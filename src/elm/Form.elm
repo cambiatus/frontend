@@ -119,6 +119,7 @@ import Profile
 import Session.Shared as Shared exposing (Shared)
 import Set exposing (Set)
 import Task
+import Translation
 import UpdateResult as UR
 import View.Feedback as Feedback
 
@@ -365,6 +366,46 @@ file :
 file config options =
     field (File options)
         { parser = Form.File.parser config.translators
+        , value = config.value
+        , update = config.update
+        , externalError = config.externalError
+        }
+
+
+file2 :
+    { translators : Translation.Translators
+    , value : values -> Form.File2.SingleModel
+    , update : Form.File2.SingleModel -> values -> values
+    , externalError : values -> Maybe String
+    }
+    -> Form.File2.Options msg
+    -> Form msg values String
+file2 config options =
+    field
+        (mapBaseField Form.File2.fromSingleModel Form.File2.toSingleModel
+            >> File2 options
+        )
+        { parser = Form.File2.parser config.translators
+        , value = config.value
+        , update = config.update
+        , externalError = config.externalError
+        }
+
+
+file2Multiple :
+    { translators : Translation.Translators
+    , value : values -> Form.File2.MultipleModel
+    , update : Form.File2.MultipleModel -> values -> values
+    , externalError : values -> Maybe String
+    }
+    -> Form.File2.Options msg
+    -> Form msg values (List String)
+file2Multiple config options =
+    field
+        (mapBaseField Form.File2.fromMultipleModel Form.File2.toMultipleModel
+            >> File2 options
+        )
+        { parser = Form.File2.parserMultiple config.translators
         , value = config.value
         , update = config.update
         , externalError = config.externalError

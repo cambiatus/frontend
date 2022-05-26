@@ -1,4 +1,26 @@
-module Form.File2 exposing (FileTypeStatus, Model, Msg, Options, getId, init, initMultiple, initSingle, isEmpty, msgToString, update, view, withDisabled, withMultipleFiles)
+module Form.File2 exposing
+    ( FileTypeStatus
+    , Model
+    , Msg
+    , MultipleModel
+    , Options
+    , SingleModel
+    , fromMultipleModel
+    , fromSingleModel
+    , getId
+    , init
+    , initMultiple
+    , initSingle
+    , isEmpty
+    , msgToString
+    , parser
+    , parserMultiple
+    , toMultipleModel
+    , toSingleModel
+    , update
+    , view
+    , withDisabled
+    )
 
 import Api
 import File exposing (File)
@@ -24,7 +46,7 @@ import View.Modal as Modal
 
 type Model
     = Model
-        { entries : List Entry
+        { entries : Entries
 
         -- TODO - Join these together
         , openEntryIndex : Maybe Int
@@ -32,10 +54,27 @@ type Model
         }
 
 
+type MultipleModel
+    = MultipleModel
+        { entries : List Entry
+        }
+
+
+type SingleModel
+    = SingleModel
+        { entry : Maybe Entry
+        }
+
+
 type alias Entry =
     { fileType : FileTypeStatus
     , url : UrlStatus
     }
+
+
+type Entries
+    = SingleEntry (Maybe Entry)
+    | MultipleEntries (List Entry)
 
 
 type FileType
@@ -59,7 +98,6 @@ type Options msg
         { id : String
         , disabled : Bool
         , fileTypes : List FileType
-        , acceptMultipleFiles : Bool
         , addImagesViewContainerAttrs : List (Html.Attribute msg)
         , addImagesView : List (Html msg)
         }
@@ -69,37 +107,29 @@ type Options msg
 -- INITIALIZING
 
 
-initSingle : { imageUrl : Maybe String, aspectRatio : Float } -> Model
-initSingle { imageUrl, aspectRatio } =
-    Model
-        { entries =
-            imageUrl
+initSingle : { fileUrl : Maybe String, aspectRatio : Float } -> SingleModel
+initSingle { fileUrl, aspectRatio } =
+    SingleModel
+        { entry =
+            fileUrl
                 |> Maybe.map
-                    (\image ->
-                        [ { fileType = LoadingFileType
-                          , url = Loaded image
-                          }
-                        ]
+                    (\file ->
+                        { fileType = LoadingFileType, url = Loaded file }
                     )
-                |> Maybe.withDefault []
-        , openEntryIndex = Nothing
-        , imageCropper = View.ImageCropper.init { aspectRatio = aspectRatio }
         }
 
 
-initMultiple : { images : List String, aspectRatio : Float } -> Model
-initMultiple { images, aspectRatio } =
-    Model
+initMultiple : { fileUrls : List String, aspectRatio : Float } -> MultipleModel
+initMultiple { fileUrls, aspectRatio } =
+    MultipleModel
         { entries =
             List.map
-                (\image ->
+                (\file ->
                     { fileType = LoadingFileType
-                    , url = Loaded image
+                    , url = Loaded file
                     }
                 )
-                images
-        , openEntryIndex = Nothing
-        , imageCropper = View.ImageCropper.init { aspectRatio = aspectRatio }
+                fileUrls
         }
 
 
@@ -113,7 +143,6 @@ init { id } =
         { id = id
         , disabled = False
         , fileTypes = [ Image ]
-        , acceptMultipleFiles = False
         , addImagesViewContainerAttrs = []
         , addImagesView = defaultAddImagesView
         }
@@ -124,17 +153,12 @@ withDisabled disabled (Options options) =
     Options { options | disabled = disabled }
 
 
-withMultipleFiles : Bool -> Options msg -> Options msg
-withMultipleFiles acceptMultipleFiles (Options options) =
-    Options { options | acceptMultipleFiles = acceptMultipleFiles }
-
-
 
 -- PARSING
 
 
-parser : Translation.Translators -> Model -> Result String String
-parser { t } (Model model) =
+parser : Translation.Translators -> SingleModel -> Result String String
+parser { t } _ =
     -- case List.head model.entries |> Maybe.map .url of
     --     Nothing ->
     --         Err (t "error.required")
@@ -150,8 +174,8 @@ parser { t } (Model model) =
     Err "Implement this"
 
 
-parserMultiple : Translation.Translators -> Model -> Result String (List String)
-parserMultiple { t } (Model model) =
+parserMultiple : Translation.Translators -> MultipleModel -> Result String (List String)
+parserMultiple { t } _ =
     -- List.foldl
     --     (\entry result ->
     --         case result of
@@ -206,33 +230,72 @@ update shared msg (Model model) =
             UR.init (Model model)
 
         RequestedUploadFiles files ->
-            let
-                newEntries : List Entry
-                newEntries =
-                    List.filterMap entryFromFile files
+            case model.entries of
+                SingleEntry _ ->
+                    case
+                        files
+                            |> List.head
+                            |> Maybe.andThen entryFromFile
+                    of
+                        Just newEntry ->
+                            { model
+                                | entries =
+                                    newEntry
+                                        |> Just
+                                        |> SingleEntry
+                            }
+                                |> Model
+                                |> UR.init
+                                |> UR.addCmd (uploadEntry shared 0 newEntry)
 
-                uploadNewEntries : Cmd Msg
-                uploadNewEntries =
-                    newEntries
-                        |> List.indexedMap
-                            (\index entry ->
-                                uploadEntry shared
-                                    (index + List.length model.entries)
-                                    entry
-                            )
-                        |> Cmd.batch
-            in
-            { model | entries = model.entries ++ newEntries }
-                |> Model
-                |> UR.init
-                |> UR.addCmd uploadNewEntries
+                        Nothing ->
+                            model
+                                |> Model
+                                |> UR.init
+                                |> UR.logImpossible msg
+                                    "Input file is not a valid entry"
+                                    Nothing
+                                    { moduleName = "Form.File2", function = "update" }
+                                    []
+
+                MultipleEntries entries ->
+                    let
+                        newEntries : List Entry
+                        newEntries =
+                            List.filterMap entryFromFile files
+
+                        uploadNewEntries : Cmd Msg
+                        uploadNewEntries =
+                            newEntries
+                                |> List.indexedMap
+                                    (\index entry ->
+                                        uploadEntry shared
+                                            (index + List.length entries)
+                                            entry
+                                    )
+                                |> Cmd.batch
+                    in
+                    { model | entries = MultipleEntries (entries ++ newEntries) }
+                        |> Model
+                        |> UR.init
+                        |> UR.addCmd uploadNewEntries
 
         CompletedUploadingFile index result ->
             { model
                 | entries =
-                    List.Extra.updateAt index
-                        (\entry -> { entry | url = urlStatusFromResult result })
-                        model.entries
+                    case model.entries of
+                        SingleEntry _ ->
+                            { fileType = LoadingFileType
+                            , url = urlStatusFromResult result
+                            }
+                                |> Just
+                                |> SingleEntry
+
+                        MultipleEntries entries ->
+                            entries
+                                |> List.Extra.updateAt index
+                                    (\entry -> { entry | url = urlStatusFromResult result })
+                                |> MultipleEntries
             }
                 |> Model
                 |> UR.init
@@ -269,15 +332,36 @@ type alias ViewConfig msg =
 
 
 view : Options msg -> ViewConfig msg -> (Msg -> msg) -> Html msg
-view (Options options) viewConfig toMsg =
+view options viewConfig toMsg =
     let
         (Model model) =
             viewConfig.value
-
-        maybeOpenEntry =
-            model.openEntryIndex
-                |> Maybe.andThen (\index -> List.Extra.getAt index model.entries)
     in
+    case model.entries of
+        SingleEntry entry ->
+            viewSingle entry options viewConfig toMsg
+
+        MultipleEntries entries ->
+            viewMultiple entries options viewConfig toMsg
+
+
+viewSingle : Maybe Entry -> Options msg -> ViewConfig msg -> (Msg -> msg) -> Html msg
+viewSingle maybeEntry options viewConfig toMsg =
+    case maybeEntry of
+        Nothing ->
+            viewAddImages { allowMultiple = False }
+                options
+                viewConfig
+                toMsg
+
+        Just entry ->
+            -- TODO - Image cropper
+            viewEntry viewConfig.translators 0 entry
+                |> Html.map toMsg
+
+
+viewMultiple : List Entry -> Options msg -> ViewConfig msg -> (Msg -> msg) -> Html msg
+viewMultiple entries (Options options) viewConfig toMsg =
     div []
         [ Html.Keyed.ul
             []
@@ -290,29 +374,32 @@ view (Options options) viewConfig toMsg =
                         ]
                     )
                 )
-                model.entries
+                entries
             )
+        , viewAddImages
+            { allowMultiple = True }
+            (Options options)
+            viewConfig
+            toMsg
 
-        -- TODO - Only show when appropriate
-        , viewAddImages (Options options) viewConfig toMsg
-        , case maybeOpenEntry of
-            Nothing ->
-                text ""
-
-            Just entry ->
-                viewEntryModal viewConfig.translators model.imageCropper entry
-                    |> Html.map toMsg
+        -- TODO - Image cropper
+        -- , case maybeOpenEntry of
+        --     Nothing ->
+        --         text ""
+        --     Just entry ->
+        --         viewEntryModal viewConfig.translators model.imageCropper entry
+        --             |> Html.map toMsg
         ]
 
 
 {-| This is what we use when there is not an image uploaded yet
 -}
-viewAddImages : Options msg -> ViewConfig msg -> (Msg -> msg) -> Html msg
-viewAddImages (Options options) viewConfig toMsg =
+viewAddImages : { allowMultiple : Bool } -> Options msg -> ViewConfig msg -> (Msg -> msg) -> Html msg
+viewAddImages allowMultiple (Options options) viewConfig toMsg =
     div []
         [ viewInput (Options options)
             viewConfig
-            { allowMultiple = options.acceptMultipleFiles }
+            allowMultiple
             toMsg
         , Html.label
             (for options.id
@@ -556,6 +643,26 @@ urlStatusFromResult result =
 
         Err err ->
             WithError err
+
+
+fromMultipleModel : MultipleModel -> Model
+fromMultipleModel _ =
+    Debug.todo ""
+
+
+toMultipleModel : Model -> MultipleModel
+toMultipleModel _ =
+    Debug.todo ""
+
+
+fromSingleModel : SingleModel -> Model
+fromSingleModel _ =
+    Debug.todo ""
+
+
+toSingleModel : Model -> SingleModel
+toSingleModel _ =
+    Debug.todo ""
 
 
 msgToString : Msg -> List String
