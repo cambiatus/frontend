@@ -32,6 +32,7 @@ import Http
 import Icons
 import Json.Decode
 import List.Extra
+import Maybe.Extra
 import Translation
 import UpdateResult as UR
 import View.Components
@@ -47,34 +48,42 @@ import View.Modal as Modal
 type Model
     = Model
         { entries : Entries
-
-        -- TODO - Join these together
-        , openEntryIndex : Maybe Int
-        , imageCropper : View.ImageCropper.Model
+        , aspectRatio : Maybe Float
+        , openImageCropperIndex : Maybe Int
         }
 
 
 type MultipleModel
     = MultipleModel
         { entries : List Entry
+        , aspectRatio : Maybe Float
+        , openImageCropperIndex : Maybe Int
         }
 
 
 type SingleModel
     = SingleModel
         { entry : Maybe Entry
+        , aspectRatio : Maybe Float
+        , isImageCropperOpen : Bool
         }
 
 
 type alias Entry =
     { fileType : FileTypeStatus
     , url : UrlStatus
+    , imageCropper : ImageCropper
     }
 
 
 type Entries
     = SingleEntry (Maybe Entry)
     | MultipleEntries (List Entry)
+
+
+type ImageCropper
+    = WithoutImageCropper
+    | WithImageCropper View.ImageCropper.Model
 
 
 type FileType
@@ -114,8 +123,16 @@ initSingle { fileUrl, aspectRatio } =
             fileUrl
                 |> Maybe.map
                     (\file ->
-                        { fileType = LoadingFileType, url = Loaded file }
+                        { fileType = LoadingFileType
+                        , url = Loaded file
+                        , imageCropper =
+                            { aspectRatio = aspectRatio }
+                                |> View.ImageCropper.init
+                                |> WithImageCropper
+                        }
                     )
+        , aspectRatio = Just aspectRatio
+        , isImageCropperOpen = False
         }
 
 
@@ -127,9 +144,15 @@ initMultiple { fileUrls, aspectRatio } =
                 (\file ->
                     { fileType = LoadingFileType
                     , url = Loaded file
+                    , imageCropper =
+                        { aspectRatio = aspectRatio }
+                            |> View.ImageCropper.init
+                            |> WithImageCropper
                     }
                 )
                 fileUrls
+        , aspectRatio = Just aspectRatio
+        , openImageCropperIndex = Nothing
         }
 
 
@@ -235,7 +258,7 @@ update shared msg (Model model) =
                     case
                         files
                             |> List.head
-                            |> Maybe.andThen entryFromFile
+                            |> Maybe.andThen (entryFromFile { aspectRatio = model.aspectRatio })
                     of
                         Just newEntry ->
                             { model
@@ -262,7 +285,9 @@ update shared msg (Model model) =
                     let
                         newEntries : List Entry
                         newEntries =
-                            List.filterMap entryFromFile files
+                            List.filterMap
+                                (entryFromFile { aspectRatio = model.aspectRatio })
+                                files
 
                         uploadNewEntries : Cmd Msg
                         uploadNewEntries =
@@ -281,41 +306,64 @@ update shared msg (Model model) =
                         |> UR.addCmd uploadNewEntries
 
         CompletedUploadingFile index result ->
+            -- let
+            -- TODO - Create newImageCropper when finding out file is an image
+            --     newImageCropper =
+            --         case model.aspectRatio of
+            --             Nothing ->
+            --                 NotNeeded
+            --             Just aspectRatio ->
+            --                 { aspectRatio = aspectRatio }
+            --                     |> View.ImageCropper.init
+            --                     |> Closed
+            -- in
             { model
                 | entries =
                     case model.entries of
                         SingleEntry _ ->
                             { fileType = LoadingFileType
                             , url = urlStatusFromResult result
+                            , imageCropper = WithoutImageCropper
                             }
                                 |> Just
                                 |> SingleEntry
 
                         MultipleEntries entries ->
                             entries
-                                |> List.Extra.updateAt index
-                                    (\entry -> { entry | url = urlStatusFromResult result })
+                                |> List.Extra.setAt index
+                                    { fileType = LoadingFileType
+                                    , url = urlStatusFromResult result
+                                    , imageCropper = WithoutImageCropper
+                                    }
                                 |> MultipleEntries
             }
                 |> Model
                 |> UR.init
 
         ClickedEntry index ->
-            { model | openEntryIndex = Just index }
+            -- { model | openEntryIndex = Just index }
+            -- TODO
+            model
                 |> Model
                 |> UR.init
 
         ClickedCloseEntryModal ->
-            { model | openEntryIndex = Nothing }
+            -- { model | openEntryIndex = Nothing }
+            -- TODO
+            model
                 |> Model
                 |> UR.init
 
         GotImageCropperMsg subMsg ->
-            View.ImageCropper.update subMsg model.imageCropper
-                |> UR.fromChild (\newImageCropper -> Model { model | imageCropper = newImageCropper })
-                    GotImageCropperMsg
-                    (\_ -> identity)
-                    (Model model)
+            -- View.ImageCropper.update subMsg model.imageCropper
+            --     |> UR.fromChild (\newImageCropper -> Model { model | imageCropper = newImageCropper })
+            --         GotImageCropperMsg
+            --         (\_ -> identity)
+            --         (Model model)
+            -- TODO
+            model
+                |> Model
+                |> UR.init
 
 
 
@@ -338,16 +386,16 @@ view options viewConfig toMsg =
             viewConfig.value
     in
     case model.entries of
-        SingleEntry entry ->
-            viewSingle entry options viewConfig toMsg
+        SingleEntry _ ->
+            viewSingle (toSingleModel (Model model)) options viewConfig toMsg
 
-        MultipleEntries entries ->
-            viewMultiple entries options viewConfig toMsg
+        MultipleEntries _ ->
+            viewMultiple (toMultipleModel (Model model)) options viewConfig toMsg
 
 
-viewSingle : Maybe Entry -> Options msg -> ViewConfig msg -> (Msg -> msg) -> Html msg
-viewSingle maybeEntry options viewConfig toMsg =
-    case maybeEntry of
+viewSingle : SingleModel -> Options msg -> ViewConfig msg -> (Msg -> msg) -> Html msg
+viewSingle (SingleModel model) options viewConfig toMsg =
+    case model.entry of
         Nothing ->
             viewAddImages { allowMultiple = False }
                 options
@@ -355,13 +403,31 @@ viewSingle maybeEntry options viewConfig toMsg =
                 toMsg
 
         Just entry ->
-            -- TODO - Image cropper
-            viewEntry viewConfig.translators 0 entry
-                |> Html.map toMsg
+            div []
+                [ viewEntry viewConfig.translators 0 entry
+                    |> Html.map toMsg
+                , if model.isImageCropperOpen then
+                    case entry.imageCropper of
+                        WithoutImageCropper ->
+                            text ""
+
+                        WithImageCropper imageCropper ->
+                            viewEntryModal viewConfig.translators imageCropper entry
+                                |> Html.map toMsg
+
+                  else
+                    text ""
+                ]
 
 
-viewMultiple : List Entry -> Options msg -> ViewConfig msg -> (Msg -> msg) -> Html msg
-viewMultiple entries (Options options) viewConfig toMsg =
+viewMultiple : MultipleModel -> Options msg -> ViewConfig msg -> (Msg -> msg) -> Html msg
+viewMultiple (MultipleModel model) (Options options) viewConfig toMsg =
+    let
+        maybeOpenEntry : Maybe Entry
+        maybeOpenEntry =
+            model.openImageCropperIndex
+                |> Maybe.andThen (\index -> List.Extra.getAt index model.entries)
+    in
     div []
         [ Html.Keyed.ul
             []
@@ -374,25 +440,29 @@ viewMultiple entries (Options options) viewConfig toMsg =
                         ]
                     )
                 )
-                entries
+                model.entries
             )
         , viewAddImages
             { allowMultiple = True }
             (Options options)
             viewConfig
             toMsg
+        , case maybeOpenEntry of
+            Nothing ->
+                text ""
 
-        -- TODO - Image cropper
-        -- , case maybeOpenEntry of
-        --     Nothing ->
-        --         text ""
-        --     Just entry ->
-        --         viewEntryModal viewConfig.translators model.imageCropper entry
-        --             |> Html.map toMsg
+            Just entry ->
+                case entry.imageCropper of
+                    WithoutImageCropper ->
+                        text ""
+
+                    WithImageCropper imageCropper ->
+                        viewEntryModal viewConfig.translators imageCropper entry
+                            |> Html.map toMsg
         ]
 
 
-{-| This is what we use when there is not an image uploaded yet
+{-| This is what we use when there isn't an image uploaded yet
 -}
 viewAddImages : { allowMultiple : Bool } -> Options msg -> ViewConfig msg -> (Msg -> msg) -> Html msg
 viewAddImages allowMultiple (Options options) viewConfig toMsg =
@@ -429,7 +499,6 @@ viewInput (Options options) viewConfig { allowMultiple } toMsg =
         , class "sr-only form-file"
         , on "change"
             (Json.Decode.at [ "target", "files" ]
-                -- TODO - Should we make sure it's not empty? (Decode.andThen ...)
                 (Json.Decode.list File.decoder)
                 |> Json.Decode.map RequestedUploadFiles
             )
@@ -605,8 +674,8 @@ acceptFileTypes fileTypes =
         |> accept
 
 
-entryFromFile : File -> Maybe Entry
-entryFromFile file =
+entryFromFile : { aspectRatio : Maybe Float } -> File -> Maybe Entry
+entryFromFile { aspectRatio } file =
     file
         |> File.mime
         |> fileTypeFromString
@@ -614,6 +683,20 @@ entryFromFile file =
             (\fileType ->
                 { fileType = LoadedFileType fileType
                 , url = Loading file
+                , imageCropper =
+                    case aspectRatio of
+                        Nothing ->
+                            WithoutImageCropper
+
+                        Just validAspectRatio ->
+                            case fileType of
+                                Pdf ->
+                                    WithoutImageCropper
+
+                                Image ->
+                                    { aspectRatio = validAspectRatio }
+                                        |> View.ImageCropper.init
+                                        |> WithImageCropper
                 }
             )
 
@@ -646,23 +729,59 @@ urlStatusFromResult result =
 
 
 fromMultipleModel : MultipleModel -> Model
-fromMultipleModel _ =
-    Debug.todo ""
+fromMultipleModel (MultipleModel model) =
+    Model
+        { entries = MultipleEntries model.entries
+        , aspectRatio = model.aspectRatio
+        , openImageCropperIndex = model.openImageCropperIndex
+        }
 
 
 toMultipleModel : Model -> MultipleModel
-toMultipleModel _ =
-    Debug.todo ""
+toMultipleModel (Model model) =
+    MultipleModel
+        { entries =
+            case model.entries of
+                SingleEntry (Just entry) ->
+                    [ entry ]
+
+                SingleEntry Nothing ->
+                    []
+
+                MultipleEntries entries ->
+                    entries
+        , aspectRatio = model.aspectRatio
+        , openImageCropperIndex = model.openImageCropperIndex
+        }
 
 
 fromSingleModel : SingleModel -> Model
-fromSingleModel _ =
-    Debug.todo ""
+fromSingleModel (SingleModel model) =
+    Model
+        { entries = SingleEntry model.entry
+        , aspectRatio = model.aspectRatio
+        , openImageCropperIndex =
+            if model.isImageCropperOpen then
+                Just 0
+
+            else
+                Nothing
+        }
 
 
 toSingleModel : Model -> SingleModel
-toSingleModel _ =
-    Debug.todo ""
+toSingleModel (Model model) =
+    SingleModel
+        { entry =
+            case model.entries of
+                SingleEntry maybeEntry ->
+                    maybeEntry
+
+                MultipleEntries entries ->
+                    List.head entries
+        , aspectRatio = model.aspectRatio
+        , isImageCropperOpen = Maybe.Extra.isJust model.openImageCropperIndex
+        }
 
 
 msgToString : Msg -> List String
