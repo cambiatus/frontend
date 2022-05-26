@@ -239,6 +239,7 @@ parserMultiple { t } _ =
 type Msg
     = NoOp
     | RequestedUploadFiles (List File)
+    | RequestedReplaceFile Int File
     | CompletedUploadingFile Int (Result Http.Error String)
     | ClickedEntry Int
     | ClickedCloseEntryModal
@@ -317,18 +318,36 @@ update shared msg (Model model) =
                         |> UR.init
                         |> UR.addCmd uploadNewEntries
 
+        RequestedReplaceFile index file ->
+            case entryFromFile { aspectRatio = model.aspectRatio } file of
+                Just newEntry ->
+                    let
+                        newEntries =
+                            case model.entries of
+                                SingleEntry _ ->
+                                    SingleEntry (Just newEntry)
+
+                                MultipleEntries entries ->
+                                    entries
+                                        |> List.Extra.setAt index newEntry
+                                        |> MultipleEntries
+                    in
+                    { model | entries = newEntries }
+                        |> Model
+                        |> UR.init
+                        |> UR.addCmd (uploadEntry shared index newEntry)
+
+                Nothing ->
+                    model
+                        |> Model
+                        |> UR.init
+                        |> UR.logImpossible msg
+                            "Input file is not a valid entry to replace"
+                            Nothing
+                            { moduleName = "Form.File2", function = "update" }
+                            []
+
         CompletedUploadingFile index result ->
-            -- let
-            -- TODO - Create newImageCropper when finding out file is an image
-            --     newImageCropper =
-            --         case model.aspectRatio of
-            --             Nothing ->
-            --                 NotNeeded
-            --             Just aspectRatio ->
-            --                 { aspectRatio = aspectRatio }
-            --                     |> View.ImageCropper.init
-            --                     |> Closed
-            -- in
             { model
                 | entries =
                     case model.entries of
@@ -423,6 +442,20 @@ update shared msg (Model model) =
                             fileType
                                 |> fileTypeFromPdfViewerFileType
                                 |> LoadedFileType
+                        , imageCropper =
+                            case fileTypeFromPdfViewerFileType fileType of
+                                Image ->
+                                    case model.aspectRatio of
+                                        Nothing ->
+                                            WithoutImageCropper
+
+                                        Just aspectRatio ->
+                                            { aspectRatio = aspectRatio }
+                                                |> View.ImageCropper.init
+                                                |> WithImageCropper
+
+                                Pdf ->
+                                    WithoutImageCropper
                     }
             in
             case model.entries of
@@ -510,8 +543,9 @@ viewSingle (SingleModel model) options viewConfig toMsg =
             div []
                 [ viewEntry viewConfig.translators { imgClass = "" } 0 entry
                     |> Html.map toMsg
-                , viewEntryModal viewConfig.translators
-                    { isVisible = model.isImageCropperOpen }
+                , viewEntryModal options
+                    viewConfig
+                    { isVisible = model.isImageCropperOpen, index = 0 }
                     entry
                     |> Html.map toMsg
                 ]
@@ -549,7 +583,14 @@ viewMultiple (MultipleModel model) (Options options) viewConfig toMsg =
                 text ""
 
             Just entry ->
-                viewEntryModal viewConfig.translators { isVisible = True } entry
+                viewEntryModal (Options options)
+                    viewConfig
+                    { isVisible = True
+                    , index =
+                        model.openImageCropperIndex
+                            |> Maybe.withDefault 0
+                    }
+                    entry
                     |> Html.map toMsg
         ]
 
@@ -562,7 +603,7 @@ viewAddImages allowMultiple (Options options) viewConfig toMsg =
         [ viewInput (Options options)
             viewConfig
             allowMultiple
-            toMsg
+            |> Html.map toMsg
         , Html.label
             (for options.id
                 -- TODO - Aria Hidden?
@@ -581,9 +622,8 @@ defaultAddImagesView =
     ]
 
 
-viewInput : Options msg -> ViewConfig msg -> { allowMultiple : Bool } -> (Msg -> msg) -> Html msg
-viewInput (Options options) viewConfig { allowMultiple } toMsg =
-    -- TODO - We should give it `allowMultiple = False` when inside the modal
+viewInput : Options msg -> ViewConfig msg -> { allowMultiple : Bool } -> Html Msg
+viewInput (Options options) viewConfig { allowMultiple } =
     input
         -- TODO - Aria?
         [ type_ "file"
@@ -600,7 +640,29 @@ viewInput (Options options) viewConfig { allowMultiple } toMsg =
         , required viewConfig.isRequired
         ]
         []
-        |> Html.map toMsg
+
+
+viewReplaceImageInput : Options msg -> Int -> Html Msg
+viewReplaceImageInput (Options options) index =
+    input
+        [ type_ "file"
+        , id (replaceInputId (Options options) index)
+        , class "sr-only form-file"
+        , on "change"
+            (Json.Decode.at [ "target", "files" ]
+                (Json.Decode.index 0 File.decoder)
+                |> Json.Decode.map (RequestedReplaceFile index)
+            )
+        , multiple False
+        , acceptFileTypes options.fileTypes
+        , disabled options.disabled
+        ]
+        []
+
+
+replaceInputId : Options msg -> Int -> String
+replaceInputId (Options options) index =
+    options.id ++ "-replace-image-" ++ String.fromInt index
 
 
 viewEntry : Translation.Translators -> { imgClass : String } -> Int -> Entry -> Html Msg
@@ -637,8 +699,12 @@ viewEntry translators { imgClass } index entry =
             text ""
 
 
-viewEntryModal : Translation.Translators -> { isVisible : Bool } -> Entry -> Html Msg
-viewEntryModal translators { isVisible } entry =
+viewEntryModal : Options msg -> ViewConfig msg -> { isVisible : Bool, index : Int } -> Entry -> Html Msg
+viewEntryModal (Options options) viewConfig { isVisible, index } entry =
+    let
+        { translators } =
+            viewConfig
+    in
     Modal.initWith
         { closeMsg = ClickedCloseEntryModal
         , isVisible = isVisible
@@ -692,15 +758,18 @@ viewEntryModal translators { isVisible } entry =
                 ]
                 -- TODO - I18N
                 [ text "Delete" ]
+            , div []
+                [ viewReplaceImageInput (Options options) index
+                , Html.label
+                    [ for (replaceInputId (Options options) index)
+                    , class "cursor-pointer file-decoration button button-secondary"
+                    ]
+                    -- TODO - Make it orange!
+                    [ Icons.camera "w-4"
 
-            -- TODO - Add event handler
-            -- TODO - This should be an input
-            , button [ class "button button-secondary" ]
-                -- TODO - Make it orange!
-                [ Icons.camera "w-4"
-
-                -- TODO - I18N
-                , text "Change image"
+                    -- TODO - I18N
+                    , text "Change image"
+                    ]
                 ]
 
             -- TODO - Add event handler
@@ -899,6 +968,9 @@ msgToString msg =
 
         RequestedUploadFiles _ ->
             [ "RequestedUploadFiles" ]
+
+        RequestedReplaceFile _ _ ->
+            [ "RequestedReplaceFile" ]
 
         CompletedUploadingFile _ _ ->
             [ "CompletedUploadingFile" ]
