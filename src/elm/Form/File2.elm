@@ -244,6 +244,7 @@ type Msg
     | ClickedCloseEntryModal
     | GotImageCropperMsg View.ImageCropper.Msg
     | DiscoveredFileType Int View.Components.PdfViewerFileType
+    | ClickedDeleteEntry
 
 
 type alias UpdateResult =
@@ -448,6 +449,25 @@ update shared msg (Model model) =
                     }
                         |> Model
                         |> UR.init
+
+        ClickedDeleteEntry ->
+            { model
+                | entries =
+                    case model.entries of
+                        SingleEntry _ ->
+                            SingleEntry Nothing
+
+                        MultipleEntries entries ->
+                            case model.openImageCropperIndex of
+                                Nothing ->
+                                    MultipleEntries entries
+
+                                Just index ->
+                                    MultipleEntries (List.Extra.removeAt index entries)
+                , openImageCropperIndex = Nothing
+            }
+                |> Model
+                |> UR.init
 
 
 
@@ -666,8 +686,10 @@ viewEntryModal translators { isVisible } entry =
                 ]
             ]
         |> Modal.withFooter
-            -- TODO - Add event handler
-            [ button [ class "uppercase text-orange-300 font-bold" ]
+            [ button
+                [ class "uppercase text-orange-300 font-bold"
+                , onClick ClickedDeleteEntry
+                ]
                 -- TODO - I18N
                 [ text "Delete" ]
 
@@ -892,3 +914,6 @@ msgToString msg =
 
         DiscoveredFileType _ _ ->
             [ "DiscoveredFileType" ]
+
+        ClickedDeleteEntry ->
+            [ "ClickedDeleteEntry" ]
