@@ -490,17 +490,10 @@ viewSingle (SingleModel model) options viewConfig toMsg =
             div []
                 [ viewEntry viewConfig.translators { imgClass = "" } 0 entry
                     |> Html.map toMsg
-                , if model.isImageCropperOpen then
-                    case entry.imageCropper of
-                        WithoutImageCropper ->
-                            text ""
-
-                        WithImageCropper imageCropper ->
-                            viewEntryModal viewConfig.translators imageCropper entry
-                                |> Html.map toMsg
-
-                  else
-                    text ""
+                , viewEntryModal viewConfig.translators
+                    { isVisible = model.isImageCropperOpen }
+                    entry
+                    |> Html.map toMsg
                 ]
 
 
@@ -536,13 +529,8 @@ viewMultiple (MultipleModel model) (Options options) viewConfig toMsg =
                 text ""
 
             Just entry ->
-                case entry.imageCropper of
-                    WithoutImageCropper ->
-                        text ""
-
-                    WithImageCropper imageCropper ->
-                        viewEntryModal viewConfig.translators imageCropper entry
-                            |> Html.map toMsg
+                viewEntryModal viewConfig.translators { isVisible = True } entry
+                    |> Html.map toMsg
         ]
 
 
@@ -629,11 +617,11 @@ viewEntry translators { imgClass } index entry =
             text ""
 
 
-viewEntryModal : Translation.Translators -> View.ImageCropper.Model -> Entry -> Html Msg
-viewEntryModal translators imageCropper entry =
+viewEntryModal : Translation.Translators -> { isVisible : Bool } -> Entry -> Html Msg
+viewEntryModal translators { isVisible } entry =
     Modal.initWith
         { closeMsg = ClickedCloseEntryModal
-        , isVisible = True
+        , isVisible = isVisible
         }
         -- TODO - I18N
         |> Modal.withHeader "Edit image"
@@ -648,8 +636,13 @@ viewEntryModal translators imageCropper entry =
                     Loaded url ->
                         case entry.fileType of
                             LoadedFileType Image ->
-                                View.ImageCropper.view imageCropper { imageUrl = url }
-                                    |> Html.map GotImageCropperMsg
+                                case entry.imageCropper of
+                                    WithoutImageCropper ->
+                                        img [ src url, alt "", class "" ] []
+
+                                    WithImageCropper imageCropper ->
+                                        View.ImageCropper.view imageCropper { imageUrl = url }
+                                            |> Html.map GotImageCropperMsg
 
                             LoadedFileType Pdf ->
                                 View.Components.pdfViewer []
