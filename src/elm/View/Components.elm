@@ -1,7 +1,7 @@
 module View.Components exposing
     ( loadingLogoAnimated, loadingLogoAnimatedFluid, loadingLogoWithCustomText
     , dialogBubble, masonryLayout, Breakpoint(..)
-    , tooltip, pdfViewer, dateViewer, infiniteList, ElementToTrack(..), label, disablableLink
+    , tooltip, pdfViewer, PdfViewerFileType(..), dateViewer, infiniteList, ElementToTrack(..), label, disablableLink
     , bgNoScroll, PreventScroll(..), keyListener, Key(..), focusTrap, intersectionObserver, pointerListener
     )
 
@@ -26,7 +26,7 @@ state or configuration, such as loading indicators and containers
 
 # Elements
 
-@docs tooltip, pdfViewer, dateViewer, infiniteList, ElementToTrack, label, disablableLink
+@docs tooltip, pdfViewer, PdfViewerFileType, dateViewer, infiniteList, ElementToTrack, label, disablableLink
 
 
 # Helpers
@@ -185,6 +185,7 @@ pdfViewer attrs { url, childClass, maybeTranslators, onFileTypeDiscovered } =
                 Just eventListener ->
                     on "file-type-discovered"
                         (Json.Decode.string
+                            |> Json.Decode.field "detail"
                             |> Json.Decode.andThen
                                 (\stringFileType ->
                                     case stringFileType of

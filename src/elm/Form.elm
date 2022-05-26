@@ -2,7 +2,7 @@ module Form exposing
     ( Form
     , succeed, fail, with, withNoOutput, withDecoration, withNesting, withGroup, withGroupOf3
     , optional, introspect, list, mapValues, mapOutput, withValidationStrategy, ValidationStrategy(..)
-    , textField, richText, toggle, checkbox, radio, select, file, datePicker, userPicker, userPickerMultiple, arbitrary, arbitraryWith, unsafeArbitrary
+    , textField, richText, toggle, checkbox, radio, select, file, file2Multiple, datePicker, userPicker, userPickerMultiple, arbitrary, arbitraryWith, unsafeArbitrary
     , view, viewWithoutSubmit, Model, init, Msg, update, updateValues, getValue, msgToString
     , withDisabled
     , parse
@@ -77,7 +77,7 @@ documentation if you're stuck.
 
 ## Fields
 
-@docs textField, richText, toggle, checkbox, radio, select, file, datePicker, userPicker, userPickerMultiple, arbitrary, arbitraryWith, unsafeArbitrary
+@docs textField, richText, toggle, checkbox, radio, select, file, file2Multiple, datePicker, userPicker, userPickerMultiple, arbitrary, arbitraryWith, unsafeArbitrary
 
 
 ## Viewing

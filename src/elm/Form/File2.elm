@@ -116,7 +116,7 @@ type Options msg
 -- INITIALIZING
 
 
-initSingle : { fileUrl : Maybe String, aspectRatio : Float } -> SingleModel
+initSingle : { fileUrl : Maybe String, aspectRatio : Maybe Float } -> SingleModel
 initSingle { fileUrl, aspectRatio } =
     SingleModel
         { entry =
@@ -126,17 +126,22 @@ initSingle { fileUrl, aspectRatio } =
                         { fileType = LoadingFileType
                         , url = Loaded file
                         , imageCropper =
-                            { aspectRatio = aspectRatio }
-                                |> View.ImageCropper.init
-                                |> WithImageCropper
+                            case aspectRatio of
+                                Nothing ->
+                                    WithoutImageCropper
+
+                                Just validAspectRatio ->
+                                    { aspectRatio = validAspectRatio }
+                                        |> View.ImageCropper.init
+                                        |> WithImageCropper
                         }
                     )
-        , aspectRatio = Just aspectRatio
+        , aspectRatio = aspectRatio
         , isImageCropperOpen = False
         }
 
 
-initMultiple : { fileUrls : List String, aspectRatio : Float } -> MultipleModel
+initMultiple : { fileUrls : List String, aspectRatio : Maybe Float } -> MultipleModel
 initMultiple { fileUrls, aspectRatio } =
     MultipleModel
         { entries =
@@ -145,13 +150,18 @@ initMultiple { fileUrls, aspectRatio } =
                     { fileType = LoadingFileType
                     , url = Loaded file
                     , imageCropper =
-                        { aspectRatio = aspectRatio }
-                            |> View.ImageCropper.init
-                            |> WithImageCropper
+                        case aspectRatio of
+                            Nothing ->
+                                WithoutImageCropper
+
+                            Just validAspectRatio ->
+                                { aspectRatio = validAspectRatio }
+                                    |> View.ImageCropper.init
+                                    |> WithImageCropper
                     }
                 )
                 fileUrls
-        , aspectRatio = Just aspectRatio
+        , aspectRatio = aspectRatio
         , openImageCropperIndex = Nothing
         }
 
@@ -233,6 +243,7 @@ type Msg
     | ClickedEntry Int
     | ClickedCloseEntryModal
     | GotImageCropperMsg View.ImageCropper.Msg
+    | DiscoveredFileType Int View.Components.PdfViewerFileType
 
 
 type alias UpdateResult =
@@ -341,29 +352,102 @@ update shared msg (Model model) =
                 |> UR.init
 
         ClickedEntry index ->
-            -- { model | openEntryIndex = Just index }
-            -- TODO
-            model
+            { model | openImageCropperIndex = Just index }
                 |> Model
                 |> UR.init
 
         ClickedCloseEntryModal ->
-            -- { model | openEntryIndex = Nothing }
-            -- TODO
-            model
+            { model | openImageCropperIndex = Nothing }
                 |> Model
                 |> UR.init
 
         GotImageCropperMsg subMsg ->
-            -- View.ImageCropper.update subMsg model.imageCropper
-            --     |> UR.fromChild (\newImageCropper -> Model { model | imageCropper = newImageCropper })
-            --         GotImageCropperMsg
-            --         (\_ -> identity)
-            --         (Model model)
-            -- TODO
-            model
-                |> Model
-                |> UR.init
+            let
+                updateEntry : Entry -> (Entry -> Model) -> UpdateResult
+                updateEntry entry updateEntryInModel =
+                    case entry.imageCropper of
+                        WithoutImageCropper ->
+                            UR.init (Model model)
+
+                        WithImageCropper imageCropper ->
+                            View.ImageCropper.update subMsg imageCropper
+                                |> UR.fromChild
+                                    (\newImageCropper ->
+                                        { entry | imageCropper = WithImageCropper newImageCropper }
+                                            |> updateEntryInModel
+                                    )
+                                    GotImageCropperMsg
+                                    (\_ -> identity)
+                                    (Model model)
+            in
+            case model.entries of
+                SingleEntry Nothing ->
+                    UR.init (Model model)
+
+                SingleEntry (Just entry) ->
+                    updateEntry entry
+                        (\newEntry ->
+                            { model | entries = SingleEntry (Just newEntry) }
+                                |> Model
+                        )
+
+                MultipleEntries entries ->
+                    case model.openImageCropperIndex of
+                        Nothing ->
+                            UR.init (Model model)
+
+                        Just index ->
+                            case List.Extra.getAt index entries of
+                                Nothing ->
+                                    UR.init (Model model)
+
+                                Just entry ->
+                                    updateEntry entry
+                                        (\newEntry ->
+                                            { model
+                                                | entries =
+                                                    entries
+                                                        |> List.Extra.setAt index newEntry
+                                                        |> MultipleEntries
+                                            }
+                                                |> Model
+                                        )
+
+        DiscoveredFileType index fileType ->
+            let
+                updateEntry : Entry -> Entry
+                updateEntry entry =
+                    { entry
+                        | fileType =
+                            fileType
+                                |> fileTypeFromPdfViewerFileType
+                                |> LoadedFileType
+                    }
+            in
+            case model.entries of
+                SingleEntry Nothing ->
+                    UR.init (Model model)
+
+                SingleEntry (Just entry) ->
+                    { model
+                        | entries =
+                            entry
+                                |> updateEntry
+                                |> Just
+                                |> SingleEntry
+                    }
+                        |> Model
+                        |> UR.init
+
+                MultipleEntries entries ->
+                    { model
+                        | entries =
+                            entries
+                                |> List.Extra.updateAt index updateEntry
+                                |> MultipleEntries
+                    }
+                        |> Model
+                        |> UR.init
 
 
 
@@ -404,7 +488,7 @@ viewSingle (SingleModel model) options viewConfig toMsg =
 
         Just entry ->
             div []
-                [ viewEntry viewConfig.translators 0 entry
+                [ viewEntry viewConfig.translators { imgClass = "" } 0 entry
                     |> Html.map toMsg
                 , if model.isImageCropperOpen then
                     case entry.imageCropper of
@@ -428,14 +512,14 @@ viewMultiple (MultipleModel model) (Options options) viewConfig toMsg =
             model.openImageCropperIndex
                 |> Maybe.andThen (\index -> List.Extra.getAt index model.entries)
     in
-    div []
+    div [ class "flex flex-wrap gap-4" ]
         [ Html.Keyed.ul
-            []
+            [ class "flex flex-wrap gap-4" ]
             (List.indexedMap
                 (\index entry ->
                     ( "entry-" ++ String.fromInt index
                     , li []
-                        [ viewEntry viewConfig.translators index entry
+                        [ viewEntry viewConfig.translators { imgClass = "h-10" } index entry
                             |> Html.map toMsg
                         ]
                     )
@@ -511,24 +595,22 @@ viewInput (Options options) viewConfig { allowMultiple } toMsg =
         |> Html.map toMsg
 
 
-viewEntry : Translation.Translators -> Int -> Entry -> Html Msg
-viewEntry translators index entry =
+viewEntry : Translation.Translators -> { imgClass : String } -> Int -> Entry -> Html Msg
+viewEntry translators { imgClass } index entry =
     case entry.url of
         Loading _ ->
-            View.Components.loadingLogoAnimated translators ""
+            View.Components.loadingLogoAnimated translators imgClass
 
         Loaded url ->
-            button
-                [ onClick (ClickedEntry index)
-                ]
+            button [ onClick (ClickedEntry index) ]
                 [ case entry.fileType of
                     LoadedFileType Image ->
-                        img [ src url, alt "" ] []
+                        img [ src url, alt "", class imgClass ] []
 
                     LoadedFileType Pdf ->
                         View.Components.pdfViewer []
                             { url = url
-                            , childClass = ""
+                            , childClass = imgClass
                             , maybeTranslators = Just translators
                             , onFileTypeDiscovered = Nothing
                             }
@@ -536,9 +618,9 @@ viewEntry translators index entry =
                     LoadingFileType ->
                         View.Components.pdfViewer []
                             { url = url
-                            , childClass = ""
+                            , childClass = imgClass
                             , maybeTranslators = Just translators
-                            , onFileTypeDiscovered = Nothing
+                            , onFileTypeDiscovered = Just (DiscoveredFileType index)
                             }
                 ]
 
@@ -674,6 +756,16 @@ acceptFileTypes fileTypes =
         |> accept
 
 
+fileTypeFromPdfViewerFileType : View.Components.PdfViewerFileType -> FileType
+fileTypeFromPdfViewerFileType fileType =
+    case fileType of
+        View.Components.Pdf ->
+            Pdf
+
+        View.Components.Image ->
+            Image
+
+
 entryFromFile : { aspectRatio : Maybe Float } -> File -> Maybe Entry
 entryFromFile { aspectRatio } file =
     file
@@ -804,3 +896,6 @@ msgToString msg =
 
         GotImageCropperMsg subMsg ->
             "GotImageCropperMsg" :: View.ImageCropper.msgToString subMsg
+
+        DiscoveredFileType _ _ ->
+            [ "DiscoveredFileType" ]

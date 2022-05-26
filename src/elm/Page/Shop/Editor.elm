@@ -14,6 +14,7 @@ import Cambiatus.Enum.Permission as Permission
 import Eos
 import Form
 import Form.File
+import Form.File2
 import Form.RichText
 import Form.Text
 import Form.Toggle
@@ -24,7 +25,6 @@ import Html.Attributes exposing (class, classList, disabled, maxlength, type_)
 import Html.Attributes.Aria exposing (ariaLabel)
 import Html.Events exposing (onClick)
 import Icons
-import List.Extra
 import Markdown exposing (Markdown)
 import Page
 import RemoteData exposing (RemoteData)
@@ -142,7 +142,7 @@ mainInformationForm ({ t } as translators) =
 
 
 type alias ImagesFormInput =
-    List Form.File.Model
+    Form.File2.MultipleModel
 
 
 type alias ImagesFormOutput =
@@ -151,58 +151,68 @@ type alias ImagesFormOutput =
 
 imagesForm : Translation.Translators -> Form.Form Msg ImagesFormInput ImagesFormOutput
 imagesForm translators =
-    Form.succeed (List.filterMap identity)
+    Form.succeed identity
         |> Form.withNoOutput
             (Form.arbitrary
                 (p [ class "mb-4" ] [ text <| translators.t "shop.steps.images.guidance" ])
             )
+        -- |> Form.with
+        --     (Form.introspect
+        --         (\images ->
+        --             List.indexedMap
+        --                 (\index image ->
+        --                     Form.succeed (\imageOutput _ -> imageOutput)
+        --                         |> Form.withGroup [ class "relative" ]
+        --                             (Form.File.init
+        --                                 { label = ""
+        --                                 , id = "product-image-input-" ++ String.fromInt index
+        --                                 }
+        --                                 |> Form.File.withAttrs
+        --                                     [ class "w-24 h-24 rounded bg-gray-100 flex items-center justify-center"
+        --                                     ]
+        --                                 |> Form.File.withVariant Form.File.SimplePlus
+        --                                 |> Form.File.withContainerAttrs [ classList [ ( "animate-bounce-in", Form.File.isEmpty image ) ] ]
+        --                                 |> Form.file
+        --                                     { translators = translators
+        --                                     , value = \_ -> image
+        --                                     , update = \newImage _ -> newImage
+        --                                     , externalError = always Nothing
+        --                                     }
+        --                                 |> Form.mapValues
+        --                                     { value = \_ -> image
+        --                                     , update = \newImage -> List.Extra.setAt index newImage
+        --                                     }
+        --                                 |> Form.optional
+        --                             )
+        --                             (Form.arbitraryWith ()
+        --                                 (div
+        --                                     [ class "absolute top-0 right-0"
+        --                                     , classList [ ( "hidden", Form.File.isEmpty image ) ]
+        --                                     ]
+        --                                     [ button
+        --                                         [ class "bg-white rounded-full -translate-y-1/2 ml-1/2"
+        --                                         , onClick (\values -> values |> List.Extra.removeAt index)
+        --                                         , type_ "button"
+        --                                         ]
+        --                                         [ Icons.circularClose "w-6 h-6"
+        --                                         ]
+        --                                     ]
+        --                                 )
+        --                             )
+        --                 )
+        --                 images
+        --                 |> Form.list [ class "flex flex-wrap gap-6" ]
+        --         )
+        --     )
         |> Form.with
-            (Form.introspect
-                (\images ->
-                    List.indexedMap
-                        (\index image ->
-                            Form.succeed (\imageOutput _ -> imageOutput)
-                                |> Form.withGroup [ class "relative" ]
-                                    (Form.File.init
-                                        { label = ""
-                                        , id = "product-image-input-" ++ String.fromInt index
-                                        }
-                                        |> Form.File.withAttrs
-                                            [ class "w-24 h-24 rounded bg-gray-100 flex items-center justify-center"
-                                            ]
-                                        |> Form.File.withVariant Form.File.SimplePlus
-                                        |> Form.File.withContainerAttrs [ classList [ ( "animate-bounce-in", Form.File.isEmpty image ) ] ]
-                                        |> Form.file
-                                            { translators = translators
-                                            , value = \_ -> image
-                                            , update = \newImage _ -> newImage
-                                            , externalError = always Nothing
-                                            }
-                                        |> Form.mapValues
-                                            { value = \_ -> image
-                                            , update = \newImage -> List.Extra.setAt index newImage
-                                            }
-                                        |> Form.optional
-                                    )
-                                    (Form.arbitraryWith ()
-                                        (div
-                                            [ class "absolute top-0 right-0"
-                                            , classList [ ( "hidden", Form.File.isEmpty image ) ]
-                                            ]
-                                            [ button
-                                                [ class "bg-white rounded-full -translate-y-1/2 ml-1/2"
-                                                , onClick (\values -> values |> List.Extra.removeAt index)
-                                                , type_ "button"
-                                                ]
-                                                [ Icons.circularClose "w-6 h-6"
-                                                ]
-                                            ]
-                                        )
-                                    )
-                        )
-                        images
-                        |> Form.list [ class "flex flex-wrap gap-6" ]
-                )
+            (Form.File2.init
+                { id = "product-images-input" }
+                |> Form.file2Multiple
+                    { translators = translators
+                    , value = identity
+                    , update = \new _ -> new
+                    , externalError = always Nothing
+                    }
             )
 
 
@@ -338,7 +348,7 @@ initFormData =
             { title = ""
             , description = Form.RichText.initModel "product-description-editor" Nothing
             }
-    , images = Form.init [ Form.File.initModel Nothing ]
+    , images = Form.init (Form.File2.initMultiple { fileUrls = [], aspectRatio = Nothing })
     , priceAndInventory =
         Form.init
             { price = "0"
@@ -357,9 +367,7 @@ initEditingFormData translators product step =
             , description = Form.RichText.initModel "product-description-editor" (Just product.description)
             }
     , images =
-        product.images
-            |> List.map (Just >> Form.File.initModel)
-            |> (\images -> images ++ [ Form.File.initModel Nothing ])
+        Form.File2.initMultiple { fileUrls = product.images, aspectRatio = Nothing }
             |> Form.init
     , priceAndInventory =
         Form.init
@@ -631,8 +639,10 @@ viewForm ({ shared } as loggedIn) { isEdit, isDisabled } model formData =
                             formData.images
                             { submitText = t "shop.steps.continue"
                             , isSubmitDisabled =
-                                Form.getValue identity formData.images
-                                    |> List.any Form.File.isLoading
+                                -- TODO
+                                -- Form.getValue identity formData.images
+                                --     |> List.any Form.File.isLoading
+                                False
                             }
                             ImagesMsg
                             SubmittedImages
@@ -1169,12 +1179,14 @@ updateForm shared formMsg model =
                             Form.update shared subMsg formData.images
 
                         oldImages =
-                            Form.getValue identity formData.images
-                                |> List.filter (not << Form.File.isEmpty)
+                            -- Form.getValue identity formData.images
+                            -- |> List.filter (not << Form.File.isEmpty)
+                            []
 
                         newImages =
-                            Form.getValue identity updatedForm.model
-                                |> List.filter (not << Form.File.isEmpty)
+                            -- Form.getValue identity updatedForm.model
+                            -- |> List.filter (not << Form.File.isEmpty)
+                            []
 
                         hasAddedNewImage =
                             List.length newImages > List.length oldImages
@@ -1188,11 +1200,11 @@ updateForm shared formMsg model =
                                 updateModel
                                     { formData
                                         | images =
-                                            if hasAddedNewImage then
-                                                Form.updateValues addNewImageField newImagesForm
-
-                                            else
-                                                newImagesForm
+                                            -- TODO
+                                            -- if hasAddedNewImage then
+                                            --     Form.updateValues addNewImageField newImagesForm
+                                            -- else
+                                            newImagesForm
                                     }
                             )
                             (GotFormMsg << ImagesMsg)
