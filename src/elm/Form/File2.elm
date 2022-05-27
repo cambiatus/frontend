@@ -116,11 +116,11 @@ The lifecycle goes like this:
 type UrlStatus
     = Loading File
     | Loaded String
-    | LoadedWithCropped { original : String, cropped : File.File }
-    | LoadingWithCropped { original : String, cropped : File.File }
+    | LoadedWithCropped { original : String, cropped : File }
+    | LoadingWithCropped { original : String, cropped : File }
     | LoadedWithCroppedUploaded
         { original : String
-        , cropped : File.File
+        , cropped : File
         , croppedUrl : String
         }
     | WithError Http.Error
@@ -261,8 +261,7 @@ parserMultiple { t } _ =
 
 
 type Msg
-    = NoOp
-    | RequestedUploadFiles (List File)
+    = RequestedUploadFiles (List File)
     | RequestedReplaceFile Int File
     | CompletedUploadingFile Int (Result Http.Error String)
     | ClickedEntry Int
@@ -287,9 +286,6 @@ update :
     -> UpdateResult
 update shared msg (Model model) =
     case msg of
-        NoOp ->
-            UR.init (Model model)
-
         RequestedUploadFiles files ->
             case model.entries of
                 SingleEntry _ ->
@@ -469,7 +465,7 @@ update shared msg (Model model) =
                                         |> updateEntryInModel m
                         )
 
-                setEntryFile : File.File -> Entry -> Entry
+                setEntryFile : File -> Entry -> Entry
                 setEntryFile file entry =
                     { entry
                         | url =
@@ -601,7 +597,7 @@ update shared msg (Model model) =
                 updateEntry : Int -> Entry -> ( Entry, Cmd Msg )
                 updateEntry index entry =
                     let
-                        fromOriginalAndCropped : { original : String, cropped : File.File } -> ( Entry, Cmd Msg )
+                        fromOriginalAndCropped : { original : String, cropped : File } -> ( Entry, Cmd Msg )
                         fromOriginalAndCropped data =
                             let
                                 newEntry =
@@ -1009,13 +1005,6 @@ isEmpty (Model model) =
     True
 
 
-isLoading : Model -> Bool
-isLoading (Model model) =
-    -- List.any (\entry -> RemoteData.isLoading entry.url) model.entries
-    -- TODO
-    False
-
-
 fileTypeToString : FileType -> String
 fileTypeToString fileType =
     case fileType of
@@ -1250,9 +1239,6 @@ toSingleModel (Model model) =
 msgToString : Msg -> List String
 msgToString msg =
     case msg of
-        NoOp ->
-            [ "NoOp" ]
-
         RequestedUploadFiles _ ->
             [ "RequestedUploadFiles" ]
 

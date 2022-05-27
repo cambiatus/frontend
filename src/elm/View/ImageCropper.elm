@@ -458,4 +458,4 @@ msgToString msg =
             [ "ClickedZoomOperation" ]
 
         GotCroppedImage _ ->
-            [ "GotCroppedImageUrl" ]
+            [ "GotCroppedImage" ]

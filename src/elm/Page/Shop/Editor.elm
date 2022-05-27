@@ -13,7 +13,6 @@ module Page.Shop.Editor exposing
 import Cambiatus.Enum.Permission as Permission
 import Eos
 import Form
-import Form.File
 import Form.File2
 import Form.RichText
 import Form.Text
@@ -1174,26 +1173,20 @@ updateForm shared formMsg model =
                             model
 
                 ImagesMsg subMsg ->
-                    let
-                        updatedForm =
-                            Form.update shared subMsg formData.images
-
-                        oldImages =
-                            -- Form.getValue identity formData.images
-                            -- |> List.filter (not << Form.File.isEmpty)
-                            []
-
-                        newImages =
-                            -- Form.getValue identity updatedForm.model
-                            -- |> List.filter (not << Form.File.isEmpty)
-                            []
-
-                        hasAddedNewImage =
-                            List.length newImages > List.length oldImages
-
-                        addNewImageField values =
-                            values ++ [ Form.File.initModel Nothing ]
-                    in
+                    -- let
+                    -- updatedForm =
+                    --     Form.update shared subMsg formData.images
+                    -- oldImages =
+                    -- Form.getValue identity formData.images
+                    -- |> List.filter (not << Form.File.isEmpty)
+                    -- newImages =
+                    -- Form.getValue identity updatedForm.model
+                    -- |> List.filter (not << Form.File.isEmpty)
+                    -- hasAddedNewImage =
+                    --     List.length newImages > List.length oldImages
+                    -- addNewImageField values =
+                    --     values ++ [ Form.File.initModel Nothing ]
+                    -- in
                     Form.update shared subMsg formData.images
                         |> UR.fromChild
                             (\newImagesForm ->

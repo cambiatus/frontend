@@ -72,6 +72,10 @@ config =
             , "Form.File"
             , "Form.Toggle"
             , "View.Select.Internal.Input"
+            , "View.ImageCropper"
+
+            -- TODO - Remove this
+            , "Form.File2"
             ]
           )
         , ( [ "Html.label" ]
@@ -80,6 +84,9 @@ config =
             , "Form.File"
             , "Form.Toggle"
             , "View.Components"
+
+            -- TODO - Remove this
+            , "Form.File2"
             ]
           )
         , ( [ "Html.select" ], [ "Form.Select" ] )
