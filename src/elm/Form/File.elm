@@ -182,10 +182,10 @@ type Variant
 
 type RectangleBackground
     = Purple
-    | Gray
 
 
 
+-- | Gray
 -- UPDATE
 
 
@@ -383,15 +383,15 @@ viewInput (Options options) viewConfig toMsg =
 
 
 viewLargeRectangle : RectangleBackground -> Options msg -> ViewConfig msg -> RemoteData Http.Error String -> (Msg -> msg) -> Html msg
-viewLargeRectangle background (Options options) viewConfig value toMsg =
+viewLargeRectangle _ (Options options) viewConfig value toMsg =
     let
         ( backgroundColor, foregroundColor, icon ) =
-            case background of
-                Purple ->
-                    ( "bg-purple-500", "text-white", Icons.camera "" )
+            -- case background of
+            --     Purple ->
+            ( "bg-purple-500", "text-white", Icons.camera "" )
 
-                Gray ->
-                    ( "bg-gray-100", "text-body-black", Icons.addPhoto "fill-current text-body-black" )
+        -- Gray ->
+        --     ( "bg-gray-100", "text-body-black", Icons.addPhoto "fill-current text-body-black" )
     in
     div options.containerAttrs
         [ View.Components.label [] { targetId = options.id, labelText = options.label }
