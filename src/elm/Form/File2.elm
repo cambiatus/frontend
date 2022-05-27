@@ -886,8 +886,7 @@ viewEntry translators { imgClass } index entry =
     in
     case entry.url of
         Loading _ ->
-            -- TODO - This is too big
-            View.Components.loadingLogoAnimated translators imgClass
+            View.Components.loadingLogoWithNoText ("p-2 " ++ imgClass)
 
         Loaded url ->
             viewWithUrl url
@@ -896,8 +895,7 @@ viewEntry translators { imgClass } index entry =
             viewWithUrl original
 
         LoadingWithCropped _ ->
-            -- TODO - This is too big
-            View.Components.loadingLogoAnimated translators imgClass
+            View.Components.loadingLogoWithNoText ("p-2 " ++ imgClass)
 
         LoadedWithCroppedUploaded { croppedUrl } ->
             viewWithUrl croppedUrl

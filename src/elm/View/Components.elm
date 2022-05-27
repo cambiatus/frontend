@@ -1,5 +1,5 @@
 module View.Components exposing
-    ( loadingLogoAnimated, loadingLogoAnimatedFluid, loadingLogoWithCustomText
+    ( loadingLogoAnimated, loadingLogoAnimatedFluid, loadingLogoWithCustomText, loadingLogoWithNoText
     , dialogBubble, masonryLayout, Breakpoint(..)
     , tooltip, pdfViewer, PdfViewerFileType(..), dateViewer, infiniteList, ElementToTrack(..), label, disablableLink
     , bgNoScroll, PreventScroll(..), keyListener, Key(..), focusTrap, intersectionObserver, pointerListener
@@ -11,7 +11,7 @@ state or configuration, such as loading indicators and containers
 
 # Loading
 
-@docs loadingLogoAnimated, loadingLogoAnimatedFluid, loadingLogoWithCustomText
+@docs loadingLogoAnimated, loadingLogoAnimatedFluid, loadingLogoWithCustomText, loadingLogoWithNoText
 
 
 # Containers
@@ -69,6 +69,11 @@ loadingLogoAnimatedFluid : Html msg
 loadingLogoAnimatedFluid =
     div [ class "w-full text-center h-full py-2" ]
         [ img [ class "mx-auto h-full", src "/images/loading.svg" ] [] ]
+
+
+loadingLogoWithNoText : String -> Html msg
+loadingLogoWithNoText class_ =
+    img [ class class_, src "/images/loading.svg" ] []
 
 
 
