@@ -204,8 +204,7 @@ imagesForm translators =
         --         )
         --     )
         |> Form.with
-            (Form.File2.init
-                { id = "product-images-input" }
+            (Form.File2.init { id = "product-images-input" }
                 |> Form.file2Multiple
                     { translators = translators
                     , value = identity

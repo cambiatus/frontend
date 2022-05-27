@@ -1,5 +1,6 @@
 module Form.File2 exposing
-    ( FileTypeStatus
+    ( FileType(..)
+    , FileTypeStatus
     , Model
     , Msg
     , MultipleModel
@@ -20,6 +21,7 @@ module Form.File2 exposing
     , update
     , view
     , withDisabled
+    , withFileTypes
     )
 
 import Api
@@ -210,50 +212,65 @@ withDisabled disabled (Options options) =
     Options { options | disabled = disabled }
 
 
+withFileTypes : List FileType -> Options msg -> Options msg
+withFileTypes fileTypes (Options options) =
+    Options { options | fileTypes = fileTypes }
+
+
 
 -- PARSING
 
 
 parser : Translation.Translators -> SingleModel -> Result String String
-parser { t } _ =
-    -- case List.head model.entries |> Maybe.map .url of
-    --     Nothing ->
-    --         Err (t "error.required")
-    --     Just RemoteData.NotAsked ->
-    --         Err (t "error.required")
-    --     Just RemoteData.Loading ->
-    --         Err (t "error.wait_file_upload")
-    --     Just (RemoteData.Failure _) ->
-    --         Err (t "error.file_upload")
-    --     Just (RemoteData.Success url) ->
-    --         Ok url
-    -- TODO
-    Err "Implement this"
+parser ({ t } as translators) (SingleModel model) =
+    case model.entry of
+        Nothing ->
+            Err (t "error.required")
+
+        Just entry ->
+            parseUrlStatus translators entry.url
 
 
 parserMultiple : Translation.Translators -> MultipleModel -> Result String (List String)
-parserMultiple { t } _ =
-    -- List.foldl
-    --     (\entry result ->
-    --         case result of
-    --             Err err ->
-    --                 Err err
-    --             Ok validEntries ->
-    --                 case entry.url of
-    --                     RemoteData.NotAsked ->
-    --                         Ok validEntries
-    --                     RemoteData.Loading ->
-    --                         Err (t "error.wait_file_upload")
-    --                     RemoteData.Failure _ ->
-    --                         Err (t "error.file_upload")
-    --                     RemoteData.Success url ->
-    --                         Ok (url :: validEntries)
-    --     )
-    --     (Ok [])
-    --     model.entries
-    --     |> Result.map List.reverse
-    -- TODO
-    Err "Implement this"
+parserMultiple translators (MultipleModel model) =
+    List.foldr
+        (\entry result ->
+            case parseUrlStatus translators entry.url of
+                Err err ->
+                    Err err
+
+                Ok url ->
+                    case result of
+                        Err err ->
+                            Err err
+
+                        Ok validEntries ->
+                            Ok (url :: validEntries)
+        )
+        (Ok [])
+        model.entries
+
+
+parseUrlStatus : Translation.Translators -> UrlStatus -> Result String String
+parseUrlStatus { t } urlStatus =
+    case urlStatus of
+        Loading _ ->
+            Err (t "error.wait_file_upload")
+
+        Loaded url ->
+            Ok url
+
+        LoadedWithCropped _ ->
+            Err (t "error.wait_file_upload")
+
+        LoadingWithCropped _ ->
+            Err (t "error.wait_file_upload")
+
+        LoadedWithCroppedUploaded { croppedUrl } ->
+            Ok croppedUrl
+
+        WithError _ ->
+            Err (t "error.file_upload")
 
 
 
@@ -886,7 +903,7 @@ viewEntry translators { imgClass } index entry =
             viewWithUrl croppedUrl
 
         WithError _ ->
-            -- TODO
+            -- TODO - Show error
             text ""
 
 
@@ -950,7 +967,7 @@ viewEntryModal (Options options) viewConfig { isVisible, index } entry =
                         viewWithUrl original
 
                     WithError _ ->
-                        -- TODO
+                        -- TODO - Show error
                         text ""
                 ]
             ]
@@ -999,10 +1016,38 @@ getId (Options options) =
 
 isEmpty : Model -> Bool
 isEmpty (Model model) =
-    -- List.isEmpty model.entries
-    --     || List.any (\entry -> not (RemoteData.isSuccess entry.url)) model.entries
-    -- TODO
-    True
+    case model.entries of
+        SingleEntry Nothing ->
+            True
+
+        SingleEntry (Just entry) ->
+            isUrlStatusEmpty entry.url
+
+        MultipleEntries entries ->
+            List.isEmpty entries
+                || List.any (\entry -> not (isUrlStatusEmpty entry.url)) entries
+
+
+isUrlStatusEmpty : UrlStatus -> Bool
+isUrlStatusEmpty urlStatus =
+    case urlStatus of
+        Loading _ ->
+            True
+
+        Loaded _ ->
+            False
+
+        LoadedWithCropped _ ->
+            True
+
+        LoadingWithCropped _ ->
+            True
+
+        LoadedWithCroppedUploaded _ ->
+            False
+
+        WithError _ ->
+            True
 
 
 fileTypeToString : FileType -> String
@@ -1012,8 +1057,6 @@ fileTypeToString fileType =
             "image/*"
 
         Pdf ->
-            -- TODO - Test this
-            -- ".pdf"
             "application/pdf"
 
 
