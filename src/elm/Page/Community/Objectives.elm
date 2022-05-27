@@ -8,7 +8,7 @@ import Dict exposing (Dict)
 import Eos
 import Eos.Account
 import Form
-import Form.File
+import Form.File2
 import Form.Text
 import Html exposing (Html, a, b, br, button, details, div, h1, h2, h3, h4, img, li, p, span, summary, text, ul)
 import Html.Attributes exposing (alt, class, classList, id, src, style, tabindex, title)
@@ -72,7 +72,7 @@ type ClaimingStatus
 
 type Proof
     = NoProofNecessary
-    | WithProof (Form.Model Form.File.Model) ProofCode
+    | WithProof (Form.Model Form.File2.SingleModel) ProofCode
 
 
 type ProofCode
@@ -140,7 +140,7 @@ type Msg
     | StoppedIntersecting String
     | ConfirmedClaimAction
     | ConfirmedClaimActionWithPhotoProof String
-    | GotPhotoProofFormMsg (Form.Msg Form.File.Model)
+    | GotPhotoProofFormMsg (Form.Msg Form.File2.SingleModel)
     | GotUint64Name String
     | CompletedClaimingAction (Result Encode.Value ())
     | CopiedShareLinkToClipboard Int
@@ -244,7 +244,13 @@ update msg model loggedIn =
                                                     , action = action
                                                     , proof =
                                                         if action.hasProofPhoto then
-                                                            WithProof (Form.init (Form.File.initModel Nothing))
+                                                            WithProof
+                                                                ({ fileUrl = Nothing
+                                                                 , aspectRatio = Nothing
+                                                                 }
+                                                                    |> Form.File2.initSingle
+                                                                    |> Form.init
+                                                                )
                                                                 GeneratingCode
 
                                                         else
@@ -457,7 +463,14 @@ update msg model loggedIn =
             let
                 proof =
                     if action.hasProofPhoto then
-                        WithProof (Form.init (Form.File.initModel Nothing)) GeneratingCode
+                        WithProof
+                            ({ fileUrl = Nothing
+                             , aspectRatio = Nothing
+                             }
+                                |> Form.File2.initSingle
+                                |> Form.init
+                            )
+                            GeneratingCode
 
                     else
                         NoProofNecessary
@@ -1527,17 +1540,15 @@ viewClaimCount { t, tr } attrs action =
         ]
 
 
-claimWithPhotoForm : Translation.Translators -> Form.Form msg Form.File.Model String
+claimWithPhotoForm : Translation.Translators -> Form.Form msg Form.File2.SingleModel String
 claimWithPhotoForm translators =
     Form.succeed identity
         |> Form.with
-            (Form.File.init
-                { label = ""
-                , id = "photo-proof-input"
-                }
-                |> Form.File.withVariant (Form.File.LargeRectangle Form.File.Gray)
-                |> Form.File.withFileTypes [ Form.File.Image, Form.File.PDF ]
-                |> Form.file
+            (Form.File2.init { id = "photo-proof-input" }
+                -- TODO - Use different view
+                -- |> Form.File.withVariant (Form.File.LargeRectangle Form.File.Gray)
+                |> Form.File2.withFileTypes [ Form.File2.Image, Form.File2.Pdf ]
+                |> Form.file2
                     { translators = translators
                     , value = identity
                     , update = \newModel _ -> newModel
