@@ -1,4 +1,4 @@
-module View.ImageCropper exposing (Model, Msg, init, msgToString, update, view)
+module View.ImageCropper exposing (ExtMsg(..), Model, Msg, init, msgToString, update, view)
 
 import Browser.Dom
 import Dict
@@ -69,11 +69,15 @@ type ZoomOperation
     | Plus
 
 
-type alias UpdateResult extMsg =
-    UR.UpdateResult Model Msg extMsg
+type ExtMsg
+    = CompletedCropping File.File
 
 
-update : Msg -> Model -> UpdateResult extMsg
+type alias UpdateResult =
+    UR.UpdateResult Model Msg ExtMsg
+
+
+update : Msg -> Model -> UpdateResult
 update msg model =
     case msg of
         ImageLoaded ->
@@ -251,9 +255,9 @@ update msg model =
                         |> UR.init
 
         GotCroppedImage file ->
-            -- TODO - Do something with the file
             { model | isRequestingCroppedImage = False }
                 |> UR.init
+                |> UR.addExt (CompletedCropping file)
 
 
 view : Model -> { imageUrl : String } -> Html Msg
