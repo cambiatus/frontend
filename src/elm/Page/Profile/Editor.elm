@@ -11,7 +11,7 @@ module Page.Profile.Editor exposing
 import Avatar
 import Dict
 import Form
-import Form.File
+import Form.File2
 import Form.RichText
 import Form.Text
 import Graphql.Http
@@ -56,7 +56,7 @@ type FormStatus
 
 
 type alias FormInput =
-    { avatar : Form.File.Model
+    { avatar : Form.File2.SingleModel
     , fullName : String
     , email : String
     , bio : Form.RichText.Model
@@ -80,12 +80,10 @@ createForm : Translators -> { hasKyc : Bool } -> Form.Form msg FormInput FormOut
 createForm ({ t } as translators) { hasKyc } =
     Form.succeed FormOutput
         |> Form.with
-            (Form.File.init
-                { label = ""
-                , id = "avatar-input"
-                }
-                |> Form.File.withVariant Form.File.SmallCircle
-                |> Form.file
+            (Form.File2.init
+                { id = "avatar-input" }
+                -- |> Form.File.withVariant Form.File.SmallCircle
+                |> Form.file2
                     { translators = translators
                     , value = .avatar
                     , update = \avatar input -> { input | avatar = avatar }
@@ -296,7 +294,11 @@ update msg model loggedIn =
             in
             { model
                 | form =
-                    { avatar = Form.File.initModel (Avatar.toMaybeString profile.avatar)
+                    { avatar =
+                        Form.File2.initSingle
+                            { fileUrl = Avatar.toMaybeString profile.avatar
+                            , aspectRatio = Just 1
+                            }
                     , fullName = nullable profile.name
                     , email = nullable profile.email
                     , bio = Form.RichText.initModel "bio-input" profile.bio

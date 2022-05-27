@@ -6,6 +6,7 @@ module Form exposing
     , view, viewWithoutSubmit, Model, init, Msg, update, updateValues, getValue, msgToString
     , withDisabled
     , parse
+    , file2
     )
 
 {-| This is how we deal with forms. The main idea behind a form is to take user
