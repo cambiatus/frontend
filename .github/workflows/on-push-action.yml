@@ -36,4 +36,4 @@ jobs:
         run: yarn build
 
       - name: Check elm-book
-        run: yarn build-book
+        run: cd elm-book && yarn install --production && yarn build
