@@ -903,8 +903,14 @@ viewEntry translators { imgClass } index entry =
             viewWithUrl croppedUrl
 
         WithError _ ->
-            -- TODO - Show error
-            text ""
+            button
+                [ onClick (ClickedEntry index)
+                , type_ "button"
+                , class imgClass
+                , class "grid place-items-center bg-gray-100"
+                ]
+                [ Icons.exclamation "text-red w-1/2 h-1/2"
+                ]
 
 
 viewEntryModal : Options msg -> ViewConfig msg -> { isVisible : Bool, index : Int } -> Entry -> Html Msg
@@ -967,8 +973,11 @@ viewEntryModal (Options options) viewConfig { isVisible, index } entry =
                         viewWithUrl original
 
                     WithError _ ->
-                        -- TODO - Show error
-                        text ""
+                        div [ class "w-full" ]
+                            [ Icons.exclamation "mb-4 mx-auto bg-gray-100 p-4 w-1/4 text-red w-full h-full rounded-sm"
+                            , p [ class "form-error text-center" ]
+                                [ text <| translators.t "error.file_upload" ]
+                            ]
                 ]
             ]
         |> Modal.withFooter
