@@ -96,9 +96,33 @@ type FileTypeStatus
     | LoadedFileType FileType
 
 
+{-| Represents the status of an entry's url.
+
+The lifecycle goes like this:
+
+1.  Right after the user selects a local file, the status is `Loading`. That
+    file is uploaded to our servers
+2.  After that file is uploaded to our servers, the status is `Loaded`, with
+    the url of the uploaded file
+3.  If an error happens when uploading the file, the status is `WithError`
+4.  If the file is an image, we can crop it. Whenever the user changes the crop
+    size or location, the status becomes `LoadedWithCropped`, which holds the
+    original URL and the cropped file.
+5.  Once the user clicks "Save", the cropped file is uploaded to our servers.
+    While that is happening, the status is `LoadingWithCropped`
+6.  When we finish uploading the cropped file, the status becomes `LoadedWithCroppedUploaded`
+
+-}
 type UrlStatus
     = Loading File
     | Loaded String
+    | LoadedWithCropped { original : String, cropped : File.File }
+    | LoadingWithCropped { original : String, cropped : File.File }
+    | LoadedWithCroppedUploaded
+        { original : String
+        , cropped : File.File
+        , croppedUrl : String
+        }
     | WithError Http.Error
 
 
@@ -246,6 +270,7 @@ type Msg
     | GotImageCropperMsg View.ImageCropper.Msg
     | DiscoveredFileType Int View.Components.PdfViewerFileType
     | ClickedDeleteEntry
+    | ClickedSaveEntry
 
 
 type alias UpdateResult =
@@ -351,21 +376,46 @@ update shared msg (Model model) =
             { model
                 | entries =
                     case model.entries of
-                        SingleEntry _ ->
+                        SingleEntry previousEntry ->
+                            let
+                                newUrlStatus =
+                                    updateUrlStatusWithResult result (Maybe.map .url previousEntry)
+                            in
                             { fileType = LoadingFileType
-                            , url = urlStatusFromResult result
-                            , imageCropper = WithoutImageCropper
+                            , url = newUrlStatus
+                            , imageCropper =
+                                case previousEntry of
+                                    Nothing ->
+                                        WithoutImageCropper
+
+                                    Just previous ->
+                                        imageCropperFromPreviousEntry
+                                            { previous = previous.url
+                                            , new = newUrlStatus
+                                            , previousImageCropper = previous.imageCropper
+                                            }
                             }
                                 |> Just
                                 |> SingleEntry
 
                         MultipleEntries entries ->
                             entries
-                                |> List.Extra.setAt index
-                                    { fileType = LoadingFileType
-                                    , url = urlStatusFromResult result
-                                    , imageCropper = WithoutImageCropper
-                                    }
+                                |> List.Extra.updateAt index
+                                    (\previousEntry ->
+                                        let
+                                            newUrlStatus =
+                                                updateUrlStatusWithResult result (Just previousEntry.url)
+                                        in
+                                        { fileType = LoadingFileType
+                                        , url = newUrlStatus
+                                        , imageCropper =
+                                            imageCropperFromPreviousEntry
+                                                { previous = previousEntry.url
+                                                , new = newUrlStatus
+                                                , previousImageCropper = previousEntry.imageCropper
+                                                }
+                                        }
+                                    )
                                 |> MultipleEntries
             }
                 |> Model
@@ -383,55 +433,94 @@ update shared msg (Model model) =
 
         GotImageCropperMsg subMsg ->
             let
-                updateEntry : Entry -> (Entry -> Model) -> UpdateResult
-                updateEntry entry updateEntryInModel =
-                    case entry.imageCropper of
-                        WithoutImageCropper ->
-                            UR.init (Model model)
-
-                        WithImageCropper imageCropper ->
-                            View.ImageCropper.update subMsg imageCropper
-                                |> UR.fromChild
-                                    (\newImageCropper ->
-                                        { entry | imageCropper = WithImageCropper newImageCropper }
-                                            |> updateEntryInModel
-                                    )
-                                    GotImageCropperMsg
-                                    (\_ -> identity)
-                                    (Model model)
-            in
-            case model.entries of
-                SingleEntry Nothing ->
-                    UR.init (Model model)
-
-                SingleEntry (Just entry) ->
-                    updateEntry entry
-                        (\newEntry ->
-                            { model | entries = SingleEntry (Just newEntry) }
-                                |> Model
-                        )
-
-                MultipleEntries entries ->
-                    case model.openImageCropperIndex of
+                updateEntry : (Model -> Maybe Entry) -> (Model -> Entry -> Model) -> UpdateResult
+                updateEntry getEntry updateEntryInModel =
+                    case getEntry (Model model) of
                         Nothing ->
                             UR.init (Model model)
 
-                        Just index ->
-                            case List.Extra.getAt index entries of
-                                Nothing ->
+                        Just entry ->
+                            case entry.imageCropper of
+                                WithoutImageCropper ->
                                     UR.init (Model model)
 
+                                WithImageCropper imageCropper ->
+                                    View.ImageCropper.update subMsg imageCropper
+                                        |> UR.fromChild
+                                            (\newImageCropper ->
+                                                { entry | imageCropper = WithImageCropper newImageCropper }
+                                                    |> updateEntryInModel (Model model)
+                                            )
+                                            GotImageCropperMsg
+                                            (handleExt getEntry updateEntryInModel)
+                                            (Model model)
+
+                handleExt : (Model -> Maybe Entry) -> (Model -> Entry -> Model) -> View.ImageCropper.ExtMsg -> UpdateResult -> UpdateResult
+                handleExt getEntry updateEntryInModel (View.ImageCropper.CompletedCropping newFile) =
+                    UR.mapModel
+                        (\m ->
+                            case getEntry m of
+                                Nothing ->
+                                    m
+
                                 Just entry ->
-                                    updateEntry entry
-                                        (\newEntry ->
-                                            { model
-                                                | entries =
-                                                    entries
-                                                        |> List.Extra.setAt index newEntry
-                                                        |> MultipleEntries
-                                            }
-                                                |> Model
-                                        )
+                                    entry
+                                        |> setEntryFile newFile
+                                        |> updateEntryInModel m
+                        )
+
+                setEntryFile : File.File -> Entry -> Entry
+                setEntryFile file entry =
+                    { entry
+                        | url =
+                            case entry.url of
+                                Loaded original ->
+                                    LoadedWithCropped { original = original, cropped = file }
+
+                                LoadedWithCropped { original } ->
+                                    LoadedWithCropped { original = original, cropped = file }
+
+                                LoadingWithCropped { original } ->
+                                    LoadingWithCropped { original = original, cropped = file }
+
+                                LoadedWithCroppedUploaded { original } ->
+                                    LoadedWithCropped { original = original, cropped = file }
+
+                                WithError err ->
+                                    WithError err
+
+                                Loading loading ->
+                                    Loading loading
+                    }
+            in
+            updateEntry
+                (\(Model m) ->
+                    case m.entries of
+                        SingleEntry maybeEntry ->
+                            maybeEntry
+
+                        MultipleEntries entries ->
+                            m.openImageCropperIndex
+                                |> Maybe.andThen (\index -> List.Extra.getAt index entries)
+                )
+                (\(Model m) newEntry ->
+                    case m.entries of
+                        SingleEntry _ ->
+                            Model { m | entries = SingleEntry (Just newEntry) }
+
+                        MultipleEntries entries ->
+                            case m.openImageCropperIndex of
+                                Nothing ->
+                                    Model m
+
+                                Just index ->
+                                    { m
+                                        | entries =
+                                            List.Extra.setAt index newEntry entries
+                                                |> MultipleEntries
+                                    }
+                                        |> Model
+                )
 
         DiscoveredFileType index fileType ->
             let
@@ -450,9 +539,14 @@ update shared msg (Model model) =
                                             WithoutImageCropper
 
                                         Just aspectRatio ->
-                                            { aspectRatio = aspectRatio }
-                                                |> View.ImageCropper.init
-                                                |> WithImageCropper
+                                            case entry.imageCropper of
+                                                WithoutImageCropper ->
+                                                    { aspectRatio = aspectRatio }
+                                                        |> View.ImageCropper.init
+                                                        |> WithImageCropper
+
+                                                WithImageCropper cropper ->
+                                                    WithImageCropper cropper
 
                                 Pdf ->
                                     WithoutImageCropper
@@ -501,6 +595,87 @@ update shared msg (Model model) =
             }
                 |> Model
                 |> UR.init
+
+        ClickedSaveEntry ->
+            let
+                updateEntry : Int -> Entry -> ( Entry, Cmd Msg )
+                updateEntry index entry =
+                    let
+                        fromOriginalAndCropped : { original : String, cropped : File.File } -> ( Entry, Cmd Msg )
+                        fromOriginalAndCropped data =
+                            let
+                                newEntry =
+                                    { entry | url = LoadingWithCropped data }
+                            in
+                            ( newEntry, uploadEntry shared index newEntry )
+                    in
+                    case entry.url of
+                        LoadedWithCropped data ->
+                            fromOriginalAndCropped data
+
+                        LoadingWithCropped data ->
+                            fromOriginalAndCropped data
+
+                        LoadedWithCroppedUploaded { original, cropped } ->
+                            fromOriginalAndCropped { original = original, cropped = cropped }
+
+                        Loading _ ->
+                            ( entry, Cmd.none )
+
+                        Loaded _ ->
+                            ( entry, Cmd.none )
+
+                        WithError _ ->
+                            ( entry, Cmd.none )
+            in
+            case model.entries of
+                SingleEntry Nothing ->
+                    { model | openImageCropperIndex = Nothing }
+                        |> Model
+                        |> UR.init
+
+                SingleEntry (Just entry) ->
+                    let
+                        ( newEntry, cmd ) =
+                            updateEntry 0 entry
+                    in
+                    { model
+                        | openImageCropperIndex = Nothing
+                        , entries =
+                            newEntry
+                                |> Just
+                                |> SingleEntry
+                    }
+                        |> Model
+                        |> UR.init
+                        |> UR.addCmd cmd
+
+                MultipleEntries entries ->
+                    case model.openImageCropperIndex of
+                        Nothing ->
+                            model |> Model |> UR.init
+
+                        Just openImageCropperIndex ->
+                            case List.Extra.getAt openImageCropperIndex entries of
+                                Nothing ->
+                                    { model | openImageCropperIndex = Nothing }
+                                        |> Model
+                                        |> UR.init
+
+                                Just entry ->
+                                    let
+                                        ( newEntry, cmd ) =
+                                            updateEntry openImageCropperIndex entry
+                                    in
+                                    { model
+                                        | openImageCropperIndex = Nothing
+                                        , entries =
+                                            List.Extra.setAt openImageCropperIndex newEntry entries
+                                                |> MultipleEntries
+                                    }
+                                        |> Model
+                                        |> UR.init
+                                        |> UR.addCmd cmd
 
 
 
@@ -566,7 +741,7 @@ viewMultiple (MultipleModel model) (Options options) viewConfig toMsg =
                 (\index entry ->
                     ( "entry-" ++ String.fromInt index
                     , li []
-                        [ viewEntry viewConfig.translators { imgClass = "h-10" } index entry
+                        [ viewEntry viewConfig.translators { imgClass = "h-24 w-24" } index entry
                             |> Html.map toMsg
                         ]
                     )
@@ -616,7 +791,8 @@ viewAddImages allowMultiple (Options options) viewConfig toMsg =
 
 defaultAddImagesView : List (Html msg)
 defaultAddImagesView =
-    [ div [ class "bg-white p-2 border border-orange-300 flex items-center justify-center w-10 h-10 rounded-sm" ]
+    -- TODO - Add hover effect
+    [ div [ class "p-2 bg-gray-100 flex items-center justify-center w-24 h-24 rounded-sm" ]
         [ Icons.plus "text-orange-300 fill-current"
         ]
     ]
@@ -667,11 +843,9 @@ replaceInputId (Options options) index =
 
 viewEntry : Translation.Translators -> { imgClass : String } -> Int -> Entry -> Html Msg
 viewEntry translators { imgClass } index entry =
-    case entry.url of
-        Loading _ ->
-            View.Components.loadingLogoAnimated translators imgClass
-
-        Loaded url ->
+    let
+        viewWithUrl : String -> Html Msg
+        viewWithUrl url =
             button [ onClick (ClickedEntry index) ]
                 [ case entry.fileType of
                     LoadedFileType Image ->
@@ -693,6 +867,24 @@ viewEntry translators { imgClass } index entry =
                             , onFileTypeDiscovered = Just (DiscoveredFileType index)
                             }
                 ]
+    in
+    case entry.url of
+        Loading _ ->
+            -- TODO - This is too big
+            View.Components.loadingLogoAnimated translators imgClass
+
+        Loaded url ->
+            viewWithUrl url
+
+        LoadedWithCropped { original } ->
+            viewWithUrl original
+
+        LoadingWithCropped _ ->
+            -- TODO - This is too big
+            View.Components.loadingLogoAnimated translators imgClass
+
+        LoadedWithCroppedUploaded { croppedUrl } ->
+            viewWithUrl croppedUrl
 
         WithError _ ->
             -- TODO
@@ -704,6 +896,33 @@ viewEntryModal (Options options) viewConfig { isVisible, index } entry =
     let
         { translators } =
             viewConfig
+
+        viewWithUrl url =
+            case entry.fileType of
+                LoadedFileType Image ->
+                    case entry.imageCropper of
+                        WithoutImageCropper ->
+                            img [ src url, alt "", class "" ] []
+
+                        WithImageCropper imageCropper ->
+                            View.ImageCropper.view imageCropper { imageUrl = url }
+                                |> Html.map GotImageCropperMsg
+
+                LoadedFileType Pdf ->
+                    View.Components.pdfViewer []
+                        { url = url
+                        , childClass = ""
+                        , maybeTranslators = Just translators
+                        , onFileTypeDiscovered = Nothing
+                        }
+
+                LoadingFileType ->
+                    View.Components.pdfViewer []
+                        { url = url
+                        , childClass = ""
+                        , maybeTranslators = Just translators
+                        , onFileTypeDiscovered = Nothing
+                        }
     in
     Modal.initWith
         { closeMsg = ClickedCloseEntryModal
@@ -720,31 +939,16 @@ viewEntryModal (Options options) viewConfig { isVisible, index } entry =
                         View.Components.loadingLogoAnimated translators ""
 
                     Loaded url ->
-                        case entry.fileType of
-                            LoadedFileType Image ->
-                                case entry.imageCropper of
-                                    WithoutImageCropper ->
-                                        img [ src url, alt "", class "" ] []
+                        viewWithUrl url
 
-                                    WithImageCropper imageCropper ->
-                                        View.ImageCropper.view imageCropper { imageUrl = url }
-                                            |> Html.map GotImageCropperMsg
+                    LoadedWithCropped { original } ->
+                        viewWithUrl original
 
-                            LoadedFileType Pdf ->
-                                View.Components.pdfViewer []
-                                    { url = url
-                                    , childClass = ""
-                                    , maybeTranslators = Just translators
-                                    , onFileTypeDiscovered = Nothing
-                                    }
+                    LoadingWithCropped { original } ->
+                        viewWithUrl original
 
-                            LoadingFileType ->
-                                View.Components.pdfViewer []
-                                    { url = url
-                                    , childClass = ""
-                                    , maybeTranslators = Just translators
-                                    , onFileTypeDiscovered = Nothing
-                                    }
+                    LoadedWithCroppedUploaded { original } ->
+                        viewWithUrl original
 
                     WithError _ ->
                         -- TODO
@@ -771,9 +975,10 @@ viewEntryModal (Options options) viewConfig { isVisible, index } entry =
                     , text "Change image"
                     ]
                 ]
-
-            -- TODO - Add event handler
-            , button [ class "button button-primary" ]
+            , button
+                [ class "button button-primary"
+                , onClick ClickedSaveEntry
+                ]
                 -- TODO - I18N
                 [ text "Save image" ]
             ]
@@ -890,8 +1095,49 @@ uploadEntry shared index entry =
         Loaded _ ->
             Cmd.none
 
+        LoadedWithCropped { cropped } ->
+            Api.uploadImage shared cropped (CompletedUploadingFile index)
+
+        LoadingWithCropped { cropped } ->
+            Api.uploadImage shared cropped (CompletedUploadingFile index)
+
+        LoadedWithCroppedUploaded _ ->
+            Cmd.none
+
         WithError _ ->
             Cmd.none
+
+
+updateUrlStatusWithResult : Result Http.Error String -> Maybe UrlStatus -> UrlStatus
+updateUrlStatusWithResult result maybePreviousStatus =
+    case maybePreviousStatus of
+        Nothing ->
+            urlStatusFromResult result
+
+        Just previousStatus ->
+            case result of
+                Err err ->
+                    WithError err
+
+                Ok url ->
+                    case previousStatus of
+                        Loading _ ->
+                            Loaded url
+
+                        Loaded _ ->
+                            Loaded url
+
+                        LoadedWithCropped { original, cropped } ->
+                            LoadedWithCroppedUploaded { original = original, cropped = cropped, croppedUrl = url }
+
+                        LoadingWithCropped { original, cropped } ->
+                            LoadedWithCroppedUploaded { original = original, cropped = cropped, croppedUrl = url }
+
+                        LoadedWithCroppedUploaded { original, cropped } ->
+                            LoadedWithCroppedUploaded { original = original, cropped = cropped, croppedUrl = url }
+
+                        WithError _ ->
+                            Loaded url
 
 
 urlStatusFromResult : Result Http.Error String -> UrlStatus
@@ -902,6 +1148,42 @@ urlStatusFromResult result =
 
         Err err ->
             WithError err
+
+
+originalUrlFromUrlStatus : UrlStatus -> Maybe String
+originalUrlFromUrlStatus urlStatus =
+    case urlStatus of
+        Loading _ ->
+            Nothing
+
+        Loaded url ->
+            Just url
+
+        LoadedWithCropped { original } ->
+            Just original
+
+        LoadingWithCropped { original } ->
+            Just original
+
+        LoadedWithCroppedUploaded { original } ->
+            Just original
+
+        WithError _ ->
+            Nothing
+
+
+imageCropperFromPreviousEntry : { previous : UrlStatus, new : UrlStatus, previousImageCropper : ImageCropper } -> ImageCropper
+imageCropperFromPreviousEntry { previous, new, previousImageCropper } =
+    case ( originalUrlFromUrlStatus previous, originalUrlFromUrlStatus new ) of
+        ( Just previousUrl, Just newUrl ) ->
+            if previousUrl == newUrl then
+                previousImageCropper
+
+            else
+                WithoutImageCropper
+
+        _ ->
+            WithoutImageCropper
 
 
 fromMultipleModel : MultipleModel -> Model
@@ -989,3 +1271,6 @@ msgToString msg =
 
         ClickedDeleteEntry ->
             [ "ClickedDeleteEntry" ]
+
+        ClickedSaveEntry ->
+            [ "ClickedSaveEntry" ]
