@@ -61,8 +61,6 @@ export default () => (
           selectionHeight * height / imageHeight
         )
 
-        // const newUrl = canvas.toDataURL('image/png', 1)
-        // this.dispatchEvent(new CustomEvent('crop-image', { detail: { newUrl } }))
         canvas.toBlob((blob) => {
           this.dispatchEvent(new CustomEvent('crop-image', {
             detail: {
