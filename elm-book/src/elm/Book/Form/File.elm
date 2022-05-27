@@ -188,7 +188,9 @@ viewLargeRectangleGray model =
                 { label = "Select a large file"
                 , id = "large-rectangle-gray-variant"
                 }
-                |> Form.File.withVariant (Form.File.LargeRectangle Form.File.Gray)
+
+        -- TODO
+        -- |> Form.File.withVariant (Form.File.LargeRectangle Form.File.Gray)
     in
     Form.File.view options
         { value = model.largeRectangleGrayExample
@@ -267,7 +269,9 @@ viewDisabledLargeGrayRectangle =
                 , id = "disabled-rectangle"
                 }
                 |> Form.File.withDisabled True
-                |> Form.File.withVariant (Form.File.LargeRectangle Form.File.Gray)
+
+        -- TODO
+        -- |> Form.File.withVariant (Form.File.LargeRectangle Form.File.Gray)
     in
     viewSideBySide options
         { image = "/images/auth_bg_full.png"
@@ -314,7 +318,9 @@ viewLargeRectangleGrayWithError =
                 { label = "Select a large image"
                 , id = "error-rectangle"
                 }
-                |> Form.File.withVariant (Form.File.LargeRectangle Form.File.Gray)
+
+        -- TODO
+        -- |> Form.File.withVariant (Form.File.LargeRectangle Form.File.Gray)
     in
     viewSideBySide options
         { image = "/images/auth_bg_full.png"
