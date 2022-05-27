@@ -29,7 +29,9 @@ initModel =
     { smallCircleExample = Form.File.initModel Nothing
     , largeRectangleExample = Form.File.initModel Nothing
     , largeRectangleGrayExample = Form.File.initModel Nothing
-    , file2 = Form.File2.initMultiple { images = [], aspectRatio = 1 / 1 }
+    , file2 =
+        Form.File2.initMultiple { fileUrls = [], aspectRatio = Just 1 }
+            |> Form.File2.fromMultipleModel
     }
 
 
@@ -167,7 +169,6 @@ viewFile2 model =
     let
         options =
             Form.File2.init { id = "file2-example" }
-                |> Form.File2.withMultipleFiles True
     in
     Form.File2.view options
         { value = model.file2
