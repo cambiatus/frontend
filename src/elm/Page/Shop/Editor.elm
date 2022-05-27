@@ -348,7 +348,7 @@ initFormData =
             { title = ""
             , description = Form.RichText.initModel "product-description-editor" Nothing
             }
-    , images = Form.init (Form.File2.initMultiple { fileUrls = [], aspectRatio = Nothing })
+    , images = Form.init (Form.File2.initMultiple { fileUrls = [], aspectRatio = Just 1 })
     , priceAndInventory =
         Form.init
             { price = "0"
@@ -367,7 +367,7 @@ initEditingFormData translators product step =
             , description = Form.RichText.initModel "product-description-editor" (Just product.description)
             }
     , images =
-        Form.File2.initMultiple { fileUrls = product.images, aspectRatio = Nothing }
+        Form.File2.initMultiple { fileUrls = product.images, aspectRatio = Just 1 }
             |> Form.init
     , priceAndInventory =
         Form.init
