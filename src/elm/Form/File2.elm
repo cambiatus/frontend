@@ -846,7 +846,10 @@ viewEntry translators { imgClass } index entry =
     let
         viewWithUrl : String -> Html Msg
         viewWithUrl url =
-            button [ onClick (ClickedEntry index) ]
+            button
+                [ onClick (ClickedEntry index)
+                , type_ "button"
+                ]
                 [ case entry.fileType of
                     LoadedFileType Image ->
                         img [ src url, alt "", class imgClass ] []
@@ -959,6 +962,7 @@ viewEntryModal (Options options) viewConfig { isVisible, index } entry =
             [ button
                 [ class "uppercase text-orange-300 font-bold"
                 , onClick ClickedDeleteEntry
+                , type_ "button"
                 ]
                 -- TODO - I18N
                 [ text "Delete" ]
@@ -978,6 +982,7 @@ viewEntryModal (Options options) viewConfig { isVisible, index } entry =
             , button
                 [ class "button button-primary"
                 , onClick ClickedSaveEntry
+                , type_ "button"
                 ]
                 -- TODO - I18N
                 [ text "Save image" ]
