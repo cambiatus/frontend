@@ -605,7 +605,7 @@ viewForm ({ shared } as loggedIn) { isEdit, isDisabled } model formData =
     div [ class "flex flex-col flex-grow" ]
         [ Page.viewHeader loggedIn pageTitle
         , div [ class "lg:container lg:mx-auto lg:px-4 lg:mt-6 lg:mb-20" ]
-            [ div [ class "bg-white pt-4 pb-8 flex-grow flex flex-col min-h-150 lg:w-2/3 lg:mx-auto lg:rounded lg:shadow-lg lg:animate-fade-in-from-above-lg lg:motion-reduce:animate-none" ]
+            [ div [ class "bg-white pt-4 pb-8 flex-grow flex flex-col min-h-150 lg:w-2/3 lg:mx-auto lg:rounded lg:shadow-lg lg:animate-fade-in-from-above-lg lg:fill-mode-none lg:motion-reduce:animate-none" ]
                 [ div [ class "container mx-auto px-4 lg:max-w-none lg:mx-0 lg:px-6" ]
                     [ div [ class "mb-4 flex items-center" ]
                         [ stepBall Route.SaleMainInformation
