@@ -747,7 +747,7 @@ viewMultiple (MultipleModel model) (Options options) viewConfig toMsg =
             model.openImageCropperIndex
                 |> Maybe.andThen (\index -> List.Extra.getAt index model.entries)
     in
-    div [ class "flex flex-wrap gap-4" ]
+    div []
         [ Html.Keyed.ul
             [ class "flex flex-wrap gap-4" ]
             (List.indexedMap
@@ -760,12 +760,15 @@ viewMultiple (MultipleModel model) (Options options) viewConfig toMsg =
                     )
                 )
                 model.entries
+                ++ [ ( "add-images-input"
+                     , viewAddImages
+                        { allowMultiple = True }
+                        (Options options)
+                        viewConfig
+                        toMsg
+                     )
+                   ]
             )
-        , viewAddImages
-            { allowMultiple = True }
-            (Options options)
-            viewConfig
-            toMsg
         , case maybeOpenEntry of
             Nothing ->
                 text ""
