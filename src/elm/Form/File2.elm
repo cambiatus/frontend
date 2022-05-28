@@ -28,6 +28,7 @@ module Form.File2 exposing
     , withFileTypes
     , withImageClass
     , withImageCropperClass
+    , withLabel
     )
 
 import Api
@@ -137,6 +138,7 @@ type UrlStatus
 type Options msg
     = Options
         { id : String
+        , label : Maybe String
         , disabled : Bool
         , fileTypes : List FileType
         , containerClass : String
@@ -210,6 +212,7 @@ init : { id : String } -> Options msg
 init { id } =
     Options
         { id = id
+        , label = Nothing
         , disabled = False
         , fileTypes = [ Image ]
         , containerClass = ""
@@ -219,6 +222,11 @@ init { id } =
         , addImagesView = Nothing
         , imageCropperClass = ""
         }
+
+
+withLabel : String -> Options msg -> Options msg
+withLabel label (Options options) =
+    Options { options | label = Just label }
 
 
 withDisabled : Bool -> Options msg -> Options msg
@@ -795,7 +803,13 @@ viewSingle (SingleModel model) (Options options) viewConfig toMsg =
         Just entry ->
             div [ class options.containerClass ]
                 -- TODO - ariaLive?
-                [ viewEntry viewConfig.translators
+                [ case options.label of
+                    Nothing ->
+                        text ""
+
+                    Just label ->
+                        View.Components.label [] { targetId = options.id, labelText = label }
+                , viewEntry viewConfig.translators
                     (Options options)
                     0
                     entry
@@ -817,7 +831,13 @@ viewMultiple (MultipleModel model) (Options options) viewConfig toMsg =
                 |> Maybe.andThen (\index -> List.Extra.getAt index model.entries)
     in
     div [ class options.containerClass ]
-        [ Html.Keyed.ul
+        [ case options.label of
+            Nothing ->
+                text ""
+
+            Just label ->
+                p [ class "label" ] [ text label ]
+        , Html.Keyed.ul
             [ class "flex flex-wrap gap-4" ]
             (List.indexedMap
                 (\index entry ->
