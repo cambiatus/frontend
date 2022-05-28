@@ -80,9 +80,11 @@ createForm : Translators -> { hasKyc : Bool } -> Form.Form msg FormInput FormOut
 createForm ({ t } as translators) { hasKyc } =
     Form.succeed FormOutput
         |> Form.with
-            (Form.File2.init
-                { id = "avatar-input" }
-                -- |> Form.File.withVariant Form.File.SmallCircle
+            (Form.File2.init { id = "avatar-input" }
+                |> Form.File2.withContainerClass "grid place-items-center"
+                |> Form.File2.withImageClass "w-20 h-20 object-cover rounded-full mx-auto"
+                |> Form.File2.withEntryContainerClass "mx-auto"
+                |> Form.File2.withEditIconOverlay
                 |> Form.file2
                     { translators = translators
                     , value = .avatar
