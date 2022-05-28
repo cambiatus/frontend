@@ -71,7 +71,7 @@ type alias FormInput =
     , name : String
     , description : Form.RichText.Model
     , website : String
-    , coverPhoto : Form.File.Model
+    , coverPhoto : Form.File2.SingleModel
     , subdomain : String
     , hasAutoInvite : Bool
     , inviterReward : String
@@ -196,7 +196,7 @@ update msg model ({ shared } as loggedIn) =
                     , name = community.name
                     , description = Form.RichText.initModel "description-input" (Just community.description)
                     , website = Maybe.withDefault "" community.website
-                    , coverPhoto = Form.File.initModel maybeCoverPhoto
+                    , coverPhoto = Form.File2.initSingle { fileUrl = maybeCoverPhoto, aspectRatio = Nothing }
                     , subdomain =
                         community.subdomain
                             |> String.split "."
@@ -224,8 +224,10 @@ update msg model ({ shared } as loggedIn) =
                                 (\values ->
                                     { values
                                         | coverPhoto =
-                                            Form.File.initModel
-                                                (List.head uploads)
+                                            Form.File2.initSingle
+                                                { fileUrl = List.head uploads
+                                                , aspectRatio = Nothing
+                                                }
                                     }
                                 )
                                 form
@@ -620,8 +622,16 @@ createForm shared community { isLoading } =
                 |> Form.optional
             )
         |> Form.with
-            (Form.File.init { label = t "settings.community_info.cover_photo.title", id = "cover-photo-input" }
-                |> Form.file
+            (Form.File2.init { id = "cover-photo-input" }
+                |> Form.File2.withLabel (t "settings.community_info.cover_photo.title")
+                |> Form.File2.withEntryContainerClass "w-full h-56 bg-purple-500 rounded-sm grid place-items-center overflow-hidden relative"
+                |> Form.File2.withImageClass "h-56"
+                |> Form.File2.withImageSiblingElement
+                    (div [ class "bg-orange-300 rounded-full absolute right-4 bottom-4 h-8 w-8 grid place-items-center" ]
+                        [ Icons.edit "text-white w-4 h-4"
+                        ]
+                    )
+                |> Form.file2
                     { translators = translators
                     , value = .coverPhoto
                     , update = \coverPhoto input -> { input | coverPhoto = coverPhoto }

@@ -28,6 +28,7 @@ module Form.File2 exposing
     , withFileTypes
     , withImageClass
     , withImageCropperClass
+    , withImageSiblingElement
     , withLabel
     )
 
@@ -808,18 +809,22 @@ viewSingle (SingleModel model) (Options options) viewConfig toMsg =
                         text ""
 
                     Just label ->
-                        View.Components.label [] { targetId = options.id, labelText = label }
+                        button
+                            [ class "label inline w-max"
+                            , onClick (ClickedEntry 0)
+                            , type_ "button"
+                            ]
+                            [ text label ]
                 , viewEntry viewConfig.translators
                     (Options options)
                     0
                     entry
-                    |> Html.map toMsg
                 , viewEntryModal (Options options)
                     viewConfig
                     { isVisible = model.isImageCropperOpen, index = 0 }
                     entry
-                    |> Html.map toMsg
                 ]
+                |> Html.map toMsg
 
 
 viewMultiple : MultipleModel -> Options msg -> ViewConfig msg -> (Msg -> msg) -> Html msg
@@ -991,7 +996,7 @@ viewEntry translators (Options options) index entry =
                 [ class "p-4 bg-gray-100 grid place-items-center"
                 , class options.entryContainerClass
                 ]
-                [ View.Components.loadingLogoWithNoText ""
+                [ View.Components.loadingLogoWithNoText "max-w-27"
                 ]
 
         Loaded url ->
@@ -1005,7 +1010,7 @@ viewEntry translators (Options options) index entry =
                 [ class "p-4 bg-gray-100 grid place-items-center"
                 , class options.entryContainerClass
                 ]
-                [ View.Components.loadingLogoWithNoText ""
+                [ View.Components.loadingLogoWithNoText "max-w-27"
                 ]
 
         LoadedWithCroppedUploaded { croppedUrl } ->
