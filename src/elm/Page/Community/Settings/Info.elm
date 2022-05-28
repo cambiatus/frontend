@@ -15,6 +15,7 @@ import Eos
 import Eos.Account as Eos
 import Form
 import Form.File
+import Form.File2
 import Form.RichText
 import Form.Text
 import Form.Toggle
@@ -22,6 +23,7 @@ import Form.Validate
 import Graphql.Http
 import Html exposing (Html, div, form, li, p, span, text, ul)
 import Html.Attributes exposing (class, classList, disabled, maxlength)
+import Icons
 import Json.Decode as Decode exposing (Value)
 import Json.Decode.Pipeline as DecodePipeline
 import Json.Encode as Encode
@@ -65,7 +67,7 @@ init loggedIn =
 
 
 type alias FormInput =
-    { logo : Form.File.Model
+    { logo : Form.File2.SingleModel
     , name : String
     , description : Form.RichText.Model
     , website : String
@@ -186,7 +188,11 @@ update msg model ({ shared } as loggedIn) =
             { model
                 | isLoading = False
                 , form =
-                    { logo = Form.File.initModel (Just community.logo)
+                    { logo =
+                        Form.File2.initSingle
+                            { fileUrl = Just community.logo
+                            , aspectRatio = Just 1
+                            }
                     , name = community.name
                     , description = Form.RichText.initModel "description-input" (Just community.description)
                     , website = Maybe.withDefault "" community.website
@@ -553,10 +559,19 @@ createForm shared community { isLoading } =
     in
     Form.succeed FormOutput
         |> Form.with
-            (Form.File.init { label = t "settings.community_info.logo.title", id = "logo-input" }
-                |> Form.File.withVariant Form.File.SmallCircle
-                |> Form.File.withContainerAttrs [ class "mb-4" ]
-                |> Form.file
+            (Form.File2.init { id = "logo-input" }
+                |> Form.File2.withLabel (t "settings.community_info.logo.title")
+                |> Form.File2.withContainerClass "mb-4 grid"
+                |> Form.File2.withImageClass "object-cover rounded-full mx-auto w-20 h-20"
+                |> Form.File2.withEntryContainerClass "mx-auto rounded-full w-20 h-20 self-center"
+                |> Form.File2.withEditIconOverlay
+                |> Form.File2.withAddImagesView
+                    [ span [ class "bg-orange-300 rounded-full p-4 w-20 h-20" ]
+                        [ Icons.camera ""
+                        ]
+                    ]
+                |> Form.File2.withImageCropperClass "rounded-full"
+                |> Form.file2
                     { translators = translators
                     , value = .logo
                     , update = \logo input -> { input | logo = logo }
