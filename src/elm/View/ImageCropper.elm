@@ -260,8 +260,8 @@ update msg model =
                 |> UR.addExt (CompletedCropping file)
 
 
-view : Model -> { imageUrl : String } -> Html Msg
-view model { imageUrl } =
+view : Model -> { imageUrl : String, cropperClass : String } -> Html Msg
+view model { imageUrl, cropperClass } =
     div [ class "mx-auto w-full md:flex md:flex-col md:w-auto" ]
         [ div [ class "relative max-w-max mx-auto" ]
             (img
@@ -277,7 +277,11 @@ view model { imageUrl } =
                             []
 
                         Loaded dimmensions ->
-                            viewCropper model dimmensions { imageUrl = imageUrl }
+                            viewCropper model
+                                dimmensions
+                                { imageUrl = imageUrl
+                                , cropperClass = cropperClass
+                                }
                    )
             )
         , case model.dimmensions of
@@ -289,8 +293,8 @@ view model { imageUrl } =
         ]
 
 
-viewCropper : Model -> Dimmensions -> { imageUrl : String } -> List (Html Msg)
-viewCropper model dimmensions { imageUrl } =
+viewCropper : Model -> Dimmensions -> { imageUrl : String, cropperClass : String } -> List (Html Msg)
+viewCropper model dimmensions { imageUrl, cropperClass } =
     let
         selection =
             calculateSelectionDimmensions model dimmensions
@@ -311,6 +315,7 @@ viewCropper model dimmensions { imageUrl } =
     [ div
         [ class "absolute overflow-hidden border border-dashed border-gray-400 cursor-move z-20 select-none mx-auto"
         , classList [ ( "transition-all origin-center", not model.isDragging && not model.isChangingDimmensions && not model.isReflowing ) ]
+        , class cropperClass
         , style "top" (floatToPx topOffset)
         , style "left" (floatToPx leftOffset)
         , style "width" (floatToPx selection.width)

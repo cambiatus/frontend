@@ -90,6 +90,7 @@ createForm ({ t } as translators) { hasKyc } =
                         [ Icons.camera ""
                         ]
                     ]
+                |> Form.File2.withImageCropperClass "rounded-full"
                 |> Form.file2
                     { translators = translators
                     , value = .avatar

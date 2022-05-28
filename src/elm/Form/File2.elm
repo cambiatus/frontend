@@ -27,6 +27,7 @@ module Form.File2 exposing
     , withEntryContainerClass
     , withFileTypes
     , withImageClass
+    , withImageCropperClass
     )
 
 import Api
@@ -143,6 +144,7 @@ type Options msg
         , entryContainerClass : String
         , imageSiblingElement : Maybe (Html Never)
         , addImagesView : Maybe (List (Html Never))
+        , imageCropperClass : String
         }
 
 
@@ -215,6 +217,7 @@ init { id } =
         , entryContainerClass = ""
         , imageSiblingElement = Nothing
         , addImagesView = Nothing
+        , imageCropperClass = ""
         }
 
 
@@ -265,6 +268,11 @@ withEditIconOverlay (Options options) =
 withAddImagesView : List (Html Never) -> Options msg -> Options msg
 withAddImagesView newView (Options options) =
     Options { options | addImagesView = Just newView }
+
+
+withImageCropperClass : String -> Options msg -> Options msg
+withImageCropperClass cropperClass (Options options) =
+    Options { options | imageCropperClass = options.imageCropperClass ++ " " ++ cropperClass }
 
 
 
@@ -1008,7 +1016,10 @@ viewEntryModal (Options options) viewConfig { isVisible, index } entry =
                             img [ src url, alt "", class "" ] []
 
                         WithImageCropper imageCropper ->
-                            View.ImageCropper.view imageCropper { imageUrl = url }
+                            View.ImageCropper.view imageCropper
+                                { imageUrl = url
+                                , cropperClass = options.imageCropperClass
+                                }
                                 |> Html.map GotImageCropperMsg
 
                 LoadedFileType Pdf ->
