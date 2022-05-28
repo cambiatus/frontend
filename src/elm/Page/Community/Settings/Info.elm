@@ -631,6 +631,14 @@ createForm shared community { isLoading } =
                         [ Icons.edit "text-white w-4 h-4"
                         ]
                     )
+                |> Form.File2.withAddImagesView
+                    [ div [ class "h-56 w-full bg-purple-500 rounded-sm text-white flex flex-col items-center justify-center" ]
+                        [ Icons.camera "w-10 mb-2"
+                        , p [ class "px-4 font-bold" ]
+                            [ text <| translators.t "community.actions.proof.upload_hint"
+                            ]
+                        ]
+                    ]
                 |> Form.file2
                     { translators = translators
                     , value = .coverPhoto
