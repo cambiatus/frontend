@@ -882,7 +882,7 @@ viewAddImages allowMultiple (Options options) viewConfig toMsg =
 
 defaultAddImagesView : List (Html Never)
 defaultAddImagesView =
-    [ div [ class "p-2 bg-gray-100 flex items-center justify-center w-24 h-24 rounded-sm hover:bg-gray-200" ]
+    [ div [ class "p-2 bg-gray-100 flex items-center justify-center w-24 h-24 rounded hover:bg-gray-200" ]
         [ Icons.plus "text-orange-300 fill-current"
         ]
     ]

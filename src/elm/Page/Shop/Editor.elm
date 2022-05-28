@@ -155,56 +155,14 @@ imagesForm translators =
             (Form.arbitrary
                 (p [ class "mb-4" ] [ text <| translators.t "shop.steps.images.guidance" ])
             )
-        -- |> Form.with
-        --     (Form.introspect
-        --         (\images ->
-        --             List.indexedMap
-        --                 (\index image ->
-        --                     Form.succeed (\imageOutput _ -> imageOutput)
-        --                         |> Form.withGroup [ class "relative" ]
-        --                             (Form.File.init
-        --                                 { label = ""
-        --                                 , id = "product-image-input-" ++ String.fromInt index
-        --                                 }
-        --                                 |> Form.File.withAttrs
-        --                                     [ class "w-24 h-24 rounded bg-gray-100 flex items-center justify-center"
-        --                                     ]
-        --                                 |> Form.File.withVariant Form.File.SimplePlus
-        --                                 |> Form.File.withContainerAttrs [ classList [ ( "animate-bounce-in", Form.File.isEmpty image ) ] ]
-        --                                 |> Form.file
-        --                                     { translators = translators
-        --                                     , value = \_ -> image
-        --                                     , update = \newImage _ -> newImage
-        --                                     , externalError = always Nothing
-        --                                     }
-        --                                 |> Form.mapValues
-        --                                     { value = \_ -> image
-        --                                     , update = \newImage -> List.Extra.setAt index newImage
-        --                                     }
-        --                                 |> Form.optional
-        --                             )
-        --                             (Form.arbitraryWith ()
-        --                                 (div
-        --                                     [ class "absolute top-0 right-0"
-        --                                     , classList [ ( "hidden", Form.File.isEmpty image ) ]
-        --                                     ]
-        --                                     [ button
-        --                                         [ class "bg-white rounded-full -translate-y-1/2 ml-1/2"
-        --                                         , onClick (\values -> values |> List.Extra.removeAt index)
-        --                                         , type_ "button"
-        --                                         ]
-        --                                         [ Icons.circularClose "w-6 h-6"
-        --                                         ]
-        --                                     ]
-        --                                 )
-        --                             )
-        --                 )
-        --                 images
-        --                 |> Form.list [ class "flex flex-wrap gap-6" ]
-        --         )
-        --     )
         |> Form.with
             (Form.File2.init { id = "product-images-input" }
+                |> Form.File2.withEntryContainerClass "w-24 h-24 bg-gray-100 rounded grid place-items-center overflow-hidden"
+                |> Form.File2.withImageClass "max-w-24 max-h-24"
+                |> Form.File2.withImageCropperClass "rounded"
+                -- TODO - Is this too overwhelming with multiple images?
+                -- TODO - Maybe we could just say the user can edit through the step description
+                |> Form.File2.withEditIconOverlay
                 |> Form.file2Multiple
                     { translators = translators
                     , value = identity
