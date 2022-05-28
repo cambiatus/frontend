@@ -20,6 +20,7 @@ module Form.File2 exposing
     , toSingleModel
     , update
     , view
+    , withAddImagesView
     , withContainerClass
     , withDisabled
     , withEditIconOverlay
@@ -141,7 +142,7 @@ type Options msg
         , imageClass : String
         , entryContainerClass : String
         , imageSiblingElement : Maybe (Html Never)
-        , addImagesView : Maybe (List (Html msg))
+        , addImagesView : Maybe (List (Html Never))
         }
 
 
@@ -259,6 +260,11 @@ withEditIconOverlay (Options options) =
                 ]
             )
         |> withEntryContainerClass "relative"
+
+
+withAddImagesView : List (Html Never) -> Options msg -> Options msg
+withAddImagesView newView (Options options) =
+    Options { options | addImagesView = Just newView }
 
 
 
@@ -848,7 +854,7 @@ viewMultiple (MultipleModel model) (Options options) viewConfig toMsg =
 -}
 viewAddImages : { allowMultiple : Bool } -> Options msg -> ViewConfig msg -> (Msg -> msg) -> Html msg
 viewAddImages allowMultiple (Options options) viewConfig toMsg =
-    div []
+    div [ class options.containerClass ]
         [ viewInput (Options options)
             viewConfig
             allowMultiple
@@ -861,11 +867,12 @@ viewAddImages allowMultiple (Options options) viewConfig toMsg =
             ]
             (options.addImagesView
                 |> Maybe.withDefault defaultAddImagesView
+                |> List.map (Html.map Basics.never)
             )
         ]
 
 
-defaultAddImagesView : List (Html msg)
+defaultAddImagesView : List (Html Never)
 defaultAddImagesView =
     [ div [ class "p-2 bg-gray-100 flex items-center justify-center w-24 h-24 rounded-sm hover:bg-gray-200" ]
         [ Icons.plus "text-orange-300 fill-current"
