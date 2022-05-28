@@ -871,7 +871,7 @@ viewAddImages allowMultiple (Options options) viewConfig toMsg =
             [ for options.id
 
             -- TODO - Aria Hidden?
-            , class "cursor-pointer flex file-decoration w-min"
+            , class "cursor-pointer flex file-decoration"
             ]
             (options.addImagesView
                 |> Maybe.withDefault defaultAddImagesView
