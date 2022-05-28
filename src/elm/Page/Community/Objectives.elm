@@ -1545,9 +1545,17 @@ claimWithPhotoForm translators =
     Form.succeed identity
         |> Form.with
             (Form.File2.init { id = "photo-proof-input" }
-                -- TODO - Use different view
-                -- |> Form.File.withVariant (Form.File.LargeRectangle Form.File.Gray)
                 |> Form.File2.withFileTypes [ Form.File2.Image, Form.File2.Pdf ]
+                |> Form.File2.withContainerClass "w-full bg-gray-100 grid place-items-center mt-2"
+                |> Form.File2.withEntryContainerClass "h-56 rounded-sm overflow-hidden"
+                |> Form.File2.withImageClass "h-56"
+                |> Form.File2.withAddImagesView
+                    [ div [ class "w-full h-56 bg-gray-100 rounded-sm flex flex-col justify-center items-center" ]
+                        [ Icons.addPhoto "fill-current text-body-black w-10 mb-2"
+                        , p [ class "px-4 font-bold" ] [ text <| translators.t "community.actions.proof.upload_hint" ]
+                        ]
+                    ]
+                |> Form.File2.withImageCropperClass "rounded-sm"
                 |> Form.file2
                     { translators = translators
                     , value = identity
