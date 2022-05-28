@@ -368,6 +368,7 @@ viewSlider dimmensions =
         [ button
             [ Html.Events.onClick (ClickedZoomOperation Minus)
             , class "flex-shrink-0 bg-gray-100 p-2 w-10 h-10 rounded-full focus-ring"
+            , type_ "button"
             ]
             [ Icons.magnifyingGlassWithMinus ""
             ]
@@ -387,6 +388,7 @@ viewSlider dimmensions =
         , button
             [ Html.Events.onClick (ClickedZoomOperation Plus)
             , class "flex-shrink-0 bg-gray-100 p-2 w-10 h-10 rounded-full focus-ring"
+            , type_ "button"
             ]
             [ Icons.magnifyingGlassWithPlus ""
             ]
