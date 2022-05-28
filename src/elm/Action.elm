@@ -33,7 +33,7 @@ import Cambiatus.Scalar exposing (DateTime)
 import Eos exposing (Symbol)
 import Eos.Account as Eos
 import Form
-import Form.File
+import Form.File2
 import Graphql.OptionalArgument as OptionalArgument
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Html exposing (Html, br, button, div, i, li, p, span, text, ul)
@@ -80,7 +80,7 @@ type ActionFeedback
 
 
 type Proof
-    = Proof (Form.Model Form.File.Model) (Maybe ProofCode)
+    = Proof (Form.Model Form.File2.SingleModel) (Maybe ProofCode)
 
 
 type alias ProofCode =
@@ -130,7 +130,7 @@ type Msg
     | GotProofTime Time.Posix
     | AskedForUint64Name
     | GotUint64Name (Result Encode.Value String)
-    | GotFormMsg (Form.Msg Form.File.Model)
+    | GotFormMsg (Form.Msg Form.File2.SingleModel)
     | Tick Time.Posix
 
 
@@ -254,7 +254,12 @@ update isPinConfirmed permissions shared selectedCommunity accName msg model =
         ( AgreedToClaimWithProof action, _ ) ->
             { model
                 | status =
-                    Proof (Form.init (Form.File.initModel Nothing)) Nothing
+                    Proof
+                        ({ fileUrl = Nothing, aspectRatio = Nothing }
+                            |> Form.File2.initSingle
+                            |> Form.init
+                        )
+                        Nothing
                         |> PhotoUploaderShowed action
                 , feedback = Nothing
                 , needsPinConfirmation = False
@@ -318,7 +323,12 @@ update isPinConfirmed permissions shared selectedCommunity accName msg model =
             in
             { model
                 | status =
-                    Proof (Form.init (Form.File.initModel Nothing)) initProofCodeParts
+                    Proof
+                        ({ fileUrl = Nothing, aspectRatio = Nothing }
+                            |> Form.File2.initSingle
+                            |> Form.init
+                        )
+                        initProofCodeParts
                         |> PhotoUploaderShowed action
                 , feedback = Nothing
                 , needsPinConfirmation = False
@@ -628,15 +638,27 @@ viewSearchActions ({ t } as translators) today actions =
         (List.map viewAction actions)
 
 
-claimWithProofsForm : Translators -> Form.Form msg Form.File.Model String
+claimWithProofsForm : Translators -> Form.Form msg Form.File2.SingleModel String
 claimWithProofsForm translators =
-    Form.File.init
-        { label = translators.t "community.actions.proof.upload"
-        , id = "proof-photo-uploader"
-        }
-        |> Form.File.withContainerAttrs [ class "mb-4 md:w-2/3" ]
-        |> Form.File.withFileTypes [ Form.File.Image, Form.File.PDF ]
-        |> Form.file
+    Form.File2.init { id = "proof-photo-uploader" }
+        |> Form.File2.withLabel (translators.t "community.actions.proof.upload")
+        |> Form.File2.withFileTypes [ Form.File2.Image, Form.File2.Pdf ]
+        |> Form.File2.withEntryContainerClass "h-56 w-full bg-purple-500 rounded-sm grid place-items-center overflow-hidden relative"
+        |> Form.File2.withContainerClass "mb-4 md:w-2/3"
+        |> Form.File2.withImageClass "h-56"
+        |> Form.File2.withImageSiblingElement
+            (div [ class "bg-orange-300 rounded-full absolute right-4 bottom-4 h-8 w-8 grid place-items-center" ]
+                [ Icons.edit "text-white w-4 h-4"
+                ]
+            )
+        |> Form.File2.withAddImagesView
+            [ div [ class "h-56 w-full bg-purple-500 rounded-sm text-white flex flex-col items-center justify-center" ]
+                [ Icons.camera "w-10 mb-2"
+                , p [ class "px-4 font-bold" ]
+                    [ text <| translators.t "community.actions.proof.upload_hint" ]
+                ]
+            ]
+        |> Form.file2
             { translators = translators
             , value = identity
             , update = \newValue _ -> newValue
