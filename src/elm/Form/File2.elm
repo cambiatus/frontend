@@ -474,6 +474,13 @@ update shared msg (Model model) =
                                         }
                                     )
                                 |> MultipleEntries
+                , openImageCropperIndex =
+                    case model.entries of
+                        SingleEntry _ ->
+                            Just 0
+
+                        MultipleEntries _ ->
+                            model.openImageCropperIndex
             }
                 |> Model
                 |> UR.init
