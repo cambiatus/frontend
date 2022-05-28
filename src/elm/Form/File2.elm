@@ -888,10 +888,24 @@ viewMultiple (MultipleModel model) (Options options) viewConfig toMsg =
 viewAddImages : { allowMultiple : Bool } -> Options msg -> ViewConfig msg -> (Msg -> msg) -> Html msg
 viewAddImages allowMultiple (Options options) viewConfig toMsg =
     div [ class options.containerClass ]
-        [ viewInput (Options options)
+        [ if allowMultiple.allowMultiple then
+            text ""
+
+          else
+            case options.label of
+                Nothing ->
+                    text ""
+
+                Just label ->
+                    button
+                        [ class "label inline w-max"
+                        , onClick (ClickedEntry 0)
+                        , type_ "button"
+                        ]
+                        [ text label ]
+        , viewInput (Options options)
             viewConfig
             allowMultiple
-            |> Html.map toMsg
         , Html.label
             [ for options.id
 
@@ -903,6 +917,7 @@ viewAddImages allowMultiple (Options options) viewConfig toMsg =
                 |> List.map (Html.map Basics.never)
             )
         ]
+        |> Html.map toMsg
 
 
 defaultAddImagesView : List (Html Never)
