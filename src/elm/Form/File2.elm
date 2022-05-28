@@ -959,7 +959,12 @@ viewEntry translators (Options options) index entry =
     in
     case entry.url of
         Loading _ ->
-            View.Components.loadingLogoWithNoText ("p-2 " ++ options.imageClass)
+            div
+                [ class "p-4 bg-gray-100 grid place-items-center"
+                , class options.entryContainerClass
+                ]
+                [ View.Components.loadingLogoWithNoText ""
+                ]
 
         Loaded url ->
             viewWithUrl url
@@ -968,7 +973,12 @@ viewEntry translators (Options options) index entry =
             viewWithUrl original
 
         LoadingWithCropped _ ->
-            View.Components.loadingLogoWithNoText ("p-2 " ++ options.imageClass)
+            div
+                [ class "p-4 bg-gray-100 grid place-items-center"
+                , class options.entryContainerClass
+                ]
+                [ View.Components.loadingLogoWithNoText ""
+                ]
 
         LoadedWithCroppedUploaded { croppedUrl } ->
             viewWithUrl croppedUrl
