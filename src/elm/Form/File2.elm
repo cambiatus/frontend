@@ -20,8 +20,12 @@ module Form.File2 exposing
     , toSingleModel
     , update
     , view
+    , withContainerClass
     , withDisabled
+    , withEditIconOverlay
+    , withEntryContainerClass
     , withFileTypes
+    , withImageClass
     )
 
 import Api
@@ -133,8 +137,11 @@ type Options msg
         { id : String
         , disabled : Bool
         , fileTypes : List FileType
-        , addImagesViewContainerAttrs : List (Html.Attribute msg)
-        , addImagesView : List (Html msg)
+        , containerClass : String
+        , imageClass : String
+        , entryContainerClass : String
+        , imageSiblingElement : Maybe (Html Never)
+        , addImagesView : Maybe (List (Html msg))
         }
 
 
@@ -202,8 +209,11 @@ init { id } =
         { id = id
         , disabled = False
         , fileTypes = [ Image ]
-        , addImagesViewContainerAttrs = []
-        , addImagesView = defaultAddImagesView
+        , containerClass = ""
+        , imageClass = ""
+        , entryContainerClass = ""
+        , imageSiblingElement = Nothing
+        , addImagesView = Nothing
         }
 
 
@@ -215,6 +225,40 @@ withDisabled disabled (Options options) =
 withFileTypes : List FileType -> Options msg -> Options msg
 withFileTypes fileTypes (Options options) =
     Options { options | fileTypes = fileTypes }
+
+
+withContainerClass : String -> Options msg -> Options msg
+withContainerClass class_ (Options options) =
+    Options { options | containerClass = options.containerClass ++ " " ++ class_ }
+
+
+withImageClass : String -> Options msg -> Options msg
+withImageClass class_ (Options options) =
+    Options { options | imageClass = options.imageClass ++ " " ++ class_ }
+
+
+withEntryContainerClass : String -> Options msg -> Options msg
+withEntryContainerClass class_ (Options options) =
+    Options { options | entryContainerClass = options.entryContainerClass ++ " " ++ class_ }
+
+
+withImageSiblingElement : Html Never -> Options msg -> Options msg
+withImageSiblingElement sibling (Options options) =
+    Options { options | imageSiblingElement = Just sibling }
+
+
+withEditIconOverlay : Options msg -> Options msg
+withEditIconOverlay (Options options) =
+    Options options
+        |> withImageSiblingElement
+            (div
+                [ class "absolute top-0 bottom-0 left-0 right-0 bg-black/40 grid place-items-center hover:bg-black/50"
+                , class options.imageClass
+                ]
+                [ Icons.edit "text-white"
+                ]
+            )
+        |> withEntryContainerClass "relative"
 
 
 
@@ -719,19 +763,23 @@ view options viewConfig toMsg =
 
 
 viewSingle : SingleModel -> Options msg -> ViewConfig msg -> (Msg -> msg) -> Html msg
-viewSingle (SingleModel model) options viewConfig toMsg =
+viewSingle (SingleModel model) (Options options) viewConfig toMsg =
     case model.entry of
         Nothing ->
             viewAddImages { allowMultiple = False }
-                options
+                (Options options)
                 viewConfig
                 toMsg
 
         Just entry ->
-            div []
-                [ viewEntry viewConfig.translators { imgClass = "" } 0 entry
+            div [ class options.containerClass ]
+                -- TODO - ariaLive?
+                [ viewEntry viewConfig.translators
+                    (Options options)
+                    0
+                    entry
                     |> Html.map toMsg
-                , viewEntryModal options
+                , viewEntryModal (Options options)
                     viewConfig
                     { isVisible = model.isImageCropperOpen, index = 0 }
                     entry
@@ -747,14 +795,17 @@ viewMultiple (MultipleModel model) (Options options) viewConfig toMsg =
             model.openImageCropperIndex
                 |> Maybe.andThen (\index -> List.Extra.getAt index model.entries)
     in
-    div []
+    div [ class options.containerClass ]
         [ Html.Keyed.ul
             [ class "flex flex-wrap gap-4" ]
             (List.indexedMap
                 (\index entry ->
                     ( "entry-" ++ String.fromInt index
                     , li []
-                        [ viewEntry viewConfig.translators { imgClass = "h-24 w-24" } index entry
+                        [ viewEntry viewConfig.translators
+                            (Options options)
+                            index
+                            entry
                             |> Html.map toMsg
                         ]
                     )
@@ -796,12 +847,14 @@ viewAddImages allowMultiple (Options options) viewConfig toMsg =
             allowMultiple
             |> Html.map toMsg
         , Html.label
-            (for options.id
-                -- TODO - Aria Hidden?
-                :: class "cursor-pointer flex file-decoration w-min"
-                :: options.addImagesViewContainerAttrs
+            [ for options.id
+
+            -- TODO - Aria Hidden?
+            , class "cursor-pointer flex file-decoration w-min"
+            ]
+            (options.addImagesView
+                |> Maybe.withDefault defaultAddImagesView
             )
-            options.addImagesView
         ]
 
 
@@ -856,23 +909,24 @@ replaceInputId (Options options) index =
     options.id ++ "-replace-image-" ++ String.fromInt index
 
 
-viewEntry : Translation.Translators -> { imgClass : String } -> Int -> Entry -> Html Msg
-viewEntry translators { imgClass } index entry =
+viewEntry : Translation.Translators -> Options msg -> Int -> Entry -> Html Msg
+viewEntry translators (Options options) index entry =
     let
         viewWithUrl : String -> Html Msg
         viewWithUrl url =
             button
                 [ onClick (ClickedEntry index)
                 , type_ "button"
+                , class options.entryContainerClass
                 ]
                 [ case entry.fileType of
                     LoadedFileType Image ->
-                        img [ src url, alt "", class imgClass ] []
+                        img [ src url, alt "", class options.imageClass ] []
 
                     LoadedFileType Pdf ->
                         View.Components.pdfViewer []
                             { url = url
-                            , childClass = imgClass
+                            , childClass = options.imageClass
                             , maybeTranslators = Just translators
                             , onFileTypeDiscovered = Nothing
                             }
@@ -880,15 +934,18 @@ viewEntry translators { imgClass } index entry =
                     LoadingFileType ->
                         View.Components.pdfViewer []
                             { url = url
-                            , childClass = imgClass
+                            , childClass = options.imageClass
                             , maybeTranslators = Just translators
                             , onFileTypeDiscovered = Just (DiscoveredFileType index)
                             }
+                , options.imageSiblingElement
+                    |> Maybe.withDefault (text "")
+                    |> Html.map Basics.never
                 ]
     in
     case entry.url of
         Loading _ ->
-            View.Components.loadingLogoWithNoText ("p-2 " ++ imgClass)
+            View.Components.loadingLogoWithNoText ("p-2 " ++ options.imageClass)
 
         Loaded url ->
             viewWithUrl url
@@ -897,7 +954,7 @@ viewEntry translators { imgClass } index entry =
             viewWithUrl original
 
         LoadingWithCropped _ ->
-            View.Components.loadingLogoWithNoText ("p-2 " ++ imgClass)
+            View.Components.loadingLogoWithNoText ("p-2 " ++ options.imageClass)
 
         LoadedWithCroppedUploaded { croppedUrl } ->
             viewWithUrl croppedUrl
@@ -906,10 +963,10 @@ viewEntry translators { imgClass } index entry =
             button
                 [ onClick (ClickedEntry index)
                 , type_ "button"
-                , class imgClass
+                , class options.entryContainerClass
                 , class "grid place-items-center bg-gray-100"
                 ]
-                [ Icons.exclamation "text-red w-1/2 h-1/2"
+                [ Icons.exclamation ("text-red w-1/2 h-1/2 " ++ options.imageClass)
                 ]
 
 
