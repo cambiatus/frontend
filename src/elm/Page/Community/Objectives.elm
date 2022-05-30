@@ -1557,7 +1557,8 @@ claimWithPhotoForm translators =
                     ]
                 |> Form.File2.withImageCropperClass "rounded-sm"
                 |> Form.file2
-                    { translators = translators
+                    { parser = Ok
+                    , translators = translators
                     , value = identity
                     , update = \newModel _ -> newModel
                     , externalError = always Nothing

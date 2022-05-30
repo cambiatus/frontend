@@ -574,7 +574,8 @@ createForm shared community { isLoading } =
                     ]
                 |> Form.File2.withImageCropperClass "rounded-full"
                 |> Form.file2
-                    { translators = translators
+                    { parser = Ok
+                    , translators = translators
                     , value = .logo
                     , update = \logo input -> { input | logo = logo }
                     , externalError = always Nothing
@@ -640,7 +641,8 @@ createForm shared community { isLoading } =
                         ]
                     ]
                 |> Form.file2
-                    { translators = translators
+                    { parser = Ok
+                    , translators = translators
                     , value = .coverPhoto
                     , update = \coverPhoto input -> { input | coverPhoto = coverPhoto }
                     , externalError = always Nothing

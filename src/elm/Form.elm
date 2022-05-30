@@ -374,19 +374,22 @@ file config options =
 
 
 file2 :
-    { translators : Translation.Translators
+    { parser : String -> Result String output
+    , translators : Translation.Translators
     , value : values -> Form.File2.SingleModel
     , update : Form.File2.SingleModel -> values -> values
     , externalError : values -> Maybe String
     }
     -> Form.File2.Options msg
-    -> Form msg values String
+    -> Form msg values output
 file2 config options =
     field
         (mapBaseField Form.File2.fromSingleModel Form.File2.toSingleModel
             >> File2 options
         )
-        { parser = Form.File2.parser config.translators
+        { parser =
+            Form.File2.parser config.translators
+                >> Result.andThen config.parser
         , value = config.value
         , update = config.update
         , externalError = config.externalError
@@ -394,19 +397,22 @@ file2 config options =
 
 
 file2Multiple :
-    { translators : Translation.Translators
+    { parser : List String -> Result String output
+    , translators : Translation.Translators
     , value : values -> Form.File2.MultipleModel
     , update : Form.File2.MultipleModel -> values -> values
     , externalError : values -> Maybe String
     }
     -> Form.File2.Options msg
-    -> Form msg values (List String)
+    -> Form msg values output
 file2Multiple config options =
     field
         (mapBaseField Form.File2.fromMultipleModel Form.File2.toMultipleModel
             >> File2 options
         )
-        { parser = Form.File2.parserMultiple config.translators
+        { parser =
+            Form.File2.parserMultiple config.translators
+                >> Result.andThen config.parser
         , value = config.value
         , update = config.update
         , externalError = config.externalError

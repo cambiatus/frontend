@@ -92,7 +92,8 @@ createForm ({ t } as translators) { hasKyc } =
                     ]
                 |> Form.File2.withImageCropperClass "rounded-full"
                 |> Form.file2
-                    { translators = translators
+                    { parser = Ok
+                    , translators = translators
                     , value = .avatar
                     , update = \avatar input -> { input | avatar = avatar }
                     , externalError = always Nothing

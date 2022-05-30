@@ -164,7 +164,8 @@ imagesForm translators =
                 -- TODO - Maybe we could just say the user can edit through the step description
                 |> Form.File2.withEditIconOverlay
                 |> Form.file2Multiple
-                    { translators = translators
+                    { parser = Ok
+                    , translators = translators
                     , value = identity
                     , update = \new _ -> new
                     , externalError = always Nothing

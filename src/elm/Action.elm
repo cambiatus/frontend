@@ -659,7 +659,8 @@ claimWithProofsForm translators =
                 ]
             ]
         |> Form.file2
-            { translators = translators
+            { parser = Ok
+            , translators = translators
             , value = identity
             , update = \newValue _ -> newValue
             , externalError = always Nothing
