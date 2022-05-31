@@ -163,7 +163,7 @@ imagesForm translators =
                 -- TODO - Is this too overwhelming with multiple images?
                 -- TODO - Maybe we could just say the user can edit through the step description
                 |> Form.File2.withEditIconOverlay
-                |> Form.file2Multiple
+                |> Form.fileMultiple
                     { parser = Ok
                     , translators = translators
                     , value = identity

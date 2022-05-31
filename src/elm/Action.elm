@@ -658,7 +658,7 @@ claimWithProofsForm translators =
                     [ text <| translators.t "community.actions.proof.upload_hint" ]
                 ]
             ]
-        |> Form.file2
+        |> Form.file
             { parser = Ok
             , translators = translators
             , value = identity

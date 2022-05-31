@@ -1556,7 +1556,7 @@ claimWithPhotoForm translators =
                         ]
                     ]
                 |> Form.File2.withImageCropperAttributes [ class "rounded-sm" ]
-                |> Form.file2
+                |> Form.file
                     { parser = Ok
                     , translators = translators
                     , value = identity

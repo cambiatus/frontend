@@ -91,7 +91,7 @@ createForm ({ t } as translators) { hasKyc } =
                         ]
                     ]
                 |> Form.File2.withImageCropperAttributes [ class "rounded-full" ]
-                |> Form.file2
+                |> Form.file
                     { parser = Ok
                     , translators = translators
                     , value = .avatar

@@ -14,7 +14,6 @@ import Dict
 import Eos
 import Eos.Account as Eos
 import Form
-import Form.File
 import Form.File2
 import Form.RichText
 import Form.Text
@@ -573,7 +572,7 @@ createForm shared community { isLoading } =
                         ]
                     ]
                 |> Form.File2.withImageCropperAttributes [ class "rounded-full" ]
-                |> Form.file2
+                |> Form.file
                     { parser = Ok
                     , translators = translators
                     , value = .logo
@@ -640,7 +639,7 @@ createForm shared community { isLoading } =
                             ]
                         ]
                     ]
-                |> Form.file2
+                |> Form.file
                     { parser = Ok
                     , translators = translators
                     , value = .coverPhoto

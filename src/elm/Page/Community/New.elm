@@ -295,7 +295,7 @@ createForm ({ t } as translators) environment { isDisabled } =
                                 , Form.File2.SaveEntry
                                 ]
                             )
-                        |> Form.file2Multiple
+                        |> Form.fileMultiple
                             { parser =
                                 List.Extra.getAt selectedLogoIndex
                                     -- TODO - I18N
