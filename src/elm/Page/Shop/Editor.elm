@@ -157,9 +157,9 @@ imagesForm translators =
             )
         |> Form.with
             (Form.File2.init { id = "product-images-input" }
-                |> Form.File2.withEntryContainerClass "w-24 h-24 bg-gray-100 rounded grid place-items-center overflow-hidden"
+                |> Form.File2.withEntryContainerAttributes [ class "w-24 h-24 bg-gray-100 rounded grid place-items-center overflow-hidden" ]
                 |> Form.File2.withImageClass "max-w-24 max-h-24"
-                |> Form.File2.withImageCropperClass "rounded"
+                |> Form.File2.withImageCropperAttributes [ class "rounded" ]
                 -- TODO - Is this too overwhelming with multiple images?
                 -- TODO - Maybe we could just say the user can edit through the step description
                 |> Form.File2.withEditIconOverlay

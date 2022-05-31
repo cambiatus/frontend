@@ -81,16 +81,16 @@ createForm ({ t } as translators) { hasKyc } =
     Form.succeed FormOutput
         |> Form.with
             (Form.File2.init { id = "avatar-input" }
-                |> Form.File2.withContainerClass "grid place-items-center"
+                |> Form.File2.withContainerAttributes [ class "grid place-items-center" ]
                 |> Form.File2.withImageClass "object-cover rounded-full mx-auto w-20 h-20"
-                |> Form.File2.withEntryContainerClass "mx-auto rounded-full w-20 h-20"
+                |> Form.File2.withEntryContainerAttributes [ class "mx-auto rounded-full w-20 h-20" ]
                 |> Form.File2.withEditIconOverlay
                 |> Form.File2.withAddImagesView
                     [ span [ class "bg-orange-300 rounded-full p-4 w-20 h-20" ]
                         [ Icons.camera ""
                         ]
                     ]
-                |> Form.File2.withImageCropperClass "rounded-full"
+                |> Form.File2.withImageCropperAttributes [ class "rounded-full" ]
                 |> Form.file2
                     { parser = Ok
                     , translators = translators

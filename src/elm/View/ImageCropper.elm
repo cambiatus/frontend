@@ -260,10 +260,11 @@ update msg model =
                 |> UR.addExt (CompletedCropping file)
 
 
-view : Model -> { imageUrl : String, cropperClass : String } -> Html Msg
-view model { imageUrl, cropperClass } =
+view : Model -> { imageUrl : String, cropperAttributes : List (Html.Attribute Never) } -> Html Msg
+view model { imageUrl, cropperAttributes } =
     div [ class "mx-auto w-full md:flex md:flex-col md:w-auto" ]
         [ div [ class "relative max-w-max mx-auto" ]
+            -- TODO - Add whitespace around the imag so that the entire image can fit in the cropper
             (img
                 [ src imageUrl
                 , alt ""
@@ -280,7 +281,7 @@ view model { imageUrl, cropperClass } =
                             viewCropper model
                                 dimmensions
                                 { imageUrl = imageUrl
-                                , cropperClass = cropperClass
+                                , cropperAttributes = cropperAttributes
                                 }
                    )
             )
@@ -293,8 +294,12 @@ view model { imageUrl, cropperClass } =
         ]
 
 
-viewCropper : Model -> Dimmensions -> { imageUrl : String, cropperClass : String } -> List (Html Msg)
-viewCropper model dimmensions { imageUrl, cropperClass } =
+viewCropper :
+    Model
+    -> Dimmensions
+    -> { imageUrl : String, cropperAttributes : List (Html.Attribute Never) }
+    -> List (Html Msg)
+viewCropper model dimmensions { imageUrl, cropperAttributes } =
     let
         selection =
             calculateSelectionDimmensions model dimmensions
@@ -313,15 +318,15 @@ viewCropper model dimmensions { imageUrl, cropperClass } =
             String.fromFloat offset ++ "px"
     in
     [ div
-        [ class "absolute overflow-hidden border border-dashed border-gray-400 cursor-move z-20 select-none mx-auto"
-        , classList [ ( "transition-all origin-center", not model.isDragging && not model.isChangingDimmensions && not model.isReflowing ) ]
-        , class cropperClass
-        , style "top" (floatToPx topOffset)
-        , style "left" (floatToPx leftOffset)
-        , style "width" (floatToPx selection.width)
-        , style "height" (floatToPx selection.height)
-        , onPointerDown StartedDragging
-        ]
+        (class "absolute overflow-hidden border border-dashed border-gray-400 cursor-move z-20 select-none mx-auto"
+            :: classList [ ( "transition-all origin-center", not model.isDragging && not model.isChangingDimmensions && not model.isReflowing ) ]
+            :: style "top" (floatToPx topOffset)
+            :: style "left" (floatToPx leftOffset)
+            :: style "width" (floatToPx selection.width)
+            :: style "height" (floatToPx selection.height)
+            :: onPointerDown StartedDragging
+            :: List.map (Html.Attributes.map Basics.never) cropperAttributes
+        )
         [ img
             [ src imageUrl
             , alt ""

@@ -1,11 +1,13 @@
 module Form.File2 exposing
-    ( FileType(..)
+    ( EntryAction(..)
+    , FileType(..)
     , FileTypeStatus
     , Model
     , Msg
     , MultipleModel
     , Options
     , SingleModel
+    , defaultAddImagesView
     , fromMultipleModel
     , fromSingleModel
     , getId
@@ -21,13 +23,14 @@ module Form.File2 exposing
     , update
     , view
     , withAddImagesView
-    , withContainerClass
+    , withContainerAttributes
     , withDisabled
     , withEditIconOverlay
-    , withEntryContainerClass
+    , withEntryActions
+    , withEntryContainerAttributes
     , withFileTypes
     , withImageClass
-    , withImageCropperClass
+    , withImageCropperAttributes
     , withImageSiblingElement
     , withLabel
     )
@@ -35,7 +38,7 @@ module Form.File2 exposing
 import Api
 import File exposing (File)
 import Html exposing (Html, button, div, img, input, li, p, text)
-import Html.Attributes exposing (accept, alt, class, disabled, for, id, multiple, required, src, type_)
+import Html.Attributes exposing (accept, alt, class, classList, disabled, for, id, multiple, required, src, type_)
 import Html.Events exposing (on, onClick)
 import Html.Keyed
 import Http
@@ -91,6 +94,13 @@ type Entries
     | MultipleEntries (List Entry)
 
 
+type EntryAction msg
+    = DeleteEntry
+    | ReplaceEntry
+    | SaveEntry
+    | CustomAction (Html msg)
+
+
 type ImageCropper
     = WithoutImageCropper
     | WithImageCropper View.ImageCropper.Model
@@ -142,12 +152,13 @@ type Options msg
         , label : Maybe String
         , disabled : Bool
         , fileTypes : List FileType
-        , containerClass : String
+        , entryActions : Int -> List (EntryAction msg)
+        , containerAttributes : List (Html.Attribute Never)
         , imageClass : String
-        , entryContainerClass : String
+        , entryContainerAttributes : List (Html.Attribute Never)
         , imageSiblingElement : Maybe (Html Never)
         , addImagesView : Maybe (List (Html Never))
-        , imageCropperClass : String
+        , imageCropperAttributes : List (Html.Attribute Never)
         }
 
 
@@ -216,12 +227,13 @@ init { id } =
         , label = Nothing
         , disabled = False
         , fileTypes = [ Image ]
-        , containerClass = ""
+        , entryActions = \_ -> [ DeleteEntry, ReplaceEntry, SaveEntry ]
+        , containerAttributes = []
         , imageClass = ""
-        , entryContainerClass = ""
+        , entryContainerAttributes = []
         , imageSiblingElement = Nothing
         , addImagesView = Nothing
-        , imageCropperClass = ""
+        , imageCropperAttributes = []
         }
 
 
@@ -240,9 +252,9 @@ withFileTypes fileTypes (Options options) =
     Options { options | fileTypes = fileTypes }
 
 
-withContainerClass : String -> Options msg -> Options msg
-withContainerClass class_ (Options options) =
-    Options { options | containerClass = options.containerClass ++ " " ++ class_ }
+withContainerAttributes : List (Html.Attribute Never) -> Options msg -> Options msg
+withContainerAttributes attributes (Options options) =
+    Options { options | containerAttributes = options.containerAttributes ++ attributes }
 
 
 withImageClass : String -> Options msg -> Options msg
@@ -250,9 +262,9 @@ withImageClass class_ (Options options) =
     Options { options | imageClass = options.imageClass ++ " " ++ class_ }
 
 
-withEntryContainerClass : String -> Options msg -> Options msg
-withEntryContainerClass class_ (Options options) =
-    Options { options | entryContainerClass = options.entryContainerClass ++ " " ++ class_ }
+withEntryContainerAttributes : List (Html.Attribute Never) -> Options msg -> Options msg
+withEntryContainerAttributes attributes (Options options) =
+    Options { options | entryContainerAttributes = options.entryContainerAttributes ++ attributes }
 
 
 withImageSiblingElement : Html Never -> Options msg -> Options msg
@@ -271,7 +283,7 @@ withEditIconOverlay (Options options) =
                 [ Icons.edit "text-white"
                 ]
             )
-        |> withEntryContainerClass "relative"
+        |> withEntryContainerAttributes [ class "relative" ]
 
 
 withAddImagesView : List (Html Never) -> Options msg -> Options msg
@@ -279,9 +291,14 @@ withAddImagesView newView (Options options) =
     Options { options | addImagesView = Just newView }
 
 
-withImageCropperClass : String -> Options msg -> Options msg
-withImageCropperClass cropperClass (Options options) =
-    Options { options | imageCropperClass = options.imageCropperClass ++ " " ++ cropperClass }
+withImageCropperAttributes : List (Html.Attribute Never) -> Options msg -> Options msg
+withImageCropperAttributes attributes (Options options) =
+    Options { options | imageCropperAttributes = options.imageCropperAttributes ++ attributes }
+
+
+withEntryActions : (Int -> List (EntryAction msg)) -> Options msg -> Options msg
+withEntryActions buildActions (Options options) =
+    Options { options | entryActions = buildActions }
 
 
 
@@ -346,7 +363,7 @@ parseUrlStatus { t } urlStatus =
 
 type Msg
     = RequestedUploadFiles (List File)
-    | RequestedReplaceFile Int File
+    | RequestedReplaceFile File
     | CompletedUploadingFile Int (Result Http.Error String)
     | ClickedEntry Int
     | ClickedCloseEntryModal
@@ -423,24 +440,33 @@ update shared msg (Model model) =
                         |> UR.init
                         |> UR.addCmd uploadNewEntries
 
-        RequestedReplaceFile index file ->
+        RequestedReplaceFile file ->
             case entryFromFile { aspectRatio = model.aspectRatio } file of
                 Just newEntry ->
                     let
-                        newEntries =
+                        ( newEntries, uploadEntryCmd ) =
                             case model.entries of
                                 SingleEntry _ ->
-                                    SingleEntry (Just newEntry)
+                                    ( SingleEntry (Just newEntry)
+                                    , uploadEntry shared 0 newEntry
+                                    )
 
                                 MultipleEntries entries ->
-                                    entries
-                                        |> List.Extra.setAt index newEntry
-                                        |> MultipleEntries
+                                    case model.openImageCropperIndex of
+                                        Just index ->
+                                            ( entries
+                                                |> List.Extra.setAt index newEntry
+                                                |> MultipleEntries
+                                            , uploadEntry shared index newEntry
+                                            )
+
+                                        Nothing ->
+                                            ( model.entries, Cmd.none )
                     in
                     { model | entries = newEntries }
                         |> Model
                         |> UR.init
-                        |> UR.addCmd (uploadEntry shared index newEntry)
+                        |> UR.addCmd uploadEntryCmd
 
                 Nothing ->
                     model
@@ -802,7 +828,7 @@ viewSingle (SingleModel model) (Options options) viewConfig toMsg =
                 toMsg
 
         Just entry ->
-            div [ class options.containerClass ]
+            div (fromNeverAttributes options.containerAttributes)
                 -- TODO - ariaLive?
                 [ case options.label of
                     Nothing ->
@@ -811,7 +837,7 @@ viewSingle (SingleModel model) (Options options) viewConfig toMsg =
                     Just label ->
                         button
                             [ class "label inline w-max"
-                            , onClick (ClickedEntry 0)
+                            , onClick (ClickedEntry 0 |> toMsg)
                             , type_ "button"
                             ]
                             [ text label ]
@@ -819,12 +845,13 @@ viewSingle (SingleModel model) (Options options) viewConfig toMsg =
                     (Options options)
                     0
                     entry
+                    |> Html.map toMsg
                 , viewEntryModal (Options options)
                     viewConfig
                     { isVisible = model.isImageCropperOpen, index = 0 }
                     entry
+                    toMsg
                 ]
-                |> Html.map toMsg
 
 
 viewMultiple : MultipleModel -> Options msg -> ViewConfig msg -> (Msg -> msg) -> Html msg
@@ -835,7 +862,7 @@ viewMultiple (MultipleModel model) (Options options) viewConfig toMsg =
             model.openImageCropperIndex
                 |> Maybe.andThen (\index -> List.Extra.getAt index model.entries)
     in
-    div [ class options.containerClass ]
+    div (fromNeverAttributes options.containerAttributes)
         [ case options.label of
             Nothing ->
                 text ""
@@ -879,16 +906,22 @@ viewMultiple (MultipleModel model) (Options options) viewConfig toMsg =
                             |> Maybe.withDefault 0
                     }
                     entry
-                    |> Html.map toMsg
+                    toMsg
         ]
 
 
 {-| This is what we use when there isn't an image uploaded yet
 -}
 viewAddImages : { allowMultiple : Bool } -> Options msg -> ViewConfig msg -> (Msg -> msg) -> Html msg
-viewAddImages allowMultiple (Options options) viewConfig toMsg =
-    div [ class options.containerClass ]
-        [ if allowMultiple.allowMultiple then
+viewAddImages { allowMultiple } (Options options) viewConfig toMsg =
+    div
+        (if allowMultiple then
+            []
+
+         else
+            fromNeverAttributes options.containerAttributes
+        )
+        [ if allowMultiple then
             text ""
 
           else
@@ -905,7 +938,7 @@ viewAddImages allowMultiple (Options options) viewConfig toMsg =
                         [ text label ]
         , viewInput (Options options)
             viewConfig
-            allowMultiple
+            { allowMultiple = allowMultiple }
         , Html.label
             [ for options.id
 
@@ -913,16 +946,19 @@ viewAddImages allowMultiple (Options options) viewConfig toMsg =
             , class "cursor-pointer flex file-decoration"
             ]
             (options.addImagesView
-                |> Maybe.withDefault defaultAddImagesView
+                |> Maybe.withDefault (defaultAddImagesView [])
                 |> List.map (Html.map Basics.never)
             )
         ]
         |> Html.map toMsg
 
 
-defaultAddImagesView : List (Html Never)
-defaultAddImagesView =
-    [ div [ class "p-2 bg-gray-100 flex items-center justify-center w-24 h-24 rounded hover:bg-gray-200" ]
+defaultAddImagesView : List (Html.Attribute Never) -> List (Html Never)
+defaultAddImagesView attrs =
+    [ div
+        (class "p-2 bg-gray-100 flex items-center justify-center w-24 h-24 rounded hover:bg-gray-200"
+            :: attrs
+        )
         [ Icons.plus "text-orange-300 fill-current"
         ]
     ]
@@ -955,9 +991,10 @@ viewReplaceImageInput (Options options) index =
         , id (replaceInputId (Options options) index)
         , class "sr-only form-file"
         , on "change"
-            (Json.Decode.at [ "target", "files" ]
-                (Json.Decode.index 0 File.decoder)
-                |> Json.Decode.map (RequestedReplaceFile index)
+            (File.decoder
+                |> Json.Decode.index 0
+                |> Json.Decode.at [ "target", "files" ]
+                |> Json.Decode.map RequestedReplaceFile
             )
         , multiple False
         , acceptFileTypes options.fileTypes
@@ -977,10 +1014,11 @@ viewEntry translators (Options options) index entry =
         viewWithUrl : String -> Html Msg
         viewWithUrl url =
             button
-                [ onClick (ClickedEntry index)
-                , type_ "button"
-                , class options.entryContainerClass
-                ]
+                (onClick (ClickedEntry index)
+                    :: type_ "button"
+                    :: class "hover:opacity-60"
+                    :: fromNeverAttributes options.entryContainerAttributes
+                )
                 [ case entry.fileType of
                     LoadedFileType Image ->
                         img [ src url, alt "", class options.imageClass ] []
@@ -1008,9 +1046,9 @@ viewEntry translators (Options options) index entry =
     case entry.url of
         Loading _ ->
             div
-                [ class "p-4 bg-gray-100 grid place-items-center"
-                , class options.entryContainerClass
-                ]
+                (class "p-4 bg-gray-100 grid place-items-center"
+                    :: fromNeverAttributes options.entryContainerAttributes
+                )
                 [ View.Components.loadingLogoWithNoText "max-w-27"
                 ]
 
@@ -1022,9 +1060,9 @@ viewEntry translators (Options options) index entry =
 
         LoadingWithCropped _ ->
             div
-                [ class "p-4 bg-gray-100 grid place-items-center"
-                , class options.entryContainerClass
-                ]
+                (class "p-4 bg-gray-100 grid place-items-center"
+                    :: fromNeverAttributes options.entryContainerAttributes
+                )
                 [ View.Components.loadingLogoWithNoText "max-w-27"
                 ]
 
@@ -1033,21 +1071,22 @@ viewEntry translators (Options options) index entry =
 
         WithError _ ->
             button
-                [ onClick (ClickedEntry index)
-                , type_ "button"
-                , class options.entryContainerClass
-                , class "grid place-items-center bg-gray-100"
-                ]
+                (onClick (ClickedEntry index)
+                    :: type_ "button"
+                    :: class "grid place-items-center bg-gray-100"
+                    :: fromNeverAttributes options.entryContainerAttributes
+                )
                 [ Icons.exclamation ("text-red w-1/2 h-1/2 " ++ options.imageClass)
                 ]
 
 
-viewEntryModal : Options msg -> ViewConfig msg -> { isVisible : Bool, index : Int } -> Entry -> Html Msg
-viewEntryModal (Options options) viewConfig { isVisible, index } entry =
+viewEntryModal : Options msg -> ViewConfig msg -> { isVisible : Bool, index : Int } -> Entry -> (Msg -> msg) -> Html msg
+viewEntryModal (Options options) viewConfig { isVisible, index } entry toMsg =
     let
         { translators } =
             viewConfig
 
+        viewWithUrl : String -> Html msg
         viewWithUrl url =
             case entry.fileType of
                 LoadedFileType Image ->
@@ -1058,9 +1097,9 @@ viewEntryModal (Options options) viewConfig { isVisible, index } entry =
                         WithImageCropper imageCropper ->
                             View.ImageCropper.view imageCropper
                                 { imageUrl = url
-                                , cropperClass = options.imageCropperClass
+                                , cropperAttributes = options.imageCropperAttributes
                                 }
-                                |> Html.map GotImageCropperMsg
+                                |> Html.map (GotImageCropperMsg >> toMsg)
 
                 LoadedFileType Pdf ->
                     View.Components.pdfViewer []
@@ -1079,7 +1118,7 @@ viewEntryModal (Options options) viewConfig { isVisible, index } entry =
                         }
     in
     Modal.initWith
-        { closeMsg = ClickedCloseEntryModal
+        { closeMsg = toMsg ClickedCloseEntryModal
         , isVisible = isVisible
         }
         -- TODO - I18N
@@ -1113,37 +1152,73 @@ viewEntryModal (Options options) viewConfig { isVisible, index } entry =
                 ]
             ]
         |> Modal.withFooter
-            [ button
-                [ class "uppercase text-orange-300 font-bold"
-                , onClick ClickedDeleteEntry
-                , type_ "button"
-                ]
-                -- TODO - I18N
-                [ text "Delete" ]
-            , div []
-                [ viewReplaceImageInput (Options options) index
-                , Html.label
-                    [ for (replaceInputId (Options options) index)
-                    , class "cursor-pointer file-decoration button button-secondary"
-                    ]
-                    -- TODO - Make it orange!
-                    [ Icons.camera "w-4"
+            (options.entryActions index
+                |> List.foldr
+                    (\action actions ->
+                        let
+                            viewAction =
+                                case action of
+                                    DeleteEntry ->
+                                        deleteEntryAction
+                                            |> Html.map toMsg
 
-                    -- TODO - I18N
-                    , text "Change image"
-                    ]
-                ]
-            , button
-                [ class "button button-primary"
-                , onClick ClickedSaveEntry
-                , type_ "button"
-                ]
-                -- TODO - I18N
-                [ text "Save image" ]
-            ]
+                                    ReplaceEntry ->
+                                        replaceEntryAction (Options options) index
+                                            |> Html.map toMsg
+
+                                    SaveEntry ->
+                                        saveEntryAction
+                                            |> Html.map toMsg
+
+                                    CustomAction customView ->
+                                        customView
+                        in
+                        viewAction :: actions
+                    )
+                    []
+            )
         -- TODO - Should it be fullscreen?
         |> Modal.withSize Modal.FullScreen
         |> Modal.toHtml
+
+
+deleteEntryAction : Html Msg
+deleteEntryAction =
+    button
+        [ class "uppercase text-orange-300 font-bold"
+        , onClick ClickedDeleteEntry
+        , type_ "button"
+        ]
+        -- TODO - I18N
+        [ text "Delete" ]
+
+
+replaceEntryAction : Options msg -> Int -> Html Msg
+replaceEntryAction options index =
+    div []
+        [ viewReplaceImageInput options index
+        , Html.label
+            [ for (replaceInputId options index)
+            , class "cursor-pointer file-decoration button button-secondary"
+            ]
+            -- TODO - Make it orange!
+            [ Icons.camera "w-4"
+
+            -- TODO - I18N
+            , text "Change image"
+            ]
+        ]
+
+
+saveEntryAction : Html Msg
+saveEntryAction =
+    button
+        [ class "button button-primary"
+        , onClick ClickedSaveEntry
+        , type_ "button"
+        ]
+        -- TODO - I18N
+        [ text "Save image" ]
 
 
 
@@ -1405,6 +1480,11 @@ fromSingleModel (SingleModel model) =
         }
 
 
+fromNeverAttributes : List (Html.Attribute Never) -> List (Html.Attribute msg)
+fromNeverAttributes =
+    List.map (Html.Attributes.map Basics.never)
+
+
 toSingleModel : Model -> SingleModel
 toSingleModel (Model model) =
     SingleModel
@@ -1426,7 +1506,7 @@ msgToString msg =
         RequestedUploadFiles _ ->
             [ "RequestedUploadFiles" ]
 
-        RequestedReplaceFile _ _ ->
+        RequestedReplaceFile _ ->
             [ "RequestedReplaceFile" ]
 
         CompletedUploadingFile _ _ ->

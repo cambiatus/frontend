@@ -643,8 +643,8 @@ claimWithProofsForm translators =
     Form.File2.init { id = "proof-photo-uploader" }
         |> Form.File2.withLabel (translators.t "community.actions.proof.upload")
         |> Form.File2.withFileTypes [ Form.File2.Image, Form.File2.Pdf ]
-        |> Form.File2.withEntryContainerClass "h-56 w-full bg-purple-500 rounded-sm grid place-items-center overflow-hidden relative"
-        |> Form.File2.withContainerClass "mb-4 md:w-2/3"
+        |> Form.File2.withEntryContainerAttributes [ class "h-56 w-full bg-purple-500 rounded-sm grid place-items-center overflow-hidden relative" ]
+        |> Form.File2.withContainerAttributes [ class "mb-4 md:w-2/3" ]
         |> Form.File2.withImageClass "h-56"
         |> Form.File2.withImageSiblingElement
             (div [ class "bg-orange-300 rounded-full absolute right-4 bottom-4 h-8 w-8 grid place-items-center" ]

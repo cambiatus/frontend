@@ -563,16 +563,16 @@ createForm shared community { isLoading } =
         |> Form.with
             (Form.File2.init { id = "logo-input" }
                 |> Form.File2.withLabel (t "settings.community_info.logo.title")
-                |> Form.File2.withContainerClass "mb-4 grid"
+                |> Form.File2.withContainerAttributes [ class "mb-4 grid" ]
                 |> Form.File2.withImageClass "object-cover rounded-full mx-auto w-20 h-20"
-                |> Form.File2.withEntryContainerClass "mx-auto rounded-full w-20 h-20 self-center"
+                |> Form.File2.withEntryContainerAttributes [ class "mx-auto rounded-full w-20 h-20 self-center" ]
                 |> Form.File2.withEditIconOverlay
                 |> Form.File2.withAddImagesView
                     [ span [ class "bg-orange-300 rounded-full p-4 w-20 h-20" ]
                         [ Icons.camera ""
                         ]
                     ]
-                |> Form.File2.withImageCropperClass "rounded-full"
+                |> Form.File2.withImageCropperAttributes [ class "rounded-full" ]
                 |> Form.file2
                     { parser = Ok
                     , translators = translators
@@ -625,7 +625,7 @@ createForm shared community { isLoading } =
         |> Form.with
             (Form.File2.init { id = "cover-photo-input" }
                 |> Form.File2.withLabel (t "settings.community_info.cover_photo.title")
-                |> Form.File2.withEntryContainerClass "w-full h-56 bg-purple-500 rounded-sm grid place-items-center overflow-hidden relative"
+                |> Form.File2.withEntryContainerAttributes [ class "w-full h-56 bg-purple-500 rounded-sm grid place-items-center overflow-hidden relative" ]
                 |> Form.File2.withImageClass "h-56"
                 |> Form.File2.withImageSiblingElement
                     (div [ class "bg-orange-300 rounded-full absolute right-4 bottom-4 h-8 w-8 grid place-items-center" ]
