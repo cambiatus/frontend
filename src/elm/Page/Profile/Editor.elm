@@ -11,7 +11,7 @@ module Page.Profile.Editor exposing
 import Avatar
 import Dict
 import Form
-import Form.File2
+import Form.File
 import Form.RichText
 import Form.Text
 import Graphql.Http
@@ -56,7 +56,7 @@ type FormStatus
 
 
 type alias FormInput =
-    { avatar : Form.File2.SingleModel
+    { avatar : Form.File.SingleModel
     , fullName : String
     , email : String
     , bio : Form.RichText.Model
@@ -80,17 +80,17 @@ createForm : Translators -> { hasKyc : Bool } -> Form.Form msg FormInput FormOut
 createForm ({ t } as translators) { hasKyc } =
     Form.succeed FormOutput
         |> Form.with
-            (Form.File2.init { id = "avatar-input" }
-                |> Form.File2.withContainerAttributes [ class "grid place-items-center" ]
-                |> Form.File2.withImageClass "object-cover rounded-full mx-auto w-20 h-20"
-                |> Form.File2.withEntryContainerAttributes (\_ -> [ class "mx-auto rounded-full w-20 h-20" ])
-                |> Form.File2.withEditIconOverlay
-                |> Form.File2.withAddImagesView
+            (Form.File.init { id = "avatar-input" }
+                |> Form.File.withContainerAttributes [ class "grid place-items-center" ]
+                |> Form.File.withImageClass "object-cover rounded-full mx-auto w-20 h-20"
+                |> Form.File.withEntryContainerAttributes (\_ -> [ class "mx-auto rounded-full w-20 h-20" ])
+                |> Form.File.withEditIconOverlay
+                |> Form.File.withAddImagesView
                     [ span [ class "bg-orange-300 rounded-full p-4 w-20 h-20" ]
                         [ Icons.camera ""
                         ]
                     ]
-                |> Form.File2.withImageCropperAttributes [ class "rounded-full" ]
+                |> Form.File.withImageCropperAttributes [ class "rounded-full" ]
                 |> Form.file
                     { parser = Ok
                     , translators = translators
@@ -304,7 +304,7 @@ update msg model loggedIn =
             { model
                 | form =
                     { avatar =
-                        Form.File2.initSingle
+                        Form.File.initSingle
                             { fileUrl = Avatar.toMaybeString profile.avatar
                             , aspectRatio = Just 1
                             }

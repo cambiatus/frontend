@@ -1,4 +1,4 @@
-module Form.File2 exposing
+module Form.File exposing
     ( EntryAction(..)
     , FileType(..)
     , FileTypeStatus
@@ -38,7 +38,7 @@ module Form.File2 exposing
 import Api
 import File exposing (File)
 import Html exposing (Html, button, div, img, input, li, p, text)
-import Html.Attributes exposing (accept, alt, class, classList, disabled, for, id, multiple, required, src, type_)
+import Html.Attributes exposing (accept, alt, class, disabled, for, id, multiple, required, src, type_)
 import Html.Events exposing (on, onClick)
 import Html.Keyed
 import Http
@@ -418,7 +418,7 @@ update shared msg (Model model) =
                                 |> UR.logImpossible msg
                                     "Input file is not a valid entry"
                                     Nothing
-                                    { moduleName = "Form.File2", function = "update" }
+                                    { moduleName = "Form.File", function = "update" }
                                     []
 
                 MultipleEntries entries ->
@@ -480,7 +480,7 @@ update shared msg (Model model) =
                         |> UR.logImpossible msg
                             "Input file is not a valid entry to replace"
                             Nothing
-                            { moduleName = "Form.File2", function = "update" }
+                            { moduleName = "Form.File", function = "update" }
                             []
 
         CompletedUploadingFile index result ->

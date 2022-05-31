@@ -14,7 +14,7 @@ import Environment exposing (Environment)
 import Eos
 import Eos.Account as Eos
 import Form
-import Form.File2
+import Form.File
 import Form.RichText
 import Form.Text
 import Form.Toggle
@@ -76,7 +76,7 @@ initModel =
             , minimumBalance = "-100"
             , website = ""
             , requireInvitation = True
-            , logo = Form.File2.initMultiple { fileUrls = defaultLogos, aspectRatio = Just 1 }
+            , logo = Form.File.initMultiple { fileUrls = defaultLogos, aspectRatio = Just 1 }
             , selectedLogoIndex = 0
             }
     }
@@ -102,7 +102,7 @@ type alias FormInput =
     , minimumBalance : String
     , website : String
     , requireInvitation : Bool
-    , logo : Form.File2.MultipleModel
+    , logo : Form.File.MultipleModel
     , selectedLogoIndex : Int
     }
 
@@ -259,10 +259,10 @@ createForm ({ t } as translators) environment { isDisabled } =
         |> Form.with
             (Form.introspect
                 (\{ selectedLogoIndex } ->
-                    Form.File2.init { id = "logo-input" }
-                        |> Form.File2.withLabel (t "settings.community_info.logo.title")
-                        |> Form.File2.withContainerAttributes [ class "w-full mt-10" ]
-                        |> Form.File2.withEntryContainerAttributes
+                    Form.File.init { id = "logo-input" }
+                        |> Form.File.withLabel (t "settings.community_info.logo.title")
+                        |> Form.File.withContainerAttributes [ class "w-full mt-10" ]
+                        |> Form.File.withEntryContainerAttributes
                             (\index ->
                                 [ class "w-22 h-22 p-2 grid place-items-center border rounded-md"
                                 , classList
@@ -271,12 +271,12 @@ createForm ({ t } as translators) environment { isDisabled } =
                                     ]
                                 ]
                             )
-                        |> Form.File2.withImageClass "max-w-16 max-h-16"
-                        |> Form.File2.withAddImagesView (Form.File2.defaultAddImagesView [ class "!w-22 !h-22" ])
-                        |> Form.File2.withEntryActions
+                        |> Form.File.withImageClass "max-w-16 max-h-16"
+                        |> Form.File.withAddImagesView (Form.File.defaultAddImagesView [ class "!w-22 !h-22" ])
+                        |> Form.File.withEntryActions
                             (\entryIndex ->
-                                [ Form.File2.DeleteEntry
-                                , Form.File2.CustomAction
+                                [ Form.File.DeleteEntry
+                                , Form.File.CustomAction
                                     (button
                                         [ class "uppercase text-orange-300 font-bold"
                                         , onClick (SelectedEntry entryIndex)
@@ -291,8 +291,8 @@ createForm ({ t } as translators) environment { isDisabled } =
                                             text "Select"
                                         ]
                                     )
-                                , Form.File2.ReplaceEntry
-                                , Form.File2.SaveEntry
+                                , Form.File.ReplaceEntry
+                                , Form.File.SaveEntry
                                 ]
                             )
                         |> Form.fileMultiple

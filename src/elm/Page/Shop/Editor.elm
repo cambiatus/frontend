@@ -13,7 +13,7 @@ module Page.Shop.Editor exposing
 import Cambiatus.Enum.Permission as Permission
 import Eos
 import Form
-import Form.File2
+import Form.File
 import Form.RichText
 import Form.Text
 import Form.Toggle
@@ -141,7 +141,7 @@ mainInformationForm ({ t } as translators) =
 
 
 type alias ImagesFormInput =
-    Form.File2.MultipleModel
+    Form.File.MultipleModel
 
 
 type alias ImagesFormOutput =
@@ -156,13 +156,13 @@ imagesForm translators =
                 (p [ class "mb-4" ] [ text <| translators.t "shop.steps.images.guidance" ])
             )
         |> Form.with
-            (Form.File2.init { id = "product-images-input" }
-                |> Form.File2.withEntryContainerAttributes (\_ -> [ class "w-24 h-24 bg-gray-100 rounded grid place-items-center overflow-hidden" ])
-                |> Form.File2.withImageClass "max-w-24 max-h-24"
-                |> Form.File2.withImageCropperAttributes [ class "rounded" ]
+            (Form.File.init { id = "product-images-input" }
+                |> Form.File.withEntryContainerAttributes (\_ -> [ class "w-24 h-24 bg-gray-100 rounded grid place-items-center overflow-hidden" ])
+                |> Form.File.withImageClass "max-w-24 max-h-24"
+                |> Form.File.withImageCropperAttributes [ class "rounded" ]
                 -- TODO - Is this too overwhelming with multiple images?
                 -- TODO - Maybe we could just say the user can edit through the step description
-                |> Form.File2.withEditIconOverlay
+                |> Form.File.withEditIconOverlay
                 |> Form.fileMultiple
                     { parser = Ok
                     , translators = translators
@@ -305,7 +305,7 @@ initFormData =
             { title = ""
             , description = Form.RichText.initModel "product-description-editor" Nothing
             }
-    , images = Form.init (Form.File2.initMultiple { fileUrls = [], aspectRatio = Just 1 })
+    , images = Form.init (Form.File.initMultiple { fileUrls = [], aspectRatio = Just 1 })
     , priceAndInventory =
         Form.init
             { price = "0"
@@ -324,7 +324,7 @@ initEditingFormData translators product step =
             , description = Form.RichText.initModel "product-description-editor" (Just product.description)
             }
     , images =
-        Form.File2.initMultiple { fileUrls = product.images, aspectRatio = Just 1 }
+        Form.File.initMultiple { fileUrls = product.images, aspectRatio = Just 1 }
             |> Form.init
     , priceAndInventory =
         Form.init

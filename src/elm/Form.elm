@@ -100,7 +100,7 @@ import Browser.Dom
 import Date exposing (Date)
 import Form.Checkbox as Checkbox
 import Form.DatePicker as DatePicker
-import Form.File2
+import Form.File
 import Form.Radio as Radio
 import Form.RichText as RichText
 import Form.Select as Select
@@ -214,7 +214,7 @@ type Field msg values
     | Toggle (Toggle.Options msg) (BaseField Bool values)
     | Checkbox (Checkbox.Options msg) (BaseField Bool values)
     | Radio (Radio.Options String msg) (BaseField String values)
-    | File2 (Form.File2.Options msg) (BaseField Form.File2.Model values)
+    | File2 (Form.File.Options msg) (BaseField Form.File.Model values)
     | Select (Select.Options String msg) (BaseField String values)
     | DatePicker (DatePicker.Options (Msg values)) (BaseField DatePicker.Model values)
     | UserPicker (UserPicker.Options (Msg values)) (BaseField UserPicker.Model values)
@@ -356,19 +356,19 @@ automatically uploaded to our servers.
 file :
     { parser : String -> Result String output
     , translators : Translation.Translators
-    , value : values -> Form.File2.SingleModel
-    , update : Form.File2.SingleModel -> values -> values
+    , value : values -> Form.File.SingleModel
+    , update : Form.File.SingleModel -> values -> values
     , externalError : values -> Maybe String
     }
-    -> Form.File2.Options msg
+    -> Form.File.Options msg
     -> Form msg values output
 file config options =
     field
-        (mapBaseField Form.File2.fromSingleModel Form.File2.toSingleModel
+        (mapBaseField Form.File.fromSingleModel Form.File.toSingleModel
             >> File2 options
         )
         { parser =
-            Form.File2.parser config.translators
+            Form.File.parser config.translators
                 >> Result.andThen config.parser
         , value = config.value
         , update = config.update
@@ -381,19 +381,19 @@ file config options =
 fileMultiple :
     { parser : List String -> Result String output
     , translators : Translation.Translators
-    , value : values -> Form.File2.MultipleModel
-    , update : Form.File2.MultipleModel -> values -> values
+    , value : values -> Form.File.MultipleModel
+    , update : Form.File.MultipleModel -> values -> values
     , externalError : values -> Maybe String
     }
-    -> Form.File2.Options msg
+    -> Form.File.Options msg
     -> Form msg values output
 fileMultiple config options =
     field
-        (mapBaseField Form.File2.fromMultipleModel Form.File2.toMultipleModel
+        (mapBaseField Form.File.fromMultipleModel Form.File.toMultipleModel
             >> File2 options
         )
         { parser =
-            Form.File2.parserMultiple config.translators
+            Form.File.parserMultiple config.translators
                 >> Result.andThen config.parser
         , value = config.value
         , update = config.update
@@ -1038,7 +1038,7 @@ type Msg values
     = NoOp
     | ChangedValues { fieldId : String } values
     | GotRichTextMsg (values -> RichText.Model) (RichText.Model -> values -> values) RichText.Msg
-    | GotFile2Msg (values -> Form.File2.Model) (Form.File2.Model -> values -> values) Form.File2.Msg
+    | GotFile2Msg (values -> Form.File.Model) (Form.File.Model -> values -> values) Form.File.Msg
     | GotDatePickerMsg (DatePicker.Options (Msg values)) (DatePicker.ViewConfig (Msg values)) (values -> DatePicker.Model) (DatePicker.Model -> values -> values) DatePicker.Msg
     | GotUserPickerMsg (UserPicker.Options (Msg values)) (UserPicker.ViewConfig (Msg values)) (values -> UserPicker.Model) (UserPicker.Model -> values -> values) UserPicker.Msg
     | BlurredField { fieldId : String, isEmpty : Bool }
@@ -1100,7 +1100,7 @@ update shared msg (Model model) =
                 |> UR.addCmd (Cmd.map (GotRichTextMsg getModel updateFn) cmd)
 
         GotFile2Msg getModel updateFn subMsg ->
-            Form.File2.update shared subMsg (getModel model.values)
+            Form.File.update shared subMsg (getModel model.values)
                 |> UR.fromChild (\newFile -> Model { model | values = updateFn newFile model.values })
                     (GotFile2Msg getModel updateFn)
                     UR.addExt
@@ -1169,7 +1169,7 @@ msgToString msg =
             "GotRichTextMsg" :: RichText.msgToString subMsg
 
         GotFile2Msg _ _ subMsg ->
-            "GotFile2Msg" :: Form.File2.msgToString subMsg
+            "GotFile2Msg" :: Form.File.msgToString subMsg
 
         GotDatePickerMsg _ _ _ _ subMsg ->
             "GotDatePickerMsg" :: DatePicker.msgToString subMsg
@@ -1468,7 +1468,7 @@ viewField { showError, translators, disabled, values, model, form, toMsg, onSucc
                 }
 
         File2 options baseField ->
-            Form.File2.view (disableIfNotAlreadyDisabled options Form.File2.withDisabled)
+            Form.File.view (disableIfNotAlreadyDisabled options Form.File.withDisabled)
                 { value = baseField.value
                 , error = viewError [] showError error
                 , hasError = hasError
@@ -1601,7 +1601,7 @@ getId state =
             Radio.getId options
 
         File2 options _ ->
-            Form.File2.getId options
+            Form.File.getId options
 
         Select options _ ->
             Select.getId options
@@ -1649,7 +1649,7 @@ isEmpty field_ =
             False
 
         File2 _ { value } ->
-            Form.File2.isEmpty value
+            Form.File.isEmpty value
 
         Select _ _ ->
             False

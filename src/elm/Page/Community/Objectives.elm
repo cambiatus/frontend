@@ -8,7 +8,7 @@ import Dict exposing (Dict)
 import Eos
 import Eos.Account
 import Form
-import Form.File2
+import Form.File
 import Form.Text
 import Html exposing (Html, a, b, br, button, details, div, h1, h2, h3, h4, img, li, p, span, summary, text, ul)
 import Html.Attributes exposing (alt, class, classList, id, src, style, tabindex, title)
@@ -72,7 +72,7 @@ type ClaimingStatus
 
 type Proof
     = NoProofNecessary
-    | WithProof (Form.Model Form.File2.SingleModel) ProofCode
+    | WithProof (Form.Model Form.File.SingleModel) ProofCode
 
 
 type ProofCode
@@ -140,7 +140,7 @@ type Msg
     | StoppedIntersecting String
     | ConfirmedClaimAction
     | ConfirmedClaimActionWithPhotoProof String
-    | GotPhotoProofFormMsg (Form.Msg Form.File2.SingleModel)
+    | GotPhotoProofFormMsg (Form.Msg Form.File.SingleModel)
     | GotUint64Name String
     | CompletedClaimingAction (Result Encode.Value ())
     | CopiedShareLinkToClipboard Int
@@ -248,7 +248,7 @@ update msg model loggedIn =
                                                                 ({ fileUrl = Nothing
                                                                  , aspectRatio = Nothing
                                                                  }
-                                                                    |> Form.File2.initSingle
+                                                                    |> Form.File.initSingle
                                                                     |> Form.init
                                                                 )
                                                                 GeneratingCode
@@ -467,7 +467,7 @@ update msg model loggedIn =
                             ({ fileUrl = Nothing
                              , aspectRatio = Nothing
                              }
-                                |> Form.File2.initSingle
+                                |> Form.File.initSingle
                                 |> Form.init
                             )
                             GeneratingCode
@@ -1540,22 +1540,22 @@ viewClaimCount { t, tr } attrs action =
         ]
 
 
-claimWithPhotoForm : Translation.Translators -> Form.Form msg Form.File2.SingleModel String
+claimWithPhotoForm : Translation.Translators -> Form.Form msg Form.File.SingleModel String
 claimWithPhotoForm translators =
     Form.succeed identity
         |> Form.with
-            (Form.File2.init { id = "photo-proof-input" }
-                |> Form.File2.withFileTypes [ Form.File2.Image, Form.File2.Pdf ]
-                |> Form.File2.withContainerAttributes [ class "w-full bg-gray-100 grid place-items-center mt-2" ]
-                |> Form.File2.withEntryContainerAttributes (\_ -> [ class "h-56 rounded-sm overflow-hidden" ])
-                |> Form.File2.withImageClass "h-56"
-                |> Form.File2.withAddImagesView
+            (Form.File.init { id = "photo-proof-input" }
+                |> Form.File.withFileTypes [ Form.File.Image, Form.File.Pdf ]
+                |> Form.File.withContainerAttributes [ class "w-full bg-gray-100 grid place-items-center mt-2" ]
+                |> Form.File.withEntryContainerAttributes (\_ -> [ class "h-56 rounded-sm overflow-hidden" ])
+                |> Form.File.withImageClass "h-56"
+                |> Form.File.withAddImagesView
                     [ div [ class "w-full h-56 bg-gray-100 rounded-sm flex flex-col justify-center items-center" ]
                         [ Icons.addPhoto "fill-current text-body-black w-10 mb-2"
                         , p [ class "px-4 font-bold" ] [ text <| translators.t "community.actions.proof.upload_hint" ]
                         ]
                     ]
-                |> Form.File2.withImageCropperAttributes [ class "rounded-sm" ]
+                |> Form.File.withImageCropperAttributes [ class "rounded-sm" ]
                 |> Form.file
                     { parser = Ok
                     , translators = translators

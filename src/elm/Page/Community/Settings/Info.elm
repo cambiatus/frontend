@@ -14,7 +14,7 @@ import Dict
 import Eos
 import Eos.Account as Eos
 import Form
-import Form.File2
+import Form.File
 import Form.RichText
 import Form.Text
 import Form.Toggle
@@ -66,11 +66,11 @@ init loggedIn =
 
 
 type alias FormInput =
-    { logo : Form.File2.SingleModel
+    { logo : Form.File.SingleModel
     , name : String
     , description : Form.RichText.Model
     , website : String
-    , coverPhoto : Form.File2.SingleModel
+    , coverPhoto : Form.File.SingleModel
     , subdomain : String
     , hasAutoInvite : Bool
     , inviterReward : String
@@ -188,14 +188,14 @@ update msg model ({ shared } as loggedIn) =
                 | isLoading = False
                 , form =
                     { logo =
-                        Form.File2.initSingle
+                        Form.File.initSingle
                             { fileUrl = Just community.logo
                             , aspectRatio = Just 1
                             }
                     , name = community.name
                     , description = Form.RichText.initModel "description-input" (Just community.description)
                     , website = Maybe.withDefault "" community.website
-                    , coverPhoto = Form.File2.initSingle { fileUrl = maybeCoverPhoto, aspectRatio = Nothing }
+                    , coverPhoto = Form.File.initSingle { fileUrl = maybeCoverPhoto, aspectRatio = Nothing }
                     , subdomain =
                         community.subdomain
                             |> String.split "."
@@ -223,7 +223,7 @@ update msg model ({ shared } as loggedIn) =
                                 (\values ->
                                     { values
                                         | coverPhoto =
-                                            Form.File2.initSingle
+                                            Form.File.initSingle
                                                 { fileUrl = List.head uploads
                                                 , aspectRatio = Nothing
                                                 }
@@ -560,18 +560,18 @@ createForm shared community { isLoading } =
     in
     Form.succeed FormOutput
         |> Form.with
-            (Form.File2.init { id = "logo-input" }
-                |> Form.File2.withLabel (t "settings.community_info.logo.title")
-                |> Form.File2.withContainerAttributes [ class "mb-4 grid" ]
-                |> Form.File2.withImageClass "object-cover rounded-full mx-auto w-20 h-20"
-                |> Form.File2.withEntryContainerAttributes (\_ -> [ class "mx-auto rounded-full w-20 h-20 self-center" ])
-                |> Form.File2.withEditIconOverlay
-                |> Form.File2.withAddImagesView
+            (Form.File.init { id = "logo-input" }
+                |> Form.File.withLabel (t "settings.community_info.logo.title")
+                |> Form.File.withContainerAttributes [ class "mb-4 grid" ]
+                |> Form.File.withImageClass "object-cover rounded-full mx-auto w-20 h-20"
+                |> Form.File.withEntryContainerAttributes (\_ -> [ class "mx-auto rounded-full w-20 h-20 self-center" ])
+                |> Form.File.withEditIconOverlay
+                |> Form.File.withAddImagesView
                     [ span [ class "bg-orange-300 rounded-full p-4 w-20 h-20" ]
                         [ Icons.camera ""
                         ]
                     ]
-                |> Form.File2.withImageCropperAttributes [ class "rounded-full" ]
+                |> Form.File.withImageCropperAttributes [ class "rounded-full" ]
                 |> Form.file
                     { parser = Ok
                     , translators = translators
@@ -622,16 +622,16 @@ createForm shared community { isLoading } =
                 |> Form.optional
             )
         |> Form.with
-            (Form.File2.init { id = "cover-photo-input" }
-                |> Form.File2.withLabel (t "settings.community_info.cover_photo.title")
-                |> Form.File2.withEntryContainerAttributes (\_ -> [ class "w-full h-56 bg-purple-500 rounded-sm grid place-items-center overflow-hidden relative" ])
-                |> Form.File2.withImageClass "h-56"
-                |> Form.File2.withImageSiblingElement
+            (Form.File.init { id = "cover-photo-input" }
+                |> Form.File.withLabel (t "settings.community_info.cover_photo.title")
+                |> Form.File.withEntryContainerAttributes (\_ -> [ class "w-full h-56 bg-purple-500 rounded-sm grid place-items-center overflow-hidden relative" ])
+                |> Form.File.withImageClass "h-56"
+                |> Form.File.withImageSiblingElement
                     (div [ class "bg-orange-300 rounded-full absolute right-4 bottom-4 h-8 w-8 grid place-items-center" ]
                         [ Icons.edit "text-white w-4 h-4"
                         ]
                     )
-                |> Form.File2.withAddImagesView
+                |> Form.File.withAddImagesView
                     [ div [ class "h-56 w-full bg-purple-500 rounded-sm text-white flex flex-col items-center justify-center" ]
                         [ Icons.camera "w-10 mb-2"
                         , p [ class "px-4 font-bold" ]
