@@ -1,39 +1,94 @@
 module Form.File exposing
-    ( EntryAction(..)
-    , FileType(..)
-    , FileTypeStatus
-    , Model
-    , Msg
-    , MultipleModel
-    , Options
-    , SingleModel
-    , defaultAddImagesView
-    , fromMultipleModel
-    , fromSingleModel
-    , getId
-    , init
-    , initMultiple
-    , initSingle
-    , isEmpty
-    , msgToString
-    , parser
-    , parserMultiple
-    , toMultipleModel
-    , toSingleModel
-    , update
-    , view
-    , withAddImagesView
-    , withContainerAttributes
-    , withDisabled
-    , withEditIconOverlay
-    , withEntryActions
-    , withEntryContainerAttributes
-    , withFileTypes
-    , withImageClass
-    , withImageCropperAttributes
-    , withImageSiblingElement
-    , withLabel
+    ( init, Options
+    , Model, initSingle, SingleModel, initMultiple, MultipleModel
+    , withLabel, withEditIconOverlay, withAddImagesView, defaultAddImagesView, withImageSiblingElement
+    , withContainerAttributes, withDisabled, withEntryContainerAttributes, withImageClass, withImageCropperAttributes
+    , withFileTypes, FileType(..), withEntryActions, EntryAction(..)
+    , update, view, Msg, msgToString
+    , fromSingleModel, toSingleModel, fromMultipleModel, toMultipleModel
+    , parser, parserMultiple, getId, isEmpty, FileTypeStatus
     )
+
+{-| Creates a file uploader input that supports single or multiple files, error
+messages, cropping images, and automatically uploading files to our servers.
+Use it within a `Form.Form`:
+
+    { icon =
+        Form.File.initSingle
+            { fileUrl = Nothing
+            , aspectRatio = Just (1 / 1)
+            }
+    }
+
+    Form.File.init { id = "icon-uploader" }
+        |> Form.File.withImageClass "rounded-full w-20 h-20"
+        |> Form.File.withEntryContainerAttributes (\_ -> [ class "rounded-full w-20 h-20" ])
+        |> Form.File.withImageCropperAttributes [ class "rounded-full" ]
+        |> Form.File.withEditIconOverlay
+        |> Form.file
+            { parser = Ok
+            , translators = translators
+            , value = .icon
+            , update = \icon input -> { input | icon = icon }
+            , externalError = always Nothing
+            }
+
+
+# Initializing
+
+In order to use this input, you need a model and an `Options` type. The `Options`
+is always the same, and is constructed with the `init` function.
+
+@docs init, Options
+
+When it comes to the model, you can choose between a model that accepts a single
+file or a model that accepts multiple files
+
+@docs Model, initSingle, SingleModel, initMultiple, MultipleModel
+
+
+# Helpers
+
+These functions use the builder pattern to modify the `Options` type and customize
+the input.
+
+
+## Adding or changing elements
+
+@docs withLabel, withEditIconOverlay, withAddImagesView, defaultAddImagesView, withImageSiblingElement
+
+
+## Adding attributes
+
+@docs withContainerAttributes, withDisabled, withEntryContainerAttributes, withImageClass, withImageCropperAttributes
+
+
+## Customizing behavior
+
+@docs withFileTypes, FileType, withEntryActions, EntryAction
+
+
+# The elm architecture
+
+In order to actually use this component, we use the elm architecture, with view
+and update. In order to make code more reusable, these accept `Model` as input,
+so you need to map/convert the `SingleModel` or `MultipleModel` to `Model`
+
+@docs update, view, Msg, msgToString
+
+
+## Mapping
+
+@docs fromSingleModel, toSingleModel, fromMultipleModel, toMultipleModel
+
+
+# General helpers
+
+These are some helper functions to parse and check the status of the model
+
+@docs parser, parserMultiple, getId, isEmpty, FileTypeStatus
+
+-}
 
 import Api
 import File exposing (File)
@@ -58,6 +113,10 @@ import View.Modal as Modal
 -- TYPES
 
 
+{-| The main kind of `Model` for this module. You can't create this directly, but
+you can use the `initSingle` or `initMultiple` functions to create something that
+can be transformed into a `Model`.
+-}
 type Model
     = Model
         { entries : Entries
@@ -66,6 +125,8 @@ type Model
         }
 
 
+{-| A kind of Model that is meant to accept multiple files at once
+-}
 type MultipleModel
     = MultipleModel
         { entries : List Entry
@@ -74,6 +135,8 @@ type MultipleModel
         }
 
 
+{-| A kind of Model that is meant to accept a single file
+-}
 type SingleModel
     = SingleModel
         { entry : Maybe Entry
@@ -82,6 +145,8 @@ type SingleModel
         }
 
 
+{-| This is what we use to represent a file
+-}
 type alias Entry =
     { fileType : FileTypeStatus
     , url : UrlStatus
@@ -94,6 +159,9 @@ type Entries
     | MultipleEntries (List Entry)
 
 
+{-| All the actions that can be performed on an entry. By default, we have (in
+order): `DeleteEntry`, `ReplaceEntry` and `SaveEntry`.
+-}
 type EntryAction msg
     = DeleteEntry
     | ReplaceEntry
@@ -106,11 +174,16 @@ type ImageCropper
     | WithImageCropper View.ImageCropper.Model
 
 
+{-| All kinds of file types that can be accepted by this input. We use this
+custom type as an abstraction over MIME types
+-}
 type FileType
     = Pdf
     | Image
 
 
+{-| Represents the current status of a file
+-}
 type FileTypeStatus
     = LoadingFileType
     | LoadedFileType FileType
@@ -146,6 +219,9 @@ type UrlStatus
     | WithError Http.Error
 
 
+{-| This is what is used to configure the input. It works the same for
+`SingleModel` and `MultipleModel`
+-}
 type Options msg
     = Options
         { id : String
@@ -166,6 +242,15 @@ type Options msg
 -- INITIALIZING
 
 
+{-| Initialize an input that accepts a single file at once. If you're creating a
+form that's in an editing phase, you might already have an image uploaded, so you
+can use that as the `fileUrl`.
+
+In order to crop images, we need to know the target aspect ratio. If you don't
+provide it, the image cropper UI won't be shown. A valid aspect ratio is just a
+float, but it's usually represented as a fraction, like `4 / 3` or `16 / 9`.
+
+-}
 initSingle : { fileUrl : Maybe String, aspectRatio : Maybe Float } -> SingleModel
 initSingle { fileUrl, aspectRatio } =
     SingleModel
@@ -191,6 +276,15 @@ initSingle { fileUrl, aspectRatio } =
         }
 
 
+{-| Initialize an input that accepts multiple files at once. If you're creating
+a form that's in an editing phase, you might already have some images uploaded,
+so you can use those as the `fileUrls`.
+
+In order to crop images, we need to know the target aspect ratio. If you don't
+provide it, the image cropper UI won't be shown. A valid aspect ratio is just a
+float, but it's usually represented as a fraction, like `4 / 3` or `16 / 9`.
+
+-}
 initMultiple : { fileUrls : List String, aspectRatio : Maybe Float } -> MultipleModel
 initMultiple { fileUrls, aspectRatio } =
     MultipleModel
@@ -220,6 +314,8 @@ initMultiple { fileUrls, aspectRatio } =
 -- CHANGING OPTIONS
 
 
+{-| Initialize the `Options` type
+-}
 init : { id : String } -> Options msg
 init { id } =
     Options
@@ -237,31 +333,39 @@ init { id } =
         }
 
 
+{-| Add a label to the input. The label should already be translated.
+-}
 withLabel : String -> Options msg -> Options msg
 withLabel label (Options options) =
     Options { options | label = Just label }
 
 
+{-| Disable the input
+-}
 withDisabled : Bool -> Options msg -> Options msg
 withDisabled disabled (Options options) =
     Options { options | disabled = disabled }
 
 
+{-| -}
 withFileTypes : List FileType -> Options msg -> Options msg
 withFileTypes fileTypes (Options options) =
     Options { options | fileTypes = fileTypes }
 
 
+{-| -}
 withContainerAttributes : List (Html.Attribute Never) -> Options msg -> Options msg
 withContainerAttributes attributes (Options options) =
     Options { options | containerAttributes = options.containerAttributes ++ attributes }
 
 
+{-| -}
 withImageClass : String -> Options msg -> Options msg
 withImageClass class_ (Options options) =
     Options { options | imageClass = options.imageClass ++ " " ++ class_ }
 
 
+{-| -}
 withEntryContainerAttributes : (Int -> List (Html.Attribute Never)) -> Options msg -> Options msg
 withEntryContainerAttributes attributes (Options options) =
     Options
@@ -272,11 +376,13 @@ withEntryContainerAttributes attributes (Options options) =
         }
 
 
+{-| -}
 withImageSiblingElement : Html Never -> Options msg -> Options msg
 withImageSiblingElement sibling (Options options) =
     Options { options | imageSiblingElement = Just sibling }
 
 
+{-| -}
 withEditIconOverlay : Options msg -> Options msg
 withEditIconOverlay (Options options) =
     Options options
@@ -291,16 +397,19 @@ withEditIconOverlay (Options options) =
         |> withEntryContainerAttributes (\_ -> [ class "relative" ])
 
 
+{-| -}
 withAddImagesView : List (Html Never) -> Options msg -> Options msg
 withAddImagesView newView (Options options) =
     Options { options | addImagesView = Just newView }
 
 
+{-| -}
 withImageCropperAttributes : List (Html.Attribute Never) -> Options msg -> Options msg
 withImageCropperAttributes attributes (Options options) =
     Options { options | imageCropperAttributes = options.imageCropperAttributes ++ attributes }
 
 
+{-| -}
 withEntryActions : (Int -> List (EntryAction msg)) -> Options msg -> Options msg
 withEntryActions buildActions (Options options) =
     Options { options | entryActions = buildActions }
@@ -310,6 +419,9 @@ withEntryActions buildActions (Options options) =
 -- PARSING
 
 
+{-| Parse a `SingleModel`. It will only succeed if the image is uploaded, and all
+of the errors are already translated
+-}
 parser : Translation.Translators -> SingleModel -> Result String String
 parser ({ t } as translators) (SingleModel model) =
     case model.entry of
@@ -320,6 +432,9 @@ parser ({ t } as translators) (SingleModel model) =
             parseUrlStatus translators entry.url
 
 
+{-| Parse a `Multiple`. It will only succeed if all of the images are uploaded,
+and all of the errors are already translated
+-}
 parserMultiple : Translation.Translators -> MultipleModel -> Result String (List String)
 parserMultiple translators (MultipleModel model) =
     List.foldr
