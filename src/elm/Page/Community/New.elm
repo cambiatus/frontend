@@ -14,17 +14,19 @@ import Environment exposing (Environment)
 import Eos
 import Eos.Account as Eos
 import Form
-import Form.File
+import Form.File2
 import Form.RichText
 import Form.Text
 import Form.Toggle
 import Form.Validate
 import Graphql.Document
 import Graphql.Http
-import Html exposing (Html, div, span, text)
-import Html.Attributes exposing (class, classList, disabled)
+import Html exposing (Html, button, div, span, text)
+import Html.Attributes exposing (class, classList, disabled, type_)
+import Html.Events exposing (onClick)
 import Json.Decode as Decode
 import Json.Encode as Encode exposing (Value)
+import List.Extra
 import Log
 import Markdown exposing (Markdown)
 import Page
@@ -74,7 +76,8 @@ initModel =
             , minimumBalance = "-100"
             , website = ""
             , requireInvitation = True
-            , logo = Form.File.initModelWithChoices defaultLogos
+            , logo = Form.File2.initMultiple { fileUrls = defaultLogos, aspectRatio = Just 1 }
+            , selectedLogoIndex = 0
             }
     }
 
@@ -99,7 +102,8 @@ type alias FormInput =
     , minimumBalance : String
     , website : String
     , requireInvitation : Bool
-    , logo : Form.File.Model
+    , logo : Form.File2.MultipleModel
+    , selectedLogoIndex : Int
     }
 
 
@@ -117,7 +121,7 @@ type alias FormOutput =
     }
 
 
-createForm : Shared.Translators -> Environment -> { isDisabled : Bool } -> Form.Form msg FormInput FormOutput
+createForm : Shared.Translators -> Environment -> { isDisabled : Bool } -> Form.Form Msg FormInput FormOutput
 createForm ({ t } as translators) environment { isDisabled } =
     Form.succeed FormOutput
         |> Form.with
@@ -253,17 +257,55 @@ createForm ({ t } as translators) environment { isDisabled } =
             )
         |> Form.with (requireInvitationToggle translators)
         |> Form.with
-            (Form.File.init
-                { label = ""
-                , id = "logo-input"
-                }
-                |> Form.File.withContainerAttrs [ class "w-full mt-10" ]
-                |> Form.file
-                    { translators = translators
-                    , value = .logo
-                    , update = \logo input -> { input | logo = logo }
-                    , externalError = always Nothing
-                    }
+            (Form.introspect
+                (\{ selectedLogoIndex } ->
+                    Form.File2.init { id = "logo-input" }
+                        |> Form.File2.withLabel (t "settings.community_info.logo.title")
+                        |> Form.File2.withContainerAttributes [ class "w-full mt-10" ]
+                        |> Form.File2.withEntryContainerAttributes
+                            (\index ->
+                                [ class "w-22 h-22 p-2 grid place-items-center border rounded-md"
+                                , classList
+                                    [ ( "border-gray-900 shadow-lg", index == selectedLogoIndex )
+                                    , ( "border-transparent", index /= selectedLogoIndex )
+                                    ]
+                                ]
+                            )
+                        |> Form.File2.withImageClass "max-w-16 max-h-16"
+                        |> Form.File2.withAddImagesView (Form.File2.defaultAddImagesView [ class "!w-22 !h-22" ])
+                        |> Form.File2.withEntryActions
+                            (\entryIndex ->
+                                [ Form.File2.DeleteEntry
+                                , Form.File2.CustomAction
+                                    (button
+                                        [ class "uppercase text-orange-300 font-bold"
+                                        , onClick (SelectedEntry entryIndex)
+                                        , type_ "button"
+                                        ]
+                                        [ if entryIndex == selectedLogoIndex then
+                                            -- TODO - I18N
+                                            text "Selected"
+
+                                          else
+                                            -- TODO - I18N
+                                            text "Select"
+                                        ]
+                                    )
+                                , Form.File2.ReplaceEntry
+                                , Form.File2.SaveEntry
+                                ]
+                            )
+                        |> Form.file2Multiple
+                            { parser =
+                                List.Extra.getAt selectedLogoIndex
+                                    -- TODO - I18N
+                                    >> Result.fromMaybe "Choose a logo from the list"
+                            , translators = translators
+                            , value = .logo
+                            , update = \logo input -> { input | logo = logo }
+                            , externalError = always Nothing
+                            }
+                )
             )
 
 
@@ -338,6 +380,7 @@ type alias UpdateResult =
 
 type Msg
     = GotFormMsg (Form.Msg FormInput)
+    | SelectedEntry Int
     | SubmittedForm FormOutput
     | GotDomainAvailableResponse FormOutput (RemoteData (Graphql.Http.Error Bool) Bool)
     | StartedCreatingCommunity Community.CreateCommunityData Token.CreateTokenData
@@ -361,6 +404,15 @@ update msg model loggedIn =
                         (Community.domainAvailableQuery formOutput.url.host)
                         (GotDomainAvailableResponse formOutput)
                     )
+
+        SelectedEntry index ->
+            { model
+                | form =
+                    Form.updateValues
+                        (\form -> { form | selectedLogoIndex = index })
+                        model.form
+            }
+                |> UR.init
 
         GotDomainAvailableResponse formOutput (RemoteData.Success True) ->
             let
@@ -586,6 +638,9 @@ msgToString msg =
     case msg of
         GotFormMsg subMsg ->
             "GotFormMsg" :: Form.msgToString subMsg
+
+        SelectedEntry _ ->
+            [ "SelectedEntry" ]
 
         SubmittedForm _ ->
             [ "SubmittedForm" ]

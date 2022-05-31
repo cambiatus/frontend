@@ -155,7 +155,7 @@ type Options msg
         , entryActions : Int -> List (EntryAction msg)
         , containerAttributes : List (Html.Attribute Never)
         , imageClass : String
-        , entryContainerAttributes : List (Html.Attribute Never)
+        , entryContainerAttributes : Int -> List (Html.Attribute Never)
         , imageSiblingElement : Maybe (Html Never)
         , addImagesView : Maybe (List (Html Never))
         , imageCropperAttributes : List (Html.Attribute Never)
@@ -230,7 +230,7 @@ init { id } =
         , entryActions = \_ -> [ DeleteEntry, ReplaceEntry, SaveEntry ]
         , containerAttributes = []
         , imageClass = ""
-        , entryContainerAttributes = []
+        , entryContainerAttributes = \_ -> []
         , imageSiblingElement = Nothing
         , addImagesView = Nothing
         , imageCropperAttributes = []
@@ -262,9 +262,14 @@ withImageClass class_ (Options options) =
     Options { options | imageClass = options.imageClass ++ " " ++ class_ }
 
 
-withEntryContainerAttributes : List (Html.Attribute Never) -> Options msg -> Options msg
+withEntryContainerAttributes : (Int -> List (Html.Attribute Never)) -> Options msg -> Options msg
 withEntryContainerAttributes attributes (Options options) =
-    Options { options | entryContainerAttributes = options.entryContainerAttributes ++ attributes }
+    Options
+        { options
+            | entryContainerAttributes =
+                \index ->
+                    options.entryContainerAttributes index ++ attributes index
+        }
 
 
 withImageSiblingElement : Html Never -> Options msg -> Options msg
@@ -283,7 +288,7 @@ withEditIconOverlay (Options options) =
                 [ Icons.edit "text-white"
                 ]
             )
-        |> withEntryContainerAttributes [ class "relative" ]
+        |> withEntryContainerAttributes (\_ -> [ class "relative" ])
 
 
 withAddImagesView : List (Html Never) -> Options msg -> Options msg
@@ -1017,7 +1022,7 @@ viewEntry translators (Options options) index entry =
                 (onClick (ClickedEntry index)
                     :: type_ "button"
                     :: class "hover:opacity-60"
-                    :: fromNeverAttributes options.entryContainerAttributes
+                    :: fromNeverAttributes (options.entryContainerAttributes index)
                 )
                 [ case entry.fileType of
                     LoadedFileType Image ->
@@ -1047,7 +1052,7 @@ viewEntry translators (Options options) index entry =
         Loading _ ->
             div
                 (class "p-4 bg-gray-100 grid place-items-center"
-                    :: fromNeverAttributes options.entryContainerAttributes
+                    :: fromNeverAttributes (options.entryContainerAttributes index)
                 )
                 [ View.Components.loadingLogoWithNoText "max-w-27"
                 ]
@@ -1061,9 +1066,9 @@ viewEntry translators (Options options) index entry =
         LoadingWithCropped _ ->
             div
                 (class "p-4 bg-gray-100 grid place-items-center"
-                    :: fromNeverAttributes options.entryContainerAttributes
+                    :: fromNeverAttributes (options.entryContainerAttributes index)
                 )
-                [ View.Components.loadingLogoWithNoText "max-w-27"
+                [ View.Components.loadingLogoWithNoText "w-full h-full max-w-27"
                 ]
 
         LoadedWithCroppedUploaded { croppedUrl } ->
@@ -1074,7 +1079,7 @@ viewEntry translators (Options options) index entry =
                 (onClick (ClickedEntry index)
                     :: type_ "button"
                     :: class "grid place-items-center bg-gray-100"
-                    :: fromNeverAttributes options.entryContainerAttributes
+                    :: fromNeverAttributes (options.entryContainerAttributes index)
                 )
                 [ Icons.exclamation ("text-red w-1/2 h-1/2 " ++ options.imageClass)
                 ]
