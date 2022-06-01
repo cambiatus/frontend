@@ -562,12 +562,13 @@ createForm shared community { isLoading } =
         |> Form.with
             (Form.File.init { id = "logo-input" }
                 |> Form.File.withLabel (t "settings.community_info.logo.title")
-                |> Form.File.withContainerAttributes [ class "mb-4 grid" ]
+                |> Form.File.withContainerAttributes [ class "mb-4" ]
                 |> Form.File.withImageClass "object-cover rounded-full mx-auto w-20 h-20"
                 |> Form.File.withEntryContainerAttributes (\_ -> [ class "mx-auto rounded-full w-20 h-20 self-center" ])
                 |> Form.File.withEditIconOverlay
+                |> Form.File.withAddImagesContainerAttributes [ class "mx-auto rounded-full" ]
                 |> Form.File.withAddImagesView
-                    [ span [ class "bg-orange-300 rounded-full p-4 w-20 h-20" ]
+                    [ span [ class "bg-orange-300 rounded-full p-4 w-20 h-20 mx-auto" ]
                         [ Icons.camera ""
                         ]
                     ]
@@ -631,6 +632,7 @@ createForm shared community { isLoading } =
                         [ Icons.edit "text-white w-4 h-4"
                         ]
                     )
+                |> Form.File.withAddImagesContainerAttributes [ class "!w-full" ]
                 |> Form.File.withAddImagesView
                     [ div [ class "h-56 w-full bg-purple-500 rounded-sm text-white flex flex-col items-center justify-center" ]
                         [ Icons.camera "w-10 mb-2"

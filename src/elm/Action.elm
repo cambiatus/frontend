@@ -658,6 +658,7 @@ claimWithProofsForm translators =
                     [ text <| translators.t "community.actions.proof.upload_hint" ]
                 ]
             ]
+        |> Form.File.withAddImagesContainerAttributes [ class "!w-full rounded-sm" ]
         |> Form.file
             { parser = Ok
             , translators = translators

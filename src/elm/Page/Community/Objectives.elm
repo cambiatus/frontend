@@ -1547,7 +1547,7 @@ claimWithPhotoForm translators =
             (Form.File.init { id = "photo-proof-input" }
                 |> Form.File.withFileTypes [ Form.File.Image, Form.File.Pdf ]
                 |> Form.File.withContainerAttributes [ class "w-full bg-gray-100 grid place-items-center mt-2" ]
-                |> Form.File.withEntryContainerAttributes (\_ -> [ class "h-56 rounded-sm overflow-hidden" ])
+                |> Form.File.withEntryContainerAttributes (\_ -> [ class "h-56 rounded-sm overflow-hidden w-full grid place-items-center" ])
                 |> Form.File.withImageClass "h-56"
                 |> Form.File.withAddImagesView
                     [ div [ class "w-full h-56 bg-gray-100 rounded-sm flex flex-col justify-center items-center" ]
@@ -1555,6 +1555,7 @@ claimWithPhotoForm translators =
                         , p [ class "px-4 font-bold" ] [ text <| translators.t "community.actions.proof.upload_hint" ]
                         ]
                     ]
+                |> Form.File.withAddImagesContainerAttributes [ class "!w-full rounded-sm" ]
                 |> Form.File.withImageCropperAttributes [ class "rounded-sm" ]
                 |> Form.file
                     { parser = Ok

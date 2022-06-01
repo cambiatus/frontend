@@ -2,7 +2,7 @@ module Form.File exposing
     ( init, Options
     , Model, initSingle, SingleModel, initMultiple, MultipleModel
     , withLabel, withEditIconOverlay, withAddImagesView, defaultAddImagesView, withImageSiblingElement
-    , withContainerAttributes, withDisabled, withEntryContainerAttributes, withImageClass, withImageCropperAttributes
+    , withContainerAttributes, withDisabled, withEntryContainerAttributes, withImageClass, withImageCropperAttributes, withAddImagesContainerAttributes
     , withFileTypes, FileType(..), withEntryActions, EntryAction(..)
     , update, view, Msg, msgToString
     , fromSingleModel, toSingleModel, fromMultipleModel, toMultipleModel
@@ -60,7 +60,7 @@ the input.
 
 ## Adding attributes
 
-@docs withContainerAttributes, withDisabled, withEntryContainerAttributes, withImageClass, withImageCropperAttributes
+@docs withContainerAttributes, withDisabled, withEntryContainerAttributes, withImageClass, withImageCropperAttributes, withAddImagesContainerAttributes
 
 
 ## Customizing behavior
@@ -237,6 +237,7 @@ type Options msg
         , entryContainerAttributes : Int -> List (Html.Attribute Never)
         , imageSiblingElement : Maybe (Html Never)
         , addImagesView : Maybe (List (Html Never))
+        , addImagesContainerAttributes : List (Html.Attribute Never)
         , imageCropperAttributes : List (Html.Attribute Never)
         }
 
@@ -334,6 +335,7 @@ init { id } =
         , entryContainerAttributes = \_ -> []
         , imageSiblingElement = Nothing
         , addImagesView = Nothing
+        , addImagesContainerAttributes = []
         , imageCropperAttributes = []
         }
 
@@ -406,6 +408,12 @@ withEditIconOverlay (Options options) =
 withAddImagesView : List (Html Never) -> Options msg -> Options msg
 withAddImagesView newView (Options options) =
     Options { options | addImagesView = Just newView }
+
+
+{-| -}
+withAddImagesContainerAttributes : List (Html.Attribute Never) -> Options msg -> Options msg
+withAddImagesContainerAttributes attributes (Options options) =
+    Options { options | addImagesContainerAttributes = options.addImagesContainerAttributes ++ attributes }
 
 
 {-| -}
@@ -944,12 +952,19 @@ view options viewConfig toMsg =
         (Model model) =
             viewConfig.value
     in
-    case model.entries of
-        SingleEntry _ ->
-            viewSingle (toSingleModel (Model model)) options viewConfig toMsg
+    div []
+        [ case model.entries of
+            SingleEntry _ ->
+                viewSingle (toSingleModel (Model model)) options viewConfig toMsg
 
-        MultipleEntries _ ->
-            viewMultiple (toMultipleModel (Model model)) options viewConfig toMsg
+            MultipleEntries _ ->
+                viewMultiple (toMultipleModel (Model model)) options viewConfig toMsg
+        , if viewConfig.hasError then
+            viewConfig.error
+
+          else
+            text ""
+        ]
 
 
 viewSingle : SingleModel -> Options msg -> ViewConfig msg -> (Msg -> msg) -> Html msg
@@ -962,7 +977,7 @@ viewSingle (SingleModel model) (Options options) viewConfig toMsg =
                 toMsg
 
         Just entry ->
-            div (fromNeverAttributes options.containerAttributes)
+            div (class "flex flex-col" :: fromNeverAttributes options.containerAttributes)
                 -- TODO - ariaLive?
                 [ case options.label of
                     Nothing ->
@@ -970,8 +985,9 @@ viewSingle (SingleModel model) (Options options) viewConfig toMsg =
 
                     Just label ->
                         button
-                            [ class "label inline w-max"
+                            [ class "label w-max focus-ring"
                             , onClick (ClickedEntry 0 |> toMsg)
+                            , disabled options.disabled
                             , type_ "button"
                             ]
                             [ text label ]
@@ -1056,7 +1072,7 @@ viewAddImages { allowMultiple } (Options options) viewConfig toMsg =
             []
 
          else
-            fromNeverAttributes options.containerAttributes
+            class "flex flex-col" :: fromNeverAttributes options.containerAttributes
         )
         [ if allowMultiple then
             text ""
@@ -1068,7 +1084,7 @@ viewAddImages { allowMultiple } (Options options) viewConfig toMsg =
 
                 Just label ->
                     button
-                        [ class "label focus-ring"
+                        [ class "label w-max focus-ring"
                         , onClick (ClickedEntry 0)
                         , disabled options.disabled
                         , type_ "button"
@@ -1080,9 +1096,10 @@ viewAddImages { allowMultiple } (Options options) viewConfig toMsg =
             viewConfig
             { allowMultiple = allowMultiple }
         , Html.label
-            [ for options.id
-            , class "cursor-pointer flex file-decoration"
-            ]
+            (for options.id
+                :: class "cursor-pointer flex file-decoration w-max"
+                :: fromNeverAttributes options.addImagesContainerAttributes
+            )
             (options.addImagesView
                 |> Maybe.withDefault (defaultAddImagesView [])
                 |> List.map (Html.map Basics.never)
