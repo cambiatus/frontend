@@ -93,13 +93,21 @@ update msg model =
                 maximumWidthPossible =
                     min element.width (element.height * model.aspectRatio)
 
+                isExistingImage =
+                    case model.dimmensions of
+                        Loading ->
+                            False
+
+                        Loaded existingDimmensions ->
+                            existingDimmensions.width == element.width && existingDimmensions.height == element.height
+
                 normalizeFromExisting dimmensions =
                     case model.dimmensions of
                         Loading ->
                             dimmensions
 
                         Loaded existingDimmensions ->
-                            if existingDimmensions.width == element.width && existingDimmensions.height == element.height then
+                            if isExistingImage then
                                 { dimmensions
                                     | selectorBoxSizeMultiplier = existingDimmensions.selectorBoxSizeMultiplier
                                     , leftOffset = existingDimmensions.leftOffset + dimmensions.left - existingDimmensions.left
@@ -110,14 +118,18 @@ update msg model =
                                 dimmensions
 
                 center dimmensions =
-                    let
-                        selection =
-                            calculateSelectionDimmensions model dimmensions
-                    in
-                    { dimmensions
-                        | leftOffset = dimmensions.leftOffset - (selection.width / 2)
-                        , topOffset = dimmensions.topOffset - (selection.height / 2)
-                    }
+                    if isExistingImage then
+                        dimmensions
+
+                    else
+                        let
+                            selection =
+                                calculateSelectionDimmensions model dimmensions
+                        in
+                        { dimmensions
+                            | leftOffset = dimmensions.leftOffset - (selection.width / 2)
+                            , topOffset = dimmensions.topOffset - (selection.height / 2)
+                        }
 
                 newDimmensions =
                     { left = element.x
