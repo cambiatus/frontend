@@ -93,6 +93,32 @@ update msg model =
                 maximumWidthPossible =
                     min element.width (element.height * model.aspectRatio)
 
+                normalizeFromExisting dimmensions =
+                    case model.dimmensions of
+                        Loading ->
+                            dimmensions
+
+                        Loaded existingDimmensions ->
+                            if existingDimmensions.width == element.width && existingDimmensions.height == element.height then
+                                { dimmensions
+                                    | selectorBoxSizeMultiplier = existingDimmensions.selectorBoxSizeMultiplier
+                                    , leftOffset = existingDimmensions.leftOffset + dimmensions.left - existingDimmensions.left
+                                    , topOffset = existingDimmensions.topOffset + dimmensions.top - existingDimmensions.top
+                                }
+
+                            else
+                                dimmensions
+
+                center dimmensions =
+                    let
+                        selection =
+                            calculateSelectionDimmensions model dimmensions
+                    in
+                    { dimmensions
+                        | leftOffset = dimmensions.leftOffset - (selection.width / 2)
+                        , topOffset = dimmensions.topOffset - (selection.height / 2)
+                    }
+
                 newDimmensions =
                     { left = element.x
                     , width = element.width
@@ -103,24 +129,11 @@ update msg model =
                     , topOffset = element.y + (element.height / 2)
                     , selectorBoxSizeMultiplier = (maximumWidthPossible / element.width) * 0.75
                     }
+                        |> normalizeFromExisting
+                        |> center
             in
             { model
-                | dimmensions =
-                    case model.dimmensions of
-                        Loading ->
-                            Loaded newDimmensions
-
-                        Loaded existingDimmensions ->
-                            if existingDimmensions.width == element.width && existingDimmensions.height == element.height then
-                                Loaded
-                                    { newDimmensions
-                                        | selectorBoxSizeMultiplier = existingDimmensions.selectorBoxSizeMultiplier
-                                        , leftOffset = existingDimmensions.leftOffset + newDimmensions.left - existingDimmensions.left
-                                        , topOffset = existingDimmensions.topOffset + newDimmensions.top - existingDimmensions.top
-                                    }
-
-                            else
-                                Loaded newDimmensions
+                | dimmensions = Loaded newDimmensions
                 , isReflowing =
                     case model.dimmensions of
                         Loading ->
