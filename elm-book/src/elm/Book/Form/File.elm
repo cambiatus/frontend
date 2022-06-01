@@ -144,8 +144,8 @@ viewSingleFileRounded model =
     let
         options =
             Form.File.init { id = "single-file-rounded-example" }
-                |> Form.File.withEntryContainerAttributes (\_ -> [ class "rounded-full focus-ring" ])
-                |> Form.File.withImageClass "rounded-full"
+                |> Form.File.withEntryContainerAttributes (\_ -> [ class "rounded-full focus-ring w-20 h-20" ])
+                |> Form.File.withImageClass "rounded-full w-20 h-20"
                 |> Form.File.withImageCropperAttributes [ class "rounded-full" ]
     in
     Form.File.view options
