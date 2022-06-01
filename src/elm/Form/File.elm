@@ -93,7 +93,7 @@ These are some helper functions to parse and check the status of the model
 import Api
 import File exposing (File)
 import Html exposing (Html, button, div, img, input, li, p, text)
-import Html.Attributes exposing (accept, alt, class, disabled, for, id, multiple, required, src, type_)
+import Html.Attributes exposing (accept, alt, class, classList, disabled, for, id, multiple, required, src, type_)
 import Html.Events exposing (on, onClick)
 import Html.Keyed
 import Http
@@ -1118,8 +1118,8 @@ viewInput (Options options) viewConfig { allowMultiple } =
         []
 
 
-viewReplaceImageInput : Options msg -> Int -> Html Msg
-viewReplaceImageInput (Options options) index =
+viewReplaceImageInput : Options msg -> { isDisabled : Bool, index : Int } -> Html Msg
+viewReplaceImageInput (Options options) { isDisabled, index } =
     input
         [ type_ "file"
         , id (replaceInputId (Options options) index)
@@ -1132,7 +1132,7 @@ viewReplaceImageInput (Options options) index =
             )
         , multiple False
         , acceptFileTypes options.fileTypes
-        , disabled options.disabled
+        , disabled (isDisabled || options.disabled)
         ]
         []
 
@@ -1293,15 +1293,15 @@ viewEntryModal (Options options) viewConfig { isVisible, index } entry toMsg =
                             viewAction =
                                 case action of
                                     DeleteEntry ->
-                                        deleteEntryAction
+                                        deleteEntryAction entry
                                             |> Html.map toMsg
 
                                     ReplaceEntry ->
-                                        replaceEntryAction (Options options) index
+                                        replaceEntryAction (Options options) index entry
                                             |> Html.map toMsg
 
                                     SaveEntry ->
-                                        saveEntryAction
+                                        saveEntryAction entry
                                             |> Html.map toMsg
 
                                     CustomAction customView ->
@@ -1316,24 +1316,36 @@ viewEntryModal (Options options) viewConfig { isVisible, index } entry toMsg =
         |> Modal.toHtml
 
 
-deleteEntryAction : Html Msg
-deleteEntryAction =
+deleteEntryAction : Entry -> Html Msg
+deleteEntryAction entry =
     button
         [ class "uppercase text-orange-300 font-bold"
         , onClick ClickedDeleteEntry
+        , disabled (isEntryLoading entry)
         , type_ "button"
         ]
         -- TODO - I18N
         [ text "Delete" ]
 
 
-replaceEntryAction : Options msg -> Int -> Html Msg
-replaceEntryAction options index =
+replaceEntryAction : Options msg -> Int -> Entry -> Html Msg
+replaceEntryAction options index entry =
+    let
+        (Options unwrappedOptions) =
+            options
+    in
     div []
-        [ viewReplaceImageInput options index
+        [ viewReplaceImageInput options { index = index, isDisabled = isEntryLoading entry }
         , Html.label
             [ for (replaceInputId options index)
             , class "cursor-pointer file-decoration button button-secondary"
+            , classList
+                [ ( "button-disabled", unwrappedOptions.disabled || isEntryLoading entry )
+
+                -- Cropping the image is pretty fast, so we don't want the button to flicker
+                -- At the same time, we don't want the user to be able to do stuff while cropping
+                , ( "!bg-white !text-orange-300", isImageCropperLoading entry )
+                ]
             ]
             -- TODO - Make it orange!
             [ Icons.camera "w-4"
@@ -1344,11 +1356,16 @@ replaceEntryAction options index =
         ]
 
 
-saveEntryAction : Html Msg
-saveEntryAction =
+saveEntryAction : Entry -> Html Msg
+saveEntryAction entry =
     button
         [ class "button button-primary"
+
+        -- Cropping the image is pretty fast, so we don't want the button to flicker
+        -- At the same time, we don't want the user to be able to submit while cropping
+        , classList [ ( "!bg-orange-300 !text-white", isImageCropperLoading entry ) ]
         , onClick ClickedSaveEntry
+        , disabled (isEntryLoading entry)
         , type_ "button"
         ]
         -- TODO - I18N
@@ -1398,6 +1415,43 @@ isUrlStatusEmpty urlStatus =
 
         WithError _ ->
             True
+
+
+isEntryLoading : Entry -> Bool
+isEntryLoading entry =
+    isUrlStatusLoading entry.url || isImageCropperLoading entry
+
+
+isUrlStatusLoading : UrlStatus -> Bool
+isUrlStatusLoading urlStatus =
+    case urlStatus of
+        Loading _ ->
+            True
+
+        Loaded _ ->
+            False
+
+        LoadedWithCropped _ ->
+            False
+
+        LoadingWithCropped _ ->
+            True
+
+        LoadedWithCroppedUploaded _ ->
+            False
+
+        WithError _ ->
+            False
+
+
+isImageCropperLoading : Entry -> Bool
+isImageCropperLoading entry =
+    case entry.imageCropper of
+        WithoutImageCropper ->
+            False
+
+        WithImageCropper imageCropper ->
+            imageCropper.isRequestingCroppedImage
 
 
 fileTypeToString : FileType -> String
