@@ -704,14 +704,13 @@ viewClaimWithProofs ((Proof photoStatus proofCode) as proof) ({ t } as translato
                             [ text (t "menu.cancel") ]
                         , submitButton
                             [ class "modal-accept"
-                            , disabled isLoading
                             ]
                             [ text (t "menu.send") ]
                         ]
                     ]
                 )
                 (claimWithProofsForm translators)
-                photoStatus
+                (Form.withDisabled isLoading photoStatus)
                 { toMsg = GotFormMsg
                 , onSubmit =
                     \image ->

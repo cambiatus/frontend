@@ -3,7 +3,7 @@ module Form exposing
     , succeed, fail, with, withNoOutput, withDecoration, withNesting, withGroup, withGroupOf3
     , optional, introspect, list, mapValues, mapOutput, withValidationStrategy, ValidationStrategy(..)
     , textField, richText, toggle, checkbox, radio, select, file, fileMultiple, datePicker, userPicker, userPickerMultiple, arbitrary, arbitraryWith, unsafeArbitrary
-    , view, viewWithoutSubmit, Model, init, Msg, update, updateValues, getValue, msgToString
+    , view, viewWithoutSubmit, Model, init, Msg, update, updateValues, getValue, hasFieldsLoading, msgToString
     , withDisabled
     , parse
     )
@@ -82,7 +82,7 @@ documentation if you're stuck.
 
 ## Viewing
 
-@docs view, viewWithoutSubmit, Model, init, Msg, update, updateValues, getValue, msgToString
+@docs view, viewWithoutSubmit, Model, init, Msg, update, updateValues, getValue, hasFieldsLoading, msgToString
 
 
 ### Changing attributes and state
@@ -214,7 +214,7 @@ type Field msg values
     | Toggle (Toggle.Options msg) (BaseField Bool values)
     | Checkbox (Checkbox.Options msg) (BaseField Bool values)
     | Radio (Radio.Options String msg) (BaseField String values)
-    | File2 (Form.File.Options msg) (BaseField Form.File.Model values)
+    | File (Form.File.Options msg) (BaseField Form.File.Model values)
     | Select (Select.Options String msg) (BaseField String values)
     | DatePicker (DatePicker.Options (Msg values)) (BaseField DatePicker.Model values)
     | UserPicker (UserPicker.Options (Msg values)) (BaseField UserPicker.Model values)
@@ -365,7 +365,7 @@ file :
 file config options =
     field
         (mapBaseField Form.File.fromSingleModel Form.File.toSingleModel
-            >> File2 options
+            >> File options
         )
         { parser =
             Form.File.parser config.translators
@@ -390,7 +390,7 @@ fileMultiple :
 fileMultiple config options =
     field
         (mapBaseField Form.File.fromMultipleModel Form.File.toMultipleModel
-            >> File2 options
+            >> File options
         )
         { parser =
             Form.File.parserMultiple config.translators
@@ -969,6 +969,7 @@ type Model values
     = Model
         { values : values
         , errorTracking : ErrorTracking
+        , loadingFields : Set String
         , disabled : Bool
         }
 
@@ -986,6 +987,7 @@ init values =
                 { showAllErrors = False
                 , showFieldError = Set.empty
                 }
+        , loadingFields = Set.empty
         , disabled = False
         }
 
@@ -1038,7 +1040,7 @@ type Msg values
     = NoOp
     | ChangedValues { fieldId : String } values
     | GotRichTextMsg (values -> RichText.Model) (RichText.Model -> values -> values) RichText.Msg
-    | GotFile2Msg (values -> Form.File.Model) (Form.File.Model -> values -> values) Form.File.Msg
+    | GotFileMsg { fieldId : String } (values -> Form.File.Model) (Form.File.Model -> values -> values) Form.File.Msg
     | GotDatePickerMsg (DatePicker.Options (Msg values)) (DatePicker.ViewConfig (Msg values)) (values -> DatePicker.Model) (DatePicker.Model -> values -> values) DatePicker.Msg
     | GotUserPickerMsg (UserPicker.Options (Msg values)) (UserPicker.ViewConfig (Msg values)) (values -> UserPicker.Model) (UserPicker.Model -> values -> values) UserPicker.Msg
     | BlurredField { fieldId : String, isEmpty : Bool }
@@ -1099,11 +1101,25 @@ update shared msg (Model model) =
                 |> UR.init
                 |> UR.addCmd (Cmd.map (GotRichTextMsg getModel updateFn) cmd)
 
-        GotFile2Msg getModel updateFn subMsg ->
+        GotFileMsg { fieldId } getModel updateFn subMsg ->
             Form.File.update shared subMsg (getModel model.values)
                 |> UR.fromChild (\newFile -> Model { model | values = updateFn newFile model.values })
-                    (GotFile2Msg getModel updateFn)
-                    UR.addExt
+                    (GotFileMsg { fieldId = fieldId } getModel updateFn)
+                    (\(Form.File.SetLoadingState isLoading) ->
+                        UR.mapModel
+                            (\(Model m) ->
+                                let
+                                    insertOrRemove =
+                                        if isLoading then
+                                            Set.insert
+
+                                        else
+                                            Set.remove
+                                in
+                                { m | loadingFields = insertOrRemove fieldId m.loadingFields }
+                                    |> Model
+                            )
+                    )
                     (Model model)
 
         GotDatePickerMsg options viewConfig getModel updateFn subMsg ->
@@ -1168,8 +1184,8 @@ msgToString msg =
         GotRichTextMsg _ _ subMsg ->
             "GotRichTextMsg" :: RichText.msgToString subMsg
 
-        GotFile2Msg _ _ subMsg ->
-            "GotFile2Msg" :: Form.File.msgToString subMsg
+        GotFileMsg _ _ _ subMsg ->
+            "GotFileMsg" :: Form.File.msgToString subMsg
 
         GotDatePickerMsg _ _ _ _ subMsg ->
             "GotDatePickerMsg" :: DatePicker.msgToString subMsg
@@ -1221,7 +1237,7 @@ view formAttrs translators footer form (Model model) { toMsg, onSubmit } =
                 (\attrs ->
                     button
                         (type_ "submit"
-                            :: Html.Attributes.disabled model.disabled
+                            :: Html.Attributes.disabled (model.disabled || hasFieldsLoading (Model model))
                             :: List.map (Html.Attributes.map (\_ -> toMsg NoOp)) attrs
                         )
                 )
@@ -1467,7 +1483,7 @@ viewField { showError, translators, disabled, values, model, form, toMsg, onSucc
                 , hasError = hasError
                 }
 
-        File2 options baseField ->
+        File options baseField ->
             Form.File.view (disableIfNotAlreadyDisabled options Form.File.withDisabled)
                 { value = baseField.value
                 , error = viewError [] showError error
@@ -1475,7 +1491,9 @@ viewField { showError, translators, disabled, values, model, form, toMsg, onSucc
                 , isRequired = isRequired
                 , translators = translators
                 }
-                (GotFile2Msg baseField.getValue baseField.updateWithValues
+                (GotFileMsg { fieldId = Form.File.getId options }
+                    baseField.getValue
+                    baseField.updateWithValues
                     >> toMsg
                 )
 
@@ -1600,7 +1618,7 @@ getId state =
         Radio options _ ->
             Radio.getId options
 
-        File2 options _ ->
+        File options _ ->
             Form.File.getId options
 
         Select options _ ->
@@ -1648,7 +1666,7 @@ isEmpty field_ =
         Radio _ _ ->
             False
 
-        File2 _ { value } ->
+        File _ { value } ->
             Form.File.isEmpty value
 
         Select _ _ ->
@@ -1793,8 +1811,8 @@ mapField fn reverseFn field_ =
         Radio options baseField ->
             baseMap Radio options baseField
 
-        File2 options baseField ->
-            baseMap File2 options baseField
+        File options baseField ->
+            baseMap File options baseField
 
         Select options baseField ->
             baseMap Select options baseField
@@ -1830,8 +1848,9 @@ mapMsg fn reverseFn msg =
                 (\value values -> reverseFn values |> updateFn value |> fn)
                 subMsg
 
-        GotFile2Msg getModel updateFn subMsg ->
-            GotFile2Msg (reverseFn >> getModel)
+        GotFileMsg fieldId getModel updateFn subMsg ->
+            GotFileMsg fieldId
+                (reverseFn >> getModel)
                 (\value values -> reverseFn values |> updateFn value |> fn)
                 subMsg
 
@@ -1854,6 +1873,11 @@ mapMsg fn reverseFn msg =
 
         ClickedSubmitWithErrors errors ->
             ClickedSubmitWithErrors errors
+
+
+hasFieldsLoading : Model values -> Bool
+hasFieldsLoading (Model model) =
+    not (Set.isEmpty model.loadingFields)
 
 
 accumulateResults :

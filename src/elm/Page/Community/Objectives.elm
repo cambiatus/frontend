@@ -11,7 +11,7 @@ import Form
 import Form.File
 import Form.Text
 import Html exposing (Html, a, b, br, button, details, div, h1, h2, h3, h4, img, li, p, span, summary, text, ul)
-import Html.Attributes exposing (alt, class, classList, id, src, style, tabindex, title)
+import Html.Attributes exposing (alt, class, classList, disabled, id, src, style, tabindex, title)
 import Html.Attributes.Aria exposing (ariaHasPopup, ariaHidden, ariaLabel, role)
 import Html.Events exposing (onClick)
 import Icons
@@ -1346,17 +1346,19 @@ viewClaimModal ({ translators } as shared) model =
                 { t } =
                     translators
 
-                onClaimClick =
+                ( onClaimClick, isClaimDisabled ) =
                     case proof of
                         WithProof formModel _ ->
-                            Form.parse (claimWithPhotoForm translators)
+                            ( Form.parse (claimWithPhotoForm translators)
                                 formModel
                                 { onError = GotPhotoProofFormMsg
                                 , onSuccess = ConfirmedClaimActionWithPhotoProof
                                 }
+                            , Form.hasFieldsLoading formModel
+                            )
 
                         NoProofNecessary ->
-                            ConfirmedClaimAction
+                            ( ConfirmedClaimAction, False )
             in
             View.Modal.initWith
                 { closeMsg = ClickedCloseClaimModal
@@ -1504,6 +1506,7 @@ viewClaimModal ({ translators } as shared) model =
                         , button
                             [ onClick onClaimClick
                             , class "button button-primary w-full"
+                            , disabled isClaimDisabled
                             ]
                             [ text <| t "dashboard.claim" ]
                         ]

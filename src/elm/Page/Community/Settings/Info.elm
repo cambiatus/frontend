@@ -533,15 +533,12 @@ view ({ shared } as loggedIn) model =
                                     [ class "container mx-auto px-4 pb-10 pt-4" ]
                                     shared.translators
                                     (\submitButton ->
-                                        [ submitButton
-                                            [ class "button button-primary w-full mt-14"
-                                            , disabled (not loggedIn.hasAcceptedCodeOfConduct)
-                                            ]
+                                        [ submitButton [ class "button button-primary w-full mt-14" ]
                                             [ text <| t "menu.save" ]
                                         ]
                                     )
                                     (createForm shared community { isLoading = model.isLoading })
-                                    (Form.withDisabled model.isLoading form)
+                                    (Form.withDisabled (model.isLoading || not loggedIn.hasAcceptedCodeOfConduct) form)
                                     { toMsg = GotFormMsg
                                     , onSubmit = ClickedSave
                                     }

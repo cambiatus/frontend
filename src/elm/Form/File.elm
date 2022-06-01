@@ -4,7 +4,7 @@ module Form.File exposing
     , withLabel, withEditIconOverlay, withAddImagesView, defaultAddImagesView, withImageSiblingElement
     , withContainerAttributes, withDisabled, withEntryContainerAttributes, withImageClass, withImageCropperAttributes, withAddImagesContainerAttributes
     , withFileTypes, FileType(..), withEntryActions, EntryAction(..)
-    , update, view, Msg, msgToString
+    , update, view, Msg, ExtMsg(..), msgToString
     , fromSingleModel, toSingleModel, fromMultipleModel, toMultipleModel
     , parser, parserMultiple, getId, isEmpty, FileTypeStatus
     )
@@ -74,7 +74,7 @@ In order to actually use this component, we use the elm architecture, with view
 and update. In order to make code more reusable, these accept `Model` as input,
 so you need to map/convert the `SingleModel` or `MultipleModel` to `Model`
 
-@docs update, view, Msg, msgToString
+@docs update, view, Msg, ExtMsg, msgToString
 
 
 ## Mapping
@@ -104,7 +104,6 @@ import Maybe.Extra
 import Translation
 import UpdateResult as UR
 import View.Components
-import View.Feedback as Feedback
 import View.ImageCropper
 import View.Modal as Modal
 
@@ -121,6 +120,7 @@ type Model
     = Model
         { entries : Entries
         , isSavingExistingImage : Bool
+        , numberOfEntriesLoading : Int
         , aspectRatio : Maybe Float
         , openImageCropperIndex : Maybe Int
         }
@@ -132,6 +132,7 @@ type MultipleModel
     = MultipleModel
         { entries : List Entry
         , isSavingExistingImage : Bool
+        , numberOfEntriesLoading : Int
         , aspectRatio : Maybe Float
         , openImageCropperIndex : Maybe Int
         }
@@ -142,6 +143,7 @@ type MultipleModel
 type SingleModel
     = SingleModel
         { entry : Maybe Entry
+        , isEntryLoading : Bool
         , isSavingExistingImage : Bool
         , aspectRatio : Maybe Float
         , isImageCropperOpen : Bool
@@ -276,6 +278,7 @@ initSingle { fileUrl, aspectRatio } =
                                         |> WithImageCropper
                         }
                     )
+        , isEntryLoading = False
         , isSavingExistingImage = False
         , aspectRatio = aspectRatio
         , isImageCropperOpen = False
@@ -311,6 +314,7 @@ initMultiple { fileUrls, aspectRatio } =
                     }
                 )
                 fileUrls
+        , numberOfEntriesLoading = 0
         , isSavingExistingImage = False
         , aspectRatio = aspectRatio
         , openImageCropperIndex = Nothing
@@ -507,8 +511,12 @@ type Msg
     | ClickedSaveEntry
 
 
+type ExtMsg
+    = SetLoadingState Bool
+
+
 type alias UpdateResult =
-    UR.UpdateResult Model Msg Feedback.Model
+    UR.UpdateResult Model Msg ExtMsg
 
 
 update :
@@ -535,10 +543,12 @@ update shared msg (Model model) =
                                     newEntry
                                         |> Just
                                         |> SingleEntry
+                                , numberOfEntriesLoading = 1
                             }
                                 |> Model
                                 |> UR.init
                                 |> UR.addCmd (uploadEntry shared 0 newEntry)
+                                |> UR.addExt (SetLoadingState True)
 
                         Nothing ->
                             model
@@ -569,20 +579,25 @@ update shared msg (Model model) =
                                     )
                                 |> Cmd.batch
                     in
-                    { model | entries = MultipleEntries (entries ++ newEntries) }
+                    { model
+                        | entries = MultipleEntries (entries ++ newEntries)
+                        , numberOfEntriesLoading = model.numberOfEntriesLoading + List.length newEntries
+                    }
                         |> Model
                         |> UR.init
                         |> UR.addCmd uploadNewEntries
+                        |> UR.addExt (SetLoadingState True)
 
         RequestedReplaceFile file ->
             case entryFromFile { aspectRatio = model.aspectRatio } file of
                 Just newEntry ->
                     let
-                        ( newEntries, uploadEntryCmd ) =
+                        ( newEntries, uploadEntryCmd, succeeded ) =
                             case model.entries of
                                 SingleEntry _ ->
                                     ( SingleEntry (Just newEntry)
                                     , uploadEntry shared 0 newEntry
+                                    , True
                                     )
 
                                 MultipleEntries entries ->
@@ -592,15 +607,32 @@ update shared msg (Model model) =
                                                 |> List.Extra.setAt index newEntry
                                                 |> MultipleEntries
                                             , uploadEntry shared index newEntry
+                                            , True
                                             )
 
                                         Nothing ->
-                                            ( model.entries, Cmd.none )
+                                            ( model.entries, Cmd.none, False )
+
+                        addMaybeExtMsg =
+                            if succeeded then
+                                UR.addExt (SetLoadingState True)
+
+                            else
+                                identity
                     in
-                    { model | entries = newEntries }
+                    { model
+                        | entries = newEntries
+                        , numberOfEntriesLoading =
+                            if succeeded then
+                                model.numberOfEntriesLoading + 1
+
+                            else
+                                model.numberOfEntriesLoading
+                    }
                         |> Model
                         |> UR.init
                         |> UR.addCmd uploadEntryCmd
+                        |> addMaybeExtMsg
 
                 Nothing ->
                     model
@@ -613,6 +645,14 @@ update shared msg (Model model) =
                             []
 
         CompletedUploadingFile index result ->
+            let
+                maybeSetLoadingStateAsFalse =
+                    if model.numberOfEntriesLoading == 1 then
+                        UR.addExt (SetLoadingState False)
+
+                    else
+                        identity
+            in
             { model
                 | entries =
                     case model.entries of
@@ -669,9 +709,11 @@ update shared msg (Model model) =
                         MultipleEntries _ ->
                             model.openImageCropperIndex
                 , isSavingExistingImage = False
+                , numberOfEntriesLoading = model.numberOfEntriesLoading - 1
             }
                 |> Model
                 |> UR.init
+                |> maybeSetLoadingStateAsFalse
 
         ClickedEntry index ->
             { model | openImageCropperIndex = Just index }
@@ -1711,6 +1753,7 @@ fromMultipleModel : MultipleModel -> Model
 fromMultipleModel (MultipleModel model) =
     Model
         { entries = MultipleEntries model.entries
+        , numberOfEntriesLoading = model.numberOfEntriesLoading
         , isSavingExistingImage = model.isSavingExistingImage
         , aspectRatio = model.aspectRatio
         , openImageCropperIndex = model.openImageCropperIndex
@@ -1730,6 +1773,7 @@ toMultipleModel (Model model) =
 
                 MultipleEntries entries ->
                     entries
+        , numberOfEntriesLoading = model.numberOfEntriesLoading
         , isSavingExistingImage = model.isSavingExistingImage
         , aspectRatio = model.aspectRatio
         , openImageCropperIndex = model.openImageCropperIndex
@@ -1740,6 +1784,12 @@ fromSingleModel : SingleModel -> Model
 fromSingleModel (SingleModel model) =
     Model
         { entries = SingleEntry model.entry
+        , numberOfEntriesLoading =
+            if model.isEntryLoading then
+                1
+
+            else
+                0
         , isSavingExistingImage = model.isSavingExistingImage
         , aspectRatio = model.aspectRatio
         , openImageCropperIndex =
@@ -1749,11 +1799,6 @@ fromSingleModel (SingleModel model) =
             else
                 Nothing
         }
-
-
-fromNeverAttributes : List (Html.Attribute Never) -> List (Html.Attribute msg)
-fromNeverAttributes =
-    List.map (Html.Attributes.map Basics.never)
 
 
 toSingleModel : Model -> SingleModel
@@ -1766,10 +1811,16 @@ toSingleModel (Model model) =
 
                 MultipleEntries entries ->
                     List.head entries
+        , isEntryLoading = model.numberOfEntriesLoading > 0
         , isSavingExistingImage = model.isSavingExistingImage
         , aspectRatio = model.aspectRatio
         , isImageCropperOpen = Maybe.Extra.isJust model.openImageCropperIndex
         }
+
+
+fromNeverAttributes : List (Html.Attribute Never) -> List (Html.Attribute msg)
+fromNeverAttributes =
+    List.map (Html.Attributes.map Basics.never)
 
 
 msgToString : Msg -> List String
