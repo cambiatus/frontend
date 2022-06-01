@@ -120,6 +120,7 @@ can be transformed into a `Model`.
 type Model
     = Model
         { entries : Entries
+        , isSavingExistingImage : Bool
         , aspectRatio : Maybe Float
         , openImageCropperIndex : Maybe Int
         }
@@ -130,6 +131,7 @@ type Model
 type MultipleModel
     = MultipleModel
         { entries : List Entry
+        , isSavingExistingImage : Bool
         , aspectRatio : Maybe Float
         , openImageCropperIndex : Maybe Int
         }
@@ -140,6 +142,7 @@ type MultipleModel
 type SingleModel
     = SingleModel
         { entry : Maybe Entry
+        , isSavingExistingImage : Bool
         , aspectRatio : Maybe Float
         , isImageCropperOpen : Bool
         }
@@ -271,6 +274,7 @@ initSingle { fileUrl, aspectRatio } =
                                         |> WithImageCropper
                         }
                     )
+        , isSavingExistingImage = False
         , aspectRatio = aspectRatio
         , isImageCropperOpen = False
         }
@@ -305,6 +309,7 @@ initMultiple { fileUrls, aspectRatio } =
                     }
                 )
                 fileUrls
+        , isSavingExistingImage = False
         , aspectRatio = aspectRatio
         , openImageCropperIndex = Nothing
         }
@@ -646,10 +651,15 @@ update shared msg (Model model) =
                 , openImageCropperIndex =
                     case model.entries of
                         SingleEntry _ ->
-                            Just 0
+                            if model.isSavingExistingImage then
+                                Nothing
+
+                            else
+                                Just 0
 
                         MultipleEntries _ ->
                             model.openImageCropperIndex
+                , isSavingExistingImage = False
             }
                 |> Model
                 |> UR.init
@@ -863,7 +873,10 @@ update shared msg (Model model) =
             in
             case model.entries of
                 SingleEntry Nothing ->
-                    { model | openImageCropperIndex = Nothing }
+                    { model
+                        | openImageCropperIndex = Nothing
+                        , isSavingExistingImage = True
+                    }
                         |> Model
                         |> UR.init
 
@@ -878,6 +891,7 @@ update shared msg (Model model) =
                             newEntry
                                 |> Just
                                 |> SingleEntry
+                        , isSavingExistingImage = True
                     }
                         |> Model
                         |> UR.init
@@ -1563,6 +1577,7 @@ fromMultipleModel : MultipleModel -> Model
 fromMultipleModel (MultipleModel model) =
     Model
         { entries = MultipleEntries model.entries
+        , isSavingExistingImage = model.isSavingExistingImage
         , aspectRatio = model.aspectRatio
         , openImageCropperIndex = model.openImageCropperIndex
         }
@@ -1581,6 +1596,7 @@ toMultipleModel (Model model) =
 
                 MultipleEntries entries ->
                     entries
+        , isSavingExistingImage = model.isSavingExistingImage
         , aspectRatio = model.aspectRatio
         , openImageCropperIndex = model.openImageCropperIndex
         }
@@ -1590,6 +1606,7 @@ fromSingleModel : SingleModel -> Model
 fromSingleModel (SingleModel model) =
     Model
         { entries = SingleEntry model.entry
+        , isSavingExistingImage = model.isSavingExistingImage
         , aspectRatio = model.aspectRatio
         , openImageCropperIndex =
             if model.isImageCropperOpen then
@@ -1615,6 +1632,7 @@ toSingleModel (Model model) =
 
                 MultipleEntries entries ->
                     List.head entries
+        , isSavingExistingImage = model.isSavingExistingImage
         , aspectRatio = model.aspectRatio
         , isImageCropperOpen = Maybe.Extra.isJust model.openImageCropperIndex
         }
