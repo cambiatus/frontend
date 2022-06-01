@@ -1002,7 +1002,10 @@ viewMultiple (MultipleModel model) (Options options) viewConfig toMsg =
                 text ""
 
             Just label ->
-                p [ class "label" ] [ text label ]
+                View.Components.label []
+                    { targetId = options.id
+                    , labelText = label
+                    }
         , Html.Keyed.ul
             [ class "flex flex-wrap gap-4" ]
             (List.indexedMap
@@ -1065,9 +1068,12 @@ viewAddImages { allowMultiple } (Options options) viewConfig toMsg =
 
                 Just label ->
                     button
-                        [ class "label inline w-max"
+                        [ class "label focus-ring"
                         , onClick (ClickedEntry 0)
+                        , disabled options.disabled
                         , type_ "button"
+
+                        -- TODO - ariaHidden?
                         ]
                         [ text label ]
         , viewInput (Options options)
@@ -1075,8 +1081,6 @@ viewAddImages { allowMultiple } (Options options) viewConfig toMsg =
             { allowMultiple = allowMultiple }
         , Html.label
             [ for options.id
-
-            -- TODO - Aria Hidden?
             , class "cursor-pointer flex file-decoration"
             ]
             (options.addImagesView
