@@ -278,7 +278,7 @@ createForm ({ t } as translators) environment { isDisabled } =
                                 [ Form.File.DeleteEntry
                                 , Form.File.CustomAction
                                     (button
-                                        [ class "uppercase text-orange-300 font-bold"
+                                        [ class "uppercase text-orange-300 font-bold focus-ring rounded-sm hover:opacity-60"
                                         , onClick (SelectedEntry entryIndex)
                                         , type_ "button"
                                         ]

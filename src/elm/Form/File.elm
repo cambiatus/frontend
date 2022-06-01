@@ -1150,7 +1150,7 @@ viewEntry translators (Options options) index entry =
             button
                 (onClick (ClickedEntry index)
                     :: type_ "button"
-                    :: class "hover:opacity-60"
+                    :: class "hover:opacity-60 focus-ring"
                     :: fromNeverAttributes (options.entryContainerAttributes index)
                 )
                 [ case entry.fileType of
@@ -1286,31 +1286,33 @@ viewEntryModal (Options options) viewConfig { isVisible, index } entry toMsg =
                 ]
             ]
         |> Modal.withFooter
-            (options.entryActions index
-                |> List.foldr
-                    (\action actions ->
-                        let
-                            viewAction =
-                                case action of
-                                    DeleteEntry ->
-                                        deleteEntryAction entry
-                                            |> Html.map toMsg
+            [ div [ class "grid sm:grid-cols-2 place-items-center md:flex gap-6 w-full px-10" ]
+                (options.entryActions index
+                    |> List.foldr
+                        (\action actions ->
+                            let
+                                viewAction =
+                                    case action of
+                                        DeleteEntry ->
+                                            deleteEntryAction entry
+                                                |> Html.map toMsg
 
-                                    ReplaceEntry ->
-                                        replaceEntryAction (Options options) index entry
-                                            |> Html.map toMsg
+                                        ReplaceEntry ->
+                                            replaceEntryAction (Options options) index entry
+                                                |> Html.map toMsg
 
-                                    SaveEntry ->
-                                        saveEntryAction entry
-                                            |> Html.map toMsg
+                                        SaveEntry ->
+                                            saveEntryAction entry
+                                                |> Html.map toMsg
 
-                                    CustomAction customView ->
-                                        customView
-                        in
-                        viewAction :: actions
-                    )
-                    []
-            )
+                                        CustomAction customView ->
+                                            customView
+                            in
+                            viewAction :: actions
+                        )
+                        []
+                )
+            ]
         -- TODO - Should it be fullscreen?
         |> Modal.withSize Modal.FullScreen
         |> Modal.toHtml
@@ -1319,7 +1321,7 @@ viewEntryModal (Options options) viewConfig { isVisible, index } entry toMsg =
 deleteEntryAction : Entry -> Html Msg
 deleteEntryAction entry =
     button
-        [ class "uppercase text-orange-300 font-bold"
+        [ class "text-center w-full md:w-auto uppercase text-orange-300 font-bold md:mr-auto focus-ring rounded-sm hover:opacity-60"
         , onClick ClickedDeleteEntry
         , disabled (isEntryLoading entry)
         , type_ "button"
@@ -1334,11 +1336,11 @@ replaceEntryAction options index entry =
         (Options unwrappedOptions) =
             options
     in
-    div []
+    div [ class "w-full md:w-40 flex-shrink-0" ]
         [ viewReplaceImageInput options { index = index, isDisabled = isEntryLoading entry }
         , Html.label
             [ for (replaceInputId options index)
-            , class "cursor-pointer file-decoration button button-secondary"
+            , class "cursor-pointer file-decoration button button-secondary w-full"
             , classList
                 [ ( "button-disabled", unwrappedOptions.disabled || isEntryLoading entry )
 
@@ -1351,7 +1353,7 @@ replaceEntryAction options index entry =
             [ Icons.camera "w-4"
 
             -- TODO - I18N
-            , text "Change image"
+            , text "Change"
             ]
         ]
 
@@ -1359,7 +1361,7 @@ replaceEntryAction options index entry =
 saveEntryAction : Entry -> Html Msg
 saveEntryAction entry =
     button
-        [ class "button button-primary"
+        [ class "button button-primary w-full flex-shrink-0 md:w-40"
 
         -- Cropping the image is pretty fast, so we don't want the button to flicker
         -- At the same time, we don't want the user to be able to submit while cropping
@@ -1369,7 +1371,7 @@ saveEntryAction entry =
         , type_ "button"
         ]
         -- TODO - I18N
-        [ text "Save image" ]
+        [ text "Save" ]
 
 
 
