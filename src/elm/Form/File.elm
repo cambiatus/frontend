@@ -92,7 +92,7 @@ These are some helper functions to parse and check the status of the model
 
 import Api
 import File exposing (File)
-import Html exposing (Html, button, div, img, input, li, p, text)
+import Html exposing (Html, a, button, div, img, input, li, p, text)
 import Html.Attributes exposing (accept, alt, class, classList, disabled, for, id, multiple, required, src, type_)
 import Html.Events exposing (on, onClick)
 import Html.Keyed
@@ -163,10 +163,11 @@ type Entries
 
 
 {-| All the actions that can be performed on an entry. By default, we have (in
-order): `DeleteEntry`, `ReplaceEntry` and `SaveEntry`.
+order): `DeleteEntry`, `OpenEntry` (if the file is a PDF), `ReplaceEntry` and `SaveEntry`.
 -}
 type EntryAction msg
     = DeleteEntry
+    | OpenEntry
     | ReplaceEntry
     | SaveEntry
     | CustomAction (Html msg)
@@ -1271,6 +1272,24 @@ viewEntryModal (Options options) viewConfig { isVisible, index } entry toMsg =
                         , maybeTranslators = Just translators
                         , onFileTypeDiscovered = Nothing
                         }
+
+        addOpenEntryAction : List (EntryAction msg) -> List (EntryAction msg)
+        addOpenEntryAction actions =
+            List.Extra.takeWhile (\action -> action /= ReplaceEntry) actions
+                ++ (OpenEntry
+                        :: List.Extra.dropWhile (\action -> action /= ReplaceEntry) actions
+                   )
+
+        actionsWithOpenAction =
+            if List.member OpenEntry (options.entryActions index) then
+                options.entryActions index
+
+            else if entry.fileType == LoadedFileType Pdf then
+                options.entryActions index
+                    |> addOpenEntryAction
+
+            else
+                options.entryActions index
     in
     Modal.initWith
         { closeMsg = toMsg ClickedCloseEntryModal
@@ -1307,31 +1326,35 @@ viewEntryModal (Options options) viewConfig { isVisible, index } entry toMsg =
                 ]
             ]
         |> Modal.withFooter
-            [ div [ class "grid sm:grid-cols-2 place-items-center md:flex gap-6 w-full px-10" ]
-                (options.entryActions index
-                    |> List.foldr
-                        (\action actions ->
-                            let
-                                viewAction =
-                                    case action of
-                                        DeleteEntry ->
-                                            deleteEntryAction entry
-                                                |> Html.map toMsg
+            [ div [ class "flex flex-wrap items-center justify-center md:flex gap-6 w-full px-10" ]
+                (List.foldr
+                    (\action actions ->
+                        let
+                            viewAction =
+                                case action of
+                                    DeleteEntry ->
+                                        deleteEntryAction entry
+                                            |> Html.map toMsg
 
-                                        ReplaceEntry ->
-                                            replaceEntryAction (Options options) index entry
-                                                |> Html.map toMsg
+                                    OpenEntry ->
+                                        openEntryAction entry
+                                            |> Html.map toMsg
 
-                                        SaveEntry ->
-                                            saveEntryAction entry
-                                                |> Html.map toMsg
+                                    ReplaceEntry ->
+                                        replaceEntryAction (Options options) index entry
+                                            |> Html.map toMsg
 
-                                        CustomAction customView ->
-                                            customView
-                            in
-                            viewAction :: actions
-                        )
-                        []
+                                    SaveEntry ->
+                                        saveEntryAction entry
+                                            |> Html.map toMsg
+
+                                    CustomAction customView ->
+                                        customView
+                        in
+                        viewAction :: actions
+                    )
+                    []
+                    actionsWithOpenAction
                 )
             ]
         -- TODO - Should it be fullscreen?
@@ -1349,6 +1372,40 @@ deleteEntryAction entry =
         ]
         -- TODO - I18N
         [ text "Delete" ]
+
+
+openEntryAction : Entry -> Html Msg
+openEntryAction entry =
+    let
+        maybeUrl =
+            case entry.url of
+                Loaded url ->
+                    Just url
+
+                LoadedWithCropped { original } ->
+                    Just original
+
+                LoadedWithCroppedUploaded { croppedUrl } ->
+                    Just croppedUrl
+
+                _ ->
+                    Nothing
+    in
+    case maybeUrl of
+        Nothing ->
+            text ""
+
+        Just url ->
+            a
+                [ class "flex items-center justify-center gap-2 w-full md:w-auto uppercase text-orange-300 font-bold focus-ring rounded-sm hover:opacity-60"
+                , Html.Attributes.target "_blank"
+                , Html.Attributes.href url
+                ]
+                [ Icons.externalLink "w-4 h-4 fill-current"
+
+                -- TODO - I18N
+                , text "Open"
+                ]
 
 
 replaceEntryAction : Options msg -> Int -> Entry -> Html Msg
