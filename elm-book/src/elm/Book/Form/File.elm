@@ -5,9 +5,8 @@ import ElmBook
 import ElmBook.Actions as Actions
 import ElmBook.Chapter as Chapter exposing (Chapter)
 import Form.File
-import Form.File2
 import Html exposing (Html)
-import Html.Attributes
+import Html.Attributes exposing (class)
 import Maybe.Extra
 import UpdateResult
 
@@ -17,21 +16,32 @@ import UpdateResult
 
 
 type alias Model =
-    { smallCircleExample : Form.File.Model
-    , largeRectangleExample : Form.File.Model
-    , largeRectangleGrayExample : Form.File.Model
-    , file2 : Form.File2.Model
+    { singleFileExample : Form.File.Model
+    , multipleFilesExample : Form.File.Model
+    , singleFileRoundedExample : Form.File.Model
     }
 
 
 initModel : Model
 initModel =
-    { smallCircleExample = Form.File.initModel Nothing
-    , largeRectangleExample = Form.File.initModel Nothing
-    , largeRectangleGrayExample = Form.File.initModel Nothing
-    , file2 =
-        Form.File2.initMultiple { fileUrls = [], aspectRatio = Just 1 }
-            |> Form.File2.fromMultipleModel
+    { singleFileExample =
+        Form.File.initSingle
+            { fileUrl = Nothing
+            , aspectRatio = Just 1
+            }
+            |> Form.File.fromSingleModel
+    , multipleFilesExample =
+        Form.File.initMultiple
+            { fileUrls = []
+            , aspectRatio = Just 1
+            }
+            |> Form.File.fromMultipleModel
+    , singleFileRoundedExample =
+        Form.File.initSingle
+            { fileUrl = Nothing
+            , aspectRatio = Just 1
+            }
+            |> Form.File.fromSingleModel
     }
 
 
@@ -40,45 +50,36 @@ initModel =
 
 
 type Msg
-    = GotSmallCircleMsg Form.File.Msg
-    | GotLargeRectangleMsg Form.File.Msg
-    | GotLargeRectangleGrayMsg Form.File.Msg
-    | GotFile2Msg Form.File2.Msg
+    = GotSingleFileMsg Form.File.Msg
+    | GotMultipleFilesMsg Form.File.Msg
+    | GotSingleFileRoundedMsg Form.File.Msg
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        GotSmallCircleMsg subMsg ->
+        GotSingleFileMsg subMsg ->
             updateComponent subMsg
                 model
-                { fromModel = .smallCircleExample
-                , toModel = \smallCircleExample model_ -> { model_ | smallCircleExample = smallCircleExample }
-                , toMsg = GotSmallCircleMsg
+                { fromModel = .singleFileExample
+                , toModel = \singleFileExample model_ -> { model_ | singleFileExample = singleFileExample }
+                , toMsg = GotSingleFileMsg
                 }
 
-        GotLargeRectangleMsg subMsg ->
+        GotMultipleFilesMsg subMsg ->
             updateComponent subMsg
                 model
-                { fromModel = .largeRectangleExample
-                , toModel = \largeRectangleExample model_ -> { model_ | largeRectangleExample = largeRectangleExample }
-                , toMsg = GotLargeRectangleMsg
+                { fromModel = .multipleFilesExample
+                , toModel = \multipleFilesExample model_ -> { model_ | multipleFilesExample = multipleFilesExample }
+                , toMsg = GotMultipleFilesMsg
                 }
 
-        GotLargeRectangleGrayMsg subMsg ->
+        GotSingleFileRoundedMsg subMsg ->
             updateComponent subMsg
                 model
-                { fromModel = .largeRectangleGrayExample
-                , toModel = \largeRectangleGrayExample model_ -> { model_ | largeRectangleGrayExample = largeRectangleGrayExample }
-                , toMsg = GotLargeRectangleGrayMsg
-                }
-
-        GotFile2Msg subMsg ->
-            updateComponent2 subMsg
-                model
-                { fromModel = .file2
-                , toModel = \file2 model_ -> { model_ | file2 = file2 }
-                , toMsg = GotFile2Msg
+                { fromModel = .singleFileRoundedExample
+                , toModel = \singleFileRoundedExample model_ -> { model_ | singleFileRoundedExample = singleFileRoundedExample }
+                , toMsg = GotSingleFileRoundedMsg
                 }
 
 
@@ -102,104 +103,59 @@ updateComponent msg model { fromModel, toModel, toMsg } =
             (\_ -> [])
 
 
-updateComponent2 :
-    Form.File2.Msg
-    -> Model
-    ->
-        { fromModel : Model -> Form.File2.Model
-        , toModel : Form.File2.Model -> Model -> Model
-        , toMsg : Form.File2.Msg -> Msg
-        }
-    -> ( Model, Cmd Msg )
-updateComponent2 msg model { fromModel, toModel, toMsg } =
-    Form.File2.update Book.Helpers.mockShared msg (fromModel model)
-        |> UpdateResult.fromChild (\subModel -> toModel subModel model)
-            toMsg
-            UpdateResult.addExt
-            model
-        |> UpdateResult.toModelCmd (\_ m -> ( m, Cmd.none ))
-            (\_ -> [])
-
-
 
 -- VIEW
 
 
-viewSmallCircle : Model -> Html Msg
-viewSmallCircle model =
+viewSingleFile : Model -> Html Msg
+viewSingleFile model =
     let
         options =
-            Form.File.init
-                { label = "Select a profile picture"
-                , id = "small-circle-variant"
-                }
-                |> Form.File.withVariant Form.File.SmallCircle
+            Form.File.init { id = "single-file-example" }
     in
     Form.File.view options
-        { value = model.smallCircleExample
+        { value = model.singleFileExample
         , error = Html.text ""
         , hasError = False
         , isRequired = True
         , translators = Book.Helpers.mockTranslators
         }
-        GotSmallCircleMsg
+        GotSingleFileMsg
 
 
-viewLargeRectangle : Model -> Html Msg
-viewLargeRectangle model =
+viewMultipleFiles : Model -> Html Msg
+viewMultipleFiles model =
     let
         options =
-            Form.File.init
-                { label = "Select a large file"
-                , id = "large-rectangle-variant"
-                }
+            Form.File.init { id = "multiple-files-example" }
     in
     Form.File.view options
-        { value = model.largeRectangleExample
+        { value = model.multipleFilesExample
         , error = Html.text ""
         , hasError = False
         , isRequired = True
         , translators = Book.Helpers.mockTranslators
         }
-        GotLargeRectangleMsg
+        GotMultipleFilesMsg
 
 
-viewFile2 : Model -> Html Msg
-viewFile2 model =
+viewSingleFileRounded : Model -> Html Msg
+viewSingleFileRounded model =
     let
         options =
-            Form.File2.init { id = "file2-example" }
-    in
-    Form.File2.view options
-        { value = model.file2
-        , error = Html.text ""
-        , hasError = False
-        , isRequired = True
-        , translators = Book.Helpers.mockTranslators
-        }
-        GotFile2Msg
-
-
-viewLargeRectangleGray : Model -> Html Msg
-viewLargeRectangleGray model =
-    let
-        options =
-            Form.File.init
-                { label = "Select a large file"
-                , id = "large-rectangle-gray-variant"
-                }
-
-        -- TODO
-        -- |> Form.File.withVariant (Form.File.LargeRectangle Form.File.Gray)
+            Form.File.init { id = "single-file-rounded-example" }
+                |> Form.File.withEntryContainerAttributes (\_ -> [ class "rounded-full focus-ring" ])
+                |> Form.File.withImageClass "rounded-full"
+                |> Form.File.withImageCropperAttributes [ class "rounded-full" ]
     in
     Form.File.view options
-        { value = model.largeRectangleGrayExample
+        { value = model.singleFileRoundedExample
         , error = Html.text ""
         , hasError = False
         , isRequired = True
         , translators = Book.Helpers.mockTranslators
         }
-        GotLargeRectangleGrayMsg
+        GotSingleFileRoundedMsg
 
 
 viewSideBySide :
@@ -208,16 +164,26 @@ viewSideBySide :
     -> Html (ElmBook.Msg x)
 viewSideBySide options { image, error } =
     Html.div [ Html.Attributes.class "grid grid-cols-2 gap-4" ]
-        [ Form.File.view options
-            { value = Form.File.initModel Nothing
+        [ Form.File.view
+            (options
+                |> Form.File.withLabel "Without image selected"
+            )
+            { value =
+                Form.File.initSingle { fileUrl = Nothing, aspectRatio = Nothing }
+                    |> Form.File.fromSingleModel
             , error = Book.Helpers.viewError [] (Maybe.Extra.isJust error) error
             , hasError = Maybe.Extra.isJust error
             , isRequired = True
             , translators = Book.Helpers.mockTranslators
             }
             (\_ -> Actions.logAction "Selected file")
-        , Form.File.view options
-            { value = Form.File.initModel (Just image)
+        , Form.File.view
+            (options
+                |> Form.File.withLabel "With image selected"
+            )
+            { value =
+                Form.File.initSingle { fileUrl = Just image, aspectRatio = Nothing }
+                    |> Form.File.fromSingleModel
             , error = Book.Helpers.viewError [] (Maybe.Extra.isJust error) error
             , hasError = Maybe.Extra.isJust error
             , isRequired = True
@@ -227,16 +193,12 @@ viewSideBySide options { image, error } =
         ]
 
 
-viewDisabledSmallCircle : Html (ElmBook.Msg x)
-viewDisabledSmallCircle =
+viewDisabled : Html (ElmBook.Msg x)
+viewDisabled =
     let
         options =
-            Form.File.init
-                { label = "Select a profile picture"
-                , id = "disabled-circle"
-                }
+            Form.File.init { id = "disabled-example" }
                 |> Form.File.withDisabled True
-                |> Form.File.withVariant Form.File.SmallCircle
     in
     viewSideBySide options
         { image = "/images/satisfied-vagabonds.svg"
@@ -244,87 +206,15 @@ viewDisabledSmallCircle =
         }
 
 
-viewDisabledLargeRectangle : Html (ElmBook.Msg x)
-viewDisabledLargeRectangle =
+viewWithError : Html (ElmBook.Msg x)
+viewWithError =
     let
         options =
-            Form.File.init
-                { label = "Select a large image"
-                , id = "disabled-rectangle"
-                }
-                |> Form.File.withDisabled True
-    in
-    viewSideBySide options
-        { image = "/images/auth_bg_full.png"
-        , error = Nothing
-        }
-
-
-viewDisabledLargeGrayRectangle : Html (ElmBook.Msg x)
-viewDisabledLargeGrayRectangle =
-    let
-        options =
-            Form.File.init
-                { label = "Select a large image"
-                , id = "disabled-rectangle"
-                }
-                |> Form.File.withDisabled True
-
-        -- TODO
-        -- |> Form.File.withVariant (Form.File.LargeRectangle Form.File.Gray)
-    in
-    viewSideBySide options
-        { image = "/images/auth_bg_full.png"
-        , error = Nothing
-        }
-
-
-viewSmallCircleWithError : Html (ElmBook.Msg x)
-viewSmallCircleWithError =
-    let
-        options =
-            Form.File.init
-                { label = "Select a profile picture"
-                , id = "error-circle"
-                }
-                |> Form.File.withVariant Form.File.SmallCircle
+            Form.File.init { id = "error-example" }
     in
     viewSideBySide options
         { image = "/images/satisfied-vagabonds.svg"
-        , error = Just "Something wrong happened"
-        }
-
-
-viewLargeRectangleWithError : Html (ElmBook.Msg x)
-viewLargeRectangleWithError =
-    let
-        options =
-            Form.File.init
-                { label = "Select a large image"
-                , id = "error-rectangle"
-                }
-    in
-    viewSideBySide options
-        { image = "/images/auth_bg_full.png"
-        , error = Just "Something wrong happened"
-        }
-
-
-viewLargeRectangleGrayWithError : Html (ElmBook.Msg x)
-viewLargeRectangleGrayWithError =
-    let
-        options =
-            Form.File.init
-                { label = "Select a large image"
-                , id = "error-rectangle"
-                }
-
-        -- TODO
-        -- |> Form.File.withVariant (Form.File.LargeRectangle Form.File.Gray)
-    in
-    viewSideBySide options
-        { image = "/images/auth_bg_full.png"
-        , error = Just "Something wrong happened"
+        , error = Just "Something went wrong"
         }
 
 
@@ -347,80 +237,61 @@ chapter : Chapter { x | fileModel : Model }
 chapter =
     Chapter.chapter "File"
         |> Chapter.withComponentList
-            [ ( "Disabled small circle"
-              , viewDisabledSmallCircle
+            [ ( "Disabled"
+              , viewDisabled
               )
-            , ( "Disabled large rectangle"
-              , viewDisabledLargeRectangle
-              )
-            , ( "Disabled gray large rectangle"
-              , viewDisabledLargeGrayRectangle
-              )
-            , ( "Small circle with error"
-              , viewSmallCircleWithError
-              )
-            , ( "Large rectangle with error"
-              , viewLargeRectangleWithError
-              )
-            , ( "Gray large rectangle with error"
-              , viewLargeRectangleGrayWithError
+            , ( "With error"
+              , viewWithError
               )
             ]
         |> Chapter.withStatefulComponentList
-            [ ( "Small circle variant"
+            [ ( "Single file"
               , \{ fileModel } ->
-                    viewSmallCircle fileModel
+                    viewSingleFile fileModel
                         |> mapToState
               )
-            , ( "Large rectangle variant"
+            , ( "Multiple files"
               , \{ fileModel } ->
-                    viewLargeRectangle fileModel
+                    viewMultipleFiles fileModel
                         |> mapToState
               )
-            , ( "Large rectangle variant with gray background"
+            , ( "Single file rounded"
               , \{ fileModel } ->
-                    viewLargeRectangleGray fileModel
-                        |> mapToState
-              )
-            , ( "File2"
-              , \{ fileModel } ->
-                    viewFile2 fileModel
+                    viewSingleFileRounded fileModel
                         |> mapToState
               )
             ]
         |> Chapter.render """
 Sometimes we need users to submit files, and this is where this component comes in!
-It provides a nice interface to work with multiple kinds of image, such as PDFs
+It provides a nice interface to work with multiple kinds of files, such as PDFs
 and images. Also, it automatically uploads the file to our servers, no wiring required!
 
-It comes in two variants:
+For images, there is also the option to crop them (with a fixed aspect ratio).
 
-<component with-label="Small circle variant" />
+We can choose between allowing multiple files to be uploaded at once, or just
+one file at a time.
 
-The small circle variant is used mainly for uploading profile pictures, or the
-logo of a community.
+This component is highly customizable, as we might need very different looking
+inputs in different places, so these examples aren't the only way these can look,
+they're just what you get by default.
 
-<component with-label="Large rectangle variant" />
+Here's an example for a single file:
 
-<component with-label="Large rectangle variant with gray background" />
+<component with-label="Single file" />
 
-The large rectangle variant is usually used for PDF files, or larger pictures.
+And here's one for multiple files at once:
+
+<component with-label="Multiple files" />
+
+We can even show how it will look like with some rounded corners:
+
+<component with-label="Single file rounded" />
 
 They can also be disabled:
 
-<component with-label="Disabled small circle" />
-
-<component with-label="Disabled large rectangle" />
-
-<component with-label="Disabled gray large rectangle" />
+<component with-label="Disabled" />
 
 And be in an error state:
 
-<component with-label="Small circle with error" />
-
-<component with-label="Large rectangle with error" />
-
-<component with-label="Gray large rectangle with error" />
-
-<component with-label="File2" />
+<component with-label="With error" />
 """
