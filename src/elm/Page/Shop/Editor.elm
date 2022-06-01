@@ -528,9 +528,10 @@ viewForm ({ shared } as loggedIn) { isEdit, isDisabled } model formData =
                     setCurrentStepInRoute model step
             in
             a
-                [ class "w-6 h-6 rounded-full bg-gray-900 flex-shrink-0 flex items-center justify-center transition-colors duration-300"
+                [ class "w-6 h-6 rounded-full flex-shrink-0 flex items-center justify-center transition-colors duration-300"
                 , classList
                     [ ( "bg-orange-300 delay-300", isStepCompleted step || isCurrent )
+                    , ( "bg-gray-900", not (isStepCompleted step || isCurrent) )
                     ]
                 , case maybeNewRoute of
                     Just newRoute ->
