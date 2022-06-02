@@ -41,10 +41,18 @@ type DimmensionsState
 
 
 type alias Dimmensions =
-    { left : Float
-    , width : Float
-    , top : Float
-    , height : Float
+    { container :
+        { left : Float
+        , width : Float
+        , top : Float
+        , height : Float
+        }
+    , image :
+        { left : Float
+        , width : Float
+        , top : Float
+        , height : Float
+        }
     , maximumWidthRatioPossible : Float
     , leftOffset : Float
     , topOffset : Float
@@ -54,7 +62,7 @@ type alias Dimmensions =
 
 type Msg
     = ImageLoaded
-    | GotImageDimmensions (Result Browser.Dom.Error Browser.Dom.Element)
+    | GotImageDimmensions (Result Browser.Dom.Error { imageElement : Browser.Dom.Element, containerElement : Browser.Dom.Element })
     | StartedDragging
     | StoppedDragging
     | Dragged { x : Float, y : Float, previousX : Float, previousY : Float }
@@ -85,13 +93,29 @@ update msg model =
                 |> UR.init
                 |> UR.addCmd
                     (Browser.Dom.getElement entireImageId
+                        |> Task.andThen
+                            (\imageElement ->
+                                Browser.Dom.getElement imageContainerId
+                                    |> Task.map
+                                        (\containerElement ->
+                                            { imageElement = imageElement
+                                            , containerElement = containerElement
+                                            }
+                                        )
+                            )
                         |> Task.attempt GotImageDimmensions
                     )
 
-        GotImageDimmensions (Ok { element }) ->
+        GotImageDimmensions (Ok { imageElement, containerElement }) ->
             let
+                image =
+                    imageElement.element
+
+                container =
+                    containerElement.element
+
                 maximumWidthPossible =
-                    min element.width (element.height * model.aspectRatio)
+                    min container.width (container.height * model.aspectRatio)
 
                 isExistingImage =
                     case model.dimmensions of
@@ -99,7 +123,7 @@ update msg model =
                             False
 
                         Loaded existingDimmensions ->
-                            existingDimmensions.width == element.width && existingDimmensions.height == element.height
+                            existingDimmensions.image.width == image.width && existingDimmensions.image.height == image.height
 
                 normalizeFromExisting dimmensions =
                     case model.dimmensions of
@@ -110,8 +134,8 @@ update msg model =
                             if isExistingImage then
                                 { dimmensions
                                     | selectorBoxSizeMultiplier = existingDimmensions.selectorBoxSizeMultiplier
-                                    , leftOffset = existingDimmensions.leftOffset + dimmensions.left - existingDimmensions.left
-                                    , topOffset = existingDimmensions.topOffset + dimmensions.top - existingDimmensions.top
+                                    , leftOffset = existingDimmensions.leftOffset + dimmensions.container.left - existingDimmensions.container.left
+                                    , topOffset = existingDimmensions.topOffset + dimmensions.container.top - existingDimmensions.container.top
                                 }
 
                             else
@@ -132,14 +156,22 @@ update msg model =
                         }
 
                 newDimmensions =
-                    { left = element.x
-                    , width = element.width
-                    , top = element.y
-                    , height = element.height
-                    , maximumWidthRatioPossible = maximumWidthPossible / element.width
-                    , leftOffset = element.x + (element.width / 2)
-                    , topOffset = element.y + (element.height / 2)
-                    , selectorBoxSizeMultiplier = (maximumWidthPossible / element.width) * 0.75
+                    { container =
+                        { left = container.x
+                        , width = container.width
+                        , top = container.y
+                        , height = container.height
+                        }
+                    , image =
+                        { left = image.x
+                        , width = image.width
+                        , top = image.y
+                        , height = image.height
+                        }
+                    , maximumWidthRatioPossible = maximumWidthPossible / container.width
+                    , leftOffset = image.x + (image.width / 2)
+                    , topOffset = image.y + (image.height / 2)
+                    , selectorBoxSizeMultiplier = (maximumWidthPossible / image.width) * 0.75
                     }
                         |> normalizeFromExisting
                         |> center
@@ -152,8 +184,8 @@ update msg model =
                             False
 
                         Loaded existingDimmensions ->
-                            (abs (existingDimmensions.width - newDimmensions.width) > 50)
-                                || (abs (existingDimmensions.height - newDimmensions.height) > 50)
+                            (abs (existingDimmensions.image.width - newDimmensions.image.width) > 50)
+                                || (abs (existingDimmensions.image.height - newDimmensions.image.height) > 50)
             }
                 |> UR.init
 
@@ -212,12 +244,12 @@ update msg model =
                             Loaded
                                 { dimmensions
                                     | topOffset =
-                                        clamp dimmensions.top
-                                            (dimmensions.top + dimmensions.height - selection.height)
+                                        clamp dimmensions.container.top
+                                            (dimmensions.container.top + dimmensions.container.height - selection.height)
                                             (dimmensions.topOffset + y - previousY)
                                     , leftOffset =
-                                        clamp dimmensions.left
-                                            (dimmensions.left + dimmensions.width - selection.width)
+                                        clamp dimmensions.container.left
+                                            (dimmensions.container.left + dimmensions.container.width - selection.width)
                                             (dimmensions.leftOffset + x - previousX)
                                 }
                     }
@@ -288,8 +320,11 @@ update msg model =
 view : Model -> { imageUrl : String, cropperAttributes : List (Html.Attribute Never) } -> Html Msg
 view model { imageUrl, cropperAttributes } =
     div [ class "mx-auto w-full md:flex md:flex-col md:w-auto" ]
-        [ div [ class "relative max-w-max mx-auto" ]
-            -- TODO - Add whitespace around the imag so that the entire image can fit in the cropper
+        [ div
+            [ class "relative max-w-max mx-auto flex items-center justify-center"
+            , style "aspect-ratio" (String.fromFloat model.aspectRatio)
+            , id imageContainerId
+            ]
             (img
                 [ src imageUrl
                 , alt ""
@@ -331,13 +366,13 @@ viewCropper model dimmensions { imageUrl, cropperAttributes } =
 
         leftOffset =
             clamp 0
-                (dimmensions.width - selection.width)
-                (dimmensions.leftOffset - dimmensions.left)
+                (dimmensions.container.width - selection.width)
+                (dimmensions.leftOffset - dimmensions.container.left)
 
         topOffset =
             clamp 0
-                (dimmensions.height - selection.height)
-                (dimmensions.topOffset - dimmensions.top)
+                (dimmensions.container.height - selection.height)
+                (dimmensions.topOffset - dimmensions.container.top)
 
         floatToPx offset =
             String.fromFloat offset ++ "px"
@@ -357,12 +392,12 @@ viewCropper model dimmensions { imageUrl, cropperAttributes } =
             , alt ""
             , class "absolute object-cover max-w-none pointer-events-none select-none"
             , classList [ ( "transition-all origin-center", not model.isDragging && not model.isChangingDimmensions && not model.isReflowing ) ]
-            , style "width" (floatToPx dimmensions.width)
-            , style "height" (floatToPx dimmensions.height)
+            , style "width" (floatToPx dimmensions.image.width)
+            , style "height" (floatToPx dimmensions.image.height)
 
-            -- We need to compensate for the border
-            , style "top" (floatToPx (-topOffset - 1))
-            , style "left" (floatToPx (-leftOffset - 1))
+            -- We need the -1 to compensate for the border
+            , style "top" (floatToPx (dimmensions.image.top - dimmensions.container.top - topOffset - 1))
+            , style "left" (floatToPx (dimmensions.image.left - dimmensions.container.left - leftOffset - 1))
             ]
             []
         ]
@@ -381,8 +416,12 @@ viewCropper model dimmensions { imageUrl, cropperAttributes } =
           else
             class ""
         , attribute "elm-url" imageUrl
-        , attribute "elm-image-width" (String.fromFloat dimmensions.width)
-        , attribute "elm-image-height" (String.fromFloat dimmensions.height)
+        , attribute "elm-image-width" (String.fromFloat dimmensions.image.width)
+        , attribute "elm-image-height" (String.fromFloat dimmensions.image.height)
+        , attribute "elm-image-left" (String.fromFloat dimmensions.image.left)
+        , attribute "elm-image-top" (String.fromFloat dimmensions.image.top)
+        , attribute "elm-container-left" (String.fromFloat dimmensions.container.left)
+        , attribute "elm-container-top" (String.fromFloat dimmensions.container.top)
         , attribute "elm-selection-left" (String.fromFloat leftOffset)
         , attribute "elm-selection-top" (String.fromFloat topOffset)
         , attribute "elm-selection-width" (String.fromFloat selection.width)
@@ -435,18 +474,23 @@ entireImageId =
     "image-cropper-bg-image"
 
 
+imageContainerId : String
+imageContainerId =
+    "image-cropper-image-container"
+
+
 calculateSelectionDimmensions : Model -> Dimmensions -> { width : Float, height : Float }
 calculateSelectionDimmensions model dimmensions =
     let
         calculatedSelectionWidth =
-            dimmensions.width * dimmensions.selectorBoxSizeMultiplier
+            dimmensions.container.width * dimmensions.selectorBoxSizeMultiplier
 
         calculatedSelectionHeight =
             calculatedSelectionWidth / model.aspectRatio
 
         selectionWidth =
-            if calculatedSelectionHeight > dimmensions.height then
-                dimmensions.height * model.aspectRatio
+            if calculatedSelectionHeight > dimmensions.container.height then
+                dimmensions.container.height * model.aspectRatio
 
             else
                 calculatedSelectionWidth
