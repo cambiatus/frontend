@@ -142,7 +142,7 @@ camera class_ =
             ]
         , g
             [ clipPath "url(#a)"
-            , stroke "#fff"
+            , stroke "currentColor"
             , strokeLinecap "round"
             , strokeLinejoin "round"
             , strokeWidth "2"

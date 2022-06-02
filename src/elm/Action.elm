@@ -601,7 +601,7 @@ viewClaimButton { t } now action =
         , class buttonClasses
         ]
         [ if action.hasProofPhoto then
-            span [ class "inline-block w-4 align-middle mr-2" ] [ Icons.camera "" ]
+            span [ class "inline-block w-4 align-middle mr-2" ] [ Icons.camera "text-white" ]
 
           else
             text ""

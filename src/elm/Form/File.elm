@@ -1493,8 +1493,7 @@ replaceEntryAction { t } options index entry =
                 , ( "!bg-white !text-orange-300", isImageCropperLoading entry )
                 ]
             ]
-            -- TODO - Make it orange!
-            [ Icons.camera "w-4"
+            [ Icons.camera "w-4 mr-1"
             , text <| t "form.file.change"
             ]
         ]

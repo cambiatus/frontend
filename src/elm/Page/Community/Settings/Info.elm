@@ -566,7 +566,7 @@ createForm shared community { isLoading } =
                 |> Form.File.withAddImagesContainerAttributes [ class "mx-auto rounded-full" ]
                 |> Form.File.withAddImagesView
                     [ span [ class "bg-orange-300 rounded-full p-4 w-20 h-20 mx-auto" ]
-                        [ Icons.camera ""
+                        [ Icons.camera "text-white"
                         ]
                     ]
                 |> Form.File.withImageCropperAttributes [ class "rounded-full" ]
