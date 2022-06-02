@@ -879,7 +879,8 @@
         "inventory_management_description": "Se você quer desabilitar sua oferta quando não tiver mais unidades em estoque, habilite esta opção"
       },
       "continue": "Continuar",
-      "index": "Passo {{current}} de {{total}}"
+      "index": "Passo {{current}} de {{total}}",
+      "step_link": "Passo {{index}} - {{step_title}}"
     },
     "empty": {
       "all_title": "Onde estão as ofertas?",
@@ -1101,7 +1102,10 @@
       "logo": {
         "title": "Logo da comunidade",
         "guidance": "Orientação sobre a Logo",
-        "description": "Seu arquivo deve estar no formato PNG, JPG ou SVG. Ele deve medir 80px em largura e 80px em altura para ser melhor visualizado na interface."
+        "description": "Seu arquivo deve estar no formato PNG, JPG ou SVG. Ele deve medir 80px em largura e 80px em altura para ser melhor visualizado na interface.",
+        "choose_one": "Escolha uma logo da lista",
+        "select": "Selecionar",
+        "selected": "Selecionado"
       },
       "invitation": {
         "title": "Acesso à comunidade",
@@ -1464,5 +1468,17 @@
     "why": "Você não aceitou as Diretrizes da comunidade e Código de conduta.",
     "solve": "Para resolver essa situação e fazer parte da comunidade, ",
     "solve_link": "aceite as Diretrizes da comunidade e Código de conduta."
+  },
+  "form": {
+    "file": {
+      "edit_image": "Editar imagem",
+      "edit_file": "Editar arquivo",
+      "body_image": "Arraste para reposicionar a imagem",
+      "body_file": "Exclua, substitua ou salve o arquivo",
+      "delete": "Excluir",
+      "open": "Abrir",
+      "change": "Substituir",
+      "save": "Salvar"
+    }
   }
 }

@@ -94,6 +94,7 @@ import Api
 import File exposing (File)
 import Html exposing (Html, a, button, div, img, input, li, p, text)
 import Html.Attributes exposing (accept, alt, class, classList, disabled, for, id, multiple, required, src, type_)
+import Html.Attributes.Aria exposing (ariaHidden, ariaLabel)
 import Html.Events exposing (on, onClick)
 import Html.Keyed
 import Http
@@ -1021,7 +1022,6 @@ viewSingle (SingleModel model) (Options options) viewConfig toMsg =
 
         Just entry ->
             div (class "flex flex-col" :: fromNeverAttributes options.containerAttributes)
-                -- TODO - ariaLive?
                 [ case options.label of
                     Nothing ->
                         text ""
@@ -1131,8 +1131,6 @@ viewAddImages { allowMultiple } (Options options) viewConfig toMsg =
                         , onClick (ClickedEntry 0)
                         , disabled options.disabled
                         , type_ "button"
-
-                        -- TODO - ariaHidden?
                         ]
                         [ text label ]
         , viewInput (Options options)
@@ -1165,7 +1163,6 @@ defaultAddImagesView attrs =
 viewInput : Options msg -> ViewConfig msg -> { allowMultiple : Bool } -> Html Msg
 viewInput (Options options) viewConfig { allowMultiple } =
     input
-        -- TODO - Aria?
         [ type_ "file"
         , id options.id
         , class "sr-only form-file"
@@ -1209,12 +1206,26 @@ replaceInputId (Options options) index =
 viewEntry : Translation.Translators -> Options msg -> Int -> Entry -> Html Msg
 viewEntry translators (Options options) index entry =
     let
+        buttonAriaLabel =
+            case entry.fileType of
+                LoadedFileType Image ->
+                    case entry.imageCropper of
+                        WithImageCropper _ ->
+                            translators.t "form.file.edit_image"
+
+                        WithoutImageCropper ->
+                            translators.t "form.file.edit_file"
+
+                _ ->
+                    translators.t "form.file.edit_file"
+
         viewWithUrl : String -> Html Msg
         viewWithUrl url =
             button
                 (onClick (ClickedEntry index)
                     :: type_ "button"
                     :: class "hover:opacity-60 focus-ring"
+                    :: ariaLabel buttonAriaLabel
                     :: fromNeverAttributes (options.entryContainerAttributes index)
                 )
                 [ case entry.fileType of
@@ -1332,16 +1343,33 @@ viewEntryModal (Options options) viewConfig { isVisible, index } entry toMsg =
 
             else
                 options.entryActions index
+
+        ( header, bodyText ) =
+            case entry.fileType of
+                LoadedFileType Image ->
+                    case entry.imageCropper of
+                        WithImageCropper _ ->
+                            ( translators.t "form.file.edit_image"
+                            , translators.t "form.file.body_image"
+                            )
+
+                        WithoutImageCropper ->
+                            ( translators.t "form.file.edit_file"
+                            , translators.t "form.file.body_file"
+                            )
+
+                _ ->
+                    ( translators.t "form.file.edit_file"
+                    , translators.t "form.file.body_file"
+                    )
     in
     Modal.initWith
         { closeMsg = toMsg ClickedCloseEntryModal
         , isVisible = isVisible
         }
-        -- TODO - I18N
-        |> Modal.withHeader "Edit image"
+        |> Modal.withHeader header
         |> Modal.withBody
-            -- TODO - I18N
-            [ p [] [ text "Drag to reposition the image" ]
+            [ p [] [ text bodyText ]
             , div [ class "flex items-center justify-center mt-4" ]
                 [ case entry.url of
                     Loading _ ->
@@ -1375,19 +1403,19 @@ viewEntryModal (Options options) viewConfig { isVisible, index } entry toMsg =
                             viewAction =
                                 case action of
                                     DeleteEntry ->
-                                        deleteEntryAction entry
+                                        deleteEntryAction translators entry
                                             |> Html.map toMsg
 
                                     OpenEntry ->
-                                        openEntryAction entry
+                                        openEntryAction translators entry
                                             |> Html.map toMsg
 
                                     ReplaceEntry ->
-                                        replaceEntryAction (Options options) index entry
+                                        replaceEntryAction translators (Options options) index entry
                                             |> Html.map toMsg
 
                                     SaveEntry ->
-                                        saveEntryAction entry
+                                        saveEntryAction translators entry
                                             |> Html.map toMsg
 
                                     CustomAction customView ->
@@ -1399,25 +1427,23 @@ viewEntryModal (Options options) viewConfig { isVisible, index } entry toMsg =
                     actionsWithOpenAction
                 )
             ]
-        -- TODO - Should it be fullscreen?
         |> Modal.withSize Modal.FullScreen
         |> Modal.toHtml
 
 
-deleteEntryAction : Entry -> Html Msg
-deleteEntryAction entry =
+deleteEntryAction : Translation.Translators -> Entry -> Html Msg
+deleteEntryAction { t } entry =
     button
         [ class "text-center w-full md:w-auto uppercase text-orange-300 font-bold md:mr-auto focus-ring rounded-sm hover:opacity-60"
         , onClick ClickedDeleteEntry
         , disabled (isEntryLoading entry)
         , type_ "button"
         ]
-        -- TODO - I18N
-        [ text "Delete" ]
+        [ text <| t "form.file.delete" ]
 
 
-openEntryAction : Entry -> Html Msg
-openEntryAction entry =
+openEntryAction : Translation.Translators -> Entry -> Html Msg
+openEntryAction { t } entry =
     let
         maybeUrl =
             case entry.url of
@@ -1444,14 +1470,12 @@ openEntryAction entry =
                 , Html.Attributes.href url
                 ]
                 [ Icons.externalLink "w-4 h-4 fill-current"
-
-                -- TODO - I18N
-                , text "Open"
+                , text <| t "form.file.open"
                 ]
 
 
-replaceEntryAction : Options msg -> Int -> Entry -> Html Msg
-replaceEntryAction options index entry =
+replaceEntryAction : Translation.Translators -> Options msg -> Int -> Entry -> Html Msg
+replaceEntryAction { t } options index entry =
     let
         (Options unwrappedOptions) =
             options
@@ -1471,15 +1495,13 @@ replaceEntryAction options index entry =
             ]
             -- TODO - Make it orange!
             [ Icons.camera "w-4"
-
-            -- TODO - I18N
-            , text "Change"
+            , text <| t "form.file.change"
             ]
         ]
 
 
-saveEntryAction : Entry -> Html Msg
-saveEntryAction entry =
+saveEntryAction : Translation.Translators -> Entry -> Html Msg
+saveEntryAction { t } entry =
     button
         [ class "button button-primary w-full flex-shrink-0 md:w-40"
 
@@ -1490,8 +1512,7 @@ saveEntryAction entry =
         , disabled (isEntryLoading entry)
         , type_ "button"
         ]
-        -- TODO - I18N
-        [ text "Save" ]
+        [ text <| t "form.file.save" ]
 
 
 

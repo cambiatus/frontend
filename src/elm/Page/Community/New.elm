@@ -283,12 +283,10 @@ createForm ({ t } as translators) environment { isDisabled } =
                                         , type_ "button"
                                         ]
                                         [ if entryIndex == selectedLogoIndex then
-                                            -- TODO - I18N
-                                            text "Selected"
+                                            text <| t "settings.community_info.logo.selected"
 
                                           else
-                                            -- TODO - I18N
-                                            text "Select"
+                                            text <| t "settings.community_info.logo.select"
                                         ]
                                     )
                                 , Form.File.ReplaceEntry
@@ -298,8 +296,7 @@ createForm ({ t } as translators) environment { isDisabled } =
                         |> Form.fileMultiple
                             { parser =
                                 List.Extra.getAt selectedLogoIndex
-                                    -- TODO - I18N
-                                    >> Result.fromMaybe "Choose a logo from the list"
+                                    >> Result.fromMaybe (t <| "settings.community_info.logo.choose_one")
                             , translators = translators
                             , value = .logo
                             , update = \logo input -> { input | logo = logo }

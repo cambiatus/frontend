@@ -21,7 +21,7 @@ import Form.Validate
 import Graphql.Http
 import Html exposing (Html, a, button, div, h2, hr, p, span, text)
 import Html.Attributes exposing (class, classList, disabled, maxlength, type_)
-import Html.Attributes.Aria exposing (ariaLabel)
+import Html.Attributes.Aria exposing (ariaHidden, ariaLabel)
 import Html.Events exposing (onClick)
 import Icons
 import Markdown exposing (Markdown)
@@ -524,6 +524,17 @@ viewForm ({ shared } as loggedIn) { isEdit, isDisabled } model formData =
 
                 maybeNewRoute =
                     setCurrentStepInRoute model step
+
+                ( linkStepIndex, linkStepName ) =
+                    case step of
+                        Route.SaleMainInformation ->
+                            ( 1, t "shop.steps.main_information.title" )
+
+                        Route.SaleImages ->
+                            ( 2, t "shop.steps.images.title" )
+
+                        Route.SalePriceAndInventory ->
+                            ( 3, t "shop.steps.price_and_inventory.title" )
             in
             a
                 [ class "w-6 h-6 rounded-full flex-shrink-0 flex items-center justify-center transition-colors duration-300"
@@ -537,6 +548,11 @@ viewForm ({ shared } as loggedIn) { isEdit, isDisabled } model formData =
 
                     Nothing ->
                         class ""
+                , ariaLabel <|
+                    tr "shop.steps.step_link"
+                        [ ( "index", String.fromInt linkStepIndex )
+                        , ( "step_title", linkStepName )
+                        ]
                 ]
                 [ div
                     [ class "transition-opacity duration-300"
@@ -579,7 +595,7 @@ viewForm ({ shared } as loggedIn) { isEdit, isDisabled } model formData =
                         ]
                     , text stepName
                     ]
-                , hr [ class "mt-4 mb-6 border-gray-500 lg:mx-4 lg:mb-10" ] []
+                , hr [ class "mt-4 mb-6 border-gray-500 lg:mx-4 lg:mb-10", ariaHidden True ] []
                 , case formData.currentStep of
                     MainInformation ->
                         viewForm_ (mainInformationForm shared.translators)
