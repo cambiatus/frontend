@@ -195,7 +195,7 @@ update msg model ({ shared } as loggedIn) =
                     , name = community.name
                     , description = Form.RichText.initModel "description-input" (Just community.description)
                     , website = Maybe.withDefault "" community.website
-                    , coverPhoto = Form.File.initSingle { fileUrl = maybeCoverPhoto, aspectRatio = Nothing }
+                    , coverPhoto = Form.File.initSingle { fileUrl = maybeCoverPhoto, aspectRatio = Just 1 }
                     , subdomain =
                         community.subdomain
                             |> String.split "."
@@ -225,7 +225,7 @@ update msg model ({ shared } as loggedIn) =
                                         | coverPhoto =
                                             Form.File.initSingle
                                                 { fileUrl = List.head uploads
-                                                , aspectRatio = Nothing
+                                                , aspectRatio = Just 1
                                                 }
                                     }
                                 )
