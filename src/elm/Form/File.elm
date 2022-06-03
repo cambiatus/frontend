@@ -1301,7 +1301,7 @@ viewEntryModal (Options options) viewConfig { isVisible, index } entry toMsg =
                 LoadedFileType Image ->
                     case entry.imageCropper of
                         WithoutImageCropper ->
-                            img [ src url, alt "", class "mx-auto w-full md:w-auto max-h-64 lg:max-h-96" ] []
+                            img [ src url, alt "", class "mx-auto w-full md:w-auto max-h-[35vh] lg:max-h-[60vh]" ] []
 
                         WithImageCropper imageCropper ->
                             View.ImageCropper.view imageCropper
@@ -1313,7 +1313,7 @@ viewEntryModal (Options options) viewConfig { isVisible, index } entry toMsg =
                 LoadedFileType Pdf ->
                     View.Components.pdfViewer []
                         { url = url
-                        , childClass = "mx-auto w-full md:w-auto max-h-64 lg:max-h-96"
+                        , childClass = "mx-auto w-full md:w-auto max-h-full max-h-[35vh] lg:max-h-[60vh]"
                         , maybeTranslators = Just translators
                         , onFileTypeDiscovered = Nothing
                         }
@@ -1321,7 +1321,7 @@ viewEntryModal (Options options) viewConfig { isVisible, index } entry toMsg =
                 LoadingFileType ->
                     View.Components.pdfViewer []
                         { url = url
-                        , childClass = "mx-auto w-full md:w-auto max-h-64 lg:max-h-96"
+                        , childClass = "mx-auto w-full md:w-auto max-h-full max-h-[35vh] lg:max-h-[60vh]"
                         , maybeTranslators = Just translators
                         , onFileTypeDiscovered = Nothing
                         }
