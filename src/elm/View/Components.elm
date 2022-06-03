@@ -385,10 +385,10 @@ bgNoScroll attrs preventScroll =
         preventScrollClass =
             case preventScroll of
                 PreventScrollOnMobile ->
-                    "overflow-hidden md:overflow-auto"
+                    "overflow-hidden fixed w-full h-full md:overflow-auto"
 
                 PreventScrollAlways ->
-                    "overflow-hidden"
+                    "overflow-hidden fixed w-full h-full"
     in
     node "bg-no-scroll"
         (attribute "elm-prevent-scroll-class" preventScrollClass
