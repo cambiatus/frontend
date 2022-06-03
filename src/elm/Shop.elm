@@ -322,6 +322,9 @@ upsert { id, symbol, title, description, images, price, stockTracking } =
 
                     Just (Id unwrappedId) ->
                         Present unwrappedId
+
+            -- TODO - Include categories here
+            , categories = Absent
             , communityId = Present (Eos.symbolToString symbol)
             , title = Present title
             , description = Present (Markdown.toRawString description)

@@ -13,6 +13,10 @@ type Address
     = Address
 
 
+type Category
+    = Category
+
+
 type Check
     = Check
 
