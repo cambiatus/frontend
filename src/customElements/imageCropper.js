@@ -52,11 +52,7 @@ export default () => (
       }
 
       if (Object.values(allInputValues).some(x => x !== 0 && !x)) {
-        console.error('ImageCropper: missing input values',
-          Object.keys(allInputValues).filter(x => !allInputValues[x])
-        )
-
-        return
+        throw new Error('ImageCropper: missing input values', { cause: Object.keys(allInputValues).filter(x => !allInputValues[x]) })
       }
 
       const imageLeft = absoluteImageLeft - containerLeft
