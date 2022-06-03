@@ -94,7 +94,7 @@ import Api
 import File exposing (File)
 import Html exposing (Html, a, button, div, img, input, li, p, text)
 import Html.Attributes exposing (accept, alt, class, classList, disabled, for, id, multiple, required, src, type_)
-import Html.Attributes.Aria exposing (ariaHidden, ariaLabel)
+import Html.Attributes.Aria exposing (ariaLabel)
 import Html.Events exposing (on, onClick)
 import Html.Keyed
 import Http

@@ -296,7 +296,7 @@ createForm ({ t } as translators) environment { isDisabled } =
                         |> Form.fileMultiple
                             { parser =
                                 List.Extra.getAt selectedLogoIndex
-                                    >> Result.fromMaybe (t <| "settings.community_info.logo.choose_one")
+                                    >> Result.fromMaybe (t "settings.community_info.logo.choose_one")
                             , translators = translators
                             , value = .logo
                             , update = \logo input -> { input | logo = logo }

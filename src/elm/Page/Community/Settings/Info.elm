@@ -21,7 +21,7 @@ import Form.Toggle
 import Form.Validate
 import Graphql.Http
 import Html exposing (Html, div, form, li, p, span, text, ul)
-import Html.Attributes exposing (class, classList, disabled, maxlength)
+import Html.Attributes exposing (class, classList, maxlength)
 import Icons
 import Json.Decode as Decode exposing (Value)
 import Json.Decode.Pipeline as DecodePipeline
