@@ -111,6 +111,7 @@ update msg model loggedIn =
                                         , ( "title", Encode.string community.name )
                                         , ( "url"
                                           , loggedIn.shared.url
+                                                |> urlToShareable
                                                 |> Url.toString
                                                 |> Encode.string
                                           )
@@ -336,7 +337,8 @@ viewCommunityCard ({ translators } as shared) community =
                         translators.tr "community.learn_about"
                             [ ( "community_name", community.name )
                             , ( "url"
-                              , Route.addRouteToUrl shared Route.CommunityAbout
+                              , shared.url
+                                    |> urlToShareable
                                     |> Url.toString
                               )
                             ]
@@ -592,6 +594,11 @@ showSupportersCard community =
 showNewsCard : Community.Model -> Bool
 showNewsCard community =
     community.hasNews
+
+
+urlToShareable : Url.Url -> Url.Url
+urlToShareable url =
+    { url | path = "", query = Nothing, fragment = Nothing }
 
 
 
