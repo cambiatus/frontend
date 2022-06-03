@@ -321,7 +321,7 @@ view : Model -> { imageUrl : String, cropperAttributes : List (Html.Attribute Ne
 view model { imageUrl, cropperAttributes } =
     div [ class "mx-auto w-full md:flex md:flex-col md:w-auto" ]
         [ div
-            [ class "relative max-w-max mx-auto flex items-center justify-center"
+            [ class "relative max-w-max mx-auto flex items-center justify-center max-h-[35vh] lg:max-h-[60vh]"
             , style "aspect-ratio" (String.fromFloat model.aspectRatio)
             , id imageContainerId
             ]
@@ -329,7 +329,7 @@ view model { imageUrl, cropperAttributes } =
                 [ src imageUrl
                 , alt ""
                 , id entireImageId
-                , class "opacity-20 pointer-events-none select-none max-h-[35vh] lg:max-h-[60vh]"
+                , class "opacity-20 pointer-events-none select-none max-h-full"
                 , Html.Events.on "load" (Json.Decode.succeed ImageLoaded)
                 ]
                 []
