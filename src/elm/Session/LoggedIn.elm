@@ -325,6 +325,7 @@ type Page
     | CommunityAbout
     | CommunityObjectives
     | CommunitySettings
+    | CommunitySettingsShopCategories
     | CommunitySettingsInfo
     | CommunitySettingsNews
     | CommunitySettingsNewsEditor
