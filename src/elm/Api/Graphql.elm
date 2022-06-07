@@ -3,7 +3,7 @@ module Api.Graphql exposing
     , signPhrasePort, decodeSignedPhrasePort, Password
     , signIn, Token, SignInResponse, signUp, SignUpResponse
     , storeToken, createAbsintheSocket, tokenDecoder
-    , mutation, query
+    , mutation, query, loggedInMutation, loggedInQuery
     , errorToString, isNonExistingCommunityError, isNewsNotFoundError, isAuthError
     )
 
@@ -43,7 +43,7 @@ give back an auth token so we can perform further requests
 
 # Operations
 
-@docs mutation, query
+@docs mutation, query, loggedInMutation, loggedInQuery
 
 
 # Error helpers
@@ -238,11 +238,29 @@ query ({ endpoints } as shared) maybeAuthToken query_ toMsg =
         |> Graphql.Http.send (RemoteData.fromResult >> toMsg)
 
 
+loggedInQuery : LoggedIn loggedIn community shared endpoints -> Maybe Token -> SelectionSet a RootQuery -> (RemoteData (Graphql.Http.Error a) a -> msg) -> Cmd msg
+loggedInQuery ({ shared } as loggedIn) maybeAuthToken query_ toMsg =
+    query_
+        |> Graphql.Http.queryRequest shared.endpoints.graphql
+        |> withLoggedInCommunityDomain loggedIn
+        |> withAuthToken maybeAuthToken
+        |> Graphql.Http.send (RemoteData.fromResult >> toMsg)
+
+
 mutation : Shared shared endpoints -> Maybe Token -> SelectionSet a RootMutation -> (RemoteData (Graphql.Http.Error a) a -> msg) -> Cmd msg
 mutation ({ endpoints } as shared) maybeAuthToken mutation_ toMsg =
     mutation_
         |> Graphql.Http.mutationRequest endpoints.graphql
         |> withCommunityDomain shared
+        |> withAuthToken maybeAuthToken
+        |> Graphql.Http.send (RemoteData.fromResult >> toMsg)
+
+
+loggedInMutation : LoggedIn loggedIn community shared endpoints -> Maybe Token -> SelectionSet a RootMutation -> (RemoteData (Graphql.Http.Error a) a -> msg) -> Cmd msg
+loggedInMutation ({ shared } as loggedIn) maybeAuthToken mutation_ toMsg =
+    mutation_
+        |> Graphql.Http.mutationRequest shared.endpoints.graphql
+        |> withLoggedInCommunityDomain loggedIn
         |> withAuthToken maybeAuthToken
         |> Graphql.Http.send (RemoteData.fromResult >> toMsg)
 
@@ -297,6 +315,17 @@ type alias Shared shared endpoints =
     }
 
 
+type alias Community community =
+    { community | subdomain : String }
+
+
+type alias LoggedIn loggedIn community shared endpoints =
+    { loggedIn
+        | shared : Shared shared endpoints
+        , selectedCommunity : RemoteData (Graphql.Http.Error (Maybe (Community community))) (Community community)
+    }
+
+
 withAuthToken : Maybe Token -> Graphql.Http.Request decodesTo -> Graphql.Http.Request decodesTo
 withAuthToken maybeToken =
     case maybeToken of
@@ -332,3 +361,13 @@ withCommunityDomain shared =
                 "cambiatus.staging.cambiatus.io"
     in
     Graphql.Http.withHeader "Community-Domain" ("https://" ++ communityDomain)
+
+
+withLoggedInCommunityDomain : LoggedIn loggedIn community shared endpoints -> Graphql.Http.Request decodesTo -> Graphql.Http.Request decodesTo
+withLoggedInCommunityDomain loggedIn =
+    case loggedIn.selectedCommunity of
+        RemoteData.Success { subdomain } ->
+            Graphql.Http.withHeader "Community-Domain" ("https://" ++ subdomain)
+
+        _ ->
+            withCommunityDomain loggedIn.shared

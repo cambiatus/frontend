@@ -1320,7 +1320,7 @@ type External msg
     | SetCommunityField Community.FieldValue
     | RequiredPrivateKey { successMsg : msg, errorMsg : msg }
     | RequiredAuthToken { callbackCmd : Api.Graphql.Token -> Cmd msg }
-    | RequestQuery (Cmd (Result { callbackCmd : Shared -> Api.Graphql.Token -> Cmd msg } msg))
+    | RequestQuery (Cmd (Result { callbackCmd : Model -> Api.Graphql.Token -> Cmd msg } msg))
     | ShowFeedback Feedback.Status String
     | HideFeedback
     | ShowCodeOfConductModal
@@ -1343,7 +1343,7 @@ query :
     -> (RemoteData (Graphql.Http.Error result) result -> msg)
     -> External msg
 query model selectionSet toMsg =
-    graphqlOperation Api.Graphql.query model selectionSet toMsg
+    graphqlOperation Api.Graphql.loggedInQuery model selectionSet toMsg
 
 
 {-| Perform a GraphQL mutation. This function is preferred over `Api.Graphql.mutation`
@@ -1363,11 +1363,11 @@ mutation :
     -> (RemoteData (Graphql.Http.Error result) result -> msg)
     -> External msg
 mutation model selectionSet toMsg =
-    graphqlOperation Api.Graphql.mutation model selectionSet toMsg
+    graphqlOperation Api.Graphql.loggedInMutation model selectionSet toMsg
 
 
 graphqlOperation :
-    (Shared
+    (Model
      -> Maybe Api.Graphql.Token
      -> SelectionSet result typeLock
      -> (rawOperationResult -> rawOperationResult)
@@ -1379,14 +1379,14 @@ graphqlOperation :
     -> External msg
 graphqlOperation operation model selectionSet toMsg =
     let
-        operationCmd : Shared -> Api.Graphql.Token -> Cmd (RemoteData (Graphql.Http.Error result) result)
-        operationCmd shared authToken =
-            operation shared
+        operationCmd : Model -> Api.Graphql.Token -> Cmd (RemoteData (Graphql.Http.Error result) result)
+        operationCmd loggedIn authToken =
+            operation loggedIn
                 (Just authToken)
                 selectionSet
                 identity
 
-        treatAuthError : RemoteData (Graphql.Http.Error result) result -> Result { callbackCmd : Shared -> Api.Graphql.Token -> Cmd msg } msg
+        treatAuthError : RemoteData (Graphql.Http.Error result) result -> Result { callbackCmd : Model -> Api.Graphql.Token -> Cmd msg } msg
         treatAuthError operationResult =
             case operationResult of
                 RemoteData.Success success ->
@@ -1396,8 +1396,8 @@ graphqlOperation operation model selectionSet toMsg =
                     if Api.Graphql.isAuthError err then
                         Err
                             { callbackCmd =
-                                \newShared ->
-                                    operationCmd newShared
+                                \newModel ->
+                                    operationCmd newModel
                                         >> Cmd.map toMsg
                             }
 
@@ -1411,12 +1411,12 @@ graphqlOperation operation model selectionSet toMsg =
         Nothing ->
             RequiredAuthToken
                 { callbackCmd =
-                    operationCmd model.shared
+                    operationCmd model
                         >> Cmd.map toMsg
                 }
 
         Just authToken ->
-            operationCmd model.shared authToken
+            operationCmd model authToken
                 |> Cmd.map treatAuthError
                 |> RequestQuery
 
@@ -1722,8 +1722,8 @@ mapExternal mapFn msg =
                             Err { callbackCmd } ->
                                 Err
                                     { callbackCmd =
-                                        \shared authToken ->
-                                            callbackCmd shared authToken
+                                        \model authToken ->
+                                            callbackCmd model authToken
                                                 |> Cmd.map mapFn
                                     }
 
@@ -2020,7 +2020,7 @@ type Msg externalMsg
     | GotAuthTokenPhraseExternal (Api.Graphql.Token -> Cmd externalMsg) (RemoteData (Graphql.Http.Error Api.Graphql.Phrase) Api.Graphql.Phrase)
     | SignedAuthTokenPhrase Api.Graphql.Password
     | CompletedGeneratingAuthToken (RemoteData (Graphql.Http.Error Api.Graphql.SignInResponse) Api.Graphql.SignInResponse)
-    | RequestedQuery (Result { callbackCmd : Shared -> Api.Graphql.Token -> Cmd externalMsg } externalMsg)
+    | RequestedQuery (Result { callbackCmd : Model -> Api.Graphql.Token -> Cmd externalMsg } externalMsg)
     | RequestedQueryInternal (Result (Api.Graphql.Token -> Cmd (Msg externalMsg)) (Msg externalMsg))
     | ClickedAcceptCodeOfConduct
     | ClickedDenyCodeOfConduct
@@ -2771,7 +2771,7 @@ update msg model =
         RequestedQuery (Err { callbackCmd }) ->
             model
                 |> UR.init
-                |> UR.addMsg (RequestedNewAuthTokenPhraseExternal (callbackCmd model.shared))
+                |> UR.addMsg (RequestedNewAuthTokenPhraseExternal (callbackCmd model))
 
         RequestedQueryInternal (Ok resultMsg) ->
             model
