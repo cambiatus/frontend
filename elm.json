@@ -42,7 +42,8 @@
             "rtfeldman/elm-iso8601-date-strings": "1.1.3",
             "rtfeldman/elm-validate": "4.0.1",
             "ryannhg/date-format": "2.3.0",
-            "thaterikperson/elm-strftime": "2.0.2"
+            "thaterikperson/elm-strftime": "2.0.2",
+            "zwilias/elm-rosetree": "1.5.0"
         },
         "indirect": {
             "elm/bytes": "1.0.8",
