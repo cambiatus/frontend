@@ -1457,7 +1457,7 @@ changeRouteTo maybeRoute model =
 
         Just Route.CommunitySettingsShopCategories ->
             CommunitySettingsShopCategories.init
-                >> updateStatusWith CommunitySettingsShopCategories GotCommunitySettingsShopCategoriesMsg model
+                >> updateLoggedInUResult CommunitySettingsShopCategories GotCommunitySettingsShopCategoriesMsg model
                 |> withLoggedIn Route.CommunitySettingsShopCategories
 
         Just Route.CommunitySettingsFeatures ->
