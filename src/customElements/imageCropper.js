@@ -103,7 +103,7 @@ export default () => (
         }, 'image/png', 1)
       })
 
-      image.src = url
+      image.src = `${url}?invalidatecache=${Date.now()}`
     }
   }
 )

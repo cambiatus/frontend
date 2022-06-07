@@ -1506,7 +1506,7 @@ saveEntryAction { t } entry =
 
         -- Cropping the image is pretty fast, so we don't want the button to flicker
         -- At the same time, we don't want the user to be able to submit while cropping
-        , classList [ ( "!bg-orange-300 !text-white", isImageCropperLoading entry ) ]
+        , classList [ ( "!bg-orange-300 !text-white cursor-wait", isImageCropperLoading entry ) ]
         , onClick ClickedSaveEntry
         , disabled (isEntryLoading entry)
         , type_ "button"
