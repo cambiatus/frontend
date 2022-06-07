@@ -75,6 +75,7 @@ import Markdown exposing (Markdown)
 import Profile
 import RemoteData exposing (RemoteData)
 import Session.Shared exposing (Shared)
+import Shop.Category
 import Time exposing (Posix)
 
 
@@ -129,6 +130,7 @@ type alias Model =
     , uploads : RemoteData (Graphql.Http.Error (List String)) (List String)
     , website : Maybe String
     , contacts : List Contact.Valid
+    , shopCategories : RemoteData (Graphql.Http.Error (List Shop.Category.Tree)) (List Shop.Category.Tree)
     }
 
 
@@ -168,6 +170,7 @@ type Field
     | UploadsField
     | MembersField
     | NewsField
+    | ShopCategoriesField
 
 
 {-| `FieldValue` is useful to wrap results of queries for fields that aren't
@@ -181,6 +184,7 @@ type FieldValue
     | UploadsValue (List String)
     | MembersValue (List Profile.Minimal)
     | NewsValue (List Community.News.Model)
+    | ShopCategories (List Shop.Category.Tree)
 
 
 {-| When we want to extract a field that is not loaded by default with the
@@ -225,6 +229,9 @@ setFieldValue fieldValue model =
         NewsValue news ->
             { model | news = RemoteData.Success news }
 
+        ShopCategories categories ->
+            { model | shopCategories = RemoteData.Success categories }
+
 
 setFieldAsLoading : Field -> Model -> Model
 setFieldAsLoading field model =
@@ -244,6 +251,9 @@ setFieldAsLoading field model =
         NewsField ->
             { model | news = RemoteData.Loading }
 
+        ShopCategoriesField ->
+            { model | shopCategories = RemoteData.Loading }
+
 
 isFieldLoading : Field -> Model -> Bool
 isFieldLoading field model =
@@ -262,6 +272,9 @@ isFieldLoading field model =
 
         NewsField ->
             RemoteData.isLoading model.news
+
+        ShopCategoriesField ->
+            RemoteData.isLoading model.shopCategories
 
 
 maybeFieldValue : Field -> Model -> Maybe FieldValue
@@ -289,6 +302,11 @@ maybeFieldValue field model =
             model.news
                 |> RemoteData.toMaybe
                 |> Maybe.map NewsValue
+
+        ShopCategoriesField ->
+            model.shopCategories
+                |> RemoteData.toMaybe
+                |> Maybe.map ShopCategories
 
 
 mergeFields : RemoteData x Model -> Model -> Model
@@ -356,6 +374,7 @@ communitySelectionSet =
             (Community.contacts Contact.selectionSet
                 |> SelectionSet.map (List.filterMap identity)
             )
+        |> SelectionSet.hardcoded RemoteData.NotAsked
 
 
 
@@ -406,6 +425,10 @@ selectionSetForField field =
         NewsField ->
             Community.news Community.News.selectionSet
                 |> SelectionSet.map NewsValue
+
+        ShopCategoriesField ->
+            Community.categories Shop.Category.treeSelectionSet
+                |> SelectionSet.map ShopCategories
 
 
 fieldSelectionSet : Eos.Symbol -> Field -> SelectionSet (Maybe FieldValue) RootQuery
