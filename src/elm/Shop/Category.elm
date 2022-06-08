@@ -1,4 +1,4 @@
-module Shop.Category exposing (Id, Model, Tree, create, selectionSet, treeSelectionSet)
+module Shop.Category exposing (Id, Model, Tree, create, selectionSet, treesSelectionSet)
 
 import Cambiatus.Mutation
 import Cambiatus.Object
@@ -6,6 +6,7 @@ import Cambiatus.Object.Category
 import Graphql.Operation exposing (RootMutation)
 import Graphql.OptionalArgument as OptionalArgument
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet)
+import Maybe.Extra
 import Slug exposing (Slug)
 import Tree
 
@@ -22,6 +23,7 @@ type alias Model =
     , description : String
     , icon : Maybe String
     , image : Maybe String
+    , parentId : Maybe Id
     }
 
 
@@ -65,6 +67,7 @@ selectionSet =
         |> SelectionSet.with Cambiatus.Object.Category.description
         |> SelectionSet.with Cambiatus.Object.Category.iconUri
         |> SelectionSet.with Cambiatus.Object.Category.imageUri
+        |> SelectionSet.with (Cambiatus.Object.Category.parentCategory idSelectionSet)
 
 
 
@@ -76,45 +79,42 @@ type alias Tree =
     Tree.Tree Model
 
 
-treeSelectionSet : SelectionSet Tree Cambiatus.Object.Category
-treeSelectionSet =
+treesSelectionSet :
+    (SelectionSet Model Cambiatus.Object.Category -> SelectionSet (List Model) typeLock)
+    -> SelectionSet (List Tree) typeLock
+treesSelectionSet categoriesSelectionSet =
     let
-        unfolder : TreeSeed -> ( Model, List TreeSeed )
-        unfolder (TreeSeed root) =
-            ( root.model, root.children )
+        isRoot : Model -> Bool
+        isRoot category =
+            Maybe.Extra.isNothing category.parentId
+
+        createTree : List Model -> Model -> Tree
+        createTree children root =
+            Tree.tree root
+                (List.filterMap
+                    (\child ->
+                        if child.parentId == Just root.id then
+                            Just (createTree children child)
+
+                        else
+                            Nothing
+                    )
+                    children
+                )
     in
-    treeSeedSelectionSet maxDepth
-        |> SelectionSet.map (\root -> Tree.unfold unfolder root)
+    categoriesSelectionSet selectionSet
+        |> SelectionSet.map
+            (\allCategories ->
+                List.filterMap
+                    (\category ->
+                        if isRoot category then
+                            Just (createTree allCategories category)
 
-
-type TreeSeed
-    = TreeSeed
-        { model : Model
-        , children : List TreeSeed
-        }
-
-
-treeSeedSelectionSet : Int -> SelectionSet TreeSeed Cambiatus.Object.Category
-treeSeedSelectionSet remainingChildren =
-    let
-        childrenSelectionSet =
-            if remainingChildren == 0 then
-                SelectionSet.succeed []
-
-            else
-                treeSeedSelectionSet (remainingChildren - 1)
-                    |> Cambiatus.Object.Category.categories
-                    |> SelectionSet.map (Maybe.withDefault [])
-    in
-    SelectionSet.succeed
-        (\model children ->
-            TreeSeed
-                { model = model
-                , children = children
-                }
-        )
-        |> SelectionSet.with selectionSet
-        |> SelectionSet.with childrenSelectionSet
+                        else
+                            Nothing
+                    )
+                    allCategories
+            )
 
 
 
@@ -128,12 +128,3 @@ type Id
 idSelectionSet : SelectionSet Id Cambiatus.Object.Category
 idSelectionSet =
     SelectionSet.map Id Cambiatus.Object.Category.id
-
-
-
--- INTERNAL
-
-
-maxDepth : Int
-maxDepth =
-    5

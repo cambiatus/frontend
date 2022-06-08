@@ -427,7 +427,7 @@ selectionSetForField field =
                 |> SelectionSet.map NewsValue
 
         ShopCategoriesField ->
-            Community.categories Shop.Category.treeSelectionSet
+            Shop.Category.treesSelectionSet Community.categories
                 |> SelectionSet.map ShopCategories
 
 
