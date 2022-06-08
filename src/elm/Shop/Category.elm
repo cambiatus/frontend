@@ -1,8 +1,12 @@
-module Shop.Category exposing (Model, Tree, selectionSet)
+module Shop.Category exposing (Id, Model, Tree, create, selectionSet, treeSelectionSet)
 
+import Cambiatus.Mutation
 import Cambiatus.Object
 import Cambiatus.Object.Category
+import Graphql.Operation exposing (RootMutation)
+import Graphql.OptionalArgument as OptionalArgument
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet)
+import Slug exposing (Slug)
 import Tree
 
 
@@ -19,6 +23,38 @@ type alias Model =
     , icon : Maybe String
     , image : Maybe String
     }
+
+
+create :
+    { name : String
+    , description : String
+    , slug : Slug
+    , icon : Maybe String
+    , image : Maybe String
+    , parentId : Maybe Id
+    }
+    -> SelectionSet (Maybe Model) RootMutation
+create { name, slug, description, icon, image, parentId } =
+    Cambiatus.Mutation.category
+        (\_ ->
+            { categories = OptionalArgument.Absent
+            , categoryId =
+                parentId
+                    |> Maybe.map (\(Id id) -> String.fromInt id)
+                    |> OptionalArgument.fromMaybe
+            , iconUri = OptionalArgument.fromMaybe icon
+            , imageUri = OptionalArgument.fromMaybe image
+            , id = OptionalArgument.Absent
+            , metaDescription = OptionalArgument.Absent
+            , metaKeywords = OptionalArgument.Absent
+            , metaTitle = OptionalArgument.Absent
+            , slug = OptionalArgument.Present (Slug.toString slug)
+            }
+        )
+        { name = name
+        , description = description
+        }
+        selectionSet
 
 
 selectionSet : SelectionSet Model Cambiatus.Object.Category

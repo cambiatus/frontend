@@ -144,6 +144,10 @@ subscriptions model =
                 CommunitySponsor.subscriptions subModel
                     |> Sub.map GotCommunitySponsorMsg
 
+            CommunitySettingsShopCategories subModel ->
+                CommunitySettingsShopCategories.subscriptions subModel
+                    |> Sub.map GotCommunitySettingsShopCategoriesMsg
+
             _ ->
                 Sub.none
         ]
