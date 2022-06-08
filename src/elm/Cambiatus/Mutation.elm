@@ -48,27 +48,27 @@ addCommunityPhotos requiredArgs object_ =
 
 
 type alias CategoryOptionalArguments =
-    { categories : OptionalArgument (List Int)
-    , categoryId : OptionalArgument String
-    , iconUri : OptionalArgument String
+    { iconUri : OptionalArgument String
     , id : OptionalArgument Int
     , imageUri : OptionalArgument String
     , metaDescription : OptionalArgument String
     , metaKeywords : OptionalArgument String
     , metaTitle : OptionalArgument String
+    , parentCategoryId : OptionalArgument Int
     , slug : OptionalArgument String
     }
 
 
 type alias CategoryRequiredArguments =
-    { description : String
+    { categories : List Int
+    , description : String
     , name : String
     }
 
 
 {-| [Auth required - Admin only] Upserts a category
 
-  - categoryId - Parent category ID
+  - parentCategoryId - Parent category ID
 
 -}
 category :
@@ -79,13 +79,13 @@ category :
 category fillInOptionals requiredArgs object_ =
     let
         filledInOptionals =
-            fillInOptionals { categories = Absent, categoryId = Absent, iconUri = Absent, id = Absent, imageUri = Absent, metaDescription = Absent, metaKeywords = Absent, metaTitle = Absent, slug = Absent }
+            fillInOptionals { iconUri = Absent, id = Absent, imageUri = Absent, metaDescription = Absent, metaKeywords = Absent, metaTitle = Absent, parentCategoryId = Absent, slug = Absent }
 
         optionalArgs =
-            [ Argument.optional "categories" filledInOptionals.categories (Encode.int |> Encode.list), Argument.optional "categoryId" filledInOptionals.categoryId Encode.string, Argument.optional "iconUri" filledInOptionals.iconUri Encode.string, Argument.optional "id" filledInOptionals.id Encode.int, Argument.optional "imageUri" filledInOptionals.imageUri Encode.string, Argument.optional "metaDescription" filledInOptionals.metaDescription Encode.string, Argument.optional "metaKeywords" filledInOptionals.metaKeywords Encode.string, Argument.optional "metaTitle" filledInOptionals.metaTitle Encode.string, Argument.optional "slug" filledInOptionals.slug Encode.string ]
+            [ Argument.optional "iconUri" filledInOptionals.iconUri Encode.string, Argument.optional "id" filledInOptionals.id Encode.int, Argument.optional "imageUri" filledInOptionals.imageUri Encode.string, Argument.optional "metaDescription" filledInOptionals.metaDescription Encode.string, Argument.optional "metaKeywords" filledInOptionals.metaKeywords Encode.string, Argument.optional "metaTitle" filledInOptionals.metaTitle Encode.string, Argument.optional "parentCategoryId" filledInOptionals.parentCategoryId Encode.int, Argument.optional "slug" filledInOptionals.slug Encode.string ]
                 |> List.filterMap identity
     in
-    Object.selectionForCompositeField "category" (optionalArgs ++ [ Argument.required "description" requiredArgs.description Encode.string, Argument.required "name" requiredArgs.name Encode.string ]) object_ (identity >> Decode.nullable)
+    Object.selectionForCompositeField "category" (optionalArgs ++ [ Argument.required "categories" requiredArgs.categories (Encode.int |> Encode.list), Argument.required "description" requiredArgs.description Encode.string, Argument.required "name" requiredArgs.name Encode.string ]) object_ (identity >> Decode.nullable)
 
 
 type alias CommunityRequiredArguments =
@@ -148,7 +148,7 @@ type alias DeleteCategoryRequiredArguments =
     { id : Int }
 
 
-{-| [Auth required - Admin only] Upserts a category
+{-| [Auth required - Admin only] Deletes a category
 -}
 deleteCategory :
     DeleteCategoryRequiredArguments

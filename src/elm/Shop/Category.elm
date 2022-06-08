@@ -37,10 +37,9 @@ create :
 create { name, slug, description, icon, image, parentId } =
     Cambiatus.Mutation.category
         (\_ ->
-            { categories = OptionalArgument.Absent
-            , categoryId =
+            { parentCategoryId =
                 parentId
-                    |> Maybe.map (\(Id id) -> String.fromInt id)
+                    |> Maybe.map (\(Id id) -> id)
                     |> OptionalArgument.fromMaybe
             , iconUri = OptionalArgument.fromMaybe icon
             , imageUri = OptionalArgument.fromMaybe image
@@ -53,6 +52,7 @@ create { name, slug, description, icon, image, parentId } =
         )
         { name = name
         , description = description
+        , categories = []
         }
         selectionSet
 

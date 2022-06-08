@@ -26,13 +26,6 @@ categories object_ =
     Object.selectionForCompositeField "categories" [] object_ (identity >> Decode.list >> Decode.nullable)
 
 
-category :
-    SelectionSet decodesTo Cambiatus.Object.Category
-    -> SelectionSet (Maybe decodesTo) Cambiatus.Object.Category
-category object_ =
-    Object.selectionForCompositeField "category" [] object_ (identity >> Decode.nullable)
-
-
 description : SelectionSet String Cambiatus.Object.Category
 description =
     Object.selectionForField "String" "description" [] Decode.string
@@ -76,6 +69,13 @@ metaTitle =
 name : SelectionSet String Cambiatus.Object.Category
 name =
     Object.selectionForField "String" "name" [] Decode.string
+
+
+parentCategory :
+    SelectionSet decodesTo Cambiatus.Object.Category
+    -> SelectionSet (Maybe decodesTo) Cambiatus.Object.Category
+parentCategory object_ =
+    Object.selectionForCompositeField "parentCategory" [] object_ (identity >> Decode.nullable)
 
 
 products :
