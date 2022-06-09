@@ -1,4 +1,4 @@
-module Shop.Category exposing (Id, Model, Tree, create, treesSelectionSet)
+module Shop.Category exposing (Id, Model, Tree, create, treesSelectionSet, update)
 
 import Cambiatus.Mutation
 import Cambiatus.Object
@@ -31,21 +31,51 @@ create :
     { name : String
     , description : String
     , slug : Slug
-    , icon : Maybe String
-    , image : Maybe String
     , parentId : Maybe Id
     }
     -> SelectionSet (Maybe Model) RootMutation
-create { name, slug, description, icon, image, parentId } =
+create { name, slug, description, parentId } =
     Cambiatus.Mutation.category
         (\_ ->
             { parentCategoryId =
                 parentId
                     |> Maybe.map (\(Id id) -> id)
                     |> OptionalArgument.fromMaybe
-            , iconUri = OptionalArgument.fromMaybe icon
-            , imageUri = OptionalArgument.fromMaybe image
+            , iconUri = OptionalArgument.Absent
+            , imageUri = OptionalArgument.Absent
             , id = OptionalArgument.Absent
+            , metaDescription = OptionalArgument.Absent
+            , metaKeywords = OptionalArgument.Absent
+            , metaTitle = OptionalArgument.Absent
+            , slug = OptionalArgument.Present (Slug.toString slug)
+            }
+        )
+        { name = name
+        , description = description
+        , categories = []
+        }
+        selectionSet
+
+
+update :
+    Model
+    -> { name : String, description : String, slug : Slug }
+    -> SelectionSet (Maybe Model) RootMutation
+update model { name, description, slug } =
+    let
+        unwrapId : Id -> Int
+        unwrapId (Id id) =
+            id
+    in
+    Cambiatus.Mutation.category
+        (\_ ->
+            { parentCategoryId =
+                model.parentId
+                    |> Maybe.map unwrapId
+                    |> OptionalArgument.fromMaybe
+            , iconUri = OptionalArgument.fromMaybe model.icon
+            , imageUri = OptionalArgument.fromMaybe model.image
+            , id = OptionalArgument.Present (unwrapId model.id)
             , metaDescription = OptionalArgument.Absent
             , metaKeywords = OptionalArgument.Absent
             , metaTitle = OptionalArgument.Absent
