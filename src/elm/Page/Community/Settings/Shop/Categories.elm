@@ -8,13 +8,14 @@ module Page.Community.Settings.Shop.Categories exposing
     , view
     )
 
+import Api.Graphql.DeleteStatus
 import Community
 import EverySet exposing (EverySet)
 import Form
 import Form.Text
 import Form.Validate
 import Graphql.Http
-import Html exposing (Html, button, details, div, li, span, summary, text, ul)
+import Html exposing (Html, button, details, div, li, p, span, summary, text, ul)
 import Html.Attributes exposing (class, classList)
 import Html.Events exposing (onClick)
 import Icons
@@ -27,6 +28,7 @@ import Shop.Category
 import Slug exposing (Slug)
 import Translation
 import Tree
+import Tree.Zipper
 import UpdateResult as UR
 import Utils
 import View.Components
@@ -42,6 +44,7 @@ type alias Model =
     { expandedCategories : EverySet Shop.Category.Id
     , newCategoryState : NewCategoryState
     , categoryModalState : CategoryModalState
+    , categoryDeletionState : CategoryDeletionState
     }
 
 
@@ -53,6 +56,7 @@ init _ =
     -- TODO - Should we allow multiple editors to be open at once?
     , newCategoryState = NotEditing
     , categoryModalState = Closed
+    , categoryDeletionState = NotDeleting
     }
         |> UR.init
         |> UR.addExt (LoggedIn.RequestedReloadCommunityField Community.ShopCategoriesField)
@@ -75,6 +79,12 @@ type CategoryModalState
     | Open Shop.Category.Id (Form.Model UpdateCategoryFormInput)
 
 
+type CategoryDeletionState
+    = NotDeleting
+    | AskingForConfirmation Shop.Category.Id
+    | Deleting Shop.Category.Id
+
+
 type Msg
     = NoOp
     | ClickedToggleExpandCategory Shop.Category.Id
@@ -88,6 +98,10 @@ type Msg
     | GotUpdateCategoryFormMsg (Form.Msg UpdateCategoryFormInput)
     | SubmittedUpdateCategoryForm UpdateCategoryFormOutput
     | FinishedUpdatingCategory (RemoteData (Graphql.Http.Error (Maybe Shop.Category.Model)) (Maybe Shop.Category.Model))
+    | ClickedDeleteCategory Shop.Category.Id
+    | ClosedConfirmDeleteModal
+    | ConfirmedDeleteCategory Shop.Category.Id
+    | CompletedDeletingCategory (RemoteData (Graphql.Http.Error Api.Graphql.DeleteStatus.DeleteStatus) Api.Graphql.DeleteStatus.DeleteStatus)
 
 
 type alias UpdateResult =
@@ -101,11 +115,11 @@ type alias UpdateResult =
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
 update msg model loggedIn =
     let
-        getCategory : Shop.Category.Id -> Maybe Shop.Category.Model
-        getCategory categoryId =
+        getCategoryZipper : Shop.Category.Id -> Maybe (Tree.Zipper.Zipper Shop.Category.Model)
+        getCategoryZipper categoryId =
             case Community.getField loggedIn.selectedCommunity .shopCategories of
                 RemoteData.Success ( _, categories ) ->
-                    findInTrees (\category -> category.id == categoryId) categories
+                    findInForest (\category -> category.id == categoryId) categories
 
                 _ ->
                     Nothing
@@ -144,7 +158,7 @@ update msg model loggedIn =
                 |> UR.init
 
         ClickedCategory categoryId ->
-            case getCategory categoryId of
+            case getCategoryZipper categoryId |> Maybe.map Tree.Zipper.label of
                 Just category ->
                     { model
                         | categoryModalState =
@@ -212,6 +226,7 @@ update msg model loggedIn =
                             , slug = slug
                             , parentId = parentId
                             }
+                            Shop.Category.selectionSet
                         )
                         FinishedCreatingCategory
                     )
@@ -246,11 +261,11 @@ update msg model loggedIn =
                             model
 
         SubmittedUpdateCategoryForm formOutput ->
-            case getCategory formOutput.id of
+            case getCategoryZipper formOutput.id of
                 Nothing ->
                     UR.init model
 
-                Just category ->
+                Just zipper ->
                     { model
                         | categoryModalState =
                             case model.categoryModalState of
@@ -263,11 +278,13 @@ update msg model loggedIn =
                         |> UR.init
                         |> UR.addExt
                             (LoggedIn.mutation loggedIn
-                                (Shop.Category.update category
+                                (Shop.Category.update (Tree.Zipper.label zipper)
+                                    -- TODO - Include children
                                     { name = formOutput.name
                                     , slug = formOutput.slug
                                     , description = formOutput.description
                                     }
+                                    Shop.Category.selectionSet
                                 )
                                 FinishedUpdatingCategory
                             )
@@ -286,6 +303,73 @@ update msg model loggedIn =
 
         FinishedUpdatingCategory _ ->
             UR.init model
+
+        ClickedDeleteCategory categoryId ->
+            case getCategoryZipper categoryId of
+                Nothing ->
+                    model
+                        |> UR.init
+
+                Just zipper ->
+                    if List.isEmpty (Tree.Zipper.children zipper) then
+                        { model | categoryDeletionState = Deleting categoryId }
+                            |> UR.init
+                            |> UR.addExt
+                                (LoggedIn.mutation
+                                    loggedIn
+                                    (Api.Graphql.DeleteStatus.selectionSet
+                                        (Shop.Category.delete categoryId)
+                                    )
+                                    CompletedDeletingCategory
+                                )
+
+                    else
+                        { model | categoryDeletionState = AskingForConfirmation categoryId }
+                            |> UR.init
+
+        ClosedConfirmDeleteModal ->
+            { model | categoryDeletionState = NotDeleting }
+                |> UR.init
+
+        ConfirmedDeleteCategory categoryId ->
+            { model | categoryDeletionState = Deleting categoryId }
+                |> UR.init
+                |> UR.addExt
+                    (LoggedIn.mutation
+                        loggedIn
+                        (Api.Graphql.DeleteStatus.selectionSet
+                            (Shop.Category.delete categoryId)
+                        )
+                        CompletedDeletingCategory
+                    )
+
+        CompletedDeletingCategory (RemoteData.Success Api.Graphql.DeleteStatus.Deleted) ->
+            { model | categoryDeletionState = NotDeleting }
+                |> UR.init
+                |> UR.addExt (LoggedIn.ShowFeedback View.Feedback.Success "Deleted")
+
+        CompletedDeletingCategory (RemoteData.Success (Api.Graphql.DeleteStatus.Error _)) ->
+            { model | categoryDeletionState = NotDeleting }
+                |> UR.init
+                -- TODO - I18N
+                |> UR.addExt (LoggedIn.ShowFeedback View.Feedback.Failure "error :(")
+
+        CompletedDeletingCategory (RemoteData.Failure err) ->
+            { model | categoryDeletionState = NotDeleting }
+                |> UR.init
+                |> UR.addExt (LoggedIn.ShowFeedback View.Feedback.Failure (loggedIn.shared.translators.t "error.unknown"))
+                |> UR.logGraphqlError msg
+                    (Just loggedIn.accountName)
+                    "Got an error when trying to delete category"
+                    { moduleName = "Page.Community.Settings.Shop.Categories"
+                    , function = "update"
+                    }
+                    []
+                    err
+
+        CompletedDeletingCategory _ ->
+            model
+                |> UR.init
 
 
 
@@ -349,6 +433,15 @@ view_ translators model categories =
 
                     Just openCategory ->
                         viewCategoryModal translators openCategory formModel
+        , case model.categoryDeletionState of
+            NotDeleting ->
+                text ""
+
+            AskingForConfirmation categoryId ->
+                viewConfirmDeleteCategoryModal categoryId
+
+            Deleting categoryId ->
+                viewConfirmDeleteCategoryModal categoryId
         ]
 
 
@@ -390,7 +483,7 @@ viewCategoryWithChildren translators model category children =
             , class "parent"
             ]
             [ summary
-                [ class "marker-hidden flex items-center rounded-sm parent-hover:bg-blue-600/20"
+                [ class "marker-hidden flex items-center rounded-sm parent-hover:bg-blue-600/10"
                 , Html.Events.preventDefaultOn "click"
                     (Json.Decode.succeed ( NoOp, True ))
                 ]
@@ -401,6 +494,11 @@ viewCategoryWithChildren translators model category children =
                     [ Icons.arrowDown (String.join " " [ "transition-transform", openArrowClass ])
                     , viewCategory category
                     ]
+                , button
+                    [ class "h-8 group mr-2"
+                    , onClick (ClickedDeleteCategory category.id)
+                    ]
+                    [ Icons.trash "h-4 text-black group-hover:text-red" ]
                 ]
             , div [ class "ml-4 flex flex-col mb-4 mt-2" ]
                 [ ul
@@ -422,7 +520,7 @@ viewAddCategory translators attrs model maybeParentCategory =
 
         viewAddCategoryButton customAttrs =
             button
-                (class "flex items-center px-2 h-8 font-bold hover:bg-blue-600/20 rounded-sm"
+                (class "flex items-center px-2 h-8 font-bold hover:bg-blue-600/10 rounded-sm"
                     :: onClick (ClickedAddCategory parentId)
                     :: customAttrs
                 )
@@ -509,6 +607,40 @@ viewCategoryModal translators category formModel =
                 ]
             ]
         |> Modal.withSize Modal.Large
+        |> Modal.toHtml
+
+
+viewConfirmDeleteCategoryModal : Shop.Category.Id -> Html Msg
+viewConfirmDeleteCategoryModal categoryId =
+    Modal.initWith
+        { isVisible = True
+        , closeMsg = ClosedConfirmDeleteModal
+        }
+        -- TODO - I18N
+        |> Modal.withHeader "Delete category"
+        |> Modal.withBody
+            -- TODO - I18N
+            [ p [] [ text "If you delete this category, all of its sub-categories will also be permanently deleted." ]
+
+            -- TODO - I18N
+            , p [] [ text "Are you sure you want to delete this category?" ]
+            ]
+        |> Modal.withFooter
+            [ div [ class "flex flex-col sm:flex-row gap-4" ]
+                [ button
+                    [ class "button button-secondary w-full sm:w-40"
+                    , onClick ClosedConfirmDeleteModal
+                    ]
+                    -- TODO - I18N
+                    [ text "Cancel" ]
+                , button
+                    [ class "button button-danger w-full sm:w-40"
+                    , onClick (ConfirmedDeleteCategory categoryId)
+                    ]
+                    -- TODO - I18N
+                    [ text "Delete" ]
+                ]
+            ]
         |> Modal.toHtml
 
 
@@ -693,6 +825,17 @@ findInTrees fn trees =
         |> List.Extra.find fn
 
 
+findInForest : (a -> Bool) -> List (Tree.Tree a) -> Maybe (Tree.Zipper.Zipper a)
+findInForest fn trees =
+    case trees of
+        [] ->
+            Nothing
+
+        firstTree :: otherTrees ->
+            Tree.Zipper.fromForest firstTree otherTrees
+                |> Tree.Zipper.findFromRoot fn
+
+
 msgToString : Msg -> List String
 msgToString msg =
     case msg of
@@ -731,3 +874,15 @@ msgToString msg =
 
         FinishedUpdatingCategory r ->
             [ "FinishedUpdatingCategory", UR.remoteDataToString r ]
+
+        ClickedDeleteCategory _ ->
+            [ "ClickedDeleteCategory" ]
+
+        ClosedConfirmDeleteModal ->
+            [ "ClosedConfirmDeleteModal" ]
+
+        ConfirmedDeleteCategory _ ->
+            [ "ConfirmedDeleteCategory" ]
+
+        CompletedDeletingCategory r ->
+            [ "CompletedDeletingCategory", UR.remoteDataToString r ]

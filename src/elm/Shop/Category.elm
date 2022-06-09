@@ -1,4 +1,4 @@
-module Shop.Category exposing (Id, Model, Tree, create, treesSelectionSet, update)
+module Shop.Category exposing (Id, Model, Tree, create, delete, selectionSet, treesSelectionSet, update)
 
 import Cambiatus.Mutation
 import Cambiatus.Object
@@ -33,7 +33,8 @@ create :
     , slug : Slug
     , parentId : Maybe Id
     }
-    -> SelectionSet (Maybe Model) RootMutation
+    -> SelectionSet decodesTo Cambiatus.Object.Category
+    -> SelectionSet (Maybe decodesTo) RootMutation
 create { name, slug, description, parentId } =
     Cambiatus.Mutation.category
         (\_ ->
@@ -54,13 +55,13 @@ create { name, slug, description, parentId } =
         , description = description
         , categories = []
         }
-        selectionSet
 
 
 update :
     Model
     -> { name : String, description : String, slug : Slug }
-    -> SelectionSet (Maybe Model) RootMutation
+    -> SelectionSet decodesTo Cambiatus.Object.Category
+    -> SelectionSet (Maybe decodesTo) RootMutation
 update model { name, description, slug } =
     let
         unwrapId : Id -> Int
@@ -86,7 +87,14 @@ update model { name, description, slug } =
         , description = description
         , categories = []
         }
-        selectionSet
+
+
+delete :
+    Id
+    -> SelectionSet decodesTo Cambiatus.Object.DeleteStatus
+    -> SelectionSet (Maybe decodesTo) RootMutation
+delete (Id id) =
+    Cambiatus.Mutation.deleteCategory { id = id }
 
 
 selectionSet : SelectionSet Model Cambiatus.Object.Category
