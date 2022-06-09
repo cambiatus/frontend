@@ -258,6 +258,19 @@ module.exports = {
       })
 
       addUtilities(rotateUtilities)
+    },
+    // Create `parent-*` variants. This works similar to `group-*` variants, but
+    // only works on direct children of the `parent` class.
+    function ({ addVariant, e }) {
+      const operations = ['hover']
+
+      operations.forEach((operation) => {
+        addVariant(`parent-${operation}`, ({ modifySelectors, separator }) => {
+          modifySelectors(({ className }) =>
+            `.parent:${operation}>.parent-${operation}${e(separator)}${e(className)}`
+          )
+        })
+      })
     }
   ],
   purge: [
