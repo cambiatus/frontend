@@ -718,7 +718,7 @@ viewInputWithBackground translators basic =
                 [ onClick (ClickedDeleteContact basic.contactType)
                 , type_ "button"
                 ]
-                [ Icons.trash "" ]
+                [ Icons.trash "text-red" ]
             ]
         , viewInput translators basic
         ]
