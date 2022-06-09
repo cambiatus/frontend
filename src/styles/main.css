@@ -583,5 +583,13 @@ https://tailwindcss.com/docs/adding-new-utilities */
 
 /* End of QuillJS classes */
 
+/* Categories page */
+
+.category-details:hover > summary {
+  @apply bg-blue-600/20;
+}
+
+/* End of categories page */
+
 /* https://tailwindcss.com/docs/extracting-components#extracting-css-components-with-apply */
 @tailwind utilities;

@@ -221,17 +221,19 @@ view loggedIn model =
 
 view_ : Translation.Translators -> Model -> List Shop.Category.Tree -> Html Msg
 view_ translators model categories =
-    div []
-        [ ul []
-            (List.map
-                (\category ->
-                    li []
-                        [ viewCategoryTree translators model category
-                        ]
+    div [ class "container mx-auto sm:px-4 sm:mt-6 sm:mb-20" ]
+        [ div [ class "bg-white container mx-auto pt-6 pb-7 px-4 sm:px-6 sm:rounded sm:shadow-lg lg:w-2/3" ]
+            [ ul [ class "mb-2" ]
+                (List.map
+                    (\category ->
+                        li []
+                            [ viewCategoryTree translators model category
+                            ]
+                    )
+                    categories
                 )
-                categories
-            )
-        , viewAddCategory translators model Nothing
+            , viewAddCategory translators [ class "w-full pl-2" ] model Nothing
+            ]
         ]
 
 
@@ -258,57 +260,53 @@ viewCategoryWithChildren translators model category children =
             else
                 "-rotate-90"
     in
-    li
-        [ classList [ ( "ml-8", List.isEmpty children ) ]
-        ]
-        (if List.isEmpty children then
-            [ viewCategory category
-            , viewAddCategory translators model (Just category)
+    li []
+        [ details
+            [ if isOpen then
+                Html.Attributes.attribute "open" "true"
+
+              else
+                class ""
+            , class "category-details"
             ]
-
-         else
-            [ details
-                [ if isOpen then
-                    Html.Attributes.attribute "open" "true"
-
-                  else
-                    class ""
+            [ summary
+                [ class "marker-hidden flex items-center rounded-sm"
+                , Html.Events.preventDefaultOn "click"
+                    (Json.Decode.succeed ( NoOp, True ))
                 ]
-                [ summary
-                    [ class "marker-hidden flex items-center"
-                    , Html.Events.preventDefaultOn "click"
-                        (Json.Decode.succeed ( NoOp, True ))
+                [ button
+                    [ onClick (ClickedToggleExpandCategory category.id)
+                    , class "flex items-center w-full"
                     ]
-                    [ button
-                        [ onClick (ClickedToggleExpandCategory category.id)
-                        , classList [ ( "opacity-0 pointer-events-none", List.isEmpty children ) ]
-                        ]
-                        [ Icons.arrowDown (String.join " " [ "transition-transform", openArrowClass ])
-                        ]
+                    [ Icons.arrowDown (String.join " " [ "transition-transform", openArrowClass ])
                     , viewCategory category
                     ]
-                , div
-                    [ class "ml-4" ]
-                    [ ul [] children
-                    , viewAddCategory translators model (Just category)
+                ]
+            , div [ class "ml-4 flex flex-col mb-4 mt-2" ]
+                [ ul
+                    [ class "grid gap-y-2"
+                    , classList [ ( "mb-2", not (List.isEmpty children) ) ]
                     ]
+                    children
+                , viewAddCategory translators [] model (Just category)
                 ]
             ]
-        )
+        ]
 
 
-viewAddCategory : Translation.Translators -> Model -> Maybe Shop.Category.Model -> Html Msg
-viewAddCategory translators model maybeParentCategory =
+viewAddCategory : Translation.Translators -> List (Html.Attribute Msg) -> Model -> Maybe Shop.Category.Model -> Html Msg
+viewAddCategory translators attrs model maybeParentCategory =
     let
         parentId =
             Maybe.map .id maybeParentCategory
 
-        viewAddCategoryButton =
+        viewAddCategoryButton customAttrs =
             button
-                [ class "flex ml-4 items-center"
-                , onClick (ClickedAddCategory parentId)
-                ]
-                [ Icons.plus "w-3 h-3 mr-2"
+                (class "flex items-center px-2 h-8 font-bold hover:bg-blue-600/20 rounded-sm"
+                    :: onClick (ClickedAddCategory parentId)
+                    :: customAttrs
+                )
+                [ Icons.plus "w-4 h-4 mr-2"
                 , case maybeParentCategory of
                     Nothing ->
                         -- TODO - I18N
@@ -321,11 +319,11 @@ viewAddCategory translators model maybeParentCategory =
     in
     case model.newCategoryState of
         NotEditing ->
-            viewAddCategoryButton
+            viewAddCategoryButton attrs
 
         EditingNewCategory newCategoryData ->
             if newCategoryData.parent == parentId then
-                Form.view [ class "ml-4 bg-white border border-black rounded-md p-6" ]
+                Form.view (class "bg-white border border-gray-300 rounded-md p-4" :: attrs)
                     translators
                     (\submitButton ->
                         [ div [ class "flex justify-end gap-4" ]
@@ -348,7 +346,7 @@ viewAddCategory translators model maybeParentCategory =
                     }
 
             else
-                viewAddCategoryButton
+                viewAddCategoryButton attrs
 
 
 
@@ -386,11 +384,16 @@ newCategoryForm translators =
                                 (\name ->
                                     case Slug.generate name of
                                         Nothing ->
-                                            -- TODO - Show meaningful error?
+                                            -- Errors are shown below, on the slug field
                                             Err (\_ -> "")
 
-                                        Just _ ->
-                                            Ok name
+                                        Just slug ->
+                                            if String.length (Slug.toString slug) < 2 then
+                                                -- Errors are shown below, on the slug field
+                                                Err (\_ -> "")
+
+                                            else
+                                                Ok name
                                 )
                             >> Form.Validate.validate translators
                     , value = .name
@@ -402,15 +405,20 @@ newCategoryForm translators =
             ((\{ name } ->
                 case Slug.generate name of
                     Nothing ->
-                        -- TODO - Show error message?
                         Form.arbitrary
                             (div [ class "mb-10" ]
                                 [ span [ class "label" ]
                                     -- TODO - I18N
                                     [ text "Slug" ]
-                                , span [ class "text-gray-400 italic" ]
-                                    -- TODO - I18N
-                                    [ text "Insert a name to generate the slug" ]
+                                , if String.isEmpty name then
+                                    span [ class "text-gray-400 italic" ]
+                                        -- TODO - I18N
+                                        [ text "Insert a name to generate the slug" ]
+
+                                  else
+                                    span [ class "form-error" ]
+                                        -- TODO - I18N
+                                        [ text "Invalid slug" ]
                                 ]
                             )
 
