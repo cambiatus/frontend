@@ -1,4 +1,4 @@
-module Shop.Category exposing (Id, Model, Tree, create, selectionSet, treesSelectionSet)
+module Shop.Category exposing (Id, Model, Tree, create, treesSelectionSet)
 
 import Cambiatus.Mutation
 import Cambiatus.Object
