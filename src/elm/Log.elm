@@ -11,6 +11,7 @@ port module Log exposing
     , addBreadcrumb
     , contextFromCommunity
     , fromDecodeError
+    , fromDeletionStatusError
     , fromGraphqlHttpError
     , fromHttpError
     , fromImpossible
@@ -37,6 +38,7 @@ can see details about the error and analyze further.
 
 -}
 
+import Api.Graphql.DeleteStatus
 import Dict exposing (Dict)
 import Eos
 import Eos.Account
@@ -365,6 +367,21 @@ fromIncompatibleMsg transaction maybeUser location contexts =
     , contexts = contexts
     , transaction = transaction
     , level = Info
+    }
+
+
+{-| Creates an event out of an error when trying to delete something with the
+GraphQL API
+-}
+fromDeletionStatusError : msg -> Maybe Eos.Account.Name -> Location -> List Context -> Api.Graphql.DeleteStatus.ErrorReason -> Event msg
+fromDeletionStatusError transaction maybeUser location contexts reason =
+    { username = maybeUser
+    , message = Api.Graphql.DeleteStatus.reasonToErrorString reason
+    , tags = [ TypeTag GraphqlErrorType ]
+    , location = location
+    , contexts = contexts
+    , transaction = transaction
+    , level = Error
     }
 
 

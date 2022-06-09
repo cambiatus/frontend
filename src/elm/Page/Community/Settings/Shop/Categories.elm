@@ -10,6 +10,7 @@ module Page.Community.Settings.Shop.Categories exposing
 
 import Api.Graphql.DeleteStatus
 import Community
+import Dict
 import EverySet exposing (EverySet)
 import Form
 import Form.Text
@@ -101,7 +102,7 @@ type Msg
     | ClickedDeleteCategory Shop.Category.Id
     | ClosedConfirmDeleteModal
     | ConfirmedDeleteCategory Shop.Category.Id
-    | CompletedDeletingCategory (RemoteData (Graphql.Http.Error Api.Graphql.DeleteStatus.DeleteStatus) Api.Graphql.DeleteStatus.DeleteStatus)
+    | CompletedDeletingCategory Shop.Category.Id (RemoteData (Graphql.Http.Error Api.Graphql.DeleteStatus.DeleteStatus) Api.Graphql.DeleteStatus.DeleteStatus)
 
 
 type alias UpdateResult =
@@ -231,16 +232,74 @@ update msg model loggedIn =
                         FinishedCreatingCategory
                     )
 
-        FinishedCreatingCategory (RemoteData.Success _) ->
+        FinishedCreatingCategory (RemoteData.Success (Just category)) ->
             -- TODO - Should we open the form to create another category?
+            let
+                insertInForest : List Shop.Category.Tree -> List Shop.Category.Tree
+                insertInForest forest =
+                    case category.parentId of
+                        Nothing ->
+                            forest ++ [ Tree.singleton category ]
+
+                        Just parentId ->
+                            case findInForest (\parent -> parent.id == parentId) forest of
+                                Nothing ->
+                                    forest ++ [ Tree.singleton category ]
+
+                                Just zipper ->
+                                    zipper
+                                        |> Tree.Zipper.mapTree (Tree.appendChild (Tree.singleton category))
+                                        |> Tree.Zipper.toForest
+                                        |> (\( first, others ) -> first :: others)
+
+                insertInCommunity : UpdateResult -> UpdateResult
+                insertInCommunity =
+                    case Community.getField loggedIn.selectedCommunity .shopCategories of
+                        RemoteData.Success ( _, categories ) ->
+                            insertInForest categories
+                                |> Community.ShopCategories
+                                |> LoggedIn.SetCommunityField
+                                |> UR.addExt
+
+                        _ ->
+                            identity
+            in
             { model | newCategoryState = NotEditing }
                 |> UR.init
-                -- TODO - Remove this once we update the UI automatically
-                |> UR.addExt (LoggedIn.ShowFeedback View.Feedback.Success "Yay!")
+                |> insertInCommunity
+
+        FinishedCreatingCategory (RemoteData.Success Nothing) ->
+            { model
+                | newCategoryState =
+                    case model.newCategoryState of
+                        NotEditing ->
+                            NotEditing
+
+                        EditingNewCategory newCategoryData ->
+                            { newCategoryData | form = Form.withDisabled False newCategoryData.form }
+                                |> EditingNewCategory
+            }
+                |> UR.init
+                -- TODO - I18N
+                |> UR.addExt (LoggedIn.ShowFeedback View.Feedback.Failure "Aww :(")
+                |> UR.logImpossible msg
+                    "Got Nothing after creating category"
+                    (Just loggedIn.accountName)
+                    { moduleName = "Page.Community.Settings.Shop.Categories", function = "update" }
+                    []
 
         FinishedCreatingCategory (RemoteData.Failure _) ->
-            -- TODO - re-enable form
-            UR.init model
+            { model
+                | newCategoryState =
+                    case model.newCategoryState of
+                        NotEditing ->
+                            NotEditing
+
+                        EditingNewCategory newCategoryData ->
+                            { newCategoryData | form = Form.withDisabled False newCategoryData.form }
+                                |> EditingNewCategory
+            }
+                |> UR.init
                 -- TODO - I18N
                 |> UR.addExt (LoggedIn.ShowFeedback View.Feedback.Failure "Aww :(")
 
@@ -289,17 +348,51 @@ update msg model loggedIn =
                                 FinishedUpdatingCategory
                             )
 
-        FinishedUpdatingCategory (RemoteData.Success _) ->
+        FinishedUpdatingCategory (RemoteData.Success (Just category)) ->
+            let
+                updateInCommunity : UpdateResult -> UpdateResult
+                updateInCommunity =
+                    case getCategoryZipper category.id of
+                        Nothing ->
+                            identity
+
+                        Just zipper ->
+                            zipper
+                                |> Tree.Zipper.replaceLabel category
+                                |> Tree.Zipper.toForest
+                                |> (\( first, others ) -> first :: others)
+                                |> Community.ShopCategories
+                                |> LoggedIn.SetCommunityField
+                                |> UR.addExt
+            in
             { model | categoryModalState = Closed }
                 |> UR.init
-                -- TODO - Remove this once we update the UI automatically
-                |> UR.addExt (LoggedIn.ShowFeedback View.Feedback.Success "Yay!")
+                |> updateInCommunity
 
-        FinishedUpdatingCategory (RemoteData.Failure _) ->
-            -- TODO - re-enable form
-            UR.init model
+        FinishedUpdatingCategory (RemoteData.Success Nothing) ->
+            { model | categoryModalState = Closed }
+                |> UR.init
                 -- TODO - I18N
                 |> UR.addExt (LoggedIn.ShowFeedback View.Feedback.Failure "Aww :(")
+                |> UR.logImpossible msg
+                    "Got Nothing after updating category"
+                    (Just loggedIn.accountName)
+                    { moduleName = "Page.Community.Settings.Shop.Categories", function = "update" }
+                    []
+
+        FinishedUpdatingCategory (RemoteData.Failure err) ->
+            { model | categoryModalState = Closed }
+                |> UR.init
+                -- TODO - I18N
+                |> UR.addExt (LoggedIn.ShowFeedback View.Feedback.Failure "Aww :(")
+                |> UR.logGraphqlError msg
+                    (Just loggedIn.accountName)
+                    "Got an error when updating category"
+                    { moduleName = "Page.Community.Settings.Shop.Categories"
+                    , function = "update"
+                    }
+                    []
+                    err
 
         FinishedUpdatingCategory _ ->
             UR.init model
@@ -320,7 +413,7 @@ update msg model loggedIn =
                                     (Api.Graphql.DeleteStatus.selectionSet
                                         (Shop.Category.delete categoryId)
                                     )
-                                    CompletedDeletingCategory
+                                    (CompletedDeletingCategory categoryId)
                                 )
 
                     else
@@ -340,21 +433,52 @@ update msg model loggedIn =
                         (Api.Graphql.DeleteStatus.selectionSet
                             (Shop.Category.delete categoryId)
                         )
-                        CompletedDeletingCategory
+                        (CompletedDeletingCategory categoryId)
                     )
 
-        CompletedDeletingCategory (RemoteData.Success Api.Graphql.DeleteStatus.Deleted) ->
+        CompletedDeletingCategory categoryId (RemoteData.Success Api.Graphql.DeleteStatus.Deleted) ->
+            let
+                removeFromForest : Tree.Zipper.Zipper Shop.Category.Model -> List Shop.Category.Tree
+                removeFromForest zipper =
+                    zipper
+                        |> Tree.Zipper.removeTree
+                        |> Maybe.map (Tree.Zipper.toForest >> (\( first, others ) -> first :: others))
+                        |> Maybe.withDefault []
+
+                removeFromCommunity : UpdateResult -> UpdateResult
+                removeFromCommunity =
+                    case getCategoryZipper categoryId of
+                        Nothing ->
+                            identity
+
+                        Just zipper ->
+                            zipper
+                                |> removeFromForest
+                                |> Community.ShopCategories
+                                |> LoggedIn.SetCommunityField
+                                |> UR.addExt
+            in
             { model | categoryDeletionState = NotDeleting }
                 |> UR.init
-                |> UR.addExt (LoggedIn.ShowFeedback View.Feedback.Success "Deleted")
+                |> removeFromCommunity
 
-        CompletedDeletingCategory (RemoteData.Success (Api.Graphql.DeleteStatus.Error _)) ->
+        CompletedDeletingCategory categoryId (RemoteData.Success (Api.Graphql.DeleteStatus.Error reason)) ->
             { model | categoryDeletionState = NotDeleting }
                 |> UR.init
                 -- TODO - I18N
                 |> UR.addExt (LoggedIn.ShowFeedback View.Feedback.Failure "error :(")
+                |> UR.logDeletionStatusError msg
+                    (Just loggedIn.accountName)
+                    { moduleName = "Page.Community.Settings.Shop.Categories"
+                    , function = "update"
+                    }
+                    [ { name = "Category"
+                      , extras = Dict.fromList [ ( "id", Shop.Category.encodeId categoryId ) ]
+                      }
+                    ]
+                    reason
 
-        CompletedDeletingCategory (RemoteData.Failure err) ->
+        CompletedDeletingCategory categoryId (RemoteData.Failure err) ->
             { model | categoryDeletionState = NotDeleting }
                 |> UR.init
                 |> UR.addExt (LoggedIn.ShowFeedback View.Feedback.Failure (loggedIn.shared.translators.t "error.unknown"))
@@ -364,10 +488,13 @@ update msg model loggedIn =
                     { moduleName = "Page.Community.Settings.Shop.Categories"
                     , function = "update"
                     }
-                    []
+                    [ { name = "Category"
+                      , extras = Dict.fromList [ ( "id", Shop.Category.encodeId categoryId ) ]
+                      }
+                    ]
                     err
 
-        CompletedDeletingCategory _ ->
+        CompletedDeletingCategory _ _ ->
             model
                 |> UR.init
 
@@ -884,5 +1011,5 @@ msgToString msg =
         ConfirmedDeleteCategory _ ->
             [ "ConfirmedDeleteCategory" ]
 
-        CompletedDeletingCategory r ->
+        CompletedDeletingCategory _ r ->
             [ "CompletedDeletingCategory", UR.remoteDataToString r ]

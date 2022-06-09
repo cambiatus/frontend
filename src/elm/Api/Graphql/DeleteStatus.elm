@@ -1,4 +1,4 @@
-module Api.Graphql.DeleteStatus exposing (DeleteStatus(..), ErrorReason(..), selectionSet)
+module Api.Graphql.DeleteStatus exposing (DeleteStatus(..), ErrorReason(..), reasonToErrorString, selectionSet)
 
 import Cambiatus.Object
 import Cambiatus.Object.DeleteStatus
@@ -42,3 +42,16 @@ internalSelectionSet =
         )
         |> SelectionSet.with Cambiatus.Object.DeleteStatus.reason
         |> SelectionSet.with Cambiatus.Object.DeleteStatus.status
+
+
+reasonToErrorString : ErrorReason -> String
+reasonToErrorString reason =
+    case reason of
+        ApiError apiMessage ->
+            "Error returned from API: " ++ apiMessage
+
+        InvalidStatus ->
+            "Invalid status (`status` field was not `success` or `error`)"
+
+        UnknownError ->
+            "UnknownError - API returned a null object instead of a DeleteStatus object"

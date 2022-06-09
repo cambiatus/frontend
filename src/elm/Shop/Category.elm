@@ -1,4 +1,4 @@
-module Shop.Category exposing (Id, Model, Tree, create, delete, selectionSet, treesSelectionSet, update)
+module Shop.Category exposing (Id, Model, Tree, create, delete, encodeId, selectionSet, treesSelectionSet, update)
 
 import Cambiatus.Mutation
 import Cambiatus.Object
@@ -6,6 +6,7 @@ import Cambiatus.Object.Category
 import Graphql.Operation exposing (RootMutation)
 import Graphql.OptionalArgument as OptionalArgument
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet)
+import Json.Encode
 import Maybe.Extra
 import Slug exposing (Slug)
 import Tree
@@ -166,3 +167,8 @@ type Id
 idSelectionSet : SelectionSet Id Cambiatus.Object.Category
 idSelectionSet =
     SelectionSet.map Id Cambiatus.Object.Category.id
+
+
+encodeId : Id -> Json.Encode.Value
+encodeId (Id id) =
+    Json.Encode.int id
