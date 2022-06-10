@@ -604,7 +604,7 @@ viewCategoryWithChildren translators model category children =
             else
                 "-rotate-90"
     in
-    li
+    div
         [ classList [ ( "bg-gray-300 rounded-sm cursor-wait", EverySet.member category.id model.deleting ) ]
         ]
         [ details
@@ -639,7 +639,7 @@ viewCategoryWithChildren translators model category children =
                     [ class "grid gap-y-2"
                     , classList [ ( "mb-2", not (List.isEmpty children) ) ]
                     ]
-                    children
+                    (List.map (\child -> li [] [ child ]) children)
                 , viewAddCategory translators [] model (Just category)
                 ]
             ]
