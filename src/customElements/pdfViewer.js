@@ -1,4 +1,4 @@
-/* global HTMLElement */
+/* global HTMLElement, CustomEvent */
 
 import * as pdfjsLib from 'pdfjs-dist/es5/build/pdf'
 
@@ -11,17 +11,53 @@ export default (app, config, addBreadcrumb) => (
     connectedCallback () {
       if (this.hasChildNodes()) return
 
-      const url = this.getAttribute('elm-url')
-      const childClass = this.getAttribute('elm-child-class')
+      this._url = this.getAttribute('elm-url')
+      this._childClass = this.getAttribute('elm-child-class')
 
+      const img = document.createElement('img')
+      img.src = this._url
+      img.className = this._childClass
+      this.appendChild(img)
+
+      img.addEventListener('load', () => {
+        this.dispatchEvent(new CustomEvent('file-type-discovered', { detail: 'image' }))
+      })
+
+      img.addEventListener('error', async () => {
+        this.dispatchEvent(new CustomEvent('file-type-discovered', { detail: 'pdf' }))
+        this.removeChild(img)
+        this.appendLoadingImage()
+
+        const pdfDocument = await pdfjsLib.getDocument(this._url).promise
+        const firstPage = await pdfDocument.getPage(1)
+
+        const canvas = document.createElement('canvas')
+        canvas.className = this._childClass
+
+        const width = this.clientWidth
+        const height = this.clientHeight
+        const unscaledViewport = firstPage.getViewport({ scale: 1 })
+        const scale = Math.min(height / unscaledViewport.height, width / unscaledViewport.width)
+
+        const viewport = firstPage.getViewport({ scale })
+        const canvasContext = canvas.getContext('2d')
+        canvas.width = viewport.width
+        canvas.height = viewport.height
+
+        const renderContext = { canvasContext, viewport }
+
+        await firstPage.render(renderContext).promise
+
+        this.removeLoadingImage()
+        this.appendChild(canvas)
+      })
+    }
+
+    appendLoadingImage () {
       const loadingImg = document.createElement('img')
       loadingImg.src = '/images/loading.svg'
-      this.appendChild(loadingImg)
 
-      let setContent = (node) => {
-        this.removeChild(loadingImg)
-        this.appendChild(node)
-      }
+      this.appendChild(loadingImg)
 
       if (this.getAttribute('elm-loading-title') && this.getAttribute('elm-loading-subtitle')) {
         loadingImg.className = 'h-16 mt-8'
@@ -36,74 +72,17 @@ export default (app, config, addBreadcrumb) => (
         loadingSubtitle.textContent = this.getAttribute('elm-loading-subtitle')
         this.appendChild(loadingSubtitle)
 
-        setContent = (node) => {
+        this.removeLoadingImage = () => {
           this.removeChild(loadingImg)
           this.removeChild(loadingTitle)
           this.removeChild(loadingSubtitle)
-          this.appendChild(node)
         }
       } else {
         loadingImg.className = 'p-4'
+        this.removeLoadingImage = () => {
+          this.removeChild(loadingImg)
+        }
       }
-
-      const notFoundTimeout = window.setTimeout(() => {
-        const notFoundImg = document.createElement('img')
-        notFoundImg.src = '/icons/pdf.svg'
-        setContent(notFoundImg)
-        const bgColor = 'bg-purple-500'
-        this.classList.add(bgColor)
-
-        setContent = (node) => {
-          this.removeChild(notFoundImg)
-          if (this.classList.contains(bgColor)) {
-            this.classList.remove(bgColor)
-          }
-          this.appendChild(node)
-        }
-      }, 1000 * 5)
-
-      pdfjsLib.getDocument(url).promise.then((pdf) => {
-        pdf.getPage(1).then((page) => {
-          const canvas = document.createElement('canvas')
-          canvas.className = childClass
-
-          const width = this.clientWidth
-          const height = this.clientHeight
-          const unscaledViewport = page.getViewport({ scale: 1 })
-          const scale = Math.min((height / unscaledViewport.height), (width / unscaledViewport.width))
-
-          const viewport = page.getViewport({ scale })
-          const canvasContext = canvas.getContext('2d')
-          canvas.width = viewport.width
-          canvas.height = viewport.height
-
-          const renderContext = { canvasContext, viewport }
-
-          const renderTask = page.render(renderContext)
-          renderTask.promise.then(() => {
-            window.clearTimeout(notFoundTimeout)
-            setContent(canvas)
-          })
-        })
-      }).catch((e) => {
-        const invalidPDFError = 'Invalid PDF structure.'
-        if (e.message === invalidPDFError) {
-          const img = document.createElement('img')
-          img.src = url
-          img.className = childClass
-          window.clearTimeout(notFoundTimeout)
-          setContent(img)
-        } else {
-          addBreadcrumb({
-            type: 'error',
-            category: 'pdf-viewer',
-            message: 'Got an error when trying to display a PDF',
-            data: { error: e },
-            localData: {},
-            level: 'warning'
-          })
-        }
-      })
     }
   }
 )

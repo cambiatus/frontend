@@ -21,10 +21,9 @@ import Form.Validate
 import Graphql.Http
 import Html exposing (Html, a, button, div, h2, hr, p, span, text)
 import Html.Attributes exposing (class, classList, disabled, maxlength, type_)
-import Html.Attributes.Aria exposing (ariaLabel)
+import Html.Attributes.Aria exposing (ariaHidden, ariaLabel)
 import Html.Events exposing (onClick)
 import Icons
-import List.Extra
 import Markdown exposing (Markdown)
 import Page
 import RemoteData exposing (RemoteData)
@@ -142,7 +141,7 @@ mainInformationForm ({ t } as translators) =
 
 
 type alias ImagesFormInput =
-    List Form.File.Model
+    Form.File.MultipleModel
 
 
 type alias ImagesFormOutput =
@@ -151,58 +150,24 @@ type alias ImagesFormOutput =
 
 imagesForm : Translation.Translators -> Form.Form Msg ImagesFormInput ImagesFormOutput
 imagesForm translators =
-    Form.succeed (List.filterMap identity)
+    Form.succeed identity
         |> Form.withNoOutput
             (Form.arbitrary
                 (p [ class "mb-4" ] [ text <| translators.t "shop.steps.images.guidance" ])
             )
         |> Form.with
-            (Form.introspect
-                (\images ->
-                    List.indexedMap
-                        (\index image ->
-                            Form.succeed (\imageOutput _ -> imageOutput)
-                                |> Form.withGroup [ class "relative" ]
-                                    (Form.File.init
-                                        { label = ""
-                                        , id = "product-image-input-" ++ String.fromInt index
-                                        }
-                                        |> Form.File.withAttrs
-                                            [ class "w-24 h-24 rounded bg-gray-100 flex items-center justify-center"
-                                            ]
-                                        |> Form.File.withVariant Form.File.SimplePlus
-                                        |> Form.File.withContainerAttrs [ classList [ ( "animate-bounce-in", Form.File.isEmpty image ) ] ]
-                                        |> Form.file
-                                            { translators = translators
-                                            , value = \_ -> image
-                                            , update = \newImage _ -> newImage
-                                            , externalError = always Nothing
-                                            }
-                                        |> Form.mapValues
-                                            { value = \_ -> image
-                                            , update = \newImage -> List.Extra.setAt index newImage
-                                            }
-                                        |> Form.optional
-                                    )
-                                    (Form.arbitraryWith ()
-                                        (div
-                                            [ class "absolute top-0 right-0"
-                                            , classList [ ( "hidden", Form.File.isEmpty image ) ]
-                                            ]
-                                            [ button
-                                                [ class "bg-white rounded-full -translate-y-1/2 ml-1/2"
-                                                , onClick (\values -> values |> List.Extra.removeAt index)
-                                                , type_ "button"
-                                                ]
-                                                [ Icons.circularClose "w-6 h-6"
-                                                ]
-                                            ]
-                                        )
-                                    )
-                        )
-                        images
-                        |> Form.list [ class "flex flex-wrap gap-6" ]
-                )
+            (Form.File.init { id = "product-images-input" }
+                |> Form.File.withEntryContainerAttributes (\_ -> [ class "w-24 h-24 bg-gray-100 rounded grid place-items-center overflow-hidden" ])
+                |> Form.File.withImageClass "max-w-24 max-h-24"
+                |> Form.File.withImageCropperAttributes [ class "rounded" ]
+                |> Form.File.withEditIconOverlay
+                |> Form.fileMultiple
+                    { parser = Ok
+                    , translators = translators
+                    , value = identity
+                    , update = \new _ -> new
+                    , externalError = always Nothing
+                    }
             )
 
 
@@ -338,7 +303,7 @@ initFormData =
             { title = ""
             , description = Form.RichText.initModel "product-description-editor" Nothing
             }
-    , images = Form.init [ Form.File.initModel Nothing ]
+    , images = Form.init (Form.File.initMultiple { fileUrls = [], aspectRatio = Nothing })
     , priceAndInventory =
         Form.init
             { price = "0"
@@ -357,9 +322,7 @@ initEditingFormData translators product step =
             , description = Form.RichText.initModel "product-description-editor" (Just product.description)
             }
     , images =
-        product.images
-            |> List.map (Just >> Form.File.initModel)
-            |> (\images -> images ++ [ Form.File.initModel Nothing ])
+        Form.File.initMultiple { fileUrls = product.images, aspectRatio = Nothing }
             |> Form.init
     , priceAndInventory =
         Form.init
@@ -481,14 +444,12 @@ viewForm ({ shared } as loggedIn) { isEdit, isDisabled } model formData =
 
         viewForm_ :
             Form.Form Msg input output
-            ->
-                Form.Model
-                    input
-            -> { submitText : String, isSubmitDisabled : Bool }
+            -> Form.Model input
+            -> { submitText : String }
             -> (Form.Msg input -> FormMsg)
             -> (output -> Msg)
             -> Html Msg
-        viewForm_ formFn formModel { submitText, isSubmitDisabled } toFormMsg onSubmitMsg =
+        viewForm_ formFn formModel { submitText } toFormMsg onSubmitMsg =
             Form.view [ class "container mx-auto px-4 flex-grow flex flex-col lg:max-w-none lg:mx-0 lg:px-6" ]
                 shared.translators
                 (\submitButton ->
@@ -505,7 +466,7 @@ viewForm ({ shared } as loggedIn) { isEdit, isDisabled } model formData =
                                     [ text <| t "menu.cancel" ]
                                 , submitButton
                                     [ class "button button-primary w-full"
-                                    , disabled (isDisabled || isSubmitDisabled)
+                                    , disabled (isDisabled || Form.hasFieldsLoading formModel)
                                     ]
                                     [ text submitText ]
                                 ]
@@ -561,11 +522,23 @@ viewForm ({ shared } as loggedIn) { isEdit, isDisabled } model formData =
 
                 maybeNewRoute =
                     setCurrentStepInRoute model step
+
+                ( linkStepIndex, linkStepName ) =
+                    case step of
+                        Route.SaleMainInformation ->
+                            ( 1, t "shop.steps.main_information.title" )
+
+                        Route.SaleImages ->
+                            ( 2, t "shop.steps.images.title" )
+
+                        Route.SalePriceAndInventory ->
+                            ( 3, t "shop.steps.price_and_inventory.title" )
             in
             a
-                [ class "w-6 h-6 rounded-full bg-gray-900 flex-shrink-0 flex items-center justify-center transition-colors duration-300"
+                [ class "w-6 h-6 rounded-full flex-shrink-0 flex items-center justify-center transition-colors duration-300"
                 , classList
                     [ ( "bg-orange-300 delay-300", isStepCompleted step || isCurrent )
+                    , ( "bg-gray-900", not (isStepCompleted step || isCurrent) )
                     ]
                 , case maybeNewRoute of
                     Just newRoute ->
@@ -573,6 +546,11 @@ viewForm ({ shared } as loggedIn) { isEdit, isDisabled } model formData =
 
                     Nothing ->
                         class ""
+                , ariaLabel <|
+                    tr "shop.steps.step_link"
+                        [ ( "index", String.fromInt linkStepIndex )
+                        , ( "step_title", linkStepName )
+                        ]
                 ]
                 [ div
                     [ class "transition-opacity duration-300"
@@ -597,7 +575,7 @@ viewForm ({ shared } as loggedIn) { isEdit, isDisabled } model formData =
     div [ class "flex flex-col flex-grow" ]
         [ Page.viewHeader loggedIn pageTitle
         , div [ class "lg:container lg:mx-auto lg:px-4 lg:mt-6 lg:mb-20" ]
-            [ div [ class "bg-white pt-4 pb-8 flex-grow flex flex-col min-h-150 lg:w-2/3 lg:mx-auto lg:rounded lg:shadow-lg lg:animate-fade-in-from-above-lg lg:motion-reduce:animate-none" ]
+            [ div [ class "bg-white pt-4 pb-8 flex-grow flex flex-col min-h-150 lg:w-2/3 lg:mx-auto lg:rounded lg:shadow-lg lg:animate-fade-in-from-above-lg lg:fill-mode-none lg:motion-reduce:animate-none" ]
                 [ div [ class "container mx-auto px-4 lg:max-w-none lg:mx-0 lg:px-6" ]
                     [ div [ class "mb-4 flex items-center" ]
                         [ stepBall Route.SaleMainInformation
@@ -615,25 +593,19 @@ viewForm ({ shared } as loggedIn) { isEdit, isDisabled } model formData =
                         ]
                     , text stepName
                     ]
-                , hr [ class "mt-4 mb-6 border-gray-500 lg:mx-4 lg:mb-10" ] []
+                , hr [ class "mt-4 mb-6 border-gray-500 lg:mx-4 lg:mb-10", ariaHidden True ] []
                 , case formData.currentStep of
                     MainInformation ->
                         viewForm_ (mainInformationForm shared.translators)
                             formData.mainInformation
-                            { submitText = t "shop.steps.continue"
-                            , isSubmitDisabled = False
-                            }
+                            { submitText = t "shop.steps.continue" }
                             MainInformationMsg
                             (SubmittedMainInformation ImagesMainInformationTarget)
 
                     Images _ ->
                         viewForm_ (imagesForm shared.translators)
                             formData.images
-                            { submitText = t "shop.steps.continue"
-                            , isSubmitDisabled =
-                                Form.getValue identity formData.images
-                                    |> List.any Form.File.isLoading
-                            }
+                            { submitText = t "shop.steps.continue" }
                             ImagesMsg
                             SubmittedImages
 
@@ -642,9 +614,7 @@ viewForm ({ shared } as loggedIn) { isEdit, isDisabled } model formData =
                             RemoteData.Success community ->
                                 viewForm_ (priceAndInventoryForm shared.translators { isDisabled = isDisabled } community.symbol)
                                     formData.priceAndInventory
-                                    { submitText = actionText
-                                    , isSubmitDisabled = False
-                                    }
+                                    { submitText = actionText }
                                     PriceAndInventoryMsg
                                     SubmittedPriceAndInventory
 
@@ -1164,37 +1134,8 @@ updateForm shared formMsg model =
                             model
 
                 ImagesMsg subMsg ->
-                    let
-                        updatedForm =
-                            Form.update shared subMsg formData.images
-
-                        oldImages =
-                            Form.getValue identity formData.images
-                                |> List.filter (not << Form.File.isEmpty)
-
-                        newImages =
-                            Form.getValue identity updatedForm.model
-                                |> List.filter (not << Form.File.isEmpty)
-
-                        hasAddedNewImage =
-                            List.length newImages > List.length oldImages
-
-                        addNewImageField values =
-                            values ++ [ Form.File.initModel Nothing ]
-                    in
                     Form.update shared subMsg formData.images
-                        |> UR.fromChild
-                            (\newImagesForm ->
-                                updateModel
-                                    { formData
-                                        | images =
-                                            if hasAddedNewImage then
-                                                Form.updateValues addNewImageField newImagesForm
-
-                                            else
-                                                newImagesForm
-                                    }
-                            )
+                        |> UR.fromChild (\newImagesForm -> updateModel { formData | images = newImagesForm })
                             (GotFormMsg << ImagesMsg)
                             LoggedIn.addFeedback
                             model

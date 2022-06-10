@@ -194,6 +194,7 @@ viewProofs { t } claim =
                         { url = url
                         , childClass = "max-w-full max-h-full"
                         , maybeTranslators = Nothing
+                        , onFileTypeDiscovered = Nothing
                         }
                     ]
                 , viewProofCode

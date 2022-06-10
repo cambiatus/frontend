@@ -21,7 +21,8 @@ import Form.Toggle
 import Form.Validate
 import Graphql.Http
 import Html exposing (Html, div, form, li, p, span, text, ul)
-import Html.Attributes exposing (class, classList, disabled, maxlength)
+import Html.Attributes exposing (class, classList, maxlength)
+import Icons
 import Json.Decode as Decode exposing (Value)
 import Json.Decode.Pipeline as DecodePipeline
 import Json.Encode as Encode
@@ -65,11 +66,11 @@ init loggedIn =
 
 
 type alias FormInput =
-    { logo : Form.File.Model
+    { logo : Form.File.SingleModel
     , name : String
     , description : Form.RichText.Model
     , website : String
-    , coverPhoto : Form.File.Model
+    , coverPhoto : Form.File.SingleModel
     , subdomain : String
     , hasAutoInvite : Bool
     , inviterReward : String
@@ -186,11 +187,15 @@ update msg model ({ shared } as loggedIn) =
             { model
                 | isLoading = False
                 , form =
-                    { logo = Form.File.initModel (Just community.logo)
+                    { logo =
+                        Form.File.initSingle
+                            { fileUrl = Just community.logo
+                            , aspectRatio = Just 1
+                            }
                     , name = community.name
                     , description = Form.RichText.initModel "description-input" (Just community.description)
                     , website = Maybe.withDefault "" community.website
-                    , coverPhoto = Form.File.initModel maybeCoverPhoto
+                    , coverPhoto = Form.File.initSingle { fileUrl = maybeCoverPhoto, aspectRatio = Just 1 }
                     , subdomain =
                         community.subdomain
                             |> String.split "."
@@ -218,8 +223,10 @@ update msg model ({ shared } as loggedIn) =
                                 (\values ->
                                     { values
                                         | coverPhoto =
-                                            Form.File.initModel
-                                                (List.head uploads)
+                                            Form.File.initSingle
+                                                { fileUrl = List.head uploads
+                                                , aspectRatio = Just 1
+                                                }
                                     }
                                 )
                                 form
@@ -526,15 +533,12 @@ view ({ shared } as loggedIn) model =
                                     [ class "container mx-auto px-4 pb-10 pt-4" ]
                                     shared.translators
                                     (\submitButton ->
-                                        [ submitButton
-                                            [ class "button button-primary w-full mt-14"
-                                            , disabled (not loggedIn.hasAcceptedCodeOfConduct)
-                                            ]
+                                        [ submitButton [ class "button button-primary w-full mt-14" ]
                                             [ text <| t "menu.save" ]
                                         ]
                                     )
                                     (createForm shared community { isLoading = model.isLoading })
-                                    (Form.withDisabled model.isLoading form)
+                                    (Form.withDisabled (model.isLoading || not loggedIn.hasAcceptedCodeOfConduct) form)
                                     { toMsg = GotFormMsg
                                     , onSubmit = ClickedSave
                                     }
@@ -553,11 +557,22 @@ createForm shared community { isLoading } =
     in
     Form.succeed FormOutput
         |> Form.with
-            (Form.File.init { label = t "settings.community_info.logo.title", id = "logo-input" }
-                |> Form.File.withVariant Form.File.SmallCircle
-                |> Form.File.withContainerAttrs [ class "mb-4" ]
+            (Form.File.init { id = "logo-input" }
+                |> Form.File.withLabel (t "settings.community_info.logo.title")
+                |> Form.File.withContainerAttributes [ class "mb-4" ]
+                |> Form.File.withImageClass "object-cover rounded-full mx-auto w-20 h-20"
+                |> Form.File.withEntryContainerAttributes (\_ -> [ class "mx-auto rounded-full w-20 h-20 self-center" ])
+                |> Form.File.withEditIconOverlay
+                |> Form.File.withAddImagesContainerAttributes [ class "mx-auto rounded-full" ]
+                |> Form.File.withAddImagesView
+                    [ span [ class "bg-orange-300 rounded-full p-4 w-20 h-20 mx-auto" ]
+                        [ Icons.camera "text-white"
+                        ]
+                    ]
+                |> Form.File.withImageCropperAttributes [ class "rounded-full" ]
                 |> Form.file
-                    { translators = translators
+                    { parser = Ok
+                    , translators = translators
                     , value = .logo
                     , update = \logo input -> { input | logo = logo }
                     , externalError = always Nothing
@@ -605,9 +620,27 @@ createForm shared community { isLoading } =
                 |> Form.optional
             )
         |> Form.with
-            (Form.File.init { label = t "settings.community_info.cover_photo.title", id = "cover-photo-input" }
+            (Form.File.init { id = "cover-photo-input" }
+                |> Form.File.withLabel (t "settings.community_info.cover_photo.title")
+                |> Form.File.withEntryContainerAttributes (\_ -> [ class "w-full h-56 bg-purple-500 rounded-sm grid place-items-center overflow-hidden relative" ])
+                |> Form.File.withImageClass "h-56"
+                |> Form.File.withImageSiblingElement
+                    (div [ class "bg-orange-300 rounded-full absolute right-4 bottom-4 h-8 w-8 grid place-items-center" ]
+                        [ Icons.edit "text-white w-4 h-4"
+                        ]
+                    )
+                |> Form.File.withAddImagesContainerAttributes [ class "!w-full" ]
+                |> Form.File.withAddImagesView
+                    [ div [ class "h-56 w-full bg-purple-500 rounded-sm text-white flex flex-col items-center justify-center" ]
+                        [ Icons.camera "w-10 mb-2"
+                        , p [ class "px-4 font-bold" ]
+                            [ text <| translators.t "community.actions.proof.upload_hint"
+                            ]
+                        ]
+                    ]
                 |> Form.file
-                    { translators = translators
+                    { parser = Ok
+                    , translators = translators
                     , value = .coverPhoto
                     , update = \coverPhoto input -> { input | coverPhoto = coverPhoto }
                     , externalError = always Nothing

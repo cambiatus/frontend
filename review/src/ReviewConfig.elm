@@ -72,6 +72,7 @@ config =
             , "Form.File"
             , "Form.Toggle"
             , "View.Select.Internal.Input"
+            , "View.ImageCropper"
             ]
           )
         , ( [ "Html.label" ]
