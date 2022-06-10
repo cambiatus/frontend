@@ -7,6 +7,7 @@ import Graphql.Operation exposing (RootMutation)
 import Graphql.OptionalArgument as OptionalArgument
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet)
 import Json.Encode
+import Markdown exposing (Markdown)
 import Maybe.Extra
 import Slug exposing (Slug)
 import Tree
@@ -19,9 +20,7 @@ import Tree
 type alias Model =
     { id : Id
     , name : String
-
-    -- TODO - Should this be `Markdown`?
-    , description : String
+    , description : Markdown
     , icon : Maybe String
     , image : Maybe String
     , parentId : Maybe Id
@@ -30,7 +29,7 @@ type alias Model =
 
 create :
     { name : String
-    , description : String
+    , description : Markdown
     , slug : Slug
     , parentId : Maybe Id
     }
@@ -53,14 +52,14 @@ create { name, slug, description, parentId } =
             }
         )
         { name = name
-        , description = description
+        , description = Markdown.toRawString description
         , categories = []
         }
 
 
 update :
     Model
-    -> { name : String, description : String, slug : Slug }
+    -> { name : String, description : Markdown, slug : Slug }
     -> SelectionSet decodesTo Cambiatus.Object.Category
     -> SelectionSet (Maybe decodesTo) RootMutation
 update model { name, description, slug } =
@@ -85,7 +84,7 @@ update model { name, description, slug } =
             }
         )
         { name = name
-        , description = description
+        , description = Markdown.toRawString description
         , categories = []
         }
 
@@ -103,7 +102,7 @@ selectionSet =
     SelectionSet.succeed Model
         |> SelectionSet.with idSelectionSet
         |> SelectionSet.with Cambiatus.Object.Category.name
-        |> SelectionSet.with Cambiatus.Object.Category.description
+        |> SelectionSet.with (Markdown.selectionSet Cambiatus.Object.Category.description)
         |> SelectionSet.with Cambiatus.Object.Category.iconUri
         |> SelectionSet.with Cambiatus.Object.Category.imageUri
         |> SelectionSet.with (Cambiatus.Object.Category.parentCategory idSelectionSet)
@@ -114,7 +113,6 @@ selectionSet =
 
 
 type alias Tree =
-    -- TODO - Do we want this type alias?
     Tree.Tree Model
 
 

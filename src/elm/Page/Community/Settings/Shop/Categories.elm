@@ -13,6 +13,7 @@ import Community
 import Dict
 import EverySet exposing (EverySet)
 import Form
+import Form.RichText
 import Form.Text
 import Form.Validate
 import Graphql.Http
@@ -22,6 +23,7 @@ import Html.Events exposing (onClick)
 import Icons
 import Json.Decode
 import List.Extra
+import Markdown exposing (Markdown)
 import Page
 import RemoteData exposing (RemoteData)
 import Session.LoggedIn as LoggedIn
@@ -142,7 +144,7 @@ update msg model loggedIn =
                         , form =
                             Form.init
                                 { name = ""
-                                , description = ""
+                                , description = Form.RichText.initModel "new-description-input" Nothing
                                 }
                         }
             }
@@ -160,7 +162,7 @@ update msg model loggedIn =
                             Open categoryId
                                 (Form.init
                                     { name = category.name
-                                    , description = category.description
+                                    , description = Form.RichText.initModel "update-category-description" (Just category.description)
                                     }
                                 )
                     }
@@ -261,7 +263,7 @@ update msg model loggedIn =
                 | newCategoryState =
                     EditingNewCategory
                         { parent = category.parentId
-                        , form = Form.init { name = "", description = "" }
+                        , form = Form.init { name = "", description = Form.RichText.initModel "new-description-input" Nothing }
                         }
             }
                 |> UR.init
@@ -819,14 +821,14 @@ viewConfirmDeleteCategoryModal categoryId =
 
 type alias NewCategoryFormInput =
     { name : String
-    , description : String
+    , description : Form.RichText.Model
     }
 
 
 type alias NewCategoryFormOutput =
     { name : String
     , slug : Slug
-    , description : String
+    , description : Markdown
     }
 
 
@@ -838,15 +840,12 @@ newCategoryForm translators =
         )
         |> Form.with (nameAndSlugForm translators { nameFieldId = "new-category-name" })
         |> Form.with
-            (Form.Text.init
-                -- TODO - I18N
-                { label = "Description"
-                , id = "new-category-description"
-                }
-                |> Form.textField
+            -- TODO - I18N
+            (Form.RichText.init { label = "Description" }
+                |> Form.richText
                     { parser =
                         Form.Validate.succeed
-                            >> Form.Validate.stringLongerThan 3
+                            >> Form.Validate.markdownLongerThan 3
                             >> Form.Validate.validate translators
                     , value = .description
                     , update = \newDescription values -> { values | description = newDescription }
@@ -857,7 +856,7 @@ newCategoryForm translators =
 
 type alias UpdateCategoryFormInput =
     { name : String
-    , description : String
+    , description : Form.RichText.Model
     }
 
 
@@ -865,7 +864,7 @@ type alias UpdateCategoryFormOutput =
     { id : Shop.Category.Id
     , name : String
     , slug : Slug
-    , description : String
+    , description : Markdown
     }
 
 
@@ -881,16 +880,13 @@ updateCategoryForm translators id =
         )
         |> Form.with (nameAndSlugForm translators { nameFieldId = "update-category-name" })
         |> Form.with
-            (Form.Text.init
-                -- TODO - I18N
-                { label = "Description"
-                , id = "update-category-description"
-                }
-                |> Form.Text.withContainerAttrs [ class "mb-0" ]
-                |> Form.textField
+            -- TODO - I18N
+            (Form.RichText.init { label = "Description" }
+                |> Form.RichText.withContainerAttrs [ class "mb-0" ]
+                |> Form.richText
                     { parser =
                         Form.Validate.succeed
-                            >> Form.Validate.stringLongerThan 3
+                            >> Form.Validate.markdownLongerThan 3
                             >> Form.Validate.validate translators
                     , value = .description
                     , update = \newDescription values -> { values | description = newDescription }
