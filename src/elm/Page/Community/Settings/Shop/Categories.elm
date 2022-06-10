@@ -45,7 +45,8 @@ type alias Model =
     { expandedCategories : EverySet Shop.Category.Id
     , newCategoryState : NewCategoryState
     , categoryModalState : CategoryModalState
-    , categoryDeletionState : CategoryDeletionState
+    , askingForDeleteConfirmation : Maybe Shop.Category.Id
+    , deleting : EverySet Shop.Category.Id
     }
 
 
@@ -55,7 +56,8 @@ init _ =
     { expandedCategories = EverySet.empty
     , newCategoryState = NotEditing
     , categoryModalState = Closed
-    , categoryDeletionState = NotDeleting
+    , askingForDeleteConfirmation = Nothing
+    , deleting = EverySet.empty
     }
         |> UR.init
         |> UR.addExt (LoggedIn.RequestedReloadCommunityField Community.ShopCategoriesField)
@@ -76,12 +78,6 @@ type NewCategoryState
 type CategoryModalState
     = Closed
     | Open Shop.Category.Id (Form.Model UpdateCategoryFormInput)
-
-
-type CategoryDeletionState
-    = NotDeleting
-    | AskingForConfirmation Shop.Category.Id
-    | Deleting Shop.Category.Id
 
 
 type Msg
@@ -408,7 +404,7 @@ update msg model loggedIn =
 
                 Just zipper ->
                     if List.isEmpty (Tree.Zipper.children zipper) then
-                        { model | categoryDeletionState = Deleting categoryId }
+                        { model | deleting = EverySet.insert categoryId model.deleting }
                             |> UR.init
                             |> UR.addExt
                                 (LoggedIn.mutation
@@ -420,15 +416,18 @@ update msg model loggedIn =
                                 )
 
                     else
-                        { model | categoryDeletionState = AskingForConfirmation categoryId }
+                        { model | askingForDeleteConfirmation = Just categoryId }
                             |> UR.init
 
         ClosedConfirmDeleteModal ->
-            { model | categoryDeletionState = NotDeleting }
+            { model | askingForDeleteConfirmation = Nothing }
                 |> UR.init
 
         ConfirmedDeleteCategory categoryId ->
-            { model | categoryDeletionState = Deleting categoryId }
+            { model
+                | deleting = EverySet.insert categoryId model.deleting
+                , askingForDeleteConfirmation = Nothing
+            }
                 |> UR.init
                 |> UR.addExt
                     (LoggedIn.mutation
@@ -461,12 +460,12 @@ update msg model loggedIn =
                                 |> LoggedIn.SetCommunityField
                                 |> UR.addExt
             in
-            { model | categoryDeletionState = NotDeleting }
+            { model | deleting = EverySet.remove categoryId model.deleting }
                 |> UR.init
                 |> removeFromCommunity
 
         CompletedDeletingCategory categoryId (RemoteData.Success (Api.Graphql.DeleteStatus.Error reason)) ->
-            { model | categoryDeletionState = NotDeleting }
+            { model | deleting = EverySet.remove categoryId model.deleting }
                 |> UR.init
                 -- TODO - I18N
                 |> UR.addExt (LoggedIn.ShowFeedback View.Feedback.Failure "error :(")
@@ -482,7 +481,7 @@ update msg model loggedIn =
                     reason
 
         CompletedDeletingCategory categoryId (RemoteData.Failure err) ->
-            { model | categoryDeletionState = NotDeleting }
+            { model | deleting = EverySet.remove categoryId model.deleting }
                 |> UR.init
                 |> UR.addExt (LoggedIn.ShowFeedback View.Feedback.Failure (loggedIn.shared.translators.t "error.unknown"))
                 |> UR.logGraphqlError msg
@@ -514,26 +513,27 @@ view loggedIn model =
             "TODO"
     in
     { title = title
-
-    -- TODO - Add back arrow
     , content =
-        case Community.getField loggedIn.selectedCommunity .shopCategories of
-            RemoteData.NotAsked ->
-                Page.fullPageLoading loggedIn.shared
+        div []
+            [ Page.viewHeader loggedIn title
+            , case Community.getField loggedIn.selectedCommunity .shopCategories of
+                RemoteData.NotAsked ->
+                    Page.fullPageLoading loggedIn.shared
 
-            RemoteData.Loading ->
-                Page.fullPageLoading loggedIn.shared
+                RemoteData.Loading ->
+                    Page.fullPageLoading loggedIn.shared
 
-            RemoteData.Failure fieldErr ->
-                case fieldErr of
-                    Community.CommunityError err ->
-                        Page.fullPageGraphQLError title err
+                RemoteData.Failure fieldErr ->
+                    case fieldErr of
+                        Community.CommunityError err ->
+                            Page.fullPageGraphQLError title err
 
-                    Community.FieldError err ->
-                        Page.fullPageGraphQLError title err
+                        Community.FieldError err ->
+                            Page.fullPageGraphQLError title err
 
-            RemoteData.Success ( _, categories ) ->
-                view_ loggedIn.shared.translators model categories
+                RemoteData.Success ( _, categories ) ->
+                    view_ loggedIn.shared.translators model categories
+            ]
     }
 
 
@@ -563,14 +563,11 @@ view_ translators model categories =
 
                     Just openCategory ->
                         viewCategoryModal translators openCategory formModel
-        , case model.categoryDeletionState of
-            NotDeleting ->
+        , case model.askingForDeleteConfirmation of
+            Nothing ->
                 text ""
 
-            AskingForConfirmation categoryId ->
-                viewConfirmDeleteCategoryModal categoryId
-
-            Deleting categoryId ->
+            Just categoryId ->
                 viewConfirmDeleteCategoryModal categoryId
         ]
 
@@ -603,7 +600,9 @@ viewCategoryWithChildren translators model category children =
             else
                 "-rotate-90"
     in
-    li []
+    li
+        [ classList [ ( "bg-gray-300 rounded-sm cursor-wait", EverySet.member category.id model.deleting ) ]
+        ]
         [ details
             [ if isOpen then
                 Html.Attributes.attribute "open" "true"
@@ -611,6 +610,7 @@ viewCategoryWithChildren translators model category children =
               else
                 class ""
             , class "parent"
+            , classList [ ( "pointer-events-none", EverySet.member category.id model.deleting ) ]
             ]
             [ summary
                 [ class "marker-hidden flex items-center rounded-sm parent-hover:bg-blue-600/10"
