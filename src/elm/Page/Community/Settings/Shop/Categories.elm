@@ -577,8 +577,19 @@ view_ translators model categories =
 
 
 viewCategoryTree : Translation.Translators -> Model -> Shop.Category.Tree -> Html Msg
-viewCategoryTree translators model =
-    Tree.restructure identity (viewCategoryWithChildren translators model)
+viewCategoryTree translators model rootTree =
+    let
+        rootZipper =
+            Tree.Zipper.fromTree rootTree
+    in
+    Tree.restructure
+        (\category ->
+            rootZipper
+                |> Tree.Zipper.findFromRoot (\{ id } -> id == category.id)
+                |> Maybe.withDefault (Tree.singleton category |> Tree.Zipper.fromTree)
+        )
+        (viewCategoryWithChildren translators model)
+        rootTree
 
 
 viewCategory : Shop.Category.Model -> Html Msg
@@ -591,9 +602,12 @@ viewCategory category =
         ]
 
 
-viewCategoryWithChildren : Translation.Translators -> Model -> Shop.Category.Model -> List (Html Msg) -> Html Msg
-viewCategoryWithChildren translators model category children =
+viewCategoryWithChildren : Translation.Translators -> Model -> Tree.Zipper.Zipper Shop.Category.Model -> List (Html Msg) -> Html Msg
+viewCategoryWithChildren translators model zipper children =
     let
+        category =
+            Tree.Zipper.label zipper
+
         isOpen =
             EverySet.member category.id model.expandedCategories
 
@@ -603,9 +617,25 @@ viewCategoryWithChildren translators model category children =
 
             else
                 "-rotate-90"
+
+        isParentOfNewCategoryForm =
+            case model.newCategoryState of
+                NotEditing ->
+                    False
+
+                EditingNewCategory { parent } ->
+                    case parent of
+                        Nothing ->
+                            False
+
+                        Just parentId ->
+                            isAncestorOf (\childId { id } -> childId == id)
+                                parentId
+                                zipper
     in
     div
-        [ classList [ ( "bg-gray-300 rounded-sm cursor-wait", EverySet.member category.id model.deleting ) ]
+        [ class "transition-colors"
+        , classList [ ( "bg-gray-300 rounded-sm cursor-wait", EverySet.member category.id model.deleting ) ]
         ]
         [ details
             [ if isOpen then
@@ -617,7 +647,11 @@ viewCategoryWithChildren translators model category children =
             , classList [ ( "pointer-events-none", EverySet.member category.id model.deleting ) ]
             ]
             [ summary
-                [ class "marker-hidden flex items-center rounded-sm parent-hover:bg-blue-600/10"
+                [ class "marker-hidden flex items-center rounded-sm transition-colors"
+                , classList
+                    [ ( "!bg-green/20", isParentOfNewCategoryForm )
+                    , ( "parent-hover:bg-blue-600/10", not isParentOfNewCategoryForm )
+                    ]
                 , Html.Events.preventDefaultOn "click"
                     (Json.Decode.succeed ( NoOp, True ))
                 ]
@@ -654,7 +688,7 @@ viewAddCategory translators attrs model maybeParentCategory =
 
         viewAddCategoryButton customAttrs =
             button
-                (class "flex items-center px-2 h-8 font-bold hover:bg-blue-600/10 rounded-sm"
+                (class "flex items-center px-2 h-8 font-bold transition-colors hover:bg-blue-600/10 rounded-sm"
                     :: onClick (ClickedAddCategory parentId)
                     :: customAttrs
                 )
@@ -969,6 +1003,28 @@ findInForest fn trees =
         firstTree :: otherTrees ->
             Tree.Zipper.fromForest firstTree otherTrees
                 |> Tree.Zipper.findFromRoot fn
+
+
+isAncestorOf : (child -> a -> Bool) -> child -> Tree.Zipper.Zipper a -> Bool
+isAncestorOf equals child parentZipper =
+    let
+        isDirectParent =
+            equals child (Tree.Zipper.label parentZipper)
+
+        isIndirectAncestor =
+            Tree.Zipper.children parentZipper
+                |> List.any
+                    (\childTree ->
+                        if equals child (Tree.label childTree) then
+                            True
+
+                        else
+                            isAncestorOf equals
+                                child
+                                (Tree.Zipper.fromTree childTree)
+                    )
+    in
+    isDirectParent || isIndirectAncestor
 
 
 msgToString : Msg -> List String
