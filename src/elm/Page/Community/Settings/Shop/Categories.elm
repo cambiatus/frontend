@@ -17,7 +17,7 @@ import Form.Text
 import Form.Validate
 import Graphql.Http
 import Html exposing (Html, button, details, div, li, p, span, summary, text, ul)
-import Html.Attributes exposing (class, classList)
+import Html.Attributes exposing (class, classList, type_)
 import Html.Events exposing (onClick)
 import Icons
 import Json.Decode
@@ -53,8 +53,6 @@ init : LoggedIn.Model -> UpdateResult
 init _ =
     -- TODO - Should we start them all expanded?
     { expandedCategories = EverySet.empty
-
-    -- TODO - Should we allow multiple editors to be open at once?
     , newCategoryState = NotEditing
     , categoryModalState = Closed
     , categoryDeletionState = NotDeleting
@@ -233,7 +231,6 @@ update msg model loggedIn =
                     )
 
         FinishedCreatingCategory (RemoteData.Success (Just category)) ->
-            -- TODO - Should we open the form to create another category?
             let
                 insertInForest : List Shop.Category.Tree -> List Shop.Category.Tree
                 insertInForest forest =
@@ -264,7 +261,13 @@ update msg model loggedIn =
                         _ ->
                             identity
             in
-            { model | newCategoryState = NotEditing }
+            { model
+                | newCategoryState =
+                    EditingNewCategory
+                        { parent = category.parentId
+                        , form = Form.init { name = "", description = "" }
+                        }
+            }
                 |> UR.init
                 |> insertInCommunity
 
@@ -674,6 +677,7 @@ viewAddCategory translators attrs model maybeParentCategory =
                         [ div [ class "flex flex-col sm:flex-row justify-end gap-4" ]
                             [ button
                                 [ class "button button-secondary w-full sm:w-40"
+                                , type_ "button"
                                 , onClick ClickedCancelAddCategory
                                 ]
                                 -- TODO - I18N
@@ -743,7 +747,7 @@ viewConfirmDeleteCategoryModal categoryId =
         { isVisible = True
         , closeMsg = ClosedConfirmDeleteModal
         }
-        -- TODO - I18N
+        -- TODO - I18N - Include category name
         |> Modal.withHeader "Delete category"
         |> Modal.withBody
             -- TODO - I18N
