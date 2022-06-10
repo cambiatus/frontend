@@ -27,7 +27,7 @@
   },
   "husky": {
     "hooks": {
-      "pre-push": "echo \"Checking JS with StandardJS...\" && yarn check-js && echo \"Checking CSS with StyleLint\" && yarn check-css && echo \"Checking Elm with elm-format...\" && yarn check-format && echo \"Checking Elm with elm-review...\" && yarn review && echo \"Checking Elm with elm-test\" && yarn test"
+      "pre-push": "echo \"Checking JS with StandardJS...\" && yarn check-js && echo \"Checking CSS with StyleLint\" && yarn check-css && echo \"Checking Elm with elm-format...\" && yarn check-format && echo \"Checking Elm with elm-review...\" && yarn review && echo \"Checking Elm with elm-test\" && yarn test && echo \"Checking if elm-book compiles\" && yarn build-book"
     }
   },
   "standard": {

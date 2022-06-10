@@ -11,7 +11,7 @@ import Form
 import Form.File
 import Form.Text
 import Html exposing (Html, a, b, br, button, details, div, h1, h2, h3, h4, img, li, p, span, summary, text, ul)
-import Html.Attributes exposing (alt, class, classList, id, src, style, tabindex, title)
+import Html.Attributes exposing (alt, class, classList, disabled, id, src, style, tabindex, title)
 import Html.Attributes.Aria exposing (ariaHasPopup, ariaHidden, ariaLabel, role)
 import Html.Events exposing (onClick)
 import Icons
@@ -72,7 +72,7 @@ type ClaimingStatus
 
 type Proof
     = NoProofNecessary
-    | WithProof (Form.Model Form.File.Model) ProofCode
+    | WithProof (Form.Model Form.File.SingleModel) ProofCode
 
 
 type ProofCode
@@ -140,7 +140,7 @@ type Msg
     | StoppedIntersecting String
     | ConfirmedClaimAction
     | ConfirmedClaimActionWithPhotoProof String
-    | GotPhotoProofFormMsg (Form.Msg Form.File.Model)
+    | GotPhotoProofFormMsg (Form.Msg Form.File.SingleModel)
     | GotUint64Name String
     | CompletedClaimingAction (Result Encode.Value ())
     | CopiedShareLinkToClipboard Int
@@ -244,7 +244,13 @@ update msg model loggedIn =
                                                     , action = action
                                                     , proof =
                                                         if action.hasProofPhoto then
-                                                            WithProof (Form.init (Form.File.initModel Nothing))
+                                                            WithProof
+                                                                ({ fileUrl = Nothing
+                                                                 , aspectRatio = Nothing
+                                                                 }
+                                                                    |> Form.File.initSingle
+                                                                    |> Form.init
+                                                                )
                                                                 GeneratingCode
 
                                                         else
@@ -457,7 +463,14 @@ update msg model loggedIn =
             let
                 proof =
                     if action.hasProofPhoto then
-                        WithProof (Form.init (Form.File.initModel Nothing)) GeneratingCode
+                        WithProof
+                            ({ fileUrl = Nothing
+                             , aspectRatio = Nothing
+                             }
+                                |> Form.File.initSingle
+                                |> Form.init
+                            )
+                            GeneratingCode
 
                     else
                         NoProofNecessary
@@ -1333,17 +1346,19 @@ viewClaimModal ({ translators } as shared) model =
                 { t } =
                     translators
 
-                onClaimClick =
+                ( onClaimClick, isClaimDisabled ) =
                     case proof of
                         WithProof formModel _ ->
-                            Form.parse (claimWithPhotoForm translators)
+                            ( Form.parse (claimWithPhotoForm translators)
                                 formModel
                                 { onError = GotPhotoProofFormMsg
                                 , onSuccess = ConfirmedClaimActionWithPhotoProof
                                 }
+                            , Form.hasFieldsLoading formModel
+                            )
 
                         NoProofNecessary ->
-                            ConfirmedClaimAction
+                            ( ConfirmedClaimAction, False )
             in
             View.Modal.initWith
                 { closeMsg = ClickedCloseClaimModal
@@ -1491,6 +1506,7 @@ viewClaimModal ({ translators } as shared) model =
                         , button
                             [ onClick onClaimClick
                             , class "button button-primary w-full"
+                            , disabled isClaimDisabled
                             ]
                             [ text <| t "dashboard.claim" ]
                         ]
@@ -1527,18 +1543,26 @@ viewClaimCount { t, tr } attrs action =
         ]
 
 
-claimWithPhotoForm : Translation.Translators -> Form.Form msg Form.File.Model String
+claimWithPhotoForm : Translation.Translators -> Form.Form msg Form.File.SingleModel String
 claimWithPhotoForm translators =
     Form.succeed identity
         |> Form.with
-            (Form.File.init
-                { label = ""
-                , id = "photo-proof-input"
-                }
-                |> Form.File.withVariant (Form.File.LargeRectangle Form.File.Gray)
-                |> Form.File.withFileTypes [ Form.File.Image, Form.File.PDF ]
+            (Form.File.init { id = "photo-proof-input" }
+                |> Form.File.withFileTypes [ Form.File.Image, Form.File.Pdf ]
+                |> Form.File.withContainerAttributes [ class "w-full bg-gray-100 grid place-items-center mt-2" ]
+                |> Form.File.withEntryContainerAttributes (\_ -> [ class "h-56 rounded-sm overflow-hidden w-full grid place-items-center" ])
+                |> Form.File.withImageClass "h-56"
+                |> Form.File.withAddImagesView
+                    [ div [ class "w-full h-56 bg-gray-100 rounded-sm flex flex-col justify-center items-center" ]
+                        [ Icons.addPhoto "fill-current text-body-black w-10 mb-2"
+                        , p [ class "px-4 font-bold" ] [ text <| translators.t "community.actions.proof.upload_hint" ]
+                        ]
+                    ]
+                |> Form.File.withAddImagesContainerAttributes [ class "!w-full rounded-sm" ]
+                |> Form.File.withImageCropperAttributes [ class "rounded-sm" ]
                 |> Form.file
-                    { translators = translators
+                    { parser = Ok
+                    , translators = translators
                     , value = identity
                     , update = \newModel _ -> newModel
                     , externalError = always Nothing

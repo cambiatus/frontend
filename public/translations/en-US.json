@@ -872,7 +872,8 @@
         "inventory_management_description": "If you want to disable your offer when there are no more units in stock, enable this option"
       },
       "continue": "Continue",
-      "index": "Step {{current}} of {{total}}"
+      "index": "Step {{current}} of {{total}}",
+      "step_link": "Step {{index}} - {{step_title}}"
     },
     "empty": {
       "all_title": "Where are all the offers?",
@@ -1095,7 +1096,10 @@
       "logo": {
         "title": "Community logo",
         "guidance": "Guidance on the Logo image",
-        "description": "Your file must be in PNG, JPG or SVG format. It should measure 80px in width and 80px in height to be better viewed on the interface."
+        "description": "Your file must be in PNG, JPG or SVG format. It should measure 80px in width and 80px in height to be better viewed on the interface.",
+        "choose_one": "Choose a logo from the list",
+        "select": "Select",
+        "selected": "Selected"
       },
       "invitation": {
         "title": "Access to the community",
@@ -1458,5 +1462,17 @@
     "why": "You haven't accepted the Community guidelines & Code of conduct.",
     "solve": "To resolve this situation and be a part of the community, ",
     "solve_link": "accept the Community guidelines & Code of conduct."
+  },
+  "form": {
+    "file": {
+      "edit_image": "Edit image",
+      "edit_file": "Edit file",
+      "body_image": "Drag to reposition the image",
+      "body_file": "Delete, replace or save the file",
+      "delete": "Delete",
+      "open": "Open",
+      "change": "Change",
+      "save": "Save"
+    }
   }
 }

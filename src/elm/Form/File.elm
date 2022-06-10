@@ -1,204 +1,499 @@
 module Form.File exposing
     ( init, Options
-    , withDisabled, withAttrs, withContainerAttrs, withFileTypes, FileType(..), withVariant, Variant(..), RectangleBackground(..)
-    , getId
-    , isEmpty, isLoading, parser
-    , view
-    , Model, initModel, initModelWithChoices, update, Msg, msgToString
+    , Model, initSingle, SingleModel, initMultiple, MultipleModel
+    , withLabel, withEditIconOverlay, withAddImagesView, defaultAddImagesView, withImageSiblingElement
+    , withContainerAttributes, withDisabled, withEntryContainerAttributes, withImageClass, withImageCropperAttributes, withAddImagesContainerAttributes
+    , withFileTypes, FileType(..), withEntryActions, EntryAction(..)
+    , update, view, Msg, ExtMsg(..), msgToString
+    , fromSingleModel, toSingleModel, fromMultipleModel, toMultipleModel
+    , parser, parserMultiple, getId, isEmpty, FileTypeStatus
     )
 
-{-| Creates a Cambiatus-style File. Use it within a `Form.Form`:
+{-| Creates a file uploader input that supports single or multiple files, error
+messages, cropping images, and automatically uploading files to our servers.
+Use it within a `Form.Form`:
 
-    Form.File.init
-        { label = "Photo"
-        , id = "photo-input"
-        }
+    { icon =
+        Form.File.initSingle
+            { fileUrl = Nothing
+            , aspectRatio = Just (1 / 1)
+            }
+    }
+
+    Form.File.init { id = "icon-uploader" }
+        |> Form.File.withImageClass "rounded-full w-20 h-20"
+        |> Form.File.withEntryContainerAttributes (\_ -> [ class "rounded-full w-20 h-20" ])
+        |> Form.File.withImageCropperAttributes [ class "rounded-full" ]
+        |> Form.File.withEditIconOverlay
+        |> Form.file
+            { parser = Ok
+            , translators = translators
+            , value = .icon
+            , update = \icon input -> { input | icon = icon }
+            , externalError = always Nothing
+            }
 
 
 # Initializing
 
+In order to use this input, you need a model and an `Options` type. The `Options`
+is always the same, and is constructed with the `init` function.
+
 @docs init, Options
+
+When it comes to the model, you can choose between a model that accepts a single
+file or a model that accepts multiple files
+
+@docs Model, initSingle, SingleModel, initMultiple, MultipleModel
 
 
 # Helpers
+
+These functions use the builder pattern to modify the `Options` type and customize
+the input.
+
+
+## Adding or changing elements
+
+@docs withLabel, withEditIconOverlay, withAddImagesView, defaultAddImagesView, withImageSiblingElement
 
 
 ## Adding attributes
 
-@docs withDisabled, withAttrs, withContainerAttrs, withFileTypes, FileType, withVariant, Variant, RectangleBackground
+@docs withContainerAttributes, withDisabled, withEntryContainerAttributes, withImageClass, withImageCropperAttributes, withAddImagesContainerAttributes
 
 
-# Getters
+## Customizing behavior
 
-@docs getId
-
-
-# Helpers
-
-@docs isEmpty, isLoading, parser
-
-
-# View
-
-@docs view
+@docs withFileTypes, FileType, withEntryActions, EntryAction
 
 
 # The elm architecture
 
-@docs Model, initModel, initModelWithChoices, update, Msg, msgToString
+In order to actually use this component, we use the elm architecture, with view
+and update. In order to make code more reusable, these accept `Model` as input,
+so you need to map/convert the `SingleModel` or `MultipleModel` to `Model`
+
+@docs update, view, Msg, ExtMsg, msgToString
+
+
+## Mapping
+
+@docs fromSingleModel, toSingleModel, fromMultipleModel, toMultipleModel
+
+
+# General helpers
+
+These are some helper functions to parse and check the status of the model
+
+@docs parser, parserMultiple, getId, isEmpty, FileTypeStatus
 
 -}
 
 import Api
 import File exposing (File)
-import Html exposing (Html, button, div, img, input, p, span)
+import Html exposing (Html, a, button, div, img, input, li, p, text)
 import Html.Attributes exposing (accept, alt, class, classList, disabled, for, id, multiple, required, src, type_)
-import Html.Attributes.Aria exposing (ariaLive)
+import Html.Attributes.Aria exposing (ariaLabel)
 import Html.Events exposing (on, onClick)
+import Html.Keyed
 import Http
 import Icons
 import Json.Decode
 import List.Extra
-import RemoteData exposing (RemoteData)
-import Session.Shared as Shared
+import Maybe.Extra
+import Translation
 import UpdateResult as UR
 import View.Components
-import View.Feedback as Feedback
+import View.ImageCropper
+import View.Modal as Modal
 
 
+
+-- TYPES
+
+
+{-| The main kind of `Model` for this module. You can't create this directly, but
+you can use the `initSingle` or `initMultiple` functions to create something that
+can be transformed into a `Model`.
+-}
 type Model
-    = SingleFile (RemoteData Http.Error String)
-    | WithChoices
-        { files : List (RemoteData Http.Error String)
-        , selected : Int
+    = Model
+        { entries : Entries
+        , isSavingExistingImage : Bool
+        , numberOfEntriesLoading : Int
+        , aspectRatio : Maybe Float
+        , openImageCropperIndex : Maybe Int
         }
 
 
-initModel : Maybe String -> Model
-initModel maybeImage =
-    maybeImage
-        |> Maybe.map RemoteData.Success
-        |> Maybe.withDefault RemoteData.NotAsked
-        |> SingleFile
-
-
-initModelWithChoices : List String -> Model
-initModelWithChoices choices =
-    WithChoices
-        { files = List.map RemoteData.Success choices
-        , selected = 0
+{-| A kind of Model that is meant to accept multiple files at once
+-}
+type MultipleModel
+    = MultipleModel
+        { entries : List Entry
+        , isSavingExistingImage : Bool
+        , numberOfEntriesLoading : Int
+        , aspectRatio : Maybe Float
+        , openImageCropperIndex : Maybe Int
         }
 
 
-parser : Shared.Translators -> Model -> Result String String
-parser { t } model =
-    let
-        fromRemoteData remoteData =
-            case remoteData of
-                RemoteData.Success a ->
-                    Ok a
-
-                RemoteData.Failure _ ->
-                    Err (t "error.file_upload")
-
-                RemoteData.Loading ->
-                    Err (t "error.wait_file_upload")
-
-                RemoteData.NotAsked ->
-                    Err (t "error.required")
-    in
-    case model of
-        SingleFile file ->
-            fromRemoteData file
-
-        WithChoices { files, selected } ->
-            case List.Extra.getAt selected files of
-                Just remoteData ->
-                    fromRemoteData remoteData
-
-                Nothing ->
-                    Err (t "error.file_upload")
+{-| A kind of Model that is meant to accept a single file
+-}
+type SingleModel
+    = SingleModel
+        { entry : Maybe Entry
+        , isEntryLoading : Bool
+        , isSavingExistingImage : Bool
+        , aspectRatio : Maybe Float
+        , isImageCropperOpen : Bool
+        }
 
 
-isEmpty : Model -> Bool
-isEmpty model =
-    let
-        fromRemoteData remoteData =
-            not (RemoteData.isSuccess remoteData)
-    in
-    case model of
-        SingleFile file ->
-            fromRemoteData file
-
-        WithChoices { files, selected } ->
-            case List.Extra.getAt selected files of
-                Just remoteData ->
-                    fromRemoteData remoteData
-
-                Nothing ->
-                    True
+{-| This is what we use to represent a file
+-}
+type alias Entry =
+    { fileType : FileTypeStatus
+    , url : UrlStatus
+    , imageCropper : ImageCropper
+    }
 
 
-isLoading : Model -> Bool
-isLoading model =
-    case model of
-        SingleFile file ->
-            RemoteData.isLoading file
-
-        WithChoices { files, selected } ->
-            case List.Extra.getAt selected files of
-                Just file ->
-                    RemoteData.isLoading file
-
-                Nothing ->
-                    False
+type Entries
+    = SingleEntry (Maybe Entry)
+    | MultipleEntries (List Entry)
 
 
+{-| All the actions that can be performed on an entry. By default, we have (in
+order): `DeleteEntry`, `OpenEntry` (if the file is a PDF), `ReplaceEntry` and `SaveEntry`.
+-}
+type EntryAction msg
+    = DeleteEntry
+    | OpenEntry
+    | ReplaceEntry
+    | SaveEntry
+    | CustomAction (Html msg)
 
--- OPTIONS
+
+type ImageCropper
+    = WithoutImageCropper
+    | WithImageCropper View.ImageCropper.Model
 
 
+{-| All kinds of file types that can be accepted by this input. We use this
+custom type as an abstraction over MIME types
+-}
+type FileType
+    = Pdf
+    | Image
+
+
+{-| Represents the current status of a file
+-}
+type FileTypeStatus
+    = LoadingFileType
+    | LoadedFileType FileType
+
+
+{-| Represents the status of an entry's url.
+
+The lifecycle goes like this:
+
+1.  Right after the user selects a local file, the status is `Loading`. That
+    file is uploaded to our servers
+2.  After that file is uploaded to our servers, the status is `Loaded`, with
+    the url of the uploaded file
+3.  If an error happens when uploading the file, the status is `WithError`
+4.  If the file is an image, we can crop it. Whenever the user changes the crop
+    size or location, the status becomes `LoadedWithCropped`, which holds the
+    original URL and the cropped file.
+5.  Once the user clicks "Save", the cropped file is uploaded to our servers.
+    While that is happening, the status is `LoadingWithCropped`
+6.  When we finish uploading the cropped file, the status becomes `LoadedWithCroppedUploaded`
+
+-}
+type UrlStatus
+    = Loading File
+    | Loaded String
+    | LoadedWithCropped { original : String, cropped : File }
+    | LoadingWithCropped { original : String, cropped : File }
+    | LoadedWithCroppedUploaded
+        { original : String
+        , cropped : File
+        , croppedUrl : String
+        }
+    | WithError Http.Error
+
+
+{-| This is what is used to configure the input. It works the same for
+`SingleModel` and `MultipleModel`
+-}
 type Options msg
     = Options
-        { label : String
-        , id : String
+        { id : String
+        , label : Maybe String
         , disabled : Bool
-        , containerAttrs : List (Html.Attribute msg)
-        , extraAttrs : List (Html.Attribute msg)
         , fileTypes : List FileType
-        , variant : Variant
+        , entryActions : Int -> List (EntryAction msg)
+        , containerAttributes : List (Html.Attribute Never)
+        , imageClass : String
+        , entryContainerAttributes : Int -> List (Html.Attribute Never)
+        , imageSiblingElement : Maybe (Html Never)
+        , addImagesView : Maybe (List (Html Never))
+        , addImagesContainerAttributes : List (Html.Attribute Never)
+        , imageCropperAttributes : List (Html.Attribute Never)
         }
 
 
-{-| Initializes a File
+
+-- INITIALIZING
+
+
+{-| Initialize an input that accepts a single file at once. If you're creating a
+form that's in an editing phase, you might already have an image uploaded, so you
+can use that as the `fileUrl`.
+
+In order to crop images, we need to know the target aspect ratio. If you don't
+provide it, the image cropper UI won't be shown. A valid aspect ratio is just a
+float, but it's usually represented as a fraction, like `4 / 3` or `16 / 9`.
+
 -}
-init : { label : String, id : String } -> Options msg
-init { label, id } =
-    Options
-        { label = label
-        , id = id
-        , disabled = False
-        , containerAttrs = []
-        , extraAttrs = []
-        , fileTypes = [ Image ]
-        , variant = LargeRectangle Purple
+initSingle : { fileUrl : Maybe String, aspectRatio : Maybe Float } -> SingleModel
+initSingle { fileUrl, aspectRatio } =
+    SingleModel
+        { entry =
+            fileUrl
+                |> Maybe.map
+                    (\file ->
+                        { fileType = LoadingFileType
+                        , url = Loaded file
+                        , imageCropper =
+                            case aspectRatio of
+                                Nothing ->
+                                    WithoutImageCropper
+
+                                Just validAspectRatio ->
+                                    { aspectRatio = validAspectRatio }
+                                        |> View.ImageCropper.init
+                                        |> WithImageCropper
+                        }
+                    )
+        , isEntryLoading = False
+        , isSavingExistingImage = False
+        , aspectRatio = aspectRatio
+        , isImageCropperOpen = False
         }
 
 
-type FileType
-    = Image
-    | PDF
+{-| Initialize an input that accepts multiple files at once. If you're creating
+a form that's in an editing phase, you might already have some images uploaded,
+so you can use those as the `fileUrls`.
+
+In order to crop images, we need to know the target aspect ratio. If you don't
+provide it, the image cropper UI won't be shown. A valid aspect ratio is just a
+float, but it's usually represented as a fraction, like `4 / 3` or `16 / 9`.
+
+-}
+initMultiple : { fileUrls : List String, aspectRatio : Maybe Float } -> MultipleModel
+initMultiple { fileUrls, aspectRatio } =
+    MultipleModel
+        { entries =
+            List.map
+                (\file ->
+                    { fileType = LoadingFileType
+                    , url = Loaded file
+                    , imageCropper =
+                        case aspectRatio of
+                            Nothing ->
+                                WithoutImageCropper
+
+                            Just validAspectRatio ->
+                                { aspectRatio = validAspectRatio }
+                                    |> View.ImageCropper.init
+                                    |> WithImageCropper
+                    }
+                )
+                fileUrls
+        , numberOfEntriesLoading = 0
+        , isSavingExistingImage = False
+        , aspectRatio = aspectRatio
+        , openImageCropperIndex = Nothing
+        }
 
 
-type Variant
-    = SmallCircle
-    | LargeRectangle RectangleBackground
-    | SimplePlus
+
+-- CHANGING OPTIONS
 
 
-type RectangleBackground
-    = Purple
-    | Gray
+{-| Initialize the `Options` type
+-}
+init : { id : String } -> Options msg
+init { id } =
+    Options
+        { id = id
+        , label = Nothing
+        , disabled = False
+        , fileTypes = [ Image ]
+        , entryActions = \_ -> [ DeleteEntry, ReplaceEntry, SaveEntry ]
+        , containerAttributes = []
+        , imageClass = ""
+        , entryContainerAttributes = \_ -> []
+        , imageSiblingElement = Nothing
+        , addImagesView = Nothing
+        , addImagesContainerAttributes = []
+        , imageCropperAttributes = []
+        }
+
+
+{-| Add a label to the input. The label should already be translated.
+-}
+withLabel : String -> Options msg -> Options msg
+withLabel label (Options options) =
+    Options { options | label = Just label }
+
+
+{-| Disable the input
+-}
+withDisabled : Bool -> Options msg -> Options msg
+withDisabled disabled (Options options) =
+    Options { options | disabled = disabled }
+
+
+{-| -}
+withFileTypes : List FileType -> Options msg -> Options msg
+withFileTypes fileTypes (Options options) =
+    Options { options | fileTypes = fileTypes }
+
+
+{-| -}
+withContainerAttributes : List (Html.Attribute Never) -> Options msg -> Options msg
+withContainerAttributes attributes (Options options) =
+    Options { options | containerAttributes = options.containerAttributes ++ attributes }
+
+
+{-| -}
+withImageClass : String -> Options msg -> Options msg
+withImageClass class_ (Options options) =
+    Options { options | imageClass = options.imageClass ++ " " ++ class_ }
+
+
+{-| -}
+withEntryContainerAttributes : (Int -> List (Html.Attribute Never)) -> Options msg -> Options msg
+withEntryContainerAttributes attributes (Options options) =
+    Options
+        { options
+            | entryContainerAttributes =
+                \index ->
+                    options.entryContainerAttributes index ++ attributes index
+        }
+
+
+{-| -}
+withImageSiblingElement : Html Never -> Options msg -> Options msg
+withImageSiblingElement sibling (Options options) =
+    Options { options | imageSiblingElement = Just sibling }
+
+
+{-| -}
+withEditIconOverlay : Options msg -> Options msg
+withEditIconOverlay (Options options) =
+    Options options
+        |> withImageSiblingElement
+            (div
+                [ class "absolute top-0 bottom-0 left-0 right-0 bg-black/40 grid place-items-center hover:bg-black/50"
+                , class options.imageClass
+                ]
+                [ Icons.edit "text-white"
+                ]
+            )
+        |> withEntryContainerAttributes (\_ -> [ class "relative" ])
+
+
+{-| -}
+withAddImagesView : List (Html Never) -> Options msg -> Options msg
+withAddImagesView newView (Options options) =
+    Options { options | addImagesView = Just newView }
+
+
+{-| -}
+withAddImagesContainerAttributes : List (Html.Attribute Never) -> Options msg -> Options msg
+withAddImagesContainerAttributes attributes (Options options) =
+    Options { options | addImagesContainerAttributes = options.addImagesContainerAttributes ++ attributes }
+
+
+{-| -}
+withImageCropperAttributes : List (Html.Attribute Never) -> Options msg -> Options msg
+withImageCropperAttributes attributes (Options options) =
+    Options { options | imageCropperAttributes = options.imageCropperAttributes ++ attributes }
+
+
+{-| -}
+withEntryActions : (Int -> List (EntryAction msg)) -> Options msg -> Options msg
+withEntryActions buildActions (Options options) =
+    Options { options | entryActions = buildActions }
+
+
+
+-- PARSING
+
+
+{-| Parse a `SingleModel`. It will only succeed if the image is uploaded, and all
+of the errors are already translated
+-}
+parser : Translation.Translators -> SingleModel -> Result String String
+parser ({ t } as translators) (SingleModel model) =
+    case model.entry of
+        Nothing ->
+            Err (t "error.required")
+
+        Just entry ->
+            parseUrlStatus translators entry.url
+
+
+{-| Parse a `Multiple`. It will only succeed if all of the images are uploaded,
+and all of the errors are already translated
+-}
+parserMultiple : Translation.Translators -> MultipleModel -> Result String (List String)
+parserMultiple translators (MultipleModel model) =
+    List.foldr
+        (\entry result ->
+            case parseUrlStatus translators entry.url of
+                Err err ->
+                    Err err
+
+                Ok url ->
+                    case result of
+                        Err err ->
+                            Err err
+
+                        Ok validEntries ->
+                            Ok (url :: validEntries)
+        )
+        (Ok [])
+        model.entries
+
+
+parseUrlStatus : Translation.Translators -> UrlStatus -> Result String String
+parseUrlStatus { t } urlStatus =
+    case urlStatus of
+        Loading _ ->
+            Err (t "error.wait_file_upload")
+
+        Loaded url ->
+            Ok url
+
+        LoadedWithCropped _ ->
+            Err (t "error.wait_file_upload")
+
+        LoadingWithCropped _ ->
+            Err (t "error.wait_file_upload")
+
+        LoadedWithCroppedUploaded { croppedUrl } ->
+            Ok croppedUrl
+
+        WithError _ ->
+            Err (t "error.file_upload")
 
 
 
@@ -206,152 +501,480 @@ type RectangleBackground
 
 
 type Msg
-    = RequestedUploadFile File
+    = RequestedUploadFiles (List File)
+    | RequestedReplaceFile File
     | CompletedUploadingFile Int (Result Http.Error String)
-    | SelectedFile Int
+    | ClickedEntry Int
+    | ClickedCloseEntryModal
+    | GotImageCropperMsg View.ImageCropper.Msg
+    | DiscoveredFileType Int View.Components.PdfViewerFileType
+    | ClickedDeleteEntry
+    | ClickedSaveEntry
+
+
+type ExtMsg
+    = SetLoadingState Bool
 
 
 type alias UpdateResult =
-    UR.UpdateResult Model Msg Feedback.Model
+    UR.UpdateResult Model Msg ExtMsg
 
 
-{-| We don't use Shared directly in order to be able to use the update function
-in elm-book more easily, but you can just use `Shared` directly
--}
 update :
     { shared
         | endpoints : { endpoints | api : String }
-        , translators : Shared.Translators
+        , translators : Translation.Translators
     }
     -> Msg
     -> Model
     -> UpdateResult
-update shared msg model =
+update shared msg (Model model) =
     case msg of
-        RequestedUploadFile file ->
+        RequestedUploadFiles files ->
+            case model.entries of
+                SingleEntry _ ->
+                    case
+                        files
+                            |> List.head
+                            |> Maybe.andThen (entryFromFile { aspectRatio = model.aspectRatio })
+                    of
+                        Just newEntry ->
+                            { model
+                                | entries =
+                                    newEntry
+                                        |> Just
+                                        |> SingleEntry
+                                , numberOfEntriesLoading = 1
+                            }
+                                |> Model
+                                |> UR.init
+                                |> UR.addCmd (uploadEntry shared 0 newEntry)
+                                |> UR.addExt (SetLoadingState True)
+
+                        Nothing ->
+                            model
+                                |> Model
+                                |> UR.init
+                                |> UR.logImpossible msg
+                                    "Input file is not a valid entry"
+                                    Nothing
+                                    { moduleName = "Form.File", function = "update" }
+                                    []
+
+                MultipleEntries entries ->
+                    let
+                        newEntries : List Entry
+                        newEntries =
+                            List.filterMap
+                                (entryFromFile { aspectRatio = model.aspectRatio })
+                                files
+
+                        uploadNewEntries : Cmd Msg
+                        uploadNewEntries =
+                            newEntries
+                                |> List.indexedMap
+                                    (\index entry ->
+                                        uploadEntry shared
+                                            (index + List.length entries)
+                                            entry
+                                    )
+                                |> Cmd.batch
+                    in
+                    { model
+                        | entries = MultipleEntries (entries ++ newEntries)
+                        , numberOfEntriesLoading = model.numberOfEntriesLoading + List.length newEntries
+                    }
+                        |> Model
+                        |> UR.init
+                        |> UR.addCmd uploadNewEntries
+                        |> UR.addExt (SetLoadingState True)
+
+        RequestedReplaceFile file ->
+            case entryFromFile { aspectRatio = model.aspectRatio } file of
+                Just newEntry ->
+                    let
+                        ( newEntries, uploadEntryCmd, succeeded ) =
+                            case model.entries of
+                                SingleEntry _ ->
+                                    ( SingleEntry (Just newEntry)
+                                    , uploadEntry shared 0 newEntry
+                                    , True
+                                    )
+
+                                MultipleEntries entries ->
+                                    case model.openImageCropperIndex of
+                                        Just index ->
+                                            ( entries
+                                                |> List.Extra.setAt index newEntry
+                                                |> MultipleEntries
+                                            , uploadEntry shared index newEntry
+                                            , True
+                                            )
+
+                                        Nothing ->
+                                            ( model.entries, Cmd.none, False )
+
+                        addMaybeExtMsg =
+                            if succeeded then
+                                UR.addExt (SetLoadingState True)
+
+                            else
+                                identity
+                    in
+                    { model
+                        | entries = newEntries
+                        , numberOfEntriesLoading =
+                            if succeeded then
+                                model.numberOfEntriesLoading + 1
+
+                            else
+                                model.numberOfEntriesLoading
+                    }
+                        |> Model
+                        |> UR.init
+                        |> UR.addCmd uploadEntryCmd
+                        |> addMaybeExtMsg
+
+                Nothing ->
+                    model
+                        |> Model
+                        |> UR.init
+                        |> UR.logImpossible msg
+                            "Input file is not a valid entry to replace"
+                            Nothing
+                            { moduleName = "Form.File", function = "update" }
+                            []
+
+        CompletedUploadingFile index result ->
             let
-                ( newModel, index ) =
-                    case model of
-                        SingleFile _ ->
-                            ( SingleFile RemoteData.Loading, 0 )
+                maybeSetLoadingStateAsFalse =
+                    if model.numberOfEntriesLoading == 1 then
+                        UR.addExt (SetLoadingState False)
 
-                        WithChoices { files } ->
-                            ( WithChoices
-                                { selected = List.length files
-                                , files = files ++ [ RemoteData.Loading ]
-                                }
-                            , List.length files
-                            )
+                    else
+                        identity
             in
-            newModel
-                |> UR.init
-                |> UR.addCmd
-                    (Api.uploadImage shared
-                        file
-                        (CompletedUploadingFile index)
-                    )
+            { model
+                | entries =
+                    case model.entries of
+                        SingleEntry previousEntry ->
+                            let
+                                newUrlStatus =
+                                    updateUrlStatusWithResult result (Maybe.map .url previousEntry)
+                            in
+                            { fileType = LoadingFileType
+                            , url = newUrlStatus
+                            , imageCropper =
+                                case previousEntry of
+                                    Nothing ->
+                                        WithoutImageCropper
 
-        CompletedUploadingFile index (Err error) ->
+                                    Just previous ->
+                                        imageCropperFromPreviousEntry
+                                            { previous = previous.url
+                                            , new = newUrlStatus
+                                            , previousImageCropper = previous.imageCropper
+                                            }
+                            }
+                                |> Just
+                                |> SingleEntry
+
+                        MultipleEntries entries ->
+                            entries
+                                |> List.Extra.updateAt index
+                                    (\previousEntry ->
+                                        let
+                                            newUrlStatus =
+                                                updateUrlStatusWithResult result (Just previousEntry.url)
+                                        in
+                                        { fileType = LoadingFileType
+                                        , url = newUrlStatus
+                                        , imageCropper =
+                                            imageCropperFromPreviousEntry
+                                                { previous = previousEntry.url
+                                                , new = newUrlStatus
+                                                , previousImageCropper = previousEntry.imageCropper
+                                                }
+                                        }
+                                    )
+                                |> MultipleEntries
+                , openImageCropperIndex =
+                    case model.entries of
+                        SingleEntry _ ->
+                            if model.isSavingExistingImage then
+                                Nothing
+
+                            else
+                                Just 0
+
+                        MultipleEntries _ ->
+                            model.openImageCropperIndex
+                , isSavingExistingImage = False
+                , numberOfEntriesLoading = model.numberOfEntriesLoading - 1
+            }
+                |> Model
+                |> UR.init
+                |> maybeSetLoadingStateAsFalse
+
+        ClickedEntry index ->
+            { model | openImageCropperIndex = Just index }
+                |> Model
+                |> UR.init
+
+        ClickedCloseEntryModal ->
+            { model | openImageCropperIndex = Nothing }
+                |> Model
+                |> UR.init
+
+        GotImageCropperMsg subMsg ->
             let
-                newModel =
-                    case model of
-                        SingleFile _ ->
-                            SingleFile (RemoteData.Failure error)
+                updateEntry : (Model -> Maybe Entry) -> (Model -> Entry -> Model) -> UpdateResult
+                updateEntry getEntry updateEntryInModel =
+                    case getEntry (Model model) of
+                        Nothing ->
+                            UR.init (Model model)
 
-                        WithChoices choices ->
-                            WithChoices
-                                { choices
-                                    | files =
-                                        List.Extra.updateAt
-                                            index
-                                            (\_ -> RemoteData.Failure error)
-                                            choices.files
-                                }
+                        Just entry ->
+                            case entry.imageCropper of
+                                WithoutImageCropper ->
+                                    UR.init (Model model)
+
+                                WithImageCropper imageCropper ->
+                                    View.ImageCropper.update subMsg imageCropper
+                                        |> UR.fromChild
+                                            (\newImageCropper ->
+                                                { entry | imageCropper = WithImageCropper newImageCropper }
+                                                    |> updateEntryInModel (Model model)
+                                            )
+                                            GotImageCropperMsg
+                                            (handleExt getEntry updateEntryInModel)
+                                            (Model model)
+
+                handleExt : (Model -> Maybe Entry) -> (Model -> Entry -> Model) -> View.ImageCropper.ExtMsg -> UpdateResult -> UpdateResult
+                handleExt getEntry updateEntryInModel (View.ImageCropper.CompletedCropping newFile) =
+                    UR.mapModel
+                        (\m ->
+                            case getEntry m of
+                                Nothing ->
+                                    m
+
+                                Just entry ->
+                                    entry
+                                        |> setEntryFile newFile
+                                        |> updateEntryInModel m
+                        )
+
+                setEntryFile : File -> Entry -> Entry
+                setEntryFile file entry =
+                    { entry
+                        | url =
+                            case entry.url of
+                                Loaded original ->
+                                    LoadedWithCropped { original = original, cropped = file }
+
+                                LoadedWithCropped { original } ->
+                                    LoadedWithCropped { original = original, cropped = file }
+
+                                LoadingWithCropped { original } ->
+                                    LoadingWithCropped { original = original, cropped = file }
+
+                                LoadedWithCroppedUploaded { original } ->
+                                    LoadedWithCropped { original = original, cropped = file }
+
+                                WithError err ->
+                                    WithError err
+
+                                Loading loading ->
+                                    Loading loading
+                    }
             in
-            newModel
-                |> UR.init
-                |> UR.addExt
-                    (Feedback.Visible Feedback.Failure
-                        (shared.translators.t "error.file_upload")
-                    )
-                |> UR.logHttpError msg
-                    Nothing
-                    "Error uploading file"
-                    { moduleName = "Form.File", function = "update" }
-                    []
-                    error
+            updateEntry
+                (\(Model m) ->
+                    case m.entries of
+                        SingleEntry maybeEntry ->
+                            maybeEntry
 
-        CompletedUploadingFile index (Ok url) ->
+                        MultipleEntries entries ->
+                            m.openImageCropperIndex
+                                |> Maybe.andThen (\index -> List.Extra.getAt index entries)
+                )
+                (\(Model m) newEntry ->
+                    case m.entries of
+                        SingleEntry _ ->
+                            Model { m | entries = SingleEntry (Just newEntry) }
+
+                        MultipleEntries entries ->
+                            case m.openImageCropperIndex of
+                                Nothing ->
+                                    Model m
+
+                                Just index ->
+                                    { m
+                                        | entries =
+                                            List.Extra.setAt index newEntry entries
+                                                |> MultipleEntries
+                                    }
+                                        |> Model
+                )
+
+        DiscoveredFileType index fileType ->
             let
-                newModel =
-                    case model of
-                        SingleFile _ ->
-                            SingleFile (RemoteData.Success url)
+                updateEntry : Entry -> Entry
+                updateEntry entry =
+                    { entry
+                        | fileType =
+                            fileType
+                                |> fileTypeFromPdfViewerFileType
+                                |> LoadedFileType
+                        , imageCropper =
+                            case fileTypeFromPdfViewerFileType fileType of
+                                Image ->
+                                    case model.aspectRatio of
+                                        Nothing ->
+                                            WithoutImageCropper
 
-                        WithChoices choices ->
-                            WithChoices
-                                { choices
-                                    | files =
-                                        List.Extra.updateAt index
-                                            (\_ -> RemoteData.Success url)
-                                            choices.files
-                                }
+                                        Just aspectRatio ->
+                                            case entry.imageCropper of
+                                                WithoutImageCropper ->
+                                                    { aspectRatio = aspectRatio }
+                                                        |> View.ImageCropper.init
+                                                        |> WithImageCropper
+
+                                                WithImageCropper cropper ->
+                                                    WithImageCropper cropper
+
+                                Pdf ->
+                                    WithoutImageCropper
+                    }
             in
-            newModel
+            case model.entries of
+                SingleEntry Nothing ->
+                    UR.init (Model model)
+
+                SingleEntry (Just entry) ->
+                    { model
+                        | entries =
+                            entry
+                                |> updateEntry
+                                |> Just
+                                |> SingleEntry
+                    }
+                        |> Model
+                        |> UR.init
+
+                MultipleEntries entries ->
+                    { model
+                        | entries =
+                            entries
+                                |> List.Extra.updateAt index updateEntry
+                                |> MultipleEntries
+                    }
+                        |> Model
+                        |> UR.init
+
+        ClickedDeleteEntry ->
+            { model
+                | entries =
+                    case model.entries of
+                        SingleEntry _ ->
+                            SingleEntry Nothing
+
+                        MultipleEntries entries ->
+                            case model.openImageCropperIndex of
+                                Nothing ->
+                                    MultipleEntries entries
+
+                                Just index ->
+                                    MultipleEntries (List.Extra.removeAt index entries)
+                , openImageCropperIndex = Nothing
+            }
+                |> Model
                 |> UR.init
 
-        SelectedFile index ->
+        ClickedSaveEntry ->
             let
-                newModel =
-                    case model of
-                        SingleFile file ->
-                            SingleFile file
+                updateEntry : Int -> Entry -> ( Entry, Cmd Msg )
+                updateEntry index entry =
+                    let
+                        fromOriginalAndCropped : { original : String, cropped : File } -> ( Entry, Cmd Msg )
+                        fromOriginalAndCropped data =
+                            let
+                                newEntry =
+                                    { entry | url = LoadingWithCropped data }
+                            in
+                            ( newEntry, uploadEntry shared index newEntry )
+                    in
+                    case entry.url of
+                        LoadedWithCropped data ->
+                            fromOriginalAndCropped data
 
-                        WithChoices choices ->
-                            WithChoices { choices | selected = index }
+                        LoadingWithCropped data ->
+                            fromOriginalAndCropped data
+
+                        LoadedWithCroppedUploaded { original, cropped } ->
+                            fromOriginalAndCropped { original = original, cropped = cropped }
+
+                        Loading _ ->
+                            ( entry, Cmd.none )
+
+                        Loaded _ ->
+                            ( entry, Cmd.none )
+
+                        WithError _ ->
+                            ( entry, Cmd.none )
             in
-            newModel
-                |> UR.init
+            case model.entries of
+                SingleEntry Nothing ->
+                    { model
+                        | openImageCropperIndex = Nothing
+                        , isSavingExistingImage = True
+                    }
+                        |> Model
+                        |> UR.init
 
+                SingleEntry (Just entry) ->
+                    let
+                        ( newEntry, cmd ) =
+                            updateEntry 0 entry
+                    in
+                    { model
+                        | openImageCropperIndex = Nothing
+                        , entries =
+                            newEntry
+                                |> Just
+                                |> SingleEntry
+                        , isSavingExistingImage = True
+                    }
+                        |> Model
+                        |> UR.init
+                        |> UR.addCmd cmd
 
+                MultipleEntries entries ->
+                    case model.openImageCropperIndex of
+                        Nothing ->
+                            model |> Model |> UR.init
 
--- ADDING ATTRIBUTES
+                        Just openImageCropperIndex ->
+                            case List.Extra.getAt openImageCropperIndex entries of
+                                Nothing ->
+                                    { model | openImageCropperIndex = Nothing }
+                                        |> Model
+                                        |> UR.init
 
-
-{-| Determines if the File should be disabled
--}
-withDisabled : Bool -> Options msg -> Options msg
-withDisabled disabled (Options options) =
-    Options { options | disabled = disabled }
-
-
-{-| Adds attributes to the element that contains the file uploader itself, the
-label and the error message
--}
-withContainerAttrs : List (Html.Attribute msg) -> Options msg -> Options msg
-withContainerAttrs attrs (Options options) =
-    Options { options | containerAttrs = options.containerAttrs ++ attrs }
-
-
-{-| Adds attributes to the element that contains the file uploader
--}
-withAttrs : List (Html.Attribute msg) -> Options msg -> Options msg
-withAttrs attrs (Options options) =
-    Options { options | extraAttrs = options.extraAttrs ++ attrs }
-
-
-{-| Adds file types that the input accepts
--}
-withFileTypes : List FileType -> Options msg -> Options msg
-withFileTypes fileTypes (Options options) =
-    Options { options | fileTypes = fileTypes }
-
-
-{-| Selects the variant to display. This will greatly affect how the input looks
--}
-withVariant : Variant -> Options msg -> Options msg
-withVariant variant (Options options) =
-    Options { options | variant = variant }
+                                Just entry ->
+                                    let
+                                        ( newEntry, cmd ) =
+                                            updateEntry openImageCropperIndex entry
+                                    in
+                                    { model
+                                        | openImageCropperIndex = Nothing
+                                        , entries =
+                                            List.Extra.setAt openImageCropperIndex newEntry entries
+                                                |> MultipleEntries
+                                    }
+                                        |> Model
+                                        |> UR.init
+                                        |> UR.addCmd cmd
 
 
 
@@ -363,283 +986,536 @@ type alias ViewConfig msg =
     , error : Html msg
     , hasError : Bool
     , isRequired : Bool
-    , translators : Shared.Translators
+    , translators : Translation.Translators
     }
 
 
 view : Options msg -> ViewConfig msg -> (Msg -> msg) -> Html msg
-view (Options options) viewConfig toMsg =
-    case viewConfig.value of
-        SingleFile file ->
-            case options.variant of
-                LargeRectangle background ->
-                    viewLargeRectangle background (Options options) viewConfig file toMsg
+view options viewConfig toMsg =
+    let
+        (Model model) =
+            viewConfig.value
+    in
+    div []
+        [ case model.entries of
+            SingleEntry _ ->
+                viewSingle (toSingleModel (Model model)) options viewConfig toMsg
 
-                SmallCircle ->
-                    viewSmallCircle (Options options) viewConfig file toMsg
+            MultipleEntries _ ->
+                viewMultiple (toMultipleModel (Model model)) options viewConfig toMsg
+        , if viewConfig.hasError then
+            viewConfig.error
 
-                SimplePlus ->
-                    viewSimplePlus (Options options) viewConfig file toMsg
-
-        WithChoices choices ->
-            viewHardcodedChoices (Options options) viewConfig choices toMsg
+          else
+            text ""
+        ]
 
 
-viewInput : Options msg -> ViewConfig msg -> (Msg -> msg) -> Html msg
-viewInput (Options options) viewConfig toMsg =
+viewSingle : SingleModel -> Options msg -> ViewConfig msg -> (Msg -> msg) -> Html msg
+viewSingle (SingleModel model) (Options options) viewConfig toMsg =
+    case model.entry of
+        Nothing ->
+            viewAddImages { allowMultiple = False }
+                (Options options)
+                viewConfig
+                toMsg
+
+        Just entry ->
+            div (class "flex flex-col" :: fromNeverAttributes options.containerAttributes)
+                [ case options.label of
+                    Nothing ->
+                        text ""
+
+                    Just label ->
+                        button
+                            [ class "label w-max focus-ring"
+                            , onClick (ClickedEntry 0 |> toMsg)
+                            , disabled options.disabled
+                            , type_ "button"
+                            ]
+                            [ text label ]
+                , viewEntry viewConfig.translators
+                    (Options options)
+                    0
+                    entry
+                    |> Html.map toMsg
+                , viewEntryModal (Options options)
+                    viewConfig
+                    { isVisible = model.isImageCropperOpen, index = 0 }
+                    entry
+                    toMsg
+                ]
+
+
+viewMultiple : MultipleModel -> Options msg -> ViewConfig msg -> (Msg -> msg) -> Html msg
+viewMultiple (MultipleModel model) (Options options) viewConfig toMsg =
+    let
+        maybeOpenEntry : Maybe Entry
+        maybeOpenEntry =
+            model.openImageCropperIndex
+                |> Maybe.andThen (\index -> List.Extra.getAt index model.entries)
+    in
+    div (fromNeverAttributes options.containerAttributes)
+        [ case options.label of
+            Nothing ->
+                text ""
+
+            Just label ->
+                View.Components.label []
+                    { targetId = options.id
+                    , labelText = label
+                    }
+        , Html.Keyed.ul
+            [ class "flex flex-wrap gap-4" ]
+            (List.indexedMap
+                (\index entry ->
+                    ( "entry-" ++ String.fromInt index
+                    , li []
+                        [ viewEntry viewConfig.translators
+                            (Options options)
+                            index
+                            entry
+                            |> Html.map toMsg
+                        ]
+                    )
+                )
+                model.entries
+                ++ [ ( "add-images-input"
+                     , viewAddImages
+                        { allowMultiple = True }
+                        (Options options)
+                        viewConfig
+                        toMsg
+                     )
+                   ]
+            )
+        , case maybeOpenEntry of
+            Nothing ->
+                text ""
+
+            Just entry ->
+                viewEntryModal (Options options)
+                    viewConfig
+                    { isVisible = True
+                    , index =
+                        model.openImageCropperIndex
+                            |> Maybe.withDefault 0
+                    }
+                    entry
+                    toMsg
+        ]
+
+
+{-| This is what we use when there isn't an image uploaded yet
+-}
+viewAddImages : { allowMultiple : Bool } -> Options msg -> ViewConfig msg -> (Msg -> msg) -> Html msg
+viewAddImages { allowMultiple } (Options options) viewConfig toMsg =
+    div
+        (if allowMultiple then
+            []
+
+         else
+            class "flex flex-col" :: fromNeverAttributes options.containerAttributes
+        )
+        [ if allowMultiple then
+            text ""
+
+          else
+            case options.label of
+                Nothing ->
+                    text ""
+
+                Just label ->
+                    button
+                        [ class "label w-max focus-ring"
+                        , onClick (ClickedEntry 0)
+                        , disabled options.disabled
+                        , type_ "button"
+                        ]
+                        [ text label ]
+        , viewInput (Options options)
+            viewConfig
+            { allowMultiple = allowMultiple }
+        , Html.label
+            (for options.id
+                :: class "cursor-pointer flex file-decoration w-max"
+                :: fromNeverAttributes options.addImagesContainerAttributes
+            )
+            (options.addImagesView
+                |> Maybe.withDefault (defaultAddImagesView [])
+                |> List.map (Html.map Basics.never)
+            )
+        ]
+        |> Html.map toMsg
+
+
+defaultAddImagesView : List (Html.Attribute Never) -> List (Html Never)
+defaultAddImagesView attrs =
+    [ div
+        (class "p-2 bg-gray-100 flex items-center justify-center w-24 h-24 rounded hover:bg-gray-200"
+            :: attrs
+        )
+        [ Icons.plus "text-orange-300 fill-current"
+        ]
+    ]
+
+
+viewInput : Options msg -> ViewConfig msg -> { allowMultiple : Bool } -> Html Msg
+viewInput (Options options) viewConfig { allowMultiple } =
     input
-        [ id options.id
-        , class "hidden form-file"
-        , type_ "file"
-        , onFileChange (RequestedUploadFile >> toMsg)
+        [ type_ "file"
+        , id options.id
+        , class "sr-only form-file"
+        , on "change"
+            (Json.Decode.at [ "target", "files" ]
+                (Json.Decode.list File.decoder)
+                |> Json.Decode.map RequestedUploadFiles
+            )
+        , multiple allowMultiple
         , acceptFileTypes options.fileTypes
-        , multiple False
-        , required viewConfig.isRequired
         , disabled options.disabled
+        , required viewConfig.isRequired
         ]
         []
 
 
-viewLargeRectangle : RectangleBackground -> Options msg -> ViewConfig msg -> RemoteData Http.Error String -> (Msg -> msg) -> Html msg
-viewLargeRectangle background (Options options) viewConfig value toMsg =
-    let
-        ( backgroundColor, foregroundColor, icon ) =
-            case background of
-                Purple ->
-                    ( "bg-purple-500", "text-white", Icons.camera "" )
-
-                Gray ->
-                    ( "bg-gray-100", "text-body-black", Icons.addPhoto "fill-current text-body-black" )
-    in
-    div options.containerAttrs
-        [ View.Components.label [] { targetId = options.id, labelText = options.label }
-        , viewInput (Options options) viewConfig toMsg
-        , Html.label
-            (class "relative w-full h-56 rounded-sm flex justify-center items-center file-decoration"
-                :: class backgroundColor
-                :: class foregroundColor
-                :: classList
-                    [ ( "cursor-pointer", not options.disabled )
-                    , ( "cursor-not-allowed", options.disabled )
-                    ]
-                :: for options.id
-                :: options.extraAttrs
+viewReplaceImageInput : Options msg -> { isDisabled : Bool, index : Int } -> Html Msg
+viewReplaceImageInput (Options options) { isDisabled, index } =
+    input
+        [ type_ "file"
+        , id (replaceInputId (Options options) index)
+        , class "sr-only form-file"
+        , on "change"
+            (File.decoder
+                |> Json.Decode.index 0
+                |> Json.Decode.at [ "target", "files" ]
+                |> Json.Decode.map RequestedReplaceFile
             )
-            [ case value of
-                RemoteData.Loading ->
-                    View.Components.loadingLogoAnimated viewConfig.translators ""
+        , multiple False
+        , acceptFileTypes options.fileTypes
+        , disabled (isDisabled || options.disabled)
+        ]
+        []
 
-                RemoteData.Success url ->
-                    div [ class "w-full h-full flex items-center justify-center" ]
-                        [ span [ class "absolute bottom-4 right-4 bg-orange-300 w-8 h-8 p-2 rounded-full" ]
-                            [ Icons.camera "" ]
-                        , if List.member PDF options.fileTypes then
-                            View.Components.pdfViewer [ class "h-full w-full" ]
-                                { url = url
-                                , childClass = "max-h-full max-w-full"
-                                , maybeTranslators = Just viewConfig.translators
-                                }
 
-                          else
-                            img
-                                [ src url
-                                , class "max-h-full max-w-full"
-                                , alt ""
-                                ]
-                                []
-                        ]
+replaceInputId : Options msg -> Int -> String
+replaceInputId (Options options) index =
+    options.id ++ "-replace-image-" ++ String.fromInt index
+
+
+viewEntry : Translation.Translators -> Options msg -> Int -> Entry -> Html Msg
+viewEntry translators (Options options) index entry =
+    let
+        buttonAriaLabel =
+            case entry.fileType of
+                LoadedFileType Image ->
+                    case entry.imageCropper of
+                        WithImageCropper _ ->
+                            translators.t "form.file.edit_image"
+
+                        WithoutImageCropper ->
+                            translators.t "form.file.edit_file"
 
                 _ ->
-                    div [ class "font-bold text-center" ]
-                        [ div [ class "w-10 mx-auto mb-2" ] [ icon ]
-                        , p [ class "px-4" ]
-                            [ Html.text (viewConfig.translators.t "community.actions.proof.upload_hint") ]
-                        ]
-            ]
-        , viewConfig.error
-        ]
+                    translators.t "form.file.edit_file"
 
-
-viewSmallCircle : Options msg -> ViewConfig msg -> RemoteData Http.Error String -> (Msg -> msg) -> Html msg
-viewSmallCircle (Options options) viewConfig value toMsg =
-    let
-        imgClasses =
-            "object-cover rounded-full w-20 h-20"
-
-        viewImg =
-            case value of
-                RemoteData.Success url ->
-                    if List.member PDF options.fileTypes then
-                        View.Components.pdfViewer [ class imgClasses ]
-                            { url = url
-                            , childClass = imgClasses
-                            , maybeTranslators = Nothing
-                            }
-
-                    else
-                        img
-                            [ class imgClasses
-                            , src url
-                            , alt ""
-                            ]
-                            []
-
-                _ ->
-                    div
-                        [ class (imgClasses ++ " bg-gray-500")
-                        , classList [ ( "animate-skeleton-loading", RemoteData.isLoading value ) ]
-                        , ariaLive "polite"
-                        ]
-                        [ if RemoteData.isLoading value then
-                            span [ class "sr-only" ] [ Html.text <| viewConfig.translators.t "menu.loading" ]
-
-                          else
-                            Html.text ""
-                        ]
-    in
-    div options.containerAttrs
-        [ View.Components.label [] { targetId = options.id, labelText = options.label }
-        , div [ class "mt-2 m-auto w-20 h-20 relative" ]
-            [ viewInput (Options options) viewConfig toMsg
-            , Html.label
-                (for options.id
-                    :: class "block"
-                    :: classList
-                        [ ( "cursor-pointer", not options.disabled )
-                        , ( "cursor-not-allowed", options.disabled )
-                        ]
-                    :: options.extraAttrs
-                )
-                [ viewImg
-                , span
-                    [ class "absolute bottom-0 right-0 bg-orange-300 rounded-full transition-all file-decoration"
-                    , classList
-                        [ ( "w-8 h-8 p-2", not (RemoteData.isNotAsked value) )
-                        , ( "w-full h-full p-4", RemoteData.isNotAsked value )
-                        ]
-                    ]
-                    [ Icons.camera "" ]
-                ]
-            ]
-        , viewConfig.error
-        ]
-
-
-viewSimplePlus : Options msg -> ViewConfig msg -> RemoteData Http.Error String -> (Msg -> msg) -> Html msg
-viewSimplePlus (Options options) viewConfig value toMsg =
-    let
-        imgClasses =
-            "object-cover rounded max-w-full max-h-full"
-    in
-    div options.containerAttrs
-        [ viewInput (Options options) viewConfig toMsg
-        , Html.label
-            (for options.id
-                :: class "hover:opacity-70"
-                :: classList
-                    [ ( "cursor-pointer", not options.disabled )
-                    , ( "cursor-not-allowed", options.disabled )
-                    ]
-                :: options.extraAttrs
-            )
-            [ case value of
-                RemoteData.NotAsked ->
-                    Icons.plus "fill-current text-orange-300"
-
-                RemoteData.Loading ->
-                    div [ class "w-full px-4" ]
-                        [ View.Components.loadingLogoAnimatedFluid
-                        , span [ class "sr-only" ]
-                            [ Html.text <| viewConfig.translators.t "menu.loading"
-                            ]
-                        ]
-
-                RemoteData.Failure _ ->
-                    Icons.plus "fill-current text-orange-300"
-
-                RemoteData.Success url ->
-                    if List.member PDF options.fileTypes then
-                        View.Components.pdfViewer [ class imgClasses ]
-                            { url = url
-                            , childClass = imgClasses
-                            , maybeTranslators = Nothing
-                            }
-
-                    else
-                        img
-                            [ class imgClasses
-                            , src url
-                            , alt ""
-                            ]
-                            []
-            ]
-        ]
-
-
-viewHardcodedChoices :
-    Options msg
-    -> ViewConfig msg
-    -> { selected : Int, files : List (RemoteData Http.Error String) }
-    -> (Msg -> msg)
-    -> Html msg
-viewHardcodedChoices (Options options) viewConfig choices toMsg =
-    let
-        activeClass =
-            "border border-gray-900 shadow-lg"
-
-        itemClass =
-            "p-4 border border-white rounded-md w-full h-full flex items-center justify-center focus-outline-none focus:border hover:border-gray-900 focus:border-gray-900 hover:shadow-lg focus:shadow-lg"
-
-        viewItem index choiceStatus =
+        viewWithUrl : String -> Html Msg
+        viewWithUrl url =
             button
-                [ class itemClass
-                , classList [ ( activeClass, index == choices.selected ) ]
-                , type_ "button"
-                , onClick (SelectedFile index)
-                ]
-                [ case choiceStatus of
-                    RemoteData.Loading ->
-                        div [ class "w-16 h-16" ]
-                            [ View.Components.loadingLogoAnimatedFluid ]
+                (onClick (ClickedEntry index)
+                    :: type_ "button"
+                    :: class "hover:opacity-60 focus-ring"
+                    :: ariaLabel buttonAriaLabel
+                    :: fromNeverAttributes (options.entryContainerAttributes index)
+                )
+                [ case entry.fileType of
+                    LoadedFileType Image ->
+                        img [ src url, alt "", class options.imageClass ] []
 
-                    RemoteData.Success url ->
-                        div
-                            [ class "w-16 h-16 bg-contain bg-center bg-no-repeat"
-                            , Html.Attributes.style "background-image"
-                                ("url(" ++ url ++ ")")
-                            ]
-                            []
+                    LoadedFileType Pdf ->
+                        View.Components.pdfViewer []
+                            { url = url
+                            , childClass = options.imageClass
+                            , maybeTranslators = Just translators
+                            , onFileTypeDiscovered = Nothing
+                            }
 
-                    _ ->
-                        div []
-                            []
+                    LoadingFileType ->
+                        View.Components.pdfViewer []
+                            { url = url
+                            , childClass = options.imageClass
+                            , maybeTranslators = Just translators
+                            , onFileTypeDiscovered = Just (DiscoveredFileType index)
+                            }
+                , options.imageSiblingElement
+                    |> Maybe.withDefault (text "")
+                    |> Html.map Basics.never
                 ]
-                |> Html.map toMsg
     in
-    div options.containerAttrs
-        [ View.Components.label []
-            { targetId = options.id, labelText = options.label }
-        , div
-            [ class "grid gap-4 xs-max:grid-cols-1 grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-7" ]
-            (List.indexedMap viewItem choices.files
-                ++ [ viewInput (Options options) viewConfig toMsg
-                   , Html.label
-                        (for options.id
-                            :: class ("flex-col text-center cursor-pointer " ++ itemClass)
-                            :: options.extraAttrs
-                        )
-                        [ div [ class "bg-gradient-to-bl from-orange-300 to-orange-500 rounded-full p-2 mb-1 w-12 h-12 flex items-center justify-center" ]
-                            [ Icons.imageMultiple "text-white fill-current w-8 h-8"
+    case entry.url of
+        Loading _ ->
+            div
+                (class "p-4 bg-gray-100 grid place-items-center"
+                    :: fromNeverAttributes (options.entryContainerAttributes index)
+                )
+                [ View.Components.loadingLogoWithNoText "max-w-27"
+                ]
+
+        Loaded url ->
+            viewWithUrl url
+
+        LoadedWithCropped { original } ->
+            viewWithUrl original
+
+        LoadingWithCropped _ ->
+            div
+                (class "p-4 bg-gray-100 grid place-items-center"
+                    :: fromNeverAttributes (options.entryContainerAttributes index)
+                )
+                [ View.Components.loadingLogoWithNoText "w-full h-full max-w-27"
+                ]
+
+        LoadedWithCroppedUploaded { croppedUrl } ->
+            viewWithUrl croppedUrl
+
+        WithError _ ->
+            button
+                (onClick (ClickedEntry index)
+                    :: type_ "button"
+                    :: class "grid place-items-center bg-gray-100"
+                    :: fromNeverAttributes (options.entryContainerAttributes index)
+                )
+                [ Icons.exclamation ("text-red w-1/2 h-1/2 " ++ options.imageClass)
+                ]
+
+
+viewEntryModal : Options msg -> ViewConfig msg -> { isVisible : Bool, index : Int } -> Entry -> (Msg -> msg) -> Html msg
+viewEntryModal (Options options) viewConfig { isVisible, index } entry toMsg =
+    let
+        { translators } =
+            viewConfig
+
+        viewWithUrl : String -> Html msg
+        viewWithUrl url =
+            case entry.fileType of
+                LoadedFileType Image ->
+                    case entry.imageCropper of
+                        WithoutImageCropper ->
+                            img [ src url, alt "", class "mx-auto w-full md:w-auto max-h-[35vh] lg:max-h-[60vh]" ] []
+
+                        WithImageCropper imageCropper ->
+                            View.ImageCropper.view imageCropper
+                                { imageUrl = url
+                                , cropperAttributes = options.imageCropperAttributes
+                                }
+                                |> Html.map (GotImageCropperMsg >> toMsg)
+
+                LoadedFileType Pdf ->
+                    View.Components.pdfViewer []
+                        { url = url
+                        , childClass = "mx-auto w-full md:w-auto max-h-full max-h-[35vh] lg:max-h-[60vh]"
+                        , maybeTranslators = Just translators
+                        , onFileTypeDiscovered = Nothing
+                        }
+
+                LoadingFileType ->
+                    View.Components.pdfViewer []
+                        { url = url
+                        , childClass = "mx-auto w-full md:w-auto max-h-full max-h-[35vh] lg:max-h-[60vh]"
+                        , maybeTranslators = Just translators
+                        , onFileTypeDiscovered = Nothing
+                        }
+
+        addOpenEntryAction : List (EntryAction msg) -> List (EntryAction msg)
+        addOpenEntryAction actions =
+            List.Extra.takeWhile (\action -> action /= ReplaceEntry) actions
+                ++ (OpenEntry
+                        :: List.Extra.dropWhile (\action -> action /= ReplaceEntry) actions
+                   )
+
+        actionsWithOpenAction =
+            if List.member OpenEntry (options.entryActions index) then
+                options.entryActions index
+
+            else if entry.fileType == LoadedFileType Pdf then
+                options.entryActions index
+                    |> addOpenEntryAction
+
+            else
+                options.entryActions index
+
+        ( header, bodyText ) =
+            case entry.fileType of
+                LoadedFileType Image ->
+                    case entry.imageCropper of
+                        WithImageCropper _ ->
+                            ( translators.t "form.file.edit_image"
+                            , translators.t "form.file.body_image"
+                            )
+
+                        WithoutImageCropper ->
+                            ( translators.t "form.file.edit_file"
+                            , translators.t "form.file.body_file"
+                            )
+
+                _ ->
+                    ( translators.t "form.file.edit_file"
+                    , translators.t "form.file.body_file"
+                    )
+    in
+    Modal.initWith
+        { closeMsg = toMsg ClickedCloseEntryModal
+        , isVisible = isVisible
+        }
+        |> Modal.withHeader header
+        |> Modal.withBody
+            [ p [] [ text bodyText ]
+            , div [ class "flex items-center justify-center mt-4" ]
+                [ case entry.url of
+                    Loading _ ->
+                        View.Components.loadingLogoAnimated translators ""
+
+                    Loaded url ->
+                        viewWithUrl url
+
+                    LoadedWithCropped { original } ->
+                        viewWithUrl original
+
+                    LoadingWithCropped { original } ->
+                        viewWithUrl original
+
+                    LoadedWithCroppedUploaded { original } ->
+                        viewWithUrl original
+
+                    WithError _ ->
+                        div [ class "w-full" ]
+                            [ Icons.exclamation "mb-4 mx-auto bg-gray-100 p-4 w-1/4 text-red w-full h-full rounded-sm"
+                            , p [ class "form-error text-center" ]
+                                [ text <| translators.t "error.file_upload" ]
                             ]
-                        , Html.text (viewConfig.translators.t "community.create.labels.upload_icon")
-                        ]
-                   ]
-            )
+                ]
+            ]
+        |> Modal.withFooter
+            [ div [ class "flex flex-wrap items-center justify-center md:flex gap-6 w-full px-10" ]
+                (List.foldr
+                    (\action actions ->
+                        let
+                            viewAction =
+                                case action of
+                                    DeleteEntry ->
+                                        deleteEntryAction translators entry
+                                            |> Html.map toMsg
+
+                                    OpenEntry ->
+                                        openEntryAction translators entry
+                                            |> Html.map toMsg
+
+                                    ReplaceEntry ->
+                                        replaceEntryAction translators (Options options) index entry
+                                            |> Html.map toMsg
+
+                                    SaveEntry ->
+                                        saveEntryAction translators entry
+                                            |> Html.map toMsg
+
+                                    CustomAction customView ->
+                                        customView
+                        in
+                        viewAction :: actions
+                    )
+                    []
+                    actionsWithOpenAction
+                )
+            ]
+        |> Modal.withSize Modal.FullScreen
+        |> Modal.toHtml
+
+
+deleteEntryAction : Translation.Translators -> Entry -> Html Msg
+deleteEntryAction { t } entry =
+    button
+        [ class "text-center w-full md:w-auto uppercase text-orange-300 font-bold md:mr-auto focus-ring rounded-sm hover:opacity-60"
+        , onClick ClickedDeleteEntry
+        , disabled (isEntryLoading entry)
+        , type_ "button"
+        ]
+        [ text <| t "form.file.delete" ]
+
+
+openEntryAction : Translation.Translators -> Entry -> Html Msg
+openEntryAction { t } entry =
+    let
+        maybeUrl =
+            case entry.url of
+                Loaded url ->
+                    Just url
+
+                LoadedWithCropped { original } ->
+                    Just original
+
+                LoadedWithCroppedUploaded { croppedUrl } ->
+                    Just croppedUrl
+
+                _ ->
+                    Nothing
+    in
+    case maybeUrl of
+        Nothing ->
+            text ""
+
+        Just url ->
+            a
+                [ class "flex items-center justify-center gap-2 w-full md:w-auto uppercase text-orange-300 font-bold focus-ring rounded-sm hover:opacity-60"
+                , Html.Attributes.target "_blank"
+                , Html.Attributes.href url
+                ]
+                [ Icons.externalLink "w-4 h-4 fill-current"
+                , text <| t "form.file.open"
+                ]
+
+
+replaceEntryAction : Translation.Translators -> Options msg -> Int -> Entry -> Html Msg
+replaceEntryAction { t } options index entry =
+    let
+        (Options unwrappedOptions) =
+            options
+    in
+    div [ class "w-full md:w-40 flex-shrink-0" ]
+        [ viewReplaceImageInput options { index = index, isDisabled = isEntryLoading entry }
+        , Html.label
+            [ for (replaceInputId options index)
+            , class "cursor-pointer file-decoration button button-secondary w-full"
+            , classList
+                [ ( "button-disabled", unwrappedOptions.disabled || isEntryLoading entry )
+
+                -- Cropping the image is pretty fast, so we don't want the button to flicker
+                -- At the same time, we don't want the user to be able to do stuff while cropping
+                , ( "!bg-white !text-orange-300", isImageCropperLoading entry )
+                ]
+            ]
+            [ Icons.camera "w-4 mr-1"
+            , text <| t "form.file.change"
+            ]
         ]
 
 
+saveEntryAction : Translation.Translators -> Entry -> Html Msg
+saveEntryAction { t } entry =
+    button
+        [ class "button button-primary w-full flex-shrink-0 md:w-40"
 
--- GETTERS
+        -- Cropping the image is pretty fast, so we don't want the button to flicker
+        -- At the same time, we don't want the user to be able to submit while cropping
+        , classList [ ( "!bg-orange-300 !text-white cursor-wait", isImageCropperLoading entry ) ]
+        , onClick ClickedSaveEntry
+        , disabled (isEntryLoading entry)
+        , type_ "button"
+        ]
+        [ text <| t "form.file.save" ]
+
+
+
+-- HELPER FUNCTIONS
 
 
 getId : Options msg -> String
@@ -647,33 +1523,77 @@ getId (Options options) =
     options.id
 
 
+isEmpty : Model -> Bool
+isEmpty (Model model) =
+    case model.entries of
+        SingleEntry Nothing ->
+            True
 
--- UTILS
+        SingleEntry (Just entry) ->
+            isUrlStatusEmpty entry.url
 
-
-msgToString : Msg -> List String
-msgToString msg =
-    case msg of
-        RequestedUploadFile _ ->
-            [ "RequestedUploadFile" ]
-
-        CompletedUploadingFile _ r ->
-            [ "CompletedUploadingFile", UR.resultToString r ]
-
-        SelectedFile _ ->
-            [ "SelectedFile" ]
+        MultipleEntries entries ->
+            List.isEmpty entries
+                || List.any (\entry -> not (isUrlStatusEmpty entry.url)) entries
 
 
+isUrlStatusEmpty : UrlStatus -> Bool
+isUrlStatusEmpty urlStatus =
+    case urlStatus of
+        Loading _ ->
+            True
 
--- INTERNAL HELPERS
+        Loaded _ ->
+            False
+
+        LoadedWithCropped _ ->
+            True
+
+        LoadingWithCropped _ ->
+            True
+
+        LoadedWithCroppedUploaded _ ->
+            False
+
+        WithError _ ->
+            True
 
 
-onFileChange : (File -> msg) -> Html.Attribute msg
-onFileChange toMsg =
-    on "change"
-        (Json.Decode.at [ "target", "files" ] (Json.Decode.index 0 File.decoder)
-            |> Json.Decode.map toMsg
-        )
+isEntryLoading : Entry -> Bool
+isEntryLoading entry =
+    isUrlStatusLoading entry.url || isImageCropperLoading entry
+
+
+isUrlStatusLoading : UrlStatus -> Bool
+isUrlStatusLoading urlStatus =
+    case urlStatus of
+        Loading _ ->
+            True
+
+        Loaded _ ->
+            False
+
+        LoadedWithCropped _ ->
+            False
+
+        LoadingWithCropped _ ->
+            True
+
+        LoadedWithCroppedUploaded _ ->
+            False
+
+        WithError _ ->
+            False
+
+
+isImageCropperLoading : Entry -> Bool
+isImageCropperLoading entry =
+    case entry.imageCropper of
+        WithoutImageCropper ->
+            False
+
+        WithImageCropper imageCropper ->
+            imageCropper.isRequestingCroppedImage
 
 
 fileTypeToString : FileType -> String
@@ -682,8 +1602,22 @@ fileTypeToString fileType =
         Image ->
             "image/*"
 
-        PDF ->
-            ".pdf"
+        Pdf ->
+            "application/pdf"
+
+
+fileTypeFromString : String -> Maybe FileType
+fileTypeFromString fileType =
+    case fileType of
+        "application/pdf" ->
+            Just Pdf
+
+        _ ->
+            if String.startsWith "image/" fileType then
+                Just Image
+
+            else
+                Nothing
 
 
 acceptFileTypes : List FileType -> Html.Attribute msg
@@ -692,3 +1626,249 @@ acceptFileTypes fileTypes =
         |> List.map fileTypeToString
         |> String.join ","
         |> accept
+
+
+fileTypeFromPdfViewerFileType : View.Components.PdfViewerFileType -> FileType
+fileTypeFromPdfViewerFileType fileType =
+    case fileType of
+        View.Components.Pdf ->
+            Pdf
+
+        View.Components.Image ->
+            Image
+
+
+entryFromFile : { aspectRatio : Maybe Float } -> File -> Maybe Entry
+entryFromFile { aspectRatio } file =
+    file
+        |> File.mime
+        |> fileTypeFromString
+        |> Maybe.map
+            (\fileType ->
+                { fileType = LoadedFileType fileType
+                , url = Loading file
+                , imageCropper =
+                    case aspectRatio of
+                        Nothing ->
+                            WithoutImageCropper
+
+                        Just validAspectRatio ->
+                            case fileType of
+                                Pdf ->
+                                    WithoutImageCropper
+
+                                Image ->
+                                    { aspectRatio = validAspectRatio }
+                                        |> View.ImageCropper.init
+                                        |> WithImageCropper
+                }
+            )
+
+
+uploadEntry :
+    { shared | endpoints : { endpoints | api : String } }
+    -> Int
+    -> Entry
+    -> Cmd Msg
+uploadEntry shared index entry =
+    case entry.url of
+        Loading file ->
+            Api.uploadImage shared file (CompletedUploadingFile index)
+
+        Loaded _ ->
+            Cmd.none
+
+        LoadedWithCropped { cropped } ->
+            Api.uploadImage shared cropped (CompletedUploadingFile index)
+
+        LoadingWithCropped { cropped } ->
+            Api.uploadImage shared cropped (CompletedUploadingFile index)
+
+        LoadedWithCroppedUploaded _ ->
+            Cmd.none
+
+        WithError _ ->
+            Cmd.none
+
+
+updateUrlStatusWithResult : Result Http.Error String -> Maybe UrlStatus -> UrlStatus
+updateUrlStatusWithResult result maybePreviousStatus =
+    case maybePreviousStatus of
+        Nothing ->
+            urlStatusFromResult result
+
+        Just previousStatus ->
+            case result of
+                Err err ->
+                    WithError err
+
+                Ok url ->
+                    case previousStatus of
+                        Loading _ ->
+                            Loaded url
+
+                        Loaded _ ->
+                            Loaded url
+
+                        LoadedWithCropped { original, cropped } ->
+                            LoadedWithCroppedUploaded { original = original, cropped = cropped, croppedUrl = url }
+
+                        LoadingWithCropped { original, cropped } ->
+                            LoadedWithCroppedUploaded { original = original, cropped = cropped, croppedUrl = url }
+
+                        LoadedWithCroppedUploaded { original, cropped } ->
+                            LoadedWithCroppedUploaded { original = original, cropped = cropped, croppedUrl = url }
+
+                        WithError _ ->
+                            Loaded url
+
+
+urlStatusFromResult : Result Http.Error String -> UrlStatus
+urlStatusFromResult result =
+    case result of
+        Ok url ->
+            Loaded url
+
+        Err err ->
+            WithError err
+
+
+originalUrlFromUrlStatus : UrlStatus -> Maybe String
+originalUrlFromUrlStatus urlStatus =
+    case urlStatus of
+        Loading _ ->
+            Nothing
+
+        Loaded url ->
+            Just url
+
+        LoadedWithCropped { original } ->
+            Just original
+
+        LoadingWithCropped { original } ->
+            Just original
+
+        LoadedWithCroppedUploaded { original } ->
+            Just original
+
+        WithError _ ->
+            Nothing
+
+
+imageCropperFromPreviousEntry : { previous : UrlStatus, new : UrlStatus, previousImageCropper : ImageCropper } -> ImageCropper
+imageCropperFromPreviousEntry { previous, new, previousImageCropper } =
+    case ( originalUrlFromUrlStatus previous, originalUrlFromUrlStatus new ) of
+        ( Just previousUrl, Just newUrl ) ->
+            if previousUrl == newUrl then
+                previousImageCropper
+
+            else
+                WithoutImageCropper
+
+        _ ->
+            WithoutImageCropper
+
+
+fromMultipleModel : MultipleModel -> Model
+fromMultipleModel (MultipleModel model) =
+    Model
+        { entries = MultipleEntries model.entries
+        , numberOfEntriesLoading = model.numberOfEntriesLoading
+        , isSavingExistingImage = model.isSavingExistingImage
+        , aspectRatio = model.aspectRatio
+        , openImageCropperIndex = model.openImageCropperIndex
+        }
+
+
+toMultipleModel : Model -> MultipleModel
+toMultipleModel (Model model) =
+    MultipleModel
+        { entries =
+            case model.entries of
+                SingleEntry (Just entry) ->
+                    [ entry ]
+
+                SingleEntry Nothing ->
+                    []
+
+                MultipleEntries entries ->
+                    entries
+        , numberOfEntriesLoading = model.numberOfEntriesLoading
+        , isSavingExistingImage = model.isSavingExistingImage
+        , aspectRatio = model.aspectRatio
+        , openImageCropperIndex = model.openImageCropperIndex
+        }
+
+
+fromSingleModel : SingleModel -> Model
+fromSingleModel (SingleModel model) =
+    Model
+        { entries = SingleEntry model.entry
+        , numberOfEntriesLoading =
+            if model.isEntryLoading then
+                1
+
+            else
+                0
+        , isSavingExistingImage = model.isSavingExistingImage
+        , aspectRatio = model.aspectRatio
+        , openImageCropperIndex =
+            if model.isImageCropperOpen then
+                Just 0
+
+            else
+                Nothing
+        }
+
+
+toSingleModel : Model -> SingleModel
+toSingleModel (Model model) =
+    SingleModel
+        { entry =
+            case model.entries of
+                SingleEntry maybeEntry ->
+                    maybeEntry
+
+                MultipleEntries entries ->
+                    List.head entries
+        , isEntryLoading = model.numberOfEntriesLoading > 0
+        , isSavingExistingImage = model.isSavingExistingImage
+        , aspectRatio = model.aspectRatio
+        , isImageCropperOpen = Maybe.Extra.isJust model.openImageCropperIndex
+        }
+
+
+fromNeverAttributes : List (Html.Attribute Never) -> List (Html.Attribute msg)
+fromNeverAttributes =
+    List.map (Html.Attributes.map Basics.never)
+
+
+msgToString : Msg -> List String
+msgToString msg =
+    case msg of
+        RequestedUploadFiles _ ->
+            [ "RequestedUploadFiles" ]
+
+        RequestedReplaceFile _ ->
+            [ "RequestedReplaceFile" ]
+
+        CompletedUploadingFile _ _ ->
+            [ "CompletedUploadingFile" ]
+
+        ClickedEntry _ ->
+            [ "ClickedEntry" ]
+
+        ClickedCloseEntryModal ->
+            [ "ClickedCloseEntryModal" ]
+
+        GotImageCropperMsg subMsg ->
+            "GotImageCropperMsg" :: View.ImageCropper.msgToString subMsg
+
+        DiscoveredFileType _ _ ->
+            [ "DiscoveredFileType" ]
+
+        ClickedDeleteEntry ->
+            [ "ClickedDeleteEntry" ]
+
+        ClickedSaveEntry ->
+            [ "ClickedSaveEntry" ]

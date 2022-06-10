@@ -1,8 +1,8 @@
 module View.Components exposing
-    ( loadingLogoAnimated, loadingLogoAnimatedFluid, loadingLogoWithCustomText
+    ( loadingLogoAnimated, loadingLogoAnimatedFluid, loadingLogoWithCustomText, loadingLogoWithNoText
     , dialogBubble, masonryLayout, Breakpoint(..)
-    , tooltip, pdfViewer, dateViewer, infiniteList, ElementToTrack(..), label, disablableLink
-    , bgNoScroll, PreventScroll(..), keyListener, Key(..), focusTrap, intersectionObserver
+    , tooltip, pdfViewer, PdfViewerFileType(..), dateViewer, infiniteList, ElementToTrack(..), label, disablableLink
+    , bgNoScroll, PreventScroll(..), keyListener, Key(..), focusTrap, intersectionObserver, pointerListener
     )
 
 {-| This module exports some simple components that don't need to manage any
@@ -11,7 +11,7 @@ state or configuration, such as loading indicators and containers
 
 # Loading
 
-@docs loadingLogoAnimated, loadingLogoAnimatedFluid, loadingLogoWithCustomText
+@docs loadingLogoAnimated, loadingLogoAnimatedFluid, loadingLogoWithCustomText, loadingLogoWithNoText
 
 
 # Containers
@@ -26,12 +26,12 @@ state or configuration, such as loading indicators and containers
 
 # Elements
 
-@docs tooltip, pdfViewer, dateViewer, infiniteList, ElementToTrack, label, disablableLink
+@docs tooltip, pdfViewer, PdfViewerFileType, dateViewer, infiniteList, ElementToTrack, label, disablableLink
 
 
 # Helpers
 
-@docs bgNoScroll, PreventScroll, keyListener, Key, focusTrap, intersectionObserver
+@docs bgNoScroll, PreventScroll, keyListener, Key, focusTrap, intersectionObserver, pointerListener
 
 -}
 
@@ -69,6 +69,11 @@ loadingLogoAnimatedFluid : Html msg
 loadingLogoAnimatedFluid =
     div [ class "w-full text-center h-full py-2" ]
         [ img [ class "mx-auto h-full", src "/images/loading.svg" ] [] ]
+
+
+loadingLogoWithNoText : String -> Html msg
+loadingLogoWithNoText class_ =
+    img [ class class_, src "/images/loading.svg" ] []
 
 
 
@@ -146,13 +151,26 @@ tooltip { message, iconClass } =
         ]
 
 
+type PdfViewerFileType
+    = Pdf
+    | Image
+
+
 {-| Display a PDF coming from a url. If the PDF cannot be read, display an `img`
 with `url` as `src`. This element automatically shows a loading animation while
 it fetches the pdf. If you pass in `Translators`, there will also be a text
 under the loading animation
 -}
-pdfViewer : List (Html.Attribute msg) -> { url : String, childClass : String, maybeTranslators : Maybe Translators } -> Html msg
-pdfViewer attrs { url, childClass, maybeTranslators } =
+pdfViewer :
+    List (Html.Attribute msg)
+    ->
+        { url : String
+        , childClass : String
+        , maybeTranslators : Maybe Translators
+        , onFileTypeDiscovered : Maybe (PdfViewerFileType -> msg)
+        }
+    -> Html msg
+pdfViewer attrs { url, childClass, maybeTranslators, onFileTypeDiscovered } =
     let
         loadingAttributes =
             case maybeTranslators of
@@ -163,11 +181,35 @@ pdfViewer attrs { url, childClass, maybeTranslators } =
                     [ attribute "elm-loading-title" (t "loading.title")
                     , attribute "elm-loading-subtitle" (t "loading.subtitle")
                     ]
+
+        fileTypeDiscoveredListener =
+            case onFileTypeDiscovered of
+                Nothing ->
+                    class ""
+
+                Just eventListener ->
+                    on "file-type-discovered"
+                        (Json.Decode.string
+                            |> Json.Decode.field "detail"
+                            |> Json.Decode.andThen
+                                (\stringFileType ->
+                                    case stringFileType of
+                                        "image" ->
+                                            Json.Decode.succeed (eventListener Image)
+
+                                        "pdf" ->
+                                            Json.Decode.succeed (eventListener Pdf)
+
+                                        _ ->
+                                            Json.Decode.fail ("I was expecting either `image` or `pdf`, but got " ++ stringFileType ++ " instead")
+                                )
+                        )
     in
     node "pdf-viewer"
         (attribute "elm-url" url
             :: attribute "elm-child-class" childClass
             :: class "flex flex-col items-center justify-center"
+            :: fileTypeDiscoveredListener
             :: loadingAttributes
             ++ attrs
         )
@@ -343,10 +385,10 @@ bgNoScroll attrs preventScroll =
         preventScrollClass =
             case preventScroll of
                 PreventScrollOnMobile ->
-                    "overflow-hidden md:overflow-auto"
+                    "overflow-hidden fixed w-full h-full md:overflow-auto"
 
                 PreventScrollAlways ->
-                    "overflow-hidden"
+                    "overflow-hidden fixed w-full h-full"
     in
     node "bg-no-scroll"
         (attribute "elm-prevent-scroll-class" preventScrollClass
@@ -514,6 +556,56 @@ intersectionObserver options =
             )
         , optionalEvent "started-intersecting" options.onStartedIntersecting
         , optionalEvent "stopped-intersecting" options.onStoppedIntersecting
+        ]
+        []
+
+
+{-| A component that attaches events related to pointers to the document and
+passes it into Elm
+-}
+pointerListener :
+    { onPointerMove :
+        Maybe
+            ({ x : Float
+             , y : Float
+             , previousX : Float
+             , previousY : Float
+             }
+             -> msg
+            )
+    , onPointerUp : Maybe msg
+    }
+    -> Html msg
+pointerListener { onPointerMove, onPointerUp } =
+    node "pointer-listener"
+        [ case onPointerMove of
+            Nothing ->
+                class ""
+
+            Just pointerMoveListener ->
+                on "document-pointermove"
+                    (Json.Decode.field "detail"
+                        (Json.Decode.map4
+                            (\x y previousX previousY ->
+                                pointerMoveListener
+                                    { x = x
+                                    , y = y
+                                    , previousX = previousX
+                                    , previousY = previousY
+                                    }
+                            )
+                            (Json.Decode.field "clientX" Json.Decode.float)
+                            (Json.Decode.field "clientY" Json.Decode.float)
+                            (Json.Decode.field "previousX" Json.Decode.float)
+                            (Json.Decode.field "previousY" Json.Decode.float)
+                        )
+                    )
+        , case onPointerUp of
+            Nothing ->
+                class ""
+
+            Just pointerUpListener ->
+                on "document-pointerup" (Json.Decode.succeed pointerUpListener)
         ]
         []
 

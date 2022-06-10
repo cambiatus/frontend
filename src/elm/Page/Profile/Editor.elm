@@ -56,7 +56,7 @@ type FormStatus
 
 
 type alias FormInput =
-    { avatar : Form.File.Model
+    { avatar : Form.File.SingleModel
     , fullName : String
     , email : String
     , bio : Form.RichText.Model
@@ -80,13 +80,20 @@ createForm : Translators -> { hasKyc : Bool } -> Form.Form msg FormInput FormOut
 createForm ({ t } as translators) { hasKyc } =
     Form.succeed FormOutput
         |> Form.with
-            (Form.File.init
-                { label = ""
-                , id = "avatar-input"
-                }
-                |> Form.File.withVariant Form.File.SmallCircle
+            (Form.File.init { id = "avatar-input" }
+                |> Form.File.withContainerAttributes [ class "grid place-items-center" ]
+                |> Form.File.withImageClass "object-cover rounded-full mx-auto w-20 h-20"
+                |> Form.File.withEntryContainerAttributes (\_ -> [ class "mx-auto rounded-full w-20 h-20" ])
+                |> Form.File.withEditIconOverlay
+                |> Form.File.withAddImagesView
+                    [ span [ class "bg-orange-300 rounded-full p-4 w-20 h-20" ]
+                        [ Icons.camera "text-white"
+                        ]
+                    ]
+                |> Form.File.withImageCropperAttributes [ class "rounded-full" ]
                 |> Form.file
-                    { translators = translators
+                    { parser = Ok
+                    , translators = translators
                     , value = .avatar
                     , update = \avatar input -> { input | avatar = avatar }
                     , externalError = always Nothing
@@ -296,7 +303,11 @@ update msg model loggedIn =
             in
             { model
                 | form =
-                    { avatar = Form.File.initModel (Avatar.toMaybeString profile.avatar)
+                    { avatar =
+                        Form.File.initSingle
+                            { fileUrl = Avatar.toMaybeString profile.avatar
+                            , aspectRatio = Just 1
+                            }
                     , fullName = nullable profile.name
                     , email = nullable profile.email
                     , bio = Form.RichText.initModel "bio-input" profile.bio

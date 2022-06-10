@@ -875,7 +875,8 @@
         "inventory_management_description": "Si vols desactivar la teva oferta quan no tinguis més unitats en estoc, activa aquesta opció"
       },
       "continue": "Continua",
-      "index": "Pas {{current}} de {{total}}"
+      "index": "Pas {{current}} de {{total}}",
+      "step_link": "Pas {{index}} - {{step_title}}"
     },
     "empty": {
       "all_title": "On són les ofertes?",
@@ -1097,7 +1098,10 @@
       "logo": {
         "title": "Logotip de la comunitat",
         "guidance": "Orientació sobre la imatge del Logotip",
-        "description": "El fitxer ha de ser en format PNG, JPG o SVG. Ha de mesurar 80px d’amplada i 80px d’alçada per poder-se veure millor a la interfície."
+        "description": "El fitxer ha de ser en format PNG, JPG o SVG. Ha de mesurar 80px d’amplada i 80px d’alçada per poder-se veure millor a la interfície.",
+        "choose_one": "Trieu un logotip de la llista",
+        "select": "Seleccioneu",
+        "selected": "Seleccionat"
       },
       "invitation": {
         "title": "Accés a la comunitat",
@@ -1460,5 +1464,17 @@
     "why": "No heu acceptat les Directrius de la comunitat i Codi de conducta.",
     "solve": "Per resoldre aquesta situació i formar part de la comunitat, ",
     "solve_link": "accepta les Directrius de la comunitat i Codi de conducta."
+  },
+  "form": {
+    "file": {
+      "edit_image": "Editar imatge",
+      "edit_file": "Editar fitxer",
+      "body_image": "Arrossegueu per canviar la posició de la imatge",
+      "body_file": "Suprimiu, substituïu o deseu el fitxer",
+      "delete": "Suprimeix",
+      "open": "Obert",
+      "change": "Reemplaçar",
+      "save": "Guardar"
+    }
   }
 }

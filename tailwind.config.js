@@ -157,10 +157,12 @@ module.exports = {
         modal: '10rem'
       },
       height: {
-        '21': '5.25rem'
+        '21': '5.25rem',
+        '22': '5.5rem'
       },
       width: {
         '21': '5.25rem',
+        '22': '5.5rem',
         form: '45.625rem',
         '120': '30rem'
       },
@@ -169,6 +171,7 @@ module.exports = {
         '50': '12.5rem'
       },
       maxWidth: {
+        '16': '4rem',
         '27': '6.75rem'
       },
       opacity: {

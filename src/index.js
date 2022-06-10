@@ -1402,6 +1402,22 @@ async function handleJavascriptPort (arg) {
 
       return {}
     }
+    case 'addClassToDocument': {
+      const { className } = arg.data
+
+      document.querySelector('html').classList.add(className)
+      document.querySelector('body').classList.add(className)
+
+      return {}
+    }
+    case 'removeClassFromDocument': {
+      const { className } = arg.data
+
+      document.querySelector('html').classList.remove(className)
+      document.querySelector('body').classList.remove(className)
+
+      return {}
+    }
     default: {
       return { error: `No treatment found for Elm port ${arg.data.name}` }
     }
