@@ -531,8 +531,12 @@ view loggedIn model =
                         Community.FieldError err ->
                             Page.fullPageGraphQLError title err
 
-                RemoteData.Success ( _, categories ) ->
-                    view_ loggedIn.shared.translators model categories
+                RemoteData.Success ( community, categories ) ->
+                    if community.creator == loggedIn.accountName then
+                        view_ loggedIn.shared.translators model categories
+
+                    else
+                        Page.fullPageNotFound (loggedIn.shared.translators.t "community.edit.unauthorized") ""
             ]
     }
 
