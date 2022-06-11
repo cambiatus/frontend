@@ -1,4 +1,4 @@
-module Shop.Category exposing (Id, Model, Tree, create, delete, encodeId, selectionSet, treesSelectionSet, update)
+module Shop.Category exposing (Id, Model, Tree, create, delete, encodeId, selectionSet, treesSelectionSet, update, updateMetadata)
 
 import Cambiatus.Mutation
 import Cambiatus.Object
@@ -20,6 +20,7 @@ import Tree
 type alias Model =
     { id : Id
     , name : String
+    , slug : Maybe Slug
     , description : Markdown
     , icon : Maybe String
     , image : Maybe String
@@ -63,11 +64,6 @@ update :
     -> SelectionSet decodesTo Cambiatus.Object.Category
     -> SelectionSet (Maybe decodesTo) RootMutation
 update model { name, description, slug } =
-    let
-        unwrapId : Id -> Int
-        unwrapId (Id id) =
-            id
-    in
     Cambiatus.Mutation.category
         (\_ ->
             { parentCategoryId =
@@ -85,6 +81,41 @@ update model { name, description, slug } =
         )
         { name = name
         , description = Markdown.toRawString description
+
+        -- TODO - Include children
+        , categories = []
+        }
+
+
+updateMetadata :
+    Model
+    -> { metaTitle : String, metaDescription : String, metaKeywords : String }
+    -> SelectionSet decodesTo Cambiatus.Object.Category
+    -> SelectionSet (Maybe decodesTo) RootMutation
+updateMetadata model { metaTitle, metaDescription, metaKeywords } =
+    Cambiatus.Mutation.category
+        (\_ ->
+            -- TODO - Can these arguments be omitted?
+            { parentCategoryId =
+                model.parentId
+                    |> Maybe.map unwrapId
+                    |> OptionalArgument.fromMaybe
+            , iconUri = OptionalArgument.fromMaybe model.icon
+            , imageUri = OptionalArgument.fromMaybe model.image
+            , id = OptionalArgument.Present (unwrapId model.id)
+            , metaDescription = OptionalArgument.Present metaDescription
+            , metaKeywords = OptionalArgument.Present metaKeywords
+            , metaTitle = OptionalArgument.Present metaTitle
+            , slug =
+                model.slug
+                    |> Maybe.map Slug.toString
+                    |> OptionalArgument.fromMaybe
+            }
+        )
+        { name = model.name
+        , description = Markdown.toRawString model.description
+
+        -- TODO - Include children
         , categories = []
         }
 
@@ -102,6 +133,7 @@ selectionSet =
     SelectionSet.succeed Model
         |> SelectionSet.with idSelectionSet
         |> SelectionSet.with Cambiatus.Object.Category.name
+        |> SelectionSet.with (Cambiatus.Object.Category.slug |> SelectionSet.map (Maybe.andThen Slug.parse))
         |> SelectionSet.with (Markdown.selectionSet Cambiatus.Object.Category.description)
         |> SelectionSet.with Cambiatus.Object.Category.iconUri
         |> SelectionSet.with Cambiatus.Object.Category.imageUri
@@ -170,3 +202,8 @@ idSelectionSet =
 encodeId : Id -> Json.Encode.Value
 encodeId (Id id) =
     Json.Encode.int id
+
+
+unwrapId : Id -> Int
+unwrapId (Id id) =
+    id
