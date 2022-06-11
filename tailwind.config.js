@@ -189,6 +189,10 @@ module.exports = {
             'pointer-events': 'auto'
           }
         },
+        'appear-from-above-sm': {
+          '0%': { opacity: 0.25, transform: 'translate(0, -10px)' },
+          '100%': { opacity: 1, transform: 'translate(0, 0)' }
+        },
         'appear-from-above': {
           '0%': { opacity: 0, transform: 'translate(0, -20px)' },
           '100%': { opacity: 1, transform: 'translate(0, 0)' }
@@ -218,6 +222,7 @@ module.exports = {
       },
       animation: {
         'fade-in': 'appear 50ms linear 400ms both',
+        'fade-in-from-above-sm': 'appear-from-above-sm 100ms ease-out both',
         'fade-in-from-above': 'appear-from-above 150ms ease-out both',
         'fade-in-from-above-lg': 'appear-from-above-lg 600ms ease-in-out both',
         'skeleton-loading': 'skeleton-loading-keyframes 1s ease-out infinite alternate',

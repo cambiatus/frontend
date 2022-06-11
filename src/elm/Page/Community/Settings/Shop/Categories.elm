@@ -9,6 +9,7 @@ module Page.Community.Settings.Shop.Categories exposing
     )
 
 import Api.Graphql.DeleteStatus
+import Browser.Events
 import Community
 import Dict
 import EverySet exposing (EverySet)
@@ -18,7 +19,7 @@ import Form.Text
 import Form.Validate
 import Graphql.Http
 import Html exposing (Html, button, details, div, li, p, span, summary, text, ul)
-import Html.Attributes exposing (class, classList, type_)
+import Html.Attributes exposing (class, classList, id, type_)
 import Html.Events exposing (onClick)
 import Icons
 import Json.Decode
@@ -29,6 +30,7 @@ import RemoteData exposing (RemoteData)
 import Session.LoggedIn as LoggedIn
 import Shop.Category
 import Slug exposing (Slug)
+import Svg exposing (Svg)
 import Translation
 import Tree
 import Tree.Zipper
@@ -47,6 +49,7 @@ type alias Model =
     { expandedCategories : EverySet Shop.Category.Id
     , newCategoryState : NewCategoryState
     , categoryModalState : CategoryModalState
+    , actionsDropdown : Maybe Shop.Category.Id
     , askingForDeleteConfirmation : Maybe Shop.Category.Id
     , deleting : EverySet Shop.Category.Id
     }
@@ -58,6 +61,7 @@ init _ =
     { expandedCategories = EverySet.empty
     , newCategoryState = NotEditing
     , categoryModalState = Closed
+    , actionsDropdown = Nothing
     , askingForDeleteConfirmation = Nothing
     , deleting = EverySet.empty
     }
@@ -84,6 +88,7 @@ type CategoryModalState
 
 type Msg
     = NoOp
+    | PressedEsc
     | ClickedToggleExpandCategory Shop.Category.Id
     | ClickedAddCategory (Maybe Shop.Category.Id)
     | ClickedCancelAddCategory
@@ -99,6 +104,8 @@ type Msg
     | ClosedConfirmDeleteModal
     | ConfirmedDeleteCategory Shop.Category.Id
     | CompletedDeletingCategory Shop.Category.Id (RemoteData (Graphql.Http.Error Api.Graphql.DeleteStatus.DeleteStatus) Api.Graphql.DeleteStatus.DeleteStatus)
+    | ClickedShowActionsDropdown Shop.Category.Id
+    | ClosedActionsDropdown
 
 
 type alias UpdateResult =
@@ -124,6 +131,15 @@ update msg model loggedIn =
     case msg of
         NoOp ->
             UR.init model
+
+        PressedEsc ->
+            { model
+                | newCategoryState = NotEditing
+                , categoryModalState = Closed
+                , actionsDropdown = Nothing
+                , askingForDeleteConfirmation = Nothing
+            }
+                |> UR.init
 
         ClickedToggleExpandCategory categoryId ->
             { model
@@ -165,11 +181,13 @@ update msg model loggedIn =
                                     , description = Form.RichText.initModel "update-category-description" (Just category.description)
                                     }
                                 )
+                        , actionsDropdown = Nothing
                     }
                         |> UR.init
 
                 Nothing ->
-                    UR.init model
+                    { model | actionsDropdown = Nothing }
+                        |> UR.init
 
         ClosedCategoryModal ->
             { model | categoryModalState = Closed }
@@ -502,6 +520,21 @@ update msg model loggedIn =
             model
                 |> UR.init
 
+        ClickedShowActionsDropdown categoryId ->
+            { model
+                | actionsDropdown =
+                    if model.actionsDropdown == Just categoryId then
+                        Nothing
+
+                    else
+                        Just categoryId
+            }
+                |> UR.init
+
+        ClosedActionsDropdown ->
+            { model | actionsDropdown = Nothing }
+                |> UR.init
+
 
 
 -- VIEW
@@ -634,6 +667,16 @@ viewCategoryWithChildren translators model zipper children =
                             isAncestorOf (\childId { id } -> childId == id)
                                 parentId
                                 zipper
+
+        hasActionsMenuOpen =
+            case model.actionsDropdown of
+                Nothing ->
+                    False
+
+                Just actionsDropdown ->
+                    isAncestorOf (\childId { id } -> childId == id)
+                        actionsDropdown
+                        zipper
     in
     div
         [ class "transition-colors"
@@ -652,7 +695,8 @@ viewCategoryWithChildren translators model zipper children =
                 [ class "marker-hidden flex items-center rounded-sm transition-colors"
                 , classList
                     [ ( "!bg-green/20", isParentOfNewCategoryForm )
-                    , ( "parent-hover:bg-blue-600/10", not isParentOfNewCategoryForm )
+                    , ( "parent-hover:bg-orange-100/20", not isParentOfNewCategoryForm )
+                    , ( "bg-orange-100/20", hasActionsMenuOpen )
                     ]
                 , Html.Events.preventDefaultOn "click"
                     (Json.Decode.succeed ( NoOp, True ))
@@ -664,11 +708,7 @@ viewCategoryWithChildren translators model zipper children =
                     [ Icons.arrowDown (String.join " " [ "transition-transform", openArrowClass ])
                     , viewCategory category
                     ]
-                , button
-                    [ class "h-8 group mr-2"
-                    , onClick (ClickedDeleteCategory category.id)
-                    ]
-                    [ Icons.trash "h-4 text-black group-hover:text-red" ]
+                , viewActions model category
                 ]
             , div [ class "ml-4 flex flex-col mb-4 mt-2" ]
                 [ ul
@@ -690,7 +730,7 @@ viewAddCategory translators attrs model maybeParentCategory =
 
         viewAddCategoryButton customAttrs =
             button
-                (class "flex items-center px-2 h-8 font-bold transition-colors hover:bg-blue-600/10 rounded-sm"
+                (class "flex items-center px-2 h-8 font-bold transition-colors hover:bg-orange-100/20 rounded-sm"
                     :: onClick (ClickedAddCategory parentId)
                     :: customAttrs
                 )
@@ -736,6 +776,82 @@ viewAddCategory translators attrs model maybeParentCategory =
 
             else
                 viewAddCategoryButton attrs
+
+
+viewActions : Model -> Shop.Category.Model -> Html Msg
+viewActions model category =
+    let
+        isDropdownOpen =
+            case model.actionsDropdown of
+                Nothing ->
+                    False
+
+                Just actionsDropdown ->
+                    actionsDropdown == category.id
+    in
+    div [ class "relative" ]
+        [ button
+            [ class "h-8 px-2 rounded-sm transition-colors hover:bg-orange-300/30 active:bg-orange-300/60 action-opener"
+            , classList [ ( "bg-orange-300/60", isDropdownOpen ) ]
+            , Utils.onClickNoBubble (ClickedShowActionsDropdown category.id)
+            ]
+            -- TODO - Use correct icon
+            [ Icons.plus "h-4 pointer-events-none" ]
+        , if not isDropdownOpen then
+            text ""
+
+          else
+            ul
+                [ class "absolute z-10 right-0 bg-white border border-gray-300 rounded-md p-2 text-sm shadow-lg animate-fade-in-from-above-sm"
+                ]
+                [ li []
+                    [ viewAction []
+                        { icon = Icons.edit
+
+                        -- TODO - I18N
+                        , label = "Edit main information"
+                        , onClickMsg = ClickedCategory category.id
+                        }
+                    ]
+                , li []
+                    [ viewAction []
+                        { icon = Icons.edit
+
+                        -- TODO - I18N
+                        , label = "Edit sharing data"
+                        , onClickMsg = NoOp
+                        }
+                    ]
+                , li []
+                    [ viewAction [ class "text-red hover:bg-red/10" ]
+                        { icon = Icons.trash
+
+                        -- TODO - I18N
+                        , label = "Delete"
+                        , onClickMsg = ClickedDeleteCategory category.id
+                        }
+                    ]
+                ]
+        ]
+
+
+viewAction :
+    List (Html.Attribute Msg)
+    ->
+        { icon : String -> Svg Msg
+        , label : String
+        , onClickMsg : Msg
+        }
+    -> Html Msg
+viewAction containerAttrs { icon, label, onClickMsg } =
+    button
+        (class "flex items-center w-full pl-2 pr-8 py-1 rounded-md transition-colors whitespace-nowrap font-bold class hover:bg-gray-200"
+            :: onClick onClickMsg
+            :: containerAttrs
+        )
+        [ icon "w-4 mr-2"
+        , text label
+        ]
 
 
 viewCategoryModal : Translation.Translators -> Shop.Category.Model -> Form.Model UpdateCategoryFormInput -> Html Msg
@@ -971,12 +1087,28 @@ nameAndSlugForm translators { nameFieldId } =
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
-    case model.newCategoryState of
-        NotEditing ->
-            Sub.none
+    Sub.batch
+        [ Utils.escSubscription PressedEsc
+        , case model.actionsDropdown of
+            Nothing ->
+                Sub.none
 
-        EditingNewCategory _ ->
-            Utils.escSubscription ClickedCancelAddCategory
+            Just _ ->
+                Browser.Events.onClick
+                    (Json.Decode.oneOf
+                        [ Json.Decode.at [ "target", "className" ] Json.Decode.string
+                            |> Json.Decode.andThen
+                                (\targetClass ->
+                                    if String.contains "action-opener" targetClass then
+                                        Json.Decode.fail ""
+
+                                    else
+                                        Json.Decode.succeed ClosedActionsDropdown
+                                )
+                        , Json.Decode.succeed ClosedActionsDropdown
+                        ]
+                    )
+        ]
 
 
 
@@ -1029,6 +1161,9 @@ msgToString msg =
         NoOp ->
             [ "NoOp" ]
 
+        PressedEsc ->
+            [ "PressedEsc" ]
+
         ClickedToggleExpandCategory _ ->
             [ "ClickedToggleExpandCategory" ]
 
@@ -1073,3 +1208,9 @@ msgToString msg =
 
         CompletedDeletingCategory _ r ->
             [ "CompletedDeletingCategory", UR.remoteDataToString r ]
+
+        ClickedShowActionsDropdown _ ->
+            [ "ClickedShowActionsDropdown" ]
+
+        ClosedActionsDropdown ->
+            [ "ClosedActionsDropdown" ]
