@@ -20,6 +20,7 @@ import Form.Validate
 import Graphql.Http
 import Html exposing (Html, button, details, div, li, p, span, summary, text, ul)
 import Html.Attributes exposing (class, classList, id, type_)
+import Html.Attributes.Aria exposing (ariaHidden)
 import Html.Events exposing (onClick)
 import Icons
 import Json.Decode
@@ -48,7 +49,8 @@ import View.Modal as Modal
 type alias Model =
     { expandedCategories : EverySet Shop.Category.Id
     , newCategoryState : NewCategoryState
-    , categoryModalState : CategoryModalState
+    , categoryModalState : CategoryFormState UpdateCategoryFormInput
+    , categoryMetadataModalState : CategoryFormState MetadataFormInput
     , actionsDropdown : Maybe Shop.Category.Id
     , askingForDeleteConfirmation : Maybe Shop.Category.Id
     , deleting : EverySet Shop.Category.Id
@@ -61,6 +63,7 @@ init _ =
     { expandedCategories = EverySet.empty
     , newCategoryState = NotEditing
     , categoryModalState = Closed
+    , categoryMetadataModalState = Closed
     , actionsDropdown = Nothing
     , askingForDeleteConfirmation = Nothing
     , deleting = EverySet.empty
@@ -81,9 +84,9 @@ type NewCategoryState
         }
 
 
-type CategoryModalState
+type CategoryFormState formInput
     = Closed
-    | Open Shop.Category.Id (Form.Model UpdateCategoryFormInput)
+    | Open Shop.Category.Id (Form.Model formInput)
 
 
 type Msg
@@ -106,6 +109,10 @@ type Msg
     | CompletedDeletingCategory Shop.Category.Id (RemoteData (Graphql.Http.Error Api.Graphql.DeleteStatus.DeleteStatus) Api.Graphql.DeleteStatus.DeleteStatus)
     | ClickedShowActionsDropdown Shop.Category.Id
     | ClosedActionsDropdown
+    | ClickedOpenMetadataModal Shop.Category.Id
+    | GotMetadataFormMsg (Form.Msg MetadataFormInput)
+    | SubmittedMetadataForm MetadataFormOutput
+    | ClosedMetadataModal
 
 
 type alias UpdateResult =
@@ -535,6 +542,65 @@ update msg model loggedIn =
             { model | actionsDropdown = Nothing }
                 |> UR.init
 
+        ClickedOpenMetadataModal categoryId ->
+            { model
+                | categoryMetadataModalState =
+                    Open categoryId
+                        (Form.init
+                            -- TODO - Initialize with category's values
+                            { metaTitle = ""
+                            , metaDescription = ""
+                            , metaKeywords = ""
+                            }
+                        )
+            }
+                |> UR.init
+
+        GotMetadataFormMsg subMsg ->
+            case model.categoryMetadataModalState of
+                Closed ->
+                    UR.init model
+
+                Open categoryId formModel ->
+                    Form.update loggedIn.shared subMsg formModel
+                        |> UR.fromChild
+                            (\newFormModel -> { model | categoryMetadataModalState = Open categoryId newFormModel })
+                            GotMetadataFormMsg
+                            LoggedIn.addFeedback
+                            model
+
+        SubmittedMetadataForm formOutput ->
+            case getCategoryZipper formOutput.id of
+                Nothing ->
+                    UR.init model
+
+                Just zipper ->
+                    { model
+                        | categoryMetadataModalState =
+                            case model.categoryMetadataModalState of
+                                Closed ->
+                                    Closed
+
+                                Open categoryId formModel ->
+                                    Open categoryId (Form.withDisabled True formModel)
+                    }
+                        |> UR.init
+                        |> UR.addExt
+                            (LoggedIn.mutation loggedIn
+                                (Shop.Category.updateMetadata (Tree.Zipper.label zipper)
+                                    { metaTitle = formOutput.metaTitle
+                                    , metaDescription = formOutput.metaDescription
+                                    , metaKeywords = formOutput.metaKeywords
+                                    }
+                                    Shop.Category.selectionSet
+                                )
+                                FinishedUpdatingCategory
+                            )
+
+        ClosedMetadataModal ->
+            { model | categoryMetadataModalState = Closed }
+                |> UR.init
+
 
 
 -- VIEW
@@ -568,7 +634,7 @@ view loggedIn model =
 
                 RemoteData.Success ( community, categories ) ->
                     if community.creator == loggedIn.accountName then
-                        view_ loggedIn.shared.translators model categories
+                        view_ loggedIn.shared.translators community model categories
 
                     else
                         Page.fullPageNotFound (loggedIn.shared.translators.t "community.edit.unauthorized") ""
@@ -576,8 +642,8 @@ view loggedIn model =
     }
 
 
-view_ : Translation.Translators -> Model -> List Shop.Category.Tree -> Html Msg
-view_ translators model categories =
+view_ : Translation.Translators -> Community.Model -> Model -> List Shop.Category.Tree -> Html Msg
+view_ translators community model categories =
     div [ class "container mx-auto sm:px-4 sm:mt-6 sm:mb-20" ]
         [ div [ class "bg-white container mx-auto pt-6 pb-7 px-4 w-full sm:px-6 sm:rounded sm:shadow-lg lg:w-2/3" ]
             [ ul [ class "mb-2" ]
@@ -608,6 +674,17 @@ view_ translators model categories =
 
             Just categoryId ->
                 viewConfirmDeleteCategoryModal categoryId
+        , case model.categoryMetadataModalState of
+            Closed ->
+                text ""
+
+            Open categoryId formModel ->
+                case findInTrees (\category -> category.id == categoryId) categories of
+                    Nothing ->
+                        text ""
+
+                    Just openCategory ->
+                        viewCategoryMetadataModal translators community openCategory formModel
         ]
 
 
@@ -819,7 +896,7 @@ viewActions model category =
 
                         -- TODO - I18N
                         , label = "Edit sharing data"
-                        , onClickMsg = NoOp
+                        , onClickMsg = ClickedOpenMetadataModal category.id
                         }
                     ]
                 , li []
@@ -868,8 +945,7 @@ viewCategoryModal translators category formModel =
                 (\_ -> [])
                 (updateCategoryForm translators category.id)
                 formModel
-                { toMsg = GotUpdateCategoryFormMsg
-                }
+                { toMsg = GotUpdateCategoryFormMsg }
             ]
         |> Modal.withFooter
             [ div [ class "flex flex-col w-full sm:flex-row gap-4 items-center justify-center" ]
@@ -893,7 +969,51 @@ viewCategoryModal translators category formModel =
                     [ text "Save" ]
                 ]
             ]
-        |> Modal.withSize Modal.Large
+        |> Modal.withSize Modal.FullScreen
+        |> Modal.toHtml
+
+
+viewCategoryMetadataModal : Translation.Translators -> Community.Model -> Shop.Category.Model -> Form.Model MetadataFormInput -> Html Msg
+viewCategoryMetadataModal translators community category formModel =
+    Modal.initWith
+        { isVisible = True
+        , closeMsg = ClosedMetadataModal
+        }
+        |> Modal.withHeader "Editing category sharing data"
+        |> Modal.withBody
+            [ p [ class "mb-6" ]
+                -- TODO - I18N
+                [ text "This information will be used to display rich links when sharing links to this category" ]
+            , Form.viewWithoutSubmit [ class "mt-2" ]
+                translators
+                (\_ -> [])
+                (metadataForm translators community category.id)
+                formModel
+                { toMsg = GotMetadataFormMsg }
+            ]
+        |> Modal.withFooter
+            [ div [ class "flex flex-col w-full sm:flex-row gap-4 items-center justify-center" ]
+                [ button
+                    [ class "button button-secondary w-full sm:w-40"
+                    , onClick ClosedMetadataModal
+                    ]
+                    -- TODO - I18N
+                    [ text "Cancel" ]
+                , button
+                    [ class "button button-primary w-full sm:w-40"
+                    , onClick
+                        (Form.parse (metadataForm translators community category.id)
+                            formModel
+                            { onError = GotMetadataFormMsg
+                            , onSuccess = SubmittedMetadataForm
+                            }
+                        )
+                    ]
+                    -- TODO - I18N
+                    [ text "Save" ]
+                ]
+            ]
+        |> Modal.withSize Modal.FullScreen
         |> Modal.toHtml
 
 
@@ -929,6 +1049,58 @@ viewConfirmDeleteCategoryModal categoryId =
                 ]
             ]
         |> Modal.toHtml
+
+
+viewShareCategoryPreview : Community.Model -> MetadataFormInput -> Html msg
+viewShareCategoryPreview community values =
+    div []
+        [ -- TODO - I18N
+          p [ class "label" ] [ text "Preview" ]
+
+        -- TODO - I18N
+        , p [ class "mb-4" ] [ text "This is an aproximation of what the shared content will look like. It will change depending on the platform the link is being shared on." ]
+        , div [ class "isolate mr-3 z-10 ml-auto w-full sm:w-3/4 md:w-2/3 border border-gray-300 rounded-large relative before:absolute before:bg-white before:border-t before:border-r before:border-gray-300 before:-top-px before:rounded-br-super before:rounded-tr-sm before:-right-2 before:w-8 before:h-4 before:-z-10" ]
+            [ div [ class "bg-white p-1 rounded-large" ]
+                [ div [ class "flex w-full bg-gray-100 rounded-large" ]
+                    [ div [ class "bg-gray-200 p-6 rounded-l-large w-1/4 flex-shrink-0 grid place-items-center" ]
+                        [ Icons.image "" ]
+                    , div [ class "py-2 mx-4 w-full" ]
+                        [ if String.isEmpty values.metaTitle then
+                            div [ class "w-3/4 bg-gray-300 rounded font-bold" ]
+                                [ span
+                                    [ class "opacity-0 pointer-events-none"
+                                    , ariaHidden True
+                                    ]
+                                    -- This text is only here to define the height
+                                    [ text "height" ]
+                                ]
+
+                          else
+                            p [ class "font-bold line-clamp-1" ]
+                                [ text values.metaTitle ]
+                        , if String.isEmpty values.metaDescription then
+                            div [ class "w-full bg-gray-200 rounded mt-1 text-sm" ]
+                                [ span
+                                    [ class "opacity-0 pointer-events-none"
+                                    , ariaHidden True
+                                    ]
+                                    -- This text is only here to define the height
+                                    [ text "height" ]
+                                ]
+
+                          else
+                            p [ class "text-sm mt-1 line-clamp-2" ]
+                                [ text values.metaDescription ]
+                        , p [ class "text-sm opacity-70 mt-2 mb-4" ]
+                            [ text community.subdomain ]
+                        ]
+                    ]
+                , p [ class "mt-2 mb-1 ml-2 text-blue-600" ]
+                    -- TODO - Show correct route in url
+                    [ text ("https://" ++ community.subdomain) ]
+                ]
+            ]
+        ]
 
 
 
@@ -1011,6 +1183,86 @@ updateCategoryForm translators id =
             )
 
 
+type alias MetadataFormInput =
+    { metaTitle : String
+    , metaDescription : String
+    , metaKeywords : String
+    }
+
+
+type alias MetadataFormOutput =
+    { id : Shop.Category.Id
+    , metaTitle : String
+    , metaDescription : String
+
+    -- TODO - Should this be a List String?
+    , metaKeywords : String
+    }
+
+
+metadataForm : Translation.Translators -> Community.Model -> Shop.Category.Id -> Form.Form msg MetadataFormInput MetadataFormOutput
+metadataForm translators community categoryId =
+    Form.succeed
+        (\metaTitle metaDescription metaKeywords ->
+            { id = categoryId
+            , metaTitle = metaTitle
+            , metaDescription = metaDescription
+            , metaKeywords = metaKeywords
+            }
+        )
+        |> Form.with
+            (Form.Text.init
+                -- TODO - I18N
+                { label = "Title"
+                , id = "meta-title-input"
+                }
+                |> Form.textField
+                    { parser =
+                        Form.Validate.succeed
+                            >> Form.Validate.stringLongerThan 3
+                            >> Form.Validate.stringShorterThan 40
+                            >> Form.Validate.validate translators
+                    , value = .metaTitle
+                    , update = \newMetaTitle values -> { values | metaTitle = newMetaTitle }
+                    , externalError = always Nothing
+                    }
+            )
+        |> Form.with
+            (Form.Text.init
+                -- TODO - I18N
+                { label = "Description"
+                , id = "meta-description-input"
+                }
+                |> Form.textField
+                    { parser =
+                        Form.Validate.succeed
+                            >> Form.Validate.stringLongerThan 3
+                            >> Form.Validate.stringShorterThan 100
+                            >> Form.Validate.validate translators
+                    , value = .metaDescription
+                    , update = \newMetaDescription values -> { values | metaDescription = newMetaDescription }
+                    , externalError = always Nothing
+                    }
+            )
+        |> Form.with
+            (Form.Text.init
+                -- TODO - I18N
+                { label = "Keywords"
+                , id = "meta-keywords-input"
+                }
+                |> Form.textField
+                    { parser =
+                        Form.Validate.succeed
+                            -- TODO - Review this validation
+                            >> Form.Validate.validate translators
+                    , value = .metaKeywords
+                    , update = \newMetaKeywords values -> { values | metaKeywords = newMetaKeywords }
+                    , externalError = always Nothing
+                    }
+            )
+        |> Form.withNoOutput ((viewShareCategoryPreview community >> Form.arbitrary) |> Form.introspect)
+
+
 nameAndSlugForm : Translation.Translators -> { nameFieldId : String } -> Form.Form msg { values | name : String } { name : String, slug : Slug }
 nameAndSlugForm translators { nameFieldId } =
     Form.succeed (\name slug -> { name = name, slug = slug })
@@ -1073,6 +1325,9 @@ nameAndSlugForm translators { nameFieldId } =
                                 [ View.Components.label []
                                     -- TODO - I18N
                                     { targetId = nameFieldId, labelText = "Slug" }
+
+                                -- TODO - We should show a preview of the url, like:
+                                -- TODO - "Your url will look like muda.cambiatus.io/shop/categories/organicos--1234"
                                 , text (Slug.toString slug)
                                 ]
                             )
@@ -1214,3 +1469,15 @@ msgToString msg =
 
         ClosedActionsDropdown ->
             [ "ClosedActionsDropdown" ]
+
+        ClickedOpenMetadataModal _ ->
+            [ "ClickedOpenMetadataModal" ]
+
+        GotMetadataFormMsg subMsg ->
+            "GotMetadataFormMsg" :: Form.msgToString subMsg
+
+        SubmittedMetadataForm _ ->
+            [ "SubmittedMetadataForm" ]
+
+        ClosedMetadataModal ->
+            [ "ClosedMetadataModal" ]
