@@ -619,10 +619,10 @@ view loggedIn model =
             [ Page.viewHeader loggedIn title
             , case Community.getField loggedIn.selectedCommunity .shopCategories of
                 RemoteData.NotAsked ->
-                    Page.fullPageLoading loggedIn.shared
+                    viewLoading
 
                 RemoteData.Loading ->
-                    Page.fullPageLoading loggedIn.shared
+                    viewLoading
 
                 RemoteData.Failure fieldErr ->
                     case fieldErr of
@@ -642,11 +642,43 @@ view loggedIn model =
     }
 
 
+viewPageContainer : { children : List (Html Msg), modals : List (Html Msg) } -> Html Msg
+viewPageContainer { children, modals } =
+    div [ class "container mx-auto sm:px-4 sm:mt-6 sm:mb-20" ]
+        (div [ class "bg-white container mx-auto pt-6 pb-7 px-4 w-full sm:px-6 sm:rounded sm:shadow-lg lg:w-2/3" ]
+            children
+            :: modals
+        )
+
+
+viewLoading : Html Msg
+viewLoading =
+    let
+        viewBar : List (Html.Attribute Msg) -> Html Msg
+        viewBar attributes =
+            div (class "animate-skeleton-loading max-w-full h-8 rounded-sm mt-2" :: attributes)
+                []
+    in
+    viewPageContainer
+        { modals = []
+        , children =
+            [ viewBar [ class "mt-0" ]
+            , viewBar [ class "ml-4" ]
+            , viewBar [ class "ml-4" ]
+            , viewBar [ class "!mt-6" ]
+            , viewBar [ class "!mt-6" ]
+            , viewBar [ class "ml-4" ]
+            , viewBar [ class "ml-8" ]
+            , viewBar [ class "!mt-6" ]
+            ]
+        }
+
+
 view_ : Translation.Translators -> Community.Model -> Model -> List Shop.Category.Tree -> Html Msg
 view_ translators community model categories =
-    div [ class "container mx-auto sm:px-4 sm:mt-6 sm:mb-20" ]
-        [ div [ class "bg-white container mx-auto pt-6 pb-7 px-4 w-full sm:px-6 sm:rounded sm:shadow-lg lg:w-2/3" ]
-            [ ul [ class "mb-2" ]
+    viewPageContainer
+        { children =
+            [ ul [ class "mb-2 grid gap-y-2" ]
                 (List.map
                     (\category ->
                         li []
@@ -657,35 +689,37 @@ view_ translators community model categories =
                 )
             , viewAddCategory translators [ class "w-full pl-2" ] model Nothing
             ]
-        , case model.categoryModalState of
-            Closed ->
-                text ""
+        , modals =
+            [ case model.categoryModalState of
+                Closed ->
+                    text ""
 
-            Open categoryId formModel ->
-                case findInTrees (\category -> category.id == categoryId) categories of
-                    Nothing ->
-                        text ""
+                Open categoryId formModel ->
+                    case findInTrees (\category -> category.id == categoryId) categories of
+                        Nothing ->
+                            text ""
 
-                    Just openCategory ->
-                        viewCategoryModal translators openCategory formModel
-        , case model.askingForDeleteConfirmation of
-            Nothing ->
-                text ""
+                        Just openCategory ->
+                            viewCategoryModal translators openCategory formModel
+            , case model.askingForDeleteConfirmation of
+                Nothing ->
+                    text ""
 
-            Just categoryId ->
-                viewConfirmDeleteCategoryModal categoryId
-        , case model.categoryMetadataModalState of
-            Closed ->
-                text ""
+                Just categoryId ->
+                    viewConfirmDeleteCategoryModal categoryId
+            , case model.categoryMetadataModalState of
+                Closed ->
+                    text ""
 
-            Open categoryId formModel ->
-                case findInTrees (\category -> category.id == categoryId) categories of
-                    Nothing ->
-                        text ""
+                Open categoryId formModel ->
+                    case findInTrees (\category -> category.id == categoryId) categories of
+                        Nothing ->
+                            text ""
 
-                    Just openCategory ->
-                        viewCategoryMetadataModal translators community openCategory formModel
-        ]
+                        Just openCategory ->
+                            viewCategoryMetadataModal translators community openCategory formModel
+            ]
+        }
 
 
 viewCategoryTree : Translation.Translators -> Model -> Shop.Category.Tree -> Html Msg
