@@ -790,7 +790,7 @@ viewCategoryWithChildren translators model zipper children =
                         zipper
     in
     div
-        [ class "transition-colors"
+        [ class "transition-colors select-none"
         , classList [ ( "bg-gray-300 rounded-sm cursor-wait", EverySet.member category.id model.deleting ) ]
         ]
         [ details
@@ -841,7 +841,7 @@ viewAddCategory translators attrs model maybeParentCategory =
 
         viewAddCategoryButton customAttrs =
             button
-                (class "flex items-center px-2 h-8 font-bold transition-colors hover:bg-orange-100/20 rounded-sm"
+                (class "flex items-center px-2 h-8 font-bold transition-colors hover:bg-orange-100/20 rounded-sm whitespace-nowrap"
                     :: onClick (ClickedAddCategory parentId)
                     :: customAttrs
                 )
