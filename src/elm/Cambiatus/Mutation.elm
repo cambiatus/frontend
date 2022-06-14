@@ -48,44 +48,40 @@ addCommunityPhotos requiredArgs object_ =
 
 
 type alias CategoryOptionalArguments =
-    { iconUri : OptionalArgument String
+    { categories : OptionalArgument (List Cambiatus.InputObject.SubcategoryInput)
+    , description : OptionalArgument String
+    , iconUri : OptionalArgument String
     , id : OptionalArgument Int
     , imageUri : OptionalArgument String
     , metaDescription : OptionalArgument String
     , metaKeywords : OptionalArgument String
     , metaTitle : OptionalArgument String
-    , parentCategoryId : OptionalArgument Int
+    , name : OptionalArgument String
+    , parentId : OptionalArgument Int
     , slug : OptionalArgument String
-    }
-
-
-type alias CategoryRequiredArguments =
-    { categories : List Int
-    , description : String
-    , name : String
     }
 
 
 {-| [Auth required - Admin only] Upserts a category
 
-  - parentCategoryId - Parent category ID
+  - categories - List of subcategories; Associates given IDs as subcategories to this category
+  - parentId - Parent category ID
 
 -}
 category :
     (CategoryOptionalArguments -> CategoryOptionalArguments)
-    -> CategoryRequiredArguments
     -> SelectionSet decodesTo Cambiatus.Object.Category
     -> SelectionSet (Maybe decodesTo) RootMutation
-category fillInOptionals requiredArgs object_ =
+category fillInOptionals object_ =
     let
         filledInOptionals =
-            fillInOptionals { iconUri = Absent, id = Absent, imageUri = Absent, metaDescription = Absent, metaKeywords = Absent, metaTitle = Absent, parentCategoryId = Absent, slug = Absent }
+            fillInOptionals { categories = Absent, description = Absent, iconUri = Absent, id = Absent, imageUri = Absent, metaDescription = Absent, metaKeywords = Absent, metaTitle = Absent, name = Absent, parentId = Absent, slug = Absent }
 
         optionalArgs =
-            [ Argument.optional "iconUri" filledInOptionals.iconUri Encode.string, Argument.optional "id" filledInOptionals.id Encode.int, Argument.optional "imageUri" filledInOptionals.imageUri Encode.string, Argument.optional "metaDescription" filledInOptionals.metaDescription Encode.string, Argument.optional "metaKeywords" filledInOptionals.metaKeywords Encode.string, Argument.optional "metaTitle" filledInOptionals.metaTitle Encode.string, Argument.optional "parentCategoryId" filledInOptionals.parentCategoryId Encode.int, Argument.optional "slug" filledInOptionals.slug Encode.string ]
+            [ Argument.optional "categories" filledInOptionals.categories (Cambiatus.InputObject.encodeSubcategoryInput |> Encode.list), Argument.optional "description" filledInOptionals.description Encode.string, Argument.optional "iconUri" filledInOptionals.iconUri Encode.string, Argument.optional "id" filledInOptionals.id Encode.int, Argument.optional "imageUri" filledInOptionals.imageUri Encode.string, Argument.optional "metaDescription" filledInOptionals.metaDescription Encode.string, Argument.optional "metaKeywords" filledInOptionals.metaKeywords Encode.string, Argument.optional "metaTitle" filledInOptionals.metaTitle Encode.string, Argument.optional "name" filledInOptionals.name Encode.string, Argument.optional "parentId" filledInOptionals.parentId Encode.int, Argument.optional "slug" filledInOptionals.slug Encode.string ]
                 |> List.filterMap identity
     in
-    Object.selectionForCompositeField "category" (optionalArgs ++ [ Argument.required "categories" requiredArgs.categories (Encode.int |> Encode.list), Argument.required "description" requiredArgs.description Encode.string, Argument.required "name" requiredArgs.name Encode.string ]) object_ (identity >> Decode.nullable)
+    Object.selectionForCompositeField "category" optionalArgs object_ (identity >> Decode.nullable)
 
 
 type alias CommunityRequiredArguments =

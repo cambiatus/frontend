@@ -39,7 +39,7 @@ create :
 create { name, slug, description, parentId } =
     Cambiatus.Mutation.category
         (\_ ->
-            { parentCategoryId =
+            { parentId =
                 parentId
                     |> Maybe.map (\(Id id) -> id)
                     |> OptionalArgument.fromMaybe
@@ -50,12 +50,11 @@ create { name, slug, description, parentId } =
             , metaKeywords = OptionalArgument.Absent
             , metaTitle = OptionalArgument.Absent
             , slug = OptionalArgument.Present (Slug.toString slug)
+            , categories = OptionalArgument.Absent
+            , name = OptionalArgument.Present name
+            , description = OptionalArgument.Present (Markdown.toRawString description)
             }
         )
-        { name = name
-        , description = Markdown.toRawString description
-        , categories = []
-        }
 
 
 update :
@@ -66,7 +65,7 @@ update :
 update model { name, description, slug } =
     Cambiatus.Mutation.category
         (\_ ->
-            { parentCategoryId =
+            { parentId =
                 model.parentId
                     |> Maybe.map unwrapId
                     |> OptionalArgument.fromMaybe
@@ -77,14 +76,11 @@ update model { name, description, slug } =
             , metaKeywords = OptionalArgument.Absent
             , metaTitle = OptionalArgument.Absent
             , slug = OptionalArgument.Present (Slug.toString slug)
+            , name = OptionalArgument.Present name
+            , description = OptionalArgument.Present (Markdown.toRawString description)
+            , categories = OptionalArgument.Absent
             }
         )
-        { name = name
-        , description = Markdown.toRawString description
-
-        -- TODO - Include children
-        , categories = []
-        }
 
 
 updateMetadata :
@@ -96,7 +92,7 @@ updateMetadata model { metaTitle, metaDescription, metaKeywords } =
     Cambiatus.Mutation.category
         (\_ ->
             -- TODO - Can these arguments be omitted?
-            { parentCategoryId =
+            { parentId =
                 model.parentId
                     |> Maybe.map unwrapId
                     |> OptionalArgument.fromMaybe
@@ -110,14 +106,11 @@ updateMetadata model { metaTitle, metaDescription, metaKeywords } =
                 model.slug
                     |> Maybe.map Slug.toString
                     |> OptionalArgument.fromMaybe
+            , name = OptionalArgument.Absent
+            , description = OptionalArgument.Absent
+            , categories = OptionalArgument.Absent
             }
         )
-        { name = model.name
-        , description = Markdown.toRawString model.description
-
-        -- TODO - Include children
-        , categories = []
-        }
 
 
 delete :
