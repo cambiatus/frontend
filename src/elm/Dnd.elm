@@ -26,6 +26,7 @@ type Msg draggable dropZone
     = StartedDragging draggable
     | StoppedDragging
     | DroppedOn dropZone
+    | DragLeft dropZone
     | DraggedOverInternal dropZone
 
 
@@ -64,12 +65,31 @@ update msg (Model model) =
                         |> UR.init
                         |> UR.addExt (Dropped { draggedElement = draggingElement, dropZone = elementId })
 
+        DragLeft dropZone_ ->
+            { model
+                | draggingOverElement =
+                    if model.draggingOverElement == Just dropZone_ then
+                        Nothing
+
+                    else
+                        model.draggingOverElement
+            }
+                |> Model
+                |> UR.init
+
         DraggedOverInternal dropZone_ ->
-            -- TODO - Only fire DraggedOver if changed
+            let
+                fireDraggedOver =
+                    if model.draggingOverElement == Just dropZone_ then
+                        identity
+
+                    else
+                        UR.addExt (DraggedOver dropZone_)
+            in
             { model | draggingOverElement = Just dropZone_ }
                 |> Model
                 |> UR.init
-                |> UR.addExt (DraggedOver dropZone_)
+                |> fireDraggedOver
 
 
 
@@ -126,10 +146,16 @@ onDragOver dropZoneId =
         )
 
 
+onDragLeave : dropZone -> Html.Attribute (Msg draggable dropZone)
+onDragLeave dropZoneId =
+    Html.Events.preventDefaultOn "dragleave" (Json.Decode.succeed ( DragLeft dropZoneId, True ))
+
+
 dropZone : dropZone -> (Msg draggable dropZone -> msg) -> List (Html.Attribute msg)
 dropZone dropZoneId toMsg =
     [ onDrop dropZoneId
     , onDragOver dropZoneId
+    , onDragLeave dropZoneId
     ]
         |> List.map (Html.Attributes.map toMsg)
 
@@ -163,6 +189,9 @@ msgToString msg =
 
         DroppedOn _ ->
             [ "DroppedOn" ]
+
+        DragLeft _ ->
+            [ "DragLeft" ]
 
         DraggedOverInternal _ ->
             [ "DraggedOver" ]
