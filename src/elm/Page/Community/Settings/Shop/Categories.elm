@@ -831,9 +831,9 @@ viewCategoryWithChildren translators model zipper children =
                             False
 
                         Just parentId ->
-                            isAncestorOf (\childId { id } -> childId == id)
+                            isAncestorOf
                                 parentId
-                                zipper
+                                (Tree.Zipper.tree zipper)
 
         hasActionsMenuOpen =
             case model.actionsDropdown of
@@ -841,9 +841,9 @@ viewCategoryWithChildren translators model zipper children =
                     False
 
                 Just actionsDropdown ->
-                    isAncestorOf (\childId { id } -> childId == id)
+                    isAncestorOf
                         actionsDropdown
-                        zipper
+                        (Tree.Zipper.tree zipper)
 
         isValidDropzone =
             case Dnd.getDraggingElement model.dnd of
@@ -867,8 +867,8 @@ viewCategoryWithChildren translators model zipper children =
                         isDraggingAncestor =
                             Tree.Zipper.findFromRoot (\{ id } -> id == draggingId) zipper
                                 |> Maybe.map
-                                    (\draggingZipper ->
-                                        isAncestorOf2 category.id (Tree.Zipper.tree draggingZipper)
+                                    (Tree.Zipper.tree
+                                        >> isAncestorOf category.id
                                     )
                                 |> Maybe.withDefault False
                     in
@@ -1537,8 +1537,8 @@ findInForest fn trees =
                 |> Tree.Zipper.findFromRoot fn
 
 
-isAncestorOf2 : Shop.Category.Id -> Shop.Category.Tree -> Bool
-isAncestorOf2 childId parentTree =
+isAncestorOf : Shop.Category.Id -> Shop.Category.Tree -> Bool
+isAncestorOf childId parentTree =
     let
         parentId =
             Tree.label parentTree |> .id
@@ -1554,32 +1554,10 @@ isAncestorOf2 childId parentTree =
                             True
 
                         else
-                            isAncestorOf2 childId childTree
+                            isAncestorOf childId childTree
                     )
     in
     isItself || isIndirectAncestor
-
-
-isAncestorOf : (child -> a -> Bool) -> child -> Tree.Zipper.Zipper a -> Bool
-isAncestorOf equals child parentZipper =
-    let
-        isDirectParent =
-            equals child (Tree.Zipper.label parentZipper)
-
-        isIndirectAncestor =
-            Tree.Zipper.children parentZipper
-                |> List.any
-                    (\childTree ->
-                        if equals child (Tree.label childTree) then
-                            True
-
-                        else
-                            isAncestorOf equals
-                                child
-                                (Tree.Zipper.fromTree childTree)
-                    )
-    in
-    isDirectParent || isIndirectAncestor
 
 
 msgToString : Msg -> List String
