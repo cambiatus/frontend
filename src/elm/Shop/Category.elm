@@ -130,7 +130,7 @@ selectionSet =
         |> SelectionSet.with (Markdown.selectionSet Cambiatus.Object.Category.description)
         |> SelectionSet.with Cambiatus.Object.Category.iconUri
         |> SelectionSet.with Cambiatus.Object.Category.imageUri
-        |> SelectionSet.with (Cambiatus.Object.Category.parentCategory idSelectionSet)
+        |> SelectionSet.with (Cambiatus.Object.Category.parent idSelectionSet)
 
 
 

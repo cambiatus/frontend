@@ -71,11 +71,11 @@ name =
     Object.selectionForField "String" "name" [] Decode.string
 
 
-parentCategory :
+parent :
     SelectionSet decodesTo Cambiatus.Object.Category
     -> SelectionSet (Maybe decodesTo) Cambiatus.Object.Category
-parentCategory object_ =
-    Object.selectionForCompositeField "parentCategory" [] object_ (identity >> Decode.nullable)
+parent object_ =
+    Object.selectionForCompositeField "parent" [] object_ (identity >> Decode.nullable)
 
 
 products :
