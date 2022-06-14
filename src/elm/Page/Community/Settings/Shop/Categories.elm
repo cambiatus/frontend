@@ -27,6 +27,7 @@ import Icons
 import Json.Decode
 import List.Extra
 import Markdown exposing (Markdown)
+import Maybe.Extra
 import Page
 import RemoteData exposing (RemoteData)
 import Session.LoggedIn as LoggedIn
@@ -844,26 +845,61 @@ viewCategoryWithChildren translators model zipper children =
                         actionsDropdown
                         zipper
 
-        isDescendantOfDraggingCategory =
-            case
-                Dnd.getDraggingElement model.dnd
-                    |> Maybe.andThen
-                        (\draggingId ->
-                            Tree.Zipper.findFromRoot (\{ id } -> draggingId == id)
-                                zipper
-                        )
-            of
+        isValidDropzone =
+            case Dnd.getDraggingElement model.dnd of
+                Nothing ->
+                    True
+
+                Just draggingId ->
+                    let
+                        isDraggingChild =
+                            Tree.Zipper.children zipper
+                                |> List.any
+                                    (\child ->
+                                        Tree.label child
+                                            |> .id
+                                            |> (==) draggingId
+                                    )
+
+                        isDraggingItself =
+                            draggingId == category.id
+
+                        isDraggingAncestor =
+                            Tree.Zipper.findFromRoot (\{ id } -> id == draggingId) zipper
+                                |> Maybe.map
+                                    (\draggingZipper ->
+                                        isAncestorOf2 category.id (Tree.Zipper.tree draggingZipper)
+                                    )
+                                |> Maybe.withDefault False
+                    in
+                    not isDraggingItself && not isDraggingChild && not isDraggingAncestor
+
+        isDraggingSomething =
+            Dnd.getDraggingElement model.dnd
+                |> Maybe.Extra.isJust
+
+        isDraggingOver =
+            case Dnd.getDraggingOverElement model.dnd of
                 Nothing ->
                     False
 
-                Just draggingZipper ->
-                    isAncestorOf (\child { id } -> child == id) category.id draggingZipper
-                        && ((Tree.Zipper.label draggingZipper).id /= category.id)
+                Just (OnTopOf draggingOverId) ->
+                    draggingOverId == category.id
     in
     div
-        [ class "transition-colors select-none"
-        , classList [ ( "bg-gray-300 rounded-sm cursor-wait", EverySet.member category.id model.deleting ) ]
-        ]
+        (class "transition-colors select-none rounded-sm border border-dashed border-transparent"
+            :: classList
+                [ ( "bg-gray-300 rounded-sm cursor-wait", EverySet.member category.id model.deleting )
+                , ( "!bg-green/30", isValidDropzone && isDraggingSomething )
+                , ( "border-black", isValidDropzone && isDraggingSomething && isDraggingOver )
+                ]
+            :: (if isValidDropzone then
+                    Dnd.dropZone (OnTopOf category.id) GotDndMsg
+
+                else
+                    []
+               )
+        )
         [ details
             [ if isOpen then
                 Html.Attributes.attribute "open" "true"
@@ -877,18 +913,11 @@ viewCategoryWithChildren translators model zipper children =
                 (class "marker-hidden flex items-center rounded-sm transition-colors cursor-pointer"
                     :: classList
                         [ ( "!bg-green/20", isParentOfNewCategoryForm )
-                        , ( "parent-hover:bg-orange-100/20", not isParentOfNewCategoryForm )
+                        , ( "parent-hover:bg-orange-100/20", not isParentOfNewCategoryForm && not isDraggingSomething )
                         , ( "bg-orange-100/20", hasActionsMenuOpen )
-                        , ( "!bg-gray-200", isDescendantOfDraggingCategory )
                         ]
                     :: onClick (ClickedToggleExpandCategory category.id)
                     :: Dnd.draggable category.id GotDndMsg
-                    ++ (if isDescendantOfDraggingCategory then
-                            []
-
-                        else
-                            Dnd.dropZone (OnTopOf category.id) GotDndMsg
-                       )
                 )
                 [ div [ class "flex items-center w-full" ]
                     [ Icons.arrowDown (String.join " " [ "transition-transform", openArrowClass ])
@@ -1506,6 +1535,29 @@ findInForest fn trees =
         firstTree :: otherTrees ->
             Tree.Zipper.fromForest firstTree otherTrees
                 |> Tree.Zipper.findFromRoot fn
+
+
+isAncestorOf2 : Shop.Category.Id -> Shop.Category.Tree -> Bool
+isAncestorOf2 childId parentTree =
+    let
+        parentId =
+            Tree.label parentTree |> .id
+
+        isItself =
+            childId == parentId
+
+        isIndirectAncestor =
+            Tree.children parentTree
+                |> List.any
+                    (\childTree ->
+                        if childId == (Tree.label childTree |> .id) then
+                            True
+
+                        else
+                            isAncestorOf2 childId childTree
+                    )
+    in
+    isItself || isIndirectAncestor
 
 
 isAncestorOf : (child -> a -> Bool) -> child -> Tree.Zipper.Zipper a -> Bool

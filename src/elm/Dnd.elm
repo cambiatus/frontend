@@ -103,12 +103,24 @@ draggable draggableId toMsg =
 
 onDrop : dropZone -> Html.Attribute (Msg draggable dropZone)
 onDrop dropZoneId =
-    Html.Events.preventDefaultOn "drop" (Json.Decode.succeed ( DroppedOn dropZoneId, True ))
+    Html.Events.custom "drop"
+        (Json.Decode.succeed
+            { message = DroppedOn dropZoneId
+            , stopPropagation = True
+            , preventDefault = True
+            }
+        )
 
 
 onDragOver : dropZone -> Html.Attribute (Msg draggable dropZone)
 onDragOver dropZoneId =
-    Html.Events.preventDefaultOn "dragover" (Json.Decode.succeed ( DraggedOver dropZoneId, True ))
+    Html.Events.custom "dragover"
+        (Json.Decode.succeed
+            { message = DraggedOver dropZoneId
+            , stopPropagation = True
+            , preventDefault = True
+            }
+        )
 
 
 dropZone : dropZone -> (Msg draggable dropZone -> msg) -> List (Html.Attribute msg)
