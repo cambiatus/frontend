@@ -29,11 +29,13 @@ import List.Extra
 import Markdown exposing (Markdown)
 import Maybe.Extra
 import Page
+import Process
 import RemoteData exposing (RemoteData)
 import Session.LoggedIn as LoggedIn
 import Shop.Category
 import Slug exposing (Slug)
 import Svg exposing (Svg)
+import Task
 import Translation
 import Tree
 import Tree.Zipper
@@ -122,6 +124,7 @@ type Msg
     | SubmittedMetadataForm MetadataFormOutput
     | ClosedMetadataModal
     | GotDndMsg (Dnd.Msg Shop.Category.Id DropZone)
+    | DraggedOverCategoryForAWhile Shop.Category.Id
 
 
 type alias UpdateResult =
@@ -618,6 +621,19 @@ update msg model loggedIn =
                     (updateDnd loggedIn)
                     model
 
+        DraggedOverCategoryForAWhile categoryId ->
+            case Dnd.getDraggingOverElement model.dnd of
+                Nothing ->
+                    UR.init model
+
+                Just (OnTopOf currentCategoryId) ->
+                    if currentCategoryId == categoryId then
+                        { model | expandedCategories = EverySet.insert categoryId model.expandedCategories }
+                            |> UR.init
+
+                    else
+                        UR.init model
+
 
 updateDnd : LoggedIn.Model -> Dnd.ExtMsg Shop.Category.Id DropZone -> UpdateResult -> UpdateResult
 updateDnd loggedIn ext ur =
@@ -656,6 +672,17 @@ updateDnd loggedIn ext ur =
 
                 _ ->
                     ur
+
+        Dnd.DraggedOver (OnTopOf categoryId) ->
+            let
+                millisToWait =
+                    250
+            in
+            ur
+                |> UR.addCmd
+                    (Process.sleep millisToWait
+                        |> Task.perform (\_ -> DraggedOverCategoryForAWhile categoryId)
+                    )
 
 
 
@@ -1634,3 +1661,6 @@ msgToString msg =
 
         GotDndMsg subMsg ->
             "GotDndMsg" :: Dnd.msgToString subMsg
+
+        DraggedOverCategoryForAWhile _ ->
+            [ "DraggedOverCategoryForAWhile" ]

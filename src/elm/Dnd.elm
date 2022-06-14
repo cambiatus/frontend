@@ -26,7 +26,7 @@ type Msg draggable dropZone
     = StartedDragging draggable
     | StoppedDragging
     | DroppedOn dropZone
-    | DraggedOver dropZone
+    | DraggedOverInternal dropZone
 
 
 type alias UpdateResult draggable dropZone =
@@ -35,6 +35,7 @@ type alias UpdateResult draggable dropZone =
 
 type ExtMsg draggable dropZone
     = Dropped { draggedElement : draggable, dropZone : dropZone }
+    | DraggedOver dropZone
 
 
 update : Msg draggable dropZone -> Model draggable dropZone -> UpdateResult draggable dropZone
@@ -63,10 +64,12 @@ update msg (Model model) =
                         |> UR.init
                         |> UR.addExt (Dropped { draggedElement = draggingElement, dropZone = elementId })
 
-        DraggedOver elementId ->
-            { model | draggingOverElement = Just elementId }
+        DraggedOverInternal dropZone_ ->
+            -- TODO - Only fire DraggedOver if changed
+            { model | draggingOverElement = Just dropZone_ }
                 |> Model
                 |> UR.init
+                |> UR.addExt (DraggedOver dropZone_)
 
 
 
@@ -116,7 +119,7 @@ onDragOver : dropZone -> Html.Attribute (Msg draggable dropZone)
 onDragOver dropZoneId =
     Html.Events.custom "dragover"
         (Json.Decode.succeed
-            { message = DraggedOver dropZoneId
+            { message = DraggedOverInternal dropZoneId
             , stopPropagation = True
             , preventDefault = True
             }
@@ -161,5 +164,5 @@ msgToString msg =
         DroppedOn _ ->
             [ "DroppedOn" ]
 
-        DraggedOver _ ->
+        DraggedOverInternal _ ->
             [ "DraggedOver" ]
