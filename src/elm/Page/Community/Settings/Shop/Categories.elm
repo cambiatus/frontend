@@ -12,6 +12,7 @@ import Api.Graphql.DeleteStatus
 import Browser.Events
 import Community
 import Dict
+import Dnd
 import EverySet exposing (EverySet)
 import Form
 import Form.RichText
@@ -54,7 +55,12 @@ type alias Model =
     , actionsDropdown : Maybe Shop.Category.Id
     , askingForDeleteConfirmation : Maybe Shop.Category.Id
     , deleting : EverySet Shop.Category.Id
+    , dnd : Dnd.Model Shop.Category.Id DropZone
     }
+
+
+type DropZone
+    = OnTopOf Shop.Category.Id
 
 
 init : LoggedIn.Model -> UpdateResult
@@ -67,6 +73,7 @@ init _ =
     , actionsDropdown = Nothing
     , askingForDeleteConfirmation = Nothing
     , deleting = EverySet.empty
+    , dnd = Dnd.init
     }
         |> UR.init
         |> UR.addExt (LoggedIn.RequestedReloadCommunityField Community.ShopCategoriesField)
@@ -113,6 +120,7 @@ type Msg
     | GotMetadataFormMsg (Form.Msg MetadataFormInput)
     | SubmittedMetadataForm MetadataFormOutput
     | ClosedMetadataModal
+    | GotDndMsg (Dnd.Msg Shop.Category.Id DropZone)
 
 
 type alias UpdateResult =
@@ -601,6 +609,53 @@ update msg model loggedIn =
             { model | categoryMetadataModalState = Closed }
                 |> UR.init
 
+        GotDndMsg subMsg ->
+            Dnd.update subMsg model.dnd
+                |> UR.fromChild
+                    (\newDnd -> { model | dnd = newDnd })
+                    GotDndMsg
+                    (updateDnd loggedIn)
+                    model
+
+
+updateDnd : LoggedIn.Model -> Dnd.ExtMsg Shop.Category.Id DropZone -> UpdateResult -> UpdateResult
+updateDnd loggedIn ext ur =
+    case ext of
+        Dnd.Dropped { draggedElement, dropZone } ->
+            case Community.getField loggedIn.selectedCommunity .shopCategories of
+                RemoteData.Success ( _, categories ) ->
+                    case findInForest (\{ id } -> id == draggedElement) categories of
+                        Nothing ->
+                            ur
+
+                        Just draggedTree ->
+                            let
+                                insertInForest : Tree.Zipper.Zipper Shop.Category.Model -> List Shop.Category.Tree
+                                insertInForest forest =
+                                    case dropZone of
+                                        OnTopOf parentId ->
+                                            forest
+                                                |> Tree.Zipper.findFromRoot (\{ id } -> id == parentId)
+                                                |> Maybe.map
+                                                    (Tree.Zipper.mapTree (Tree.prependChild (Tree.Zipper.tree draggedTree))
+                                                        >> Tree.Zipper.toForest
+                                                        >> (\( first, others ) -> first :: others)
+                                                    )
+                                                |> Maybe.withDefault categories
+                            in
+                            ur
+                                |> UR.addExt
+                                    (draggedTree
+                                        |> Tree.Zipper.removeTree
+                                        |> Maybe.map insertInForest
+                                        |> Maybe.withDefault []
+                                        |> Community.ShopCategories
+                                        |> LoggedIn.SetCommunityField
+                                    )
+
+                _ ->
+                    ur
+
 
 
 -- VIEW
@@ -687,7 +742,7 @@ view_ translators community model categories =
                     )
                     categories
                 )
-            , viewAddCategory translators [ class "w-full pl-2" ] model Nothing
+            , viewAddCategory translators [ class "w-full" ] model Nothing
             ]
         , modals =
             [ case model.categoryModalState of
@@ -788,6 +843,22 @@ viewCategoryWithChildren translators model zipper children =
                     isAncestorOf (\childId { id } -> childId == id)
                         actionsDropdown
                         zipper
+
+        isDescendantOfDraggingCategory =
+            case
+                Dnd.getDraggingElement model.dnd
+                    |> Maybe.andThen
+                        (\draggingId ->
+                            Tree.Zipper.findFromRoot (\{ id } -> draggingId == id)
+                                zipper
+                        )
+            of
+                Nothing ->
+                    False
+
+                Just draggingZipper ->
+                    isAncestorOf (\child { id } -> child == id) category.id draggingZipper
+                        && ((Tree.Zipper.label draggingZipper).id /= category.id)
     in
     div
         [ class "transition-colors select-none"
@@ -803,19 +874,23 @@ viewCategoryWithChildren translators model zipper children =
             , classList [ ( "pointer-events-none", EverySet.member category.id model.deleting ) ]
             ]
             [ summary
-                [ class "marker-hidden flex items-center rounded-sm transition-colors"
-                , classList
-                    [ ( "!bg-green/20", isParentOfNewCategoryForm )
-                    , ( "parent-hover:bg-orange-100/20", not isParentOfNewCategoryForm )
-                    , ( "bg-orange-100/20", hasActionsMenuOpen )
-                    ]
-                , Html.Events.preventDefaultOn "click"
-                    (Json.Decode.succeed ( NoOp, True ))
-                ]
-                [ button
-                    [ onClick (ClickedToggleExpandCategory category.id)
-                    , class "flex items-center w-full"
-                    ]
+                (class "marker-hidden flex items-center rounded-sm transition-colors cursor-pointer"
+                    :: classList
+                        [ ( "!bg-green/20", isParentOfNewCategoryForm )
+                        , ( "parent-hover:bg-orange-100/20", not isParentOfNewCategoryForm )
+                        , ( "bg-orange-100/20", hasActionsMenuOpen )
+                        , ( "!bg-gray-200", isDescendantOfDraggingCategory )
+                        ]
+                    :: onClick (ClickedToggleExpandCategory category.id)
+                    :: Dnd.draggable category.id GotDndMsg
+                    ++ (if isDescendantOfDraggingCategory then
+                            []
+
+                        else
+                            Dnd.dropZone (OnTopOf category.id) GotDndMsg
+                       )
+                )
+                [ div [ class "flex items-center w-full" ]
                     [ Icons.arrowDown (String.join " " [ "transition-transform", openArrowClass ])
                     , viewCategory category
                     ]
@@ -865,7 +940,7 @@ viewAddCategory translators attrs model maybeParentCategory =
                 Form.view (class "bg-white border border-gray-300 rounded-md p-4" :: attrs)
                     translators
                     (\submitButton ->
-                        [ div [ class "flex flex-col sm:flex-row justify-end gap-4" ]
+                        [ div [ class "flex flex-col sm:flex-row justify-end gap-4 mt-10" ]
                             [ button
                                 [ class "button button-secondary w-full sm:w-40"
                                 , type_ "button"
@@ -957,7 +1032,7 @@ viewAction :
 viewAction containerAttrs { icon, label, onClickMsg } =
     button
         (class "flex items-center w-full pl-2 pr-8 py-1 rounded-md transition-colors whitespace-nowrap font-bold class hover:bg-gray-200"
-            :: onClick onClickMsg
+            :: Utils.onClickNoBubble onClickMsg
             :: containerAttrs
         )
         [ icon "w-4 mr-2"
@@ -1404,6 +1479,17 @@ subscriptions model =
 -- UTILS
 
 
+getDraggingOverCategoryId : Model -> Maybe Shop.Category.Id
+getDraggingOverCategoryId model =
+    Dnd.getDraggingOverElement model.dnd
+        |> Maybe.map
+            (\dropZone ->
+                case dropZone of
+                    OnTopOf id ->
+                        id
+            )
+
+
 findInTrees : (a -> Bool) -> List (Tree.Tree a) -> Maybe a
 findInTrees fn trees =
     trees
@@ -1515,3 +1601,6 @@ msgToString msg =
 
         ClosedMetadataModal ->
             [ "ClosedMetadataModal" ]
+
+        GotDndMsg subMsg ->
+            "GotDndMsg" :: Dnd.msgToString subMsg
