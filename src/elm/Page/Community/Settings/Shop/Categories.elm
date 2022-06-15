@@ -376,7 +376,6 @@ update msg model loggedIn =
                         |> UR.addExt
                             (LoggedIn.mutation loggedIn
                                 (Shop.Category.update (Tree.Zipper.label zipper)
-                                    -- TODO - Include children
                                     { name = formOutput.name
                                     , slug = formOutput.slug
                                     , description = formOutput.description
@@ -402,7 +401,10 @@ update msg model loggedIn =
                                 |> LoggedIn.SetCommunityField
                                 |> UR.addExt
             in
-            { model | categoryModalState = Closed }
+            { model
+                | categoryModalState = Closed
+                , categoryMetadataModalState = Closed
+            }
                 |> UR.init
                 |> updateInCommunity
 
@@ -554,18 +556,26 @@ update msg model loggedIn =
                 |> UR.init
 
         ClickedOpenMetadataModal categoryId ->
-            { model
-                | categoryMetadataModalState =
-                    Open categoryId
-                        (Form.init
-                            -- TODO - Initialize with category's values
-                            { metaTitle = ""
-                            , metaDescription = ""
-                            , metaKeywords = ""
-                            }
-                        )
-            }
-                |> UR.init
+            case getCategoryZipper categoryId of
+                Nothing ->
+                    UR.init model
+
+                Just zipper ->
+                    let
+                        category =
+                            Tree.Zipper.label zipper
+                    in
+                    { model
+                        | categoryMetadataModalState =
+                            Open categoryId
+                                (Form.init
+                                    { metaTitle = Maybe.withDefault "" category.metaTitle
+                                    , metaDescription = Maybe.withDefault "" category.metaDescription
+                                    , metaKeywords = Maybe.withDefault "" category.metaKeywords
+                                    }
+                                )
+                    }
+                        |> UR.init
 
         GotMetadataFormMsg subMsg ->
             case model.categoryMetadataModalState of

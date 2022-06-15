@@ -25,6 +25,9 @@ type alias Model =
     , icon : Maybe String
     , image : Maybe String
     , parentId : Maybe Id
+    , metaTitle : Maybe String
+    , metaDescription : Maybe String
+    , metaKeywords : Maybe String
     }
 
 
@@ -138,6 +141,9 @@ selectionSet =
         |> SelectionSet.with Cambiatus.Object.Category.iconUri
         |> SelectionSet.with Cambiatus.Object.Category.imageUri
         |> SelectionSet.with (Cambiatus.Object.Category.parent idSelectionSet)
+        |> SelectionSet.with Cambiatus.Object.Category.metaTitle
+        |> SelectionSet.with Cambiatus.Object.Category.metaDescription
+        |> SelectionSet.with Cambiatus.Object.Category.metaKeywords
 
 
 
