@@ -38,21 +38,15 @@ create :
     -> SelectionSet (Maybe decodesTo) RootMutation
 create { name, slug, description, parentId } =
     Cambiatus.Mutation.category
-        (\_ ->
-            { parentId =
-                parentId
-                    |> Maybe.map (\(Id id) -> id)
-                    |> OptionalArgument.fromMaybe
-            , iconUri = OptionalArgument.Absent
-            , imageUri = OptionalArgument.Absent
-            , id = OptionalArgument.Absent
-            , metaDescription = OptionalArgument.Absent
-            , metaKeywords = OptionalArgument.Absent
-            , metaTitle = OptionalArgument.Absent
-            , slug = OptionalArgument.Present (Slug.toString slug)
-            , categories = OptionalArgument.Absent
-            , name = OptionalArgument.Present name
-            , description = OptionalArgument.Present (Markdown.toRawString description)
+        (\optionals ->
+            { optionals
+                | parentId =
+                    parentId
+                        |> Maybe.map (\(Id id) -> id)
+                        |> OptionalArgument.fromMaybe
+                , slug = OptionalArgument.Present (Slug.toString slug)
+                , name = OptionalArgument.Present name
+                , description = OptionalArgument.Present (Markdown.toRawString description)
             }
         )
 
@@ -64,21 +58,12 @@ update :
     -> SelectionSet (Maybe decodesTo) RootMutation
 update model { name, description, slug } =
     Cambiatus.Mutation.category
-        (\_ ->
-            { parentId =
-                model.parentId
-                    |> Maybe.map unwrapId
-                    |> OptionalArgument.fromMaybe
-            , iconUri = OptionalArgument.fromMaybe model.icon
-            , imageUri = OptionalArgument.fromMaybe model.image
-            , id = OptionalArgument.Present (unwrapId model.id)
-            , metaDescription = OptionalArgument.Absent
-            , metaKeywords = OptionalArgument.Absent
-            , metaTitle = OptionalArgument.Absent
-            , slug = OptionalArgument.Present (Slug.toString slug)
-            , name = OptionalArgument.Present name
-            , description = OptionalArgument.Present (Markdown.toRawString description)
-            , categories = OptionalArgument.Absent
+        (\optionals ->
+            { optionals
+                | id = OptionalArgument.Present (unwrapId model.id)
+                , slug = OptionalArgument.Present (Slug.toString slug)
+                , name = OptionalArgument.Present name
+                , description = OptionalArgument.Present (Markdown.toRawString description)
             }
         )
 
@@ -90,25 +75,12 @@ updateMetadata :
     -> SelectionSet (Maybe decodesTo) RootMutation
 updateMetadata model { metaTitle, metaDescription, metaKeywords } =
     Cambiatus.Mutation.category
-        (\_ ->
-            -- TODO - Can these arguments be omitted?
-            { parentId =
-                model.parentId
-                    |> Maybe.map unwrapId
-                    |> OptionalArgument.fromMaybe
-            , iconUri = OptionalArgument.fromMaybe model.icon
-            , imageUri = OptionalArgument.fromMaybe model.image
-            , id = OptionalArgument.Present (unwrapId model.id)
-            , metaDescription = OptionalArgument.Present metaDescription
-            , metaKeywords = OptionalArgument.Present metaKeywords
-            , metaTitle = OptionalArgument.Present metaTitle
-            , slug =
-                model.slug
-                    |> Maybe.map Slug.toString
-                    |> OptionalArgument.fromMaybe
-            , name = OptionalArgument.Absent
-            , description = OptionalArgument.Absent
-            , categories = OptionalArgument.Absent
+        (\optionals ->
+            { optionals
+                | id = OptionalArgument.Present (unwrapId model.id)
+                , metaDescription = OptionalArgument.Present metaDescription
+                , metaKeywords = OptionalArgument.Present metaKeywords
+                , metaTitle = OptionalArgument.Present metaTitle
             }
         )
 
