@@ -993,15 +993,25 @@ view_ translators community model categories =
     in
     viewPageContainer
         { children =
-            [ ul [ class "mb-2 grid gap-y-2" ]
-                (List.map
-                    (\category ->
-                        li []
-                            [ viewCategoryTree translators model category
-                            ]
-                    )
-                    categories
-                )
+            [ case categories of
+                [] ->
+                    -- TODO - Show something when there are no categories yet
+                    text ""
+
+                first :: others ->
+                    let
+                        rootZipper =
+                            Tree.Zipper.fromForest first others
+                    in
+                    ul [ class "mb-2 grid gap-y-2" ]
+                        (List.map
+                            (\category ->
+                                li []
+                                    [ viewCategoryTree translators model rootZipper category
+                                    ]
+                            )
+                            categories
+                        )
             , viewAddCategory translators
                 (class "w-full border border-dashed border-transparent"
                     :: classList
@@ -1046,12 +1056,13 @@ view_ translators community model categories =
         }
 
 
-viewCategoryTree : Translation.Translators -> Model -> Shop.Category.Tree -> Html Msg
-viewCategoryTree translators model rootTree =
-    let
-        rootZipper =
-            Tree.Zipper.fromTree rootTree
-    in
+viewCategoryTree :
+    Translation.Translators
+    -> Model
+    -> Tree.Zipper.Zipper Shop.Category.Model
+    -> Shop.Category.Tree
+    -> Html Msg
+viewCategoryTree translators model rootZipper currentTree =
     Tree.restructure
         (\category ->
             rootZipper
@@ -1059,7 +1070,7 @@ viewCategoryTree translators model rootTree =
                 |> Maybe.withDefault (Tree.singleton category |> Tree.Zipper.fromTree)
         )
         (viewCategoryWithChildren translators model)
-        rootTree
+        currentTree
 
 
 viewCategory : Shop.Category.Model -> Html Msg
@@ -1194,7 +1205,7 @@ viewCategoryWithChildren translators model zipper children =
                     [ Icons.arrowDown (String.join " " [ "transition-transform", openArrowClass ])
                     , viewCategory category
                     ]
-                , viewActions model category
+                , viewActions model zipper
                 ]
             , div [ class "ml-4 flex flex-col mb-4 mt-2" ]
                 [ ul
@@ -1264,9 +1275,12 @@ viewAddCategory translators attrs model maybeParentCategory =
                 viewAddCategoryButton attrs
 
 
-viewActions : Model -> Shop.Category.Model -> Html Msg
-viewActions model category =
+viewActions : Model -> Tree.Zipper.Zipper Shop.Category.Model -> Html Msg
+viewActions model zipper =
     let
+        category =
+            Tree.Zipper.label zipper
+
         isDropdownOpen =
             case model.actionsDropdown of
                 Nothing ->
@@ -1274,6 +1288,18 @@ viewActions model category =
 
                 Just actionsDropdown ->
                     actionsDropdown == category.id
+
+        canGoDown =
+            not
+                (Maybe.Extra.isNothing (goDownWithoutChildren zipper)
+                    && Maybe.Extra.isNothing (Tree.Zipper.parent zipper)
+                )
+
+        canGoUp =
+            not
+                (Maybe.Extra.isNothing (goUpWithoutChildren zipper)
+                    && Maybe.Extra.isNothing (Tree.Zipper.parent zipper)
+                )
     in
     div [ class "relative" ]
         [ button
@@ -1308,24 +1334,30 @@ viewActions model category =
                         , onClickMsg = ClickedOpenMetadataModal category.id
                         }
                     ]
-                , li []
-                    [ viewAction []
-                        -- TODO - Hide when parent is root
-                        -- TODO - Use correct icon
-                        { icon = \classes -> Icons.arrowDown ("rotate-180 " ++ classes)
-                        , label = "Move up"
-                        , onClickMsg = ClickedMoveUp category.id
-                        }
-                    ]
-                , li []
-                    [ viewAction []
-                        -- TODO - Hide when impossible
-                        -- TODO - Use correct icon
-                        { icon = Icons.arrowDown
-                        , label = "Move down"
-                        , onClickMsg = ClickedMoveDown category.id
-                        }
-                    ]
+                , if canGoUp then
+                    li []
+                        [ viewAction []
+                            -- TODO - Use correct icon
+                            { icon = \classes -> Icons.arrowDown ("rotate-180 " ++ classes)
+                            , label = "Move up"
+                            , onClickMsg = ClickedMoveUp category.id
+                            }
+                        ]
+
+                  else
+                    text ""
+                , if canGoDown then
+                    li []
+                        [ viewAction []
+                            -- TODO - Use correct icon
+                            { icon = Icons.arrowDown
+                            , label = "Move down"
+                            , onClickMsg = ClickedMoveDown category.id
+                            }
+                        ]
+
+                  else
+                    text ""
                 , li []
                     [ viewAction [ class "text-red hover:bg-red/10" ]
                         { icon = Icons.trash
@@ -1836,7 +1868,7 @@ goUpWithoutChildren zipper =
             )
 
 
-goDownWithoutChildren : Tree.Zipper.Zipper a -> Maybe (Tree.Zipper.Zipper a)
+goDownWithoutChildren : Tree.Zipper.Zipper Shop.Category.Model -> Maybe (Tree.Zipper.Zipper Shop.Category.Model)
 goDownWithoutChildren zipper =
     case Tree.Zipper.nextSibling zipper of
         Nothing ->
