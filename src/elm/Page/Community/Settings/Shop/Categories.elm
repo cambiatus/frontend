@@ -19,6 +19,7 @@ import Form.RichText
 import Form.Text
 import Form.Validate
 import Graphql.Http
+import Graphql.SelectionSet
 import Html exposing (Html, button, details, div, li, p, span, summary, text, ul)
 import Html.Attributes exposing (class, classList, id, type_)
 import Html.Attributes.Aria exposing (ariaHidden)
@@ -64,6 +65,7 @@ type alias Model =
 
 type DropZone
     = OnTopOf Shop.Category.Id
+    | OnRoot
 
 
 init : LoggedIn.Model -> UpdateResult
@@ -125,6 +127,7 @@ type Msg
     | GotDndMsg (Dnd.Msg Shop.Category.Id DropZone)
     | DraggedOverCategoryForAWhile Shop.Category.Id
     | CompletedMovingCategory Shop.Category.Id (RemoteData (Graphql.Http.Error (Maybe Shop.Category.Id)) (Maybe Shop.Category.Id))
+    | CompletedMovingCategoryToRoot Shop.Category.Id (RemoteData (Graphql.Http.Error (Maybe ())) (Maybe ()))
 
 
 type alias UpdateResult =
@@ -281,8 +284,7 @@ update msg model loggedIn =
                                 Just zipper ->
                                     zipper
                                         |> Tree.Zipper.mapTree (Tree.appendChild (Tree.singleton category))
-                                        |> Tree.Zipper.toForest
-                                        |> (\( first, others ) -> first :: others)
+                                        |> toFlatForest
 
                 insertInCommunity : UpdateResult -> UpdateResult
                 insertInCommunity =
@@ -397,8 +399,7 @@ update msg model loggedIn =
                         Just zipper ->
                             zipper
                                 |> Tree.Zipper.replaceLabel category
-                                |> Tree.Zipper.toForest
-                                |> (\( first, others ) -> first :: others)
+                                |> toFlatForest
                                 |> Community.ShopCategories
                                 |> LoggedIn.SetCommunityField
                                 |> UR.addExt
@@ -483,7 +484,7 @@ update msg model loggedIn =
                 removeFromForest zipper =
                     zipper
                         |> Tree.Zipper.removeTree
-                        |> Maybe.map (Tree.Zipper.toForest >> (\( first, others ) -> first :: others))
+                        |> Maybe.map toFlatForest
                         |> Maybe.withDefault []
 
                 removeFromCommunity : UpdateResult -> UpdateResult
@@ -634,6 +635,9 @@ update msg model loggedIn =
                     else
                         UR.init model
 
+                Just OnRoot ->
+                    UR.init model
+
         CompletedMovingCategory categoryId (RemoteData.Success (Just parentId)) ->
             case Community.getField loggedIn.selectedCommunity .shopCategories of
                 RemoteData.Success ( _, categories ) ->
@@ -661,8 +665,7 @@ update msg model loggedIn =
                                 |> UR.init
                                 |> UR.addExt
                                     (zipperWithMovedChild
-                                        |> Tree.Zipper.toForest
-                                        |> (\( first, others ) -> first :: others)
+                                        |> toFlatForest
                                         |> Community.ShopCategories
                                         |> LoggedIn.SetCommunityField
                                     )
@@ -703,6 +706,68 @@ update msg model loggedIn =
         CompletedMovingCategory _ _ ->
             UR.init model
 
+        CompletedMovingCategoryToRoot categoryId (RemoteData.Success (Just ())) ->
+            case Community.getField loggedIn.selectedCommunity .shopCategories of
+                RemoteData.Success ( _, categories ) ->
+                    case findInForest (\{ id } -> id == categoryId) categories of
+                        Nothing ->
+                            UR.init model
+
+                        Just childZipper ->
+                            let
+                                zipperWithChildOnRoot =
+                                    childZipper
+                                        |> Tree.Zipper.removeTree
+                                        |> Maybe.map
+                                            (toFlatForest
+                                                >> (\forest -> Tree.Zipper.tree childZipper :: forest)
+                                                >> List.sortBy (Tree.label >> .name)
+                                            )
+                                        |> Maybe.withDefault (toFlatForest childZipper)
+                            in
+                            model
+                                |> UR.init
+                                |> UR.addExt
+                                    (zipperWithChildOnRoot
+                                        |> Community.ShopCategories
+                                        |> LoggedIn.SetCommunityField
+                                    )
+
+                _ ->
+                    UR.init model
+
+        CompletedMovingCategoryToRoot categoryId (RemoteData.Success Nothing) ->
+            UR.init model
+                |> UR.logImpossible msg
+                    "Got Nothing when trying to move a child category to root"
+                    (Just loggedIn.accountName)
+                    { moduleName = "Page.Community.Settings.Shop.Categories"
+                    , function = "update"
+                    }
+                    [ { name = "Category"
+                      , extras = Dict.fromList [ ( "id", Shop.Category.encodeId categoryId ) ]
+                      }
+                    ]
+
+        CompletedMovingCategoryToRoot categoryId (RemoteData.Failure err) ->
+            UR.init model
+                |> UR.logGraphqlError msg
+                    (Just loggedIn.accountName)
+                    "Got an error when trying to move a child category to root"
+                    { moduleName = "Page.Community.Settings.Shop.Categories"
+                    , function = "update"
+                    }
+                    [ { name = "Category"
+                      , extras = Dict.fromList [ ( "id", Shop.Category.encodeId categoryId ) ]
+                      }
+                    ]
+                    err
+                -- TODO - I18N
+                |> UR.addExt (LoggedIn.ShowFeedback View.Feedback.Failure "Something went wrong :(")
+
+        CompletedMovingCategoryToRoot _ _ ->
+            UR.init model
+
 
 updateDnd : LoggedIn.Model -> Dnd.ExtMsg Shop.Category.Id DropZone -> UpdateResult -> UpdateResult
 updateDnd loggedIn ext ur =
@@ -727,6 +792,16 @@ updateDnd loggedIn ext ur =
                                         )
                                         ur
 
+                        OnRoot ->
+                            UR.addExt
+                                (LoggedIn.mutation loggedIn
+                                    (Shop.Category.moveToRoot draggedElement
+                                        (Graphql.SelectionSet.succeed ())
+                                    )
+                                    (CompletedMovingCategoryToRoot draggedElement)
+                                )
+                                ur
+
                 _ ->
                     ur
 
@@ -740,6 +815,9 @@ updateDnd loggedIn ext ur =
                     (Process.sleep millisToWait
                         |> Task.perform (\_ -> DraggedOverCategoryForAWhile categoryId)
                     )
+
+        Dnd.DraggedOver OnRoot ->
+            ur
 
 
 
@@ -816,6 +894,21 @@ viewLoading =
 
 view_ : Translation.Translators -> Community.Model -> Model -> List Shop.Category.Tree -> Html Msg
 view_ translators community model categories =
+    let
+        isDraggingSomething =
+            Maybe.Extra.isJust (Dnd.getDraggingElement model.dnd)
+
+        isDraggingOverAddCategory =
+            case Dnd.getDraggingOverElement model.dnd of
+                Nothing ->
+                    False
+
+                Just (OnTopOf _) ->
+                    False
+
+                Just OnRoot ->
+                    True
+    in
     viewPageContainer
         { children =
             [ ul [ class "mb-2 grid gap-y-2" ]
@@ -827,7 +920,16 @@ view_ translators community model categories =
                     )
                     categories
                 )
-            , viewAddCategory translators [ class "w-full" ] model Nothing
+            , viewAddCategory translators
+                (class "w-full border border-dashed border-transparent"
+                    :: classList
+                        [ ( "bg-green/30", isDraggingSomething )
+                        , ( "border-black", isDraggingSomething && isDraggingOverAddCategory )
+                        ]
+                    :: Dnd.dropZone OnRoot GotDndMsg
+                )
+                model
+                Nothing
             ]
         , modals =
             [ case model.categoryModalState of
@@ -969,6 +1071,9 @@ viewCategoryWithChildren translators model zipper children =
 
                 Just (OnTopOf draggingOverId) ->
                     draggingOverId == category.id
+
+                Just OnRoot ->
+                    False
     in
     div
         (class "transition-colors select-none rounded-sm border border-dashed border-transparent"
@@ -1592,17 +1697,6 @@ subscriptions model =
 -- UTILS
 
 
-getDraggingOverCategoryId : Model -> Maybe Shop.Category.Id
-getDraggingOverCategoryId model =
-    Dnd.getDraggingOverElement model.dnd
-        |> Maybe.map
-            (\dropZone ->
-                case dropZone of
-                    OnTopOf id ->
-                        id
-            )
-
-
 findInTrees : (a -> Bool) -> List (Tree.Tree a) -> Maybe a
 findInTrees fn trees =
     trees
@@ -1619,6 +1713,13 @@ findInForest fn trees =
         firstTree :: otherTrees ->
             Tree.Zipper.fromForest firstTree otherTrees
                 |> Tree.Zipper.findFromRoot fn
+
+
+toFlatForest : Tree.Zipper.Zipper a -> List (Tree.Tree a)
+toFlatForest zipper =
+    zipper
+        |> Tree.Zipper.toForest
+        |> (\( first, others ) -> first :: others)
 
 
 isAncestorOf : Shop.Category.Id -> Shop.Category.Tree -> Bool
@@ -1724,3 +1825,6 @@ msgToString msg =
 
         CompletedMovingCategory _ r ->
             [ "CompletedMovingCategory", UR.remoteDataToString r ]
+
+        CompletedMovingCategoryToRoot _ r ->
+            [ "CompletedMovingCategoryToRoot", UR.remoteDataToString r ]

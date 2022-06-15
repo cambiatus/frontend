@@ -1,4 +1,4 @@
-module Shop.Category exposing (Id, Model, Tree, addChild, create, delete, encodeId, idSelectionSet, selectionSet, treesSelectionSet, update, updateMetadata)
+module Shop.Category exposing (Id, Model, Tree, addChild, create, delete, encodeId, idSelectionSet, moveToRoot, selectionSet, treesSelectionSet, update, updateMetadata)
 
 import Cambiatus.Mutation
 import Cambiatus.Object
@@ -133,6 +133,17 @@ addChild tree (Id newChildId) =
                         |> .id
                         |> unwrapId
                         |> OptionalArgument.Present
+            }
+        )
+
+
+moveToRoot : Id -> SelectionSet decodesTo Cambiatus.Object.Category -> SelectionSet (Maybe decodesTo) RootMutation
+moveToRoot (Id id) =
+    Cambiatus.Mutation.category
+        (\optionals ->
+            { optionals
+                | id = OptionalArgument.Present id
+                , parentId = OptionalArgument.Null
             }
         )
 
