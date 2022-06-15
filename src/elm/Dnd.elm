@@ -194,4 +194,4 @@ msgToString msg =
             [ "DragLeft" ]
 
         DraggedOverInternal _ ->
-            [ "DraggedOver" ]
+            [ "DraggedOverInternal" ]

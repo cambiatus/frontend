@@ -101,8 +101,7 @@ type CategoryFormState formInput
 
 
 type Msg
-    = NoOp
-    | PressedEsc
+    = PressedEsc
     | ClickedToggleExpandCategory Shop.Category.Id
     | ClickedAddCategory (Maybe Shop.Category.Id)
     | ClickedCancelAddCategory
@@ -151,9 +150,6 @@ update msg model loggedIn =
                     Nothing
     in
     case msg of
-        NoOp ->
-            UR.init model
-
         PressedEsc ->
             { model
                 | newCategoryState = NotEditing
@@ -1748,9 +1744,6 @@ isAncestorOf childId parentTree =
 msgToString : Msg -> List String
 msgToString msg =
     case msg of
-        NoOp ->
-            [ "NoOp" ]
-
         PressedEsc ->
             [ "PressedEsc" ]
 
