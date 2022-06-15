@@ -774,10 +774,7 @@ update msg model loggedIn =
                             UR.init model
 
                         Just zipper ->
-                            case
-                                Tree.Zipper.parent zipper
-                                    |> Maybe.andThen Tree.Zipper.parent
-                            of
+                            case goUpWithoutChildren zipper of
                                 Nothing ->
                                     model
                                         |> UR.init
@@ -790,6 +787,7 @@ update msg model loggedIn =
                                             )
 
                                 Just grandParentZipper ->
+                                    -- TODO - Expand categories so the moved category is still visible
                                     model
                                         |> UR.init
                                         |> UR.addExt
@@ -805,7 +803,40 @@ update msg model loggedIn =
                     UR.init model
 
         ClickedMoveDown categoryId ->
-            UR.init model
+            case Community.getField loggedIn.selectedCommunity .shopCategories of
+                RemoteData.Success ( _, categories ) ->
+                    case findInForest (\{ id } -> id == categoryId) categories of
+                        Nothing ->
+                            UR.init model
+
+                        Just zipper ->
+                            case goDownWithoutChildren zipper of
+                                Nothing ->
+                                    model
+                                        |> UR.init
+                                        |> UR.addExt
+                                            (LoggedIn.mutation loggedIn
+                                                (Shop.Category.moveToRoot categoryId
+                                                    (Graphql.SelectionSet.succeed ())
+                                                )
+                                                (CompletedMovingCategoryToRoot categoryId)
+                                            )
+
+                                Just newParentZipper ->
+                                    -- TODO - Expand categories so the moved category is still visible
+                                    model
+                                        |> UR.init
+                                        |> UR.addExt
+                                            (LoggedIn.mutation loggedIn
+                                                (Shop.Category.addChild (Tree.Zipper.tree newParentZipper)
+                                                    categoryId
+                                                    Shop.Category.idSelectionSet
+                                                )
+                                                (CompletedMovingCategory categoryId)
+                                            )
+
+                _ ->
+                    UR.init model
 
 
 updateDnd : LoggedIn.Model -> Dnd.ExtMsg Shop.Category.Id DropZone -> UpdateResult -> UpdateResult
@@ -1778,6 +1809,30 @@ toFlatForest zipper =
     zipper
         |> Tree.Zipper.toForest
         |> (\( first, others ) -> first :: others)
+
+
+goUpWithoutChildren : Tree.Zipper.Zipper a -> Maybe (Tree.Zipper.Zipper a)
+goUpWithoutChildren zipper =
+    Tree.Zipper.backward zipper
+        |> Maybe.andThen
+            (\backwardZipper ->
+                if Tree.Zipper.parent zipper == Just backwardZipper then
+                    Tree.Zipper.parent backwardZipper
+
+                else
+                    Just backwardZipper
+            )
+
+
+goDownWithoutChildren : Tree.Zipper.Zipper a -> Maybe (Tree.Zipper.Zipper a)
+goDownWithoutChildren zipper =
+    case Tree.Zipper.nextSibling zipper of
+        Nothing ->
+            Tree.Zipper.parent zipper
+                |> Maybe.andThen Tree.Zipper.parent
+
+        Just firstSibling ->
+            Just firstSibling
 
 
 isAncestorOf : Shop.Category.Id -> Shop.Category.Tree -> Bool
