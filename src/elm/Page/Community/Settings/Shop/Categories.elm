@@ -652,14 +652,28 @@ update msg model loggedIn =
                                             (Tree.Zipper.findFromRoot (\{ id } -> id == parentId)
                                                 >> Maybe.map
                                                     (Tree.Zipper.mapTree
-                                                        (Tree.appendChild (Tree.Zipper.tree childZipper)
+                                                        (Tree.prependChild (Tree.Zipper.tree childZipper)
                                                             >> Tree.mapChildren (List.sortBy (Tree.label >> .name))
                                                         )
                                                     )
                                             )
                                         |> Maybe.withDefault childZipper
                             in
-                            model
+                            { model
+                                | expandedCategories =
+                                    zipperWithMovedChild
+                                        |> Tree.Zipper.findFromRoot (\{ id } -> id == categoryId)
+                                        |> Maybe.map
+                                            (getAllAncestors
+                                                >> List.foldl
+                                                    (Tree.Zipper.label
+                                                        >> .id
+                                                        >> EverySet.insert
+                                                    )
+                                                    model.expandedCategories
+                                            )
+                                        |> Maybe.withDefault model.expandedCategories
+                            }
                                 |> UR.init
                                 |> UR.addExt
                                     (zipperWithMovedChild
@@ -787,7 +801,6 @@ update msg model loggedIn =
                                             )
 
                                 Just grandParentZipper ->
-                                    -- TODO - Expand categories so the moved category is still visible
                                     model
                                         |> UR.init
                                         |> UR.addExt
@@ -823,7 +836,6 @@ update msg model loggedIn =
                                             )
 
                                 Just newParentZipper ->
-                                    -- TODO - Expand categories so the moved category is still visible
                                     model
                                         |> UR.init
                                         |> UR.addExt
@@ -1833,6 +1845,21 @@ goDownWithoutChildren zipper =
 
         Just firstSibling ->
             Just firstSibling
+
+
+getAllAncestors : Tree.Zipper.Zipper a -> List (Tree.Zipper.Zipper a)
+getAllAncestors zipper =
+    getAllAncestorsHelper zipper []
+
+
+getAllAncestorsHelper : Tree.Zipper.Zipper a -> List (Tree.Zipper.Zipper a) -> List (Tree.Zipper.Zipper a)
+getAllAncestorsHelper zipper ancestors =
+    case Tree.Zipper.parent zipper of
+        Nothing ->
+            ancestors
+
+        Just parent ->
+            getAllAncestorsHelper parent (parent :: ancestors)
 
 
 isAncestorOf : Shop.Category.Id -> Shop.Category.Tree -> Bool
