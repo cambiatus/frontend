@@ -127,6 +127,8 @@ type Msg
     | DraggedOverCategoryForAWhile Shop.Category.Id
     | CompletedMovingCategory Shop.Category.Id (RemoteData (Graphql.Http.Error (Maybe Shop.Category.Id)) (Maybe Shop.Category.Id))
     | CompletedMovingCategoryToRoot Shop.Category.Id (RemoteData (Graphql.Http.Error (Maybe ())) (Maybe ()))
+    | ClickedMoveUp Shop.Category.Id
+    | ClickedMoveDown Shop.Category.Id
 
 
 type alias UpdateResult =
@@ -764,6 +766,47 @@ update msg model loggedIn =
         CompletedMovingCategoryToRoot _ _ ->
             UR.init model
 
+        ClickedMoveUp categoryId ->
+            case Community.getField loggedIn.selectedCommunity .shopCategories of
+                RemoteData.Success ( _, categories ) ->
+                    case findInForest (\{ id } -> id == categoryId) categories of
+                        Nothing ->
+                            UR.init model
+
+                        Just zipper ->
+                            case
+                                Tree.Zipper.parent zipper
+                                    |> Maybe.andThen Tree.Zipper.parent
+                            of
+                                Nothing ->
+                                    model
+                                        |> UR.init
+                                        |> UR.addExt
+                                            (LoggedIn.mutation loggedIn
+                                                (Shop.Category.moveToRoot categoryId
+                                                    (Graphql.SelectionSet.succeed ())
+                                                )
+                                                (CompletedMovingCategoryToRoot categoryId)
+                                            )
+
+                                Just grandParentZipper ->
+                                    model
+                                        |> UR.init
+                                        |> UR.addExt
+                                            (LoggedIn.mutation loggedIn
+                                                (Shop.Category.addChild (Tree.Zipper.tree grandParentZipper)
+                                                    categoryId
+                                                    Shop.Category.idSelectionSet
+                                                )
+                                                (CompletedMovingCategory categoryId)
+                                            )
+
+                _ ->
+                    UR.init model
+
+        ClickedMoveDown categoryId ->
+            UR.init model
+
 
 updateDnd : LoggedIn.Model -> Dnd.ExtMsg Shop.Category.Id DropZone -> UpdateResult -> UpdateResult
 updateDnd loggedIn ext ur =
@@ -1223,6 +1266,24 @@ viewActions model category =
                         }
                     ]
                 , li []
+                    [ viewAction []
+                        -- TODO - Hide when parent is root
+                        -- TODO - Use correct icon
+                        { icon = \classes -> Icons.arrowDown ("rotate-180 " ++ classes)
+                        , label = "Move up"
+                        , onClickMsg = ClickedMoveUp category.id
+                        }
+                    ]
+                , li []
+                    [ viewAction []
+                        -- TODO - Hide when impossible
+                        -- TODO - Use correct icon
+                        { icon = Icons.arrowDown
+                        , label = "Move down"
+                        , onClickMsg = ClickedMoveDown category.id
+                        }
+                    ]
+                , li []
                     [ viewAction [ class "text-red hover:bg-red/10" ]
                         { icon = Icons.trash
 
@@ -1244,6 +1305,7 @@ viewAction :
         }
     -> Html Msg
 viewAction containerAttrs { icon, label, onClickMsg } =
+    -- TODO - Focus classes
     button
         (class "flex items-center w-full pl-2 pr-8 py-1 rounded-md transition-colors whitespace-nowrap font-bold class hover:bg-gray-200"
             :: Utils.onClickNoBubble onClickMsg
@@ -1821,3 +1883,9 @@ msgToString msg =
 
         CompletedMovingCategoryToRoot _ r ->
             [ "CompletedMovingCategoryToRoot", UR.remoteDataToString r ]
+
+        ClickedMoveUp _ ->
+            [ "ClickedMoveUp" ]
+
+        ClickedMoveDown _ ->
+            [ "ClickedMoveDown" ]
