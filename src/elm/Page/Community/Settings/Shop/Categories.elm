@@ -68,7 +68,6 @@ type DropZone
 
 init : LoggedIn.Model -> UpdateResult
 init _ =
-    -- TODO - Should we start them all expanded?
     { expandedCategories = EverySet.empty
     , newCategoryState = NotEditing
     , categoryModalState = Closed
@@ -125,6 +124,7 @@ type Msg
     | ClosedMetadataModal
     | GotDndMsg (Dnd.Msg Shop.Category.Id DropZone)
     | DraggedOverCategoryForAWhile Shop.Category.Id
+    | CompletedMovingCategory Shop.Category.Id (RemoteData (Graphql.Http.Error (Maybe Shop.Category.Id)) (Maybe Shop.Category.Id))
 
 
 type alias UpdateResult =
@@ -634,6 +634,75 @@ update msg model loggedIn =
                     else
                         UR.init model
 
+        CompletedMovingCategory categoryId (RemoteData.Success (Just parentId)) ->
+            case Community.getField loggedIn.selectedCommunity .shopCategories of
+                RemoteData.Success ( _, categories ) ->
+                    case findInForest (\{ id } -> id == categoryId) categories of
+                        Nothing ->
+                            UR.init model
+
+                        Just childZipper ->
+                            let
+                                zipperWithMovedChild =
+                                    childZipper
+                                        |> Tree.Zipper.removeTree
+                                        |> Maybe.andThen
+                                            (Tree.Zipper.findFromRoot (\{ id } -> id == parentId)
+                                                >> Maybe.map
+                                                    (Tree.Zipper.mapTree
+                                                        (Tree.appendChild (Tree.Zipper.tree childZipper)
+                                                            >> Tree.mapChildren (List.sortBy (Tree.label >> .name))
+                                                        )
+                                                    )
+                                            )
+                                        |> Maybe.withDefault childZipper
+                            in
+                            model
+                                |> UR.init
+                                |> UR.addExt
+                                    (zipperWithMovedChild
+                                        |> Tree.Zipper.toForest
+                                        |> (\( first, others ) -> first :: others)
+                                        |> Community.ShopCategories
+                                        |> LoggedIn.SetCommunityField
+                                    )
+
+                _ ->
+                    model
+                        |> UR.init
+
+        CompletedMovingCategory categoryId (RemoteData.Success Nothing) ->
+            UR.init model
+                |> UR.logImpossible msg
+                    "Got Nothing when trying to move a child category"
+                    (Just loggedIn.accountName)
+                    { moduleName = "Page.Community.Settings.Shop.Categories"
+                    , function = "update"
+                    }
+                    [ { name = "Category"
+                      , extras = Dict.fromList [ ( "id", Shop.Category.encodeId categoryId ) ]
+                      }
+                    ]
+
+        CompletedMovingCategory categoryId (RemoteData.Failure err) ->
+            UR.init model
+                |> UR.logGraphqlError msg
+                    (Just loggedIn.accountName)
+                    "Got an error when trying to move a child category"
+                    { moduleName = "Page.Community.Settings.Shop.Categories"
+                    , function = "update"
+                    }
+                    [ { name = "Category"
+                      , extras = Dict.fromList [ ( "id", Shop.Category.encodeId categoryId ) ]
+                      }
+                    ]
+                    err
+                -- TODO - I18N
+                |> UR.addExt (LoggedIn.ShowFeedback View.Feedback.Failure "Something went wrong :(")
+
+        CompletedMovingCategory _ _ ->
+            UR.init model
+
 
 updateDnd : LoggedIn.Model -> Dnd.ExtMsg Shop.Category.Id DropZone -> UpdateResult -> UpdateResult
 updateDnd loggedIn ext ur =
@@ -641,34 +710,22 @@ updateDnd loggedIn ext ur =
         Dnd.Dropped { draggedElement, dropZone } ->
             case Community.getField loggedIn.selectedCommunity .shopCategories of
                 RemoteData.Success ( _, categories ) ->
-                    case findInForest (\{ id } -> id == draggedElement) categories of
-                        Nothing ->
-                            ur
+                    case dropZone of
+                        OnTopOf parentId ->
+                            case findInForest (\{ id } -> id == parentId) categories of
+                                Nothing ->
+                                    ur
 
-                        Just draggedTree ->
-                            let
-                                insertInForest : Tree.Zipper.Zipper Shop.Category.Model -> List Shop.Category.Tree
-                                insertInForest forest =
-                                    case dropZone of
-                                        OnTopOf parentId ->
-                                            forest
-                                                |> Tree.Zipper.findFromRoot (\{ id } -> id == parentId)
-                                                |> Maybe.map
-                                                    (Tree.Zipper.mapTree (Tree.prependChild (Tree.Zipper.tree draggedTree))
-                                                        >> Tree.Zipper.toForest
-                                                        >> (\( first, others ) -> first :: others)
-                                                    )
-                                                |> Maybe.withDefault categories
-                            in
-                            ur
-                                |> UR.addExt
-                                    (draggedTree
-                                        |> Tree.Zipper.removeTree
-                                        |> Maybe.map insertInForest
-                                        |> Maybe.withDefault []
-                                        |> Community.ShopCategories
-                                        |> LoggedIn.SetCommunityField
-                                    )
+                                Just parentZipper ->
+                                    UR.addExt
+                                        (LoggedIn.mutation loggedIn
+                                            (Shop.Category.addChild (Tree.Zipper.tree parentZipper)
+                                                draggedElement
+                                                Shop.Category.idSelectionSet
+                                            )
+                                            (CompletedMovingCategory draggedElement)
+                                        )
+                                        ur
 
                 _ ->
                     ur
@@ -1664,3 +1721,6 @@ msgToString msg =
 
         DraggedOverCategoryForAWhile _ ->
             [ "DraggedOverCategoryForAWhile" ]
+
+        CompletedMovingCategory _ r ->
+            [ "CompletedMovingCategory", UR.remoteDataToString r ]
