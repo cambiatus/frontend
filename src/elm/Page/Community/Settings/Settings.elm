@@ -103,6 +103,9 @@ viewSettingsList shared community =
 
           else
             text ""
+
+        -- TODO - I18N
+        , settingCard "Shop categories" (t "menu.edit") "What kinds of items people can put for sale" Route.CommunitySettingsShopCategories
         , settingCard (t "settings.contacts.title") (t "menu.edit") (t "settings.contacts.description") Route.CommunitySettingsContacts
         , settingCard (t "settings.features.title") (t "menu.edit") (t "settings.features.description") Route.CommunitySettingsFeatures
         , if Maybe.Extra.isJust community.contributionConfiguration then
