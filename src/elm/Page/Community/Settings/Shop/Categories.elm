@@ -169,6 +169,27 @@ update msg model loggedIn =
 
                     else
                         EverySet.insert categoryId model.expandedCategories
+                , newCategoryState =
+                    case model.newCategoryState of
+                        NotEditing ->
+                            NotEditing
+
+                        EditingNewCategory { parent } ->
+                            case parent of
+                                Nothing ->
+                                    model.newCategoryState
+
+                                Just parentId ->
+                                    getCategoryZipper categoryId
+                                        |> Maybe.map
+                                            (\categoryZipper ->
+                                                if isAncestorOf parentId (Tree.Zipper.tree categoryZipper) then
+                                                    NotEditing
+
+                                                else
+                                                    model.newCategoryState
+                                            )
+                                        |> Maybe.withDefault model.newCategoryState
             }
                 |> UR.init
 
