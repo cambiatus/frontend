@@ -15,6 +15,7 @@ import Dict
 import Dnd
 import EverySet exposing (EverySet)
 import Form
+import Form.File
 import Form.RichText
 import Form.Text
 import Form.Validate
@@ -218,7 +219,12 @@ update msg model loggedIn =
                         | categoryModalState =
                             Open categoryId
                                 (Form.init
-                                    { name = category.name
+                                    { icon =
+                                        Form.File.initSingle
+                                            { fileUrl = category.icon
+                                            , aspectRatio = Just 1
+                                            }
+                                    , name = category.name
                                     , description =
                                         Form.RichText.initModel
                                             ("update-category-description-" ++ Shop.Category.idToString categoryId)
@@ -394,7 +400,8 @@ update msg model loggedIn =
                         |> UR.addExt
                             (LoggedIn.mutation loggedIn
                                 (Shop.Category.update (Tree.Zipper.label zipper)
-                                    { name = formOutput.name
+                                    { icon = formOutput.icon
+                                    , name = formOutput.name
                                     , slug = formOutput.slug
                                     , description = formOutput.description
                                     }
@@ -1565,6 +1572,7 @@ viewShareCategoryPreview community values =
         , div [ class "isolate mr-3 z-10 ml-auto w-full sm:w-3/4 md:w-2/3 border border-gray-300 rounded-large relative before:absolute before:bg-white before:border-t before:border-r before:border-gray-300 before:-top-px before:rounded-br-super before:rounded-tr-sm before:-right-2 before:w-8 before:h-4 before:-z-10" ]
             [ div [ class "bg-white p-1 rounded-large" ]
                 [ div [ class "flex w-full bg-gray-100 rounded-large" ]
+                    -- TODO - Display the category image/icon if it has one
                     [ div [ class "bg-gray-200 p-6 rounded-l-large w-1/4 flex-shrink-0 grid place-items-center" ]
                         [ Icons.image "" ]
                     , div [ class "py-2 mx-4 w-full" ]
@@ -1646,13 +1654,15 @@ newCategoryForm translators =
 
 
 type alias UpdateCategoryFormInput =
-    { name : String
+    { icon : Form.File.SingleModel
+    , name : String
     , description : Form.RichText.Model
     }
 
 
 type alias UpdateCategoryFormOutput =
     { id : Shop.Category.Id
+    , icon : Maybe String
     , name : String
     , slug : Slug
     , description : Markdown
@@ -1662,13 +1672,34 @@ type alias UpdateCategoryFormOutput =
 updateCategoryForm : Translation.Translators -> Shop.Category.Id -> Form.Form msg UpdateCategoryFormInput UpdateCategoryFormOutput
 updateCategoryForm translators id =
     Form.succeed
-        (\{ name, slug } description ->
-            { name = name
+        (\icon { name, slug } description ->
+            { id = id
+            , icon = icon
+            , name = name
             , slug = slug
             , description = description
-            , id = id
             }
         )
+        |> Form.with
+            (Form.File.init { id = "update-category-icon" }
+                |> Form.File.withImageClass "object-cover rounded-full w-20 h-20"
+                |> Form.File.withEntryContainerAttributes (\_ -> [ class "mx-auto rounded-full w-20 h-20" ])
+                |> Form.File.withAddImagesView (Form.File.defaultAddImagesView [ class "!rounded-full w-20 h-20" ])
+                |> Form.File.withAddImagesContainerAttributes [ class "mx-auto w-20 h-20" ]
+                |> Form.File.withImageCropperAttributes [ class "rounded-full" ]
+                |> Form.File.withContainerAttributes [ class "mb-10" ]
+                |> Form.File.withEditIconOverlay
+                -- TODO - I18N
+                |> Form.File.withLabel "Icon"
+                |> Form.file
+                    { parser = Ok
+                    , translators = translators
+                    , value = .icon
+                    , update = \newIcon values -> { values | icon = newIcon }
+                    , externalError = always Nothing
+                    }
+                |> Form.optional
+            )
         |> Form.with (nameAndSlugForm translators { nameFieldId = "update-category-name" })
         |> Form.with
             -- TODO - I18N
