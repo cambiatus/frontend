@@ -1,4 +1,19 @@
-module Shop.Category exposing (Id, Model, Tree, addChild, create, delete, encodeId, idSelectionSet, moveToRoot, selectionSet, treesSelectionSet, update, updateMetadata)
+module Shop.Category exposing
+    ( Id
+    , Model
+    , Tree
+    , addChild
+    , create
+    , delete
+    , encodeId
+    , idSelectionSet
+    , idToString
+    , moveToRoot
+    , selectionSet
+    , treesSelectionSet
+    , update
+    , updateMetadata
+    )
 
 import Cambiatus.Mutation
 import Cambiatus.Object
@@ -213,3 +228,8 @@ encodeId (Id id) =
 unwrapId : Id -> Int
 unwrapId (Id id) =
     id
+
+
+idToString : Id -> String
+idToString (Id id) =
+    String.fromInt id

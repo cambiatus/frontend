@@ -180,7 +180,7 @@ update msg model loggedIn =
                         , form =
                             Form.init
                                 { name = ""
-                                , description = Form.RichText.initModel "new-description-input" Nothing
+                                , description = Form.RichText.initModel (newDescriptionInputId maybeParentId) Nothing
                                 }
                         }
             }
@@ -198,7 +198,10 @@ update msg model loggedIn =
                             Open categoryId
                                 (Form.init
                                     { name = category.name
-                                    , description = Form.RichText.initModel "update-category-description" (Just category.description)
+                                    , description =
+                                        Form.RichText.initModel
+                                            ("update-category-description-" ++ Shop.Category.idToString categoryId)
+                                            (Just category.description)
                                     }
                                 )
                         , actionsDropdown = Nothing
@@ -300,7 +303,11 @@ update msg model loggedIn =
                 | newCategoryState =
                     EditingNewCategory
                         { parent = category.parentId
-                        , form = Form.init { name = "", description = Form.RichText.initModel "new-description-input" Nothing }
+                        , form =
+                            Form.init
+                                { name = ""
+                                , description = Form.RichText.initModel (newDescriptionInputId category.parentId) Nothing
+                                }
                         }
             }
                 |> UR.init
@@ -910,6 +917,16 @@ updateDnd loggedIn ext ur =
 
         Dnd.DraggedOver OnRoot ->
             ur
+
+
+newDescriptionInputId : Maybe Shop.Category.Id -> String
+newDescriptionInputId maybeParentId =
+    case maybeParentId of
+        Nothing ->
+            "new-description-input-root"
+
+        Just parentId ->
+            "new-description-input-" ++ Shop.Category.idToString parentId
 
 
 
