@@ -21,8 +21,8 @@ import Form.Text
 import Form.Validate
 import Graphql.Http
 import Graphql.SelectionSet
-import Html exposing (Html, button, details, div, li, p, span, summary, text, ul)
-import Html.Attributes exposing (class, classList, id, type_)
+import Html exposing (Html, button, details, div, img, li, p, span, summary, text, ul)
+import Html.Attributes exposing (alt, class, classList, id, src, type_)
 import Html.Attributes.Aria exposing (ariaHidden)
 import Html.Events exposing (onClick)
 import Icons
@@ -1504,7 +1504,7 @@ viewCategoryMetadataModal translators community category formModel =
             , Form.viewWithoutSubmit [ class "mt-2" ]
                 translators
                 (\_ -> [])
-                (metadataForm translators community category.id)
+                (metadataForm translators community category)
                 formModel
                 { toMsg = GotMetadataFormMsg }
             ]
@@ -1519,7 +1519,7 @@ viewCategoryMetadataModal translators community category formModel =
                 , button
                     [ class "button button-primary w-full sm:w-40"
                     , onClick
-                        (Form.parse (metadataForm translators community category.id)
+                        (Form.parse (metadataForm translators community category)
                             formModel
                             { onError = GotMetadataFormMsg
                             , onSuccess = SubmittedMetadataForm
@@ -1568,8 +1568,8 @@ viewConfirmDeleteCategoryModal categoryId =
         |> Modal.toHtml
 
 
-viewShareCategoryPreview : Community.Model -> MetadataFormInput -> Html msg
-viewShareCategoryPreview community values =
+viewShareCategoryPreview : Community.Model -> Shop.Category.Model -> MetadataFormInput -> Html msg
+viewShareCategoryPreview community category values =
     div []
         [ -- TODO - I18N
           p [ class "label" ] [ text "Preview" ]
@@ -1579,9 +1579,18 @@ viewShareCategoryPreview community values =
         , div [ class "isolate mr-3 z-10 ml-auto w-full sm:w-3/4 md:w-2/3 border border-gray-300 rounded-large relative before:absolute before:bg-white before:border-t before:border-r before:border-gray-300 before:-top-px before:rounded-br-super before:rounded-tr-sm before:-right-2 before:w-8 before:h-4 before:-z-10" ]
             [ div [ class "bg-white p-1 rounded-large" ]
                 [ div [ class "flex w-full bg-gray-100 rounded-large" ]
-                    -- TODO - Display the category image/icon if it has one
-                    [ div [ class "bg-gray-200 p-6 rounded-l-large w-1/4 flex-shrink-0 grid place-items-center" ]
-                        [ Icons.image "" ]
+                    [ case Maybe.Extra.or category.image category.icon of
+                        Nothing ->
+                            div [ class "bg-gray-200 p-6 rounded-l-large w-1/4 flex-shrink-0 grid place-items-center" ]
+                                [ Icons.image "" ]
+
+                        Just previewImage ->
+                            img
+                                [ src previewImage
+                                , alt ""
+                                , class "bg-gray-100 rounded-l-large w-1/4 flex-shrink-0 object-contain"
+                                ]
+                                []
                     , div [ class "py-2 mx-4 w-full" ]
                         [ if String.isEmpty values.metaTitle then
                             div [ class "w-3/4 bg-gray-300 rounded font-bold" ]
@@ -1762,11 +1771,11 @@ type alias MetadataFormOutput =
     }
 
 
-metadataForm : Translation.Translators -> Community.Model -> Shop.Category.Id -> Form.Form msg MetadataFormInput MetadataFormOutput
-metadataForm translators community categoryId =
+metadataForm : Translation.Translators -> Community.Model -> Shop.Category.Model -> Form.Form msg MetadataFormInput MetadataFormOutput
+metadataForm translators community category =
     Form.succeed
         (\metaTitle metaDescription metaKeywords ->
-            { id = categoryId
+            { id = category.id
             , metaTitle = metaTitle
             , metaDescription = metaDescription
             , metaKeywords = metaKeywords
@@ -1822,7 +1831,10 @@ metadataForm translators community categoryId =
                     , externalError = always Nothing
                     }
             )
-        |> Form.withNoOutput ((viewShareCategoryPreview community >> Form.arbitrary) |> Form.introspect)
+        |> Form.withNoOutput
+            (Form.introspect
+                (\values -> Form.arbitrary (viewShareCategoryPreview community category values))
+            )
 
 
 nameAndSlugForm : Translation.Translators -> { nameFieldId : String } -> Form.Form msg { values | name : String } { name : String, slug : Slug }
