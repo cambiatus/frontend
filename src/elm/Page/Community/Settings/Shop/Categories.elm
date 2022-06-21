@@ -299,17 +299,7 @@ update msg model loggedIn =
                         _ ->
                             identity
             in
-            { model
-                | newCategoryState =
-                    EditingNewCategory
-                        { parent = category.parentId
-                        , form =
-                            Form.init
-                                { name = ""
-                                , description = Form.RichText.initModel (newDescriptionInputId category.parentId) Nothing
-                                }
-                        }
-            }
+            { model | newCategoryState = NotEditing }
                 |> UR.init
                 |> insertInCommunity
 
