@@ -229,6 +229,11 @@ update msg model loggedIn =
                                         Form.RichText.initModel
                                             ("update-category-description-" ++ Shop.Category.idToString categoryId)
                                             (Just category.description)
+                                    , image =
+                                        Form.File.initSingle
+                                            { fileUrl = category.image
+                                            , aspectRatio = Nothing
+                                            }
                                     }
                                 )
                         , actionsDropdown = Nothing
@@ -404,6 +409,7 @@ update msg model loggedIn =
                                     , name = formOutput.name
                                     , slug = formOutput.slug
                                     , description = formOutput.description
+                                    , image = formOutput.image
                                     }
                                     Shop.Category.selectionSet
                                 )
@@ -1450,6 +1456,7 @@ viewCategoryModal translators category formModel =
         -- TODO - I18N
         |> Modal.withHeader "Editing category"
         |> Modal.withBody
+            -- TODO - Add some description - "Edit icon, name, description and image"
             [ Form.viewWithoutSubmit [ class "mt-2" ]
                 translators
                 (\_ -> [])
@@ -1657,6 +1664,7 @@ type alias UpdateCategoryFormInput =
     { icon : Form.File.SingleModel
     , name : String
     , description : Form.RichText.Model
+    , image : Form.File.SingleModel
     }
 
 
@@ -1666,18 +1674,20 @@ type alias UpdateCategoryFormOutput =
     , name : String
     , slug : Slug
     , description : Markdown
+    , image : Maybe String
     }
 
 
 updateCategoryForm : Translation.Translators -> Shop.Category.Id -> Form.Form msg UpdateCategoryFormInput UpdateCategoryFormOutput
 updateCategoryForm translators id =
     Form.succeed
-        (\icon { name, slug } description ->
+        (\icon { name, slug } description image ->
             { id = id
             , icon = icon
             , name = name
             , slug = slug
             , description = description
+            , image = image
             }
         )
         |> Form.with
@@ -1704,7 +1714,7 @@ updateCategoryForm translators id =
         |> Form.with
             -- TODO - I18N
             (Form.RichText.init { label = "Description" }
-                |> Form.RichText.withContainerAttrs [ class "mb-0" ]
+                |> Form.RichText.withContainerAttrs [ class "mb-10" ]
                 |> Form.richText
                     { parser =
                         Form.Validate.succeed
@@ -1714,6 +1724,24 @@ updateCategoryForm translators id =
                     , update = \newDescription values -> { values | description = newDescription }
                     , externalError = always Nothing
                     }
+            )
+        |> Form.with
+            (Form.File.init { id = "update-category-image" }
+                -- TODO - I18N
+                |> Form.File.withLabel "Image"
+                |> Form.File.withContainerAttributes [ class "w-full" ]
+                |> Form.File.withAddImagesContainerAttributes [ class "!w-full" ]
+                |> Form.File.withAddImagesView (Form.File.defaultAddImagesView [ class "!w-full min-h-48" ])
+                |> Form.File.withImageClass "rounded-md"
+                |> Form.File.withEditIconOverlay
+                |> Form.file
+                    { parser = Ok
+                    , translators = translators
+                    , value = .image
+                    , update = \newImage values -> { values | image = newImage }
+                    , externalError = always Nothing
+                    }
+                |> Form.optional
             )
 
 

@@ -71,15 +71,16 @@ create { name, slug, description, parentId } =
 
 update :
     Model
-    -> { icon : Maybe String, name : String, description : Markdown, slug : Slug }
+    -> { icon : Maybe String, name : String, description : Markdown, slug : Slug, image : Maybe String }
     -> SelectionSet decodesTo Cambiatus.Object.Category
     -> SelectionSet (Maybe decodesTo) RootMutation
-update model { icon, name, description, slug } =
+update model { icon, name, description, slug, image } =
     Cambiatus.Mutation.category
         (\optionals ->
             { optionals
                 | id = OptionalArgument.Present (unwrapId model.id)
                 , iconUri = OptionalArgument.fromMaybeWithNull icon
+                , imageUri = OptionalArgument.fromMaybeWithNull image
                 , slug = OptionalArgument.Present (Slug.toString slug)
                 , name = OptionalArgument.Present name
                 , description = OptionalArgument.Present (Markdown.toRawString description)
