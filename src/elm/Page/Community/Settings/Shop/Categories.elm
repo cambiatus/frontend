@@ -1040,10 +1040,10 @@ view_ translators community model categories =
                             categories
                         )
             , viewAddCategory translators
-                (class "w-full border border-dashed border-transparent"
+                (class "w-full border border-transparent"
                     :: classList
                         [ ( "bg-green/30", isDraggingSomething )
-                        , ( "border-black", isDraggingSomething && isDraggingOverAddCategory )
+                        , ( "!border-black border-dashed", isDraggingSomething && isDraggingOverAddCategory )
                         ]
                     :: Dnd.dropZone OnRoot GotDndMsg
                 )
@@ -1196,7 +1196,7 @@ viewCategoryWithChildren translators model zipper children =
                     False
     in
     div
-        (class "transition-colors select-none rounded-sm border border-dashed border-transparent"
+        (class "transition-colors rounded-sm border border-dashed border-transparent"
             :: classList
                 [ ( "bg-gray-300 rounded-sm cursor-wait", EverySet.member category.id model.deleting )
                 , ( "!bg-green/30", isValidDropzone && isDraggingSomething )
@@ -1246,7 +1246,12 @@ viewCategoryWithChildren translators model zipper children =
         ]
 
 
-viewAddCategory : Translation.Translators -> List (Html.Attribute Msg) -> Model -> Maybe Shop.Category.Model -> Html Msg
+viewAddCategory :
+    Translation.Translators
+    -> List (Html.Attribute Msg)
+    -> Model
+    -> Maybe Shop.Category.Model
+    -> Html Msg
 viewAddCategory translators attrs model maybeParentCategory =
     let
         parentId =
@@ -1275,7 +1280,7 @@ viewAddCategory translators attrs model maybeParentCategory =
 
         EditingNewCategory newCategoryData ->
             if newCategoryData.parent == parentId then
-                Form.view (class "bg-white border border-gray-300 rounded-md p-4" :: attrs)
+                Form.view (class "border !border-gray-300 rounded-md p-4" :: attrs)
                     translators
                     (\submitButton ->
                         [ div [ class "flex flex-col sm:flex-row justify-end gap-4 mt-10" ]
