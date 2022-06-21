@@ -1374,7 +1374,7 @@ viewActions model zipper =
                 ]
                 [ li []
                     [ viewAction []
-                        { icon = Icons.edit
+                        { icon = Icons.edit "w-4 ml-1 mr-3"
 
                         -- TODO - I18N
                         , label = "Edit main information"
@@ -1383,7 +1383,7 @@ viewActions model zipper =
                     ]
                 , li []
                     [ viewAction []
-                        { icon = Icons.edit
+                        { icon = Icons.edit "w-4 ml-1 mr-3"
 
                         -- TODO - I18N
                         , label = "Edit sharing data"
@@ -1393,8 +1393,7 @@ viewActions model zipper =
                 , if canGoUp then
                     li []
                         [ viewAction []
-                            -- TODO - Use correct icon
-                            { icon = \classes -> Icons.arrowDown ("rotate-180 " ++ classes)
+                            { icon = Icons.arrowDown "rotate-180 w-6 mr-2"
                             , label = "Move up"
                             , onClickMsg = ClickedMoveUp category.id
                             }
@@ -1405,8 +1404,7 @@ viewActions model zipper =
                 , if canGoDown then
                     li []
                         [ viewAction []
-                            -- TODO - Use correct icon
-                            { icon = Icons.arrowDown
+                            { icon = Icons.arrowDown "w-6 mr-2"
                             , label = "Move down"
                             , onClickMsg = ClickedMoveDown category.id
                             }
@@ -1416,7 +1414,7 @@ viewActions model zipper =
                     text ""
                 , li []
                     [ viewAction [ class "text-red hover:bg-red/10" ]
-                        { icon = Icons.trash
+                        { icon = Icons.trash "w-4 ml-1 mr-3"
 
                         -- TODO - I18N
                         , label = "Delete"
@@ -1430,7 +1428,7 @@ viewActions model zipper =
 viewAction :
     List (Html.Attribute Msg)
     ->
-        { icon : String -> Svg Msg
+        { icon : Svg Msg
         , label : String
         , onClickMsg : Msg
         }
@@ -1442,7 +1440,7 @@ viewAction containerAttrs { icon, label, onClickMsg } =
             :: Utils.onClickNoBubble onClickMsg
             :: containerAttrs
         )
-        [ icon "w-4 mr-2"
+        [ icon
         , text label
         ]
 
