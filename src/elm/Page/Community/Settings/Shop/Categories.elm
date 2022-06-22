@@ -970,10 +970,10 @@ view loggedIn model =
             [ Page.viewHeader loggedIn title
             , case Community.getField loggedIn.selectedCommunity .shopCategories of
                 RemoteData.NotAsked ->
-                    viewLoading
+                    viewLoading model
 
                 RemoteData.Loading ->
-                    viewLoading
+                    viewLoading model
 
                 RemoteData.Failure fieldErr ->
                     case fieldErr of
@@ -993,17 +993,23 @@ view loggedIn model =
     }
 
 
-viewPageContainer : { children : List (Html Msg), modals : List (Html Msg) } -> Html Msg
-viewPageContainer { children, modals } =
+viewPageContainer : { children : List (Html Msg), modals : List (Html Msg) } -> Model -> Html Msg
+viewPageContainer { children, modals } model =
     div [ class "container mx-auto sm:px-4 sm:mt-6 sm:mb-20" ]
-        (div [ class "bg-white container mx-auto pt-6 pb-7 px-4 w-full sm:px-6 sm:rounded sm:shadow-lg lg:w-2/3" ]
+        (div
+            [ class "bg-white container mx-auto pt-6 pb-7 w-full px-4 sm:px-6 sm:rounded sm:shadow-lg lg:w-2/3"
+            , classList
+                [ ( "overflow-x-scroll", Maybe.Extra.isNothing model.actionsDropdown )
+                , ( "overflow-x-hidden", Maybe.Extra.isJust model.actionsDropdown )
+                ]
+            ]
             children
             :: modals
         )
 
 
-viewLoading : Html Msg
-viewLoading =
+viewLoading : Model -> Html Msg
+viewLoading model =
     let
         viewBar : List (Html.Attribute Msg) -> Html Msg
         viewBar attributes =
@@ -1023,6 +1029,7 @@ viewLoading =
             , viewBar [ class "!mt-6" ]
             ]
         }
+        model
 
 
 view_ : Translation.Translators -> Community.Model -> Model -> List Shop.Category.Tree -> Html Msg
@@ -1064,7 +1071,7 @@ view_ translators community model categories =
                             categories
                         )
             , viewAddCategory translators
-                (class "w-full border border-transparent"
+                (class "w-full border border-transparent sticky left-0"
                     :: classList
                         [ ( "bg-green/30", isDraggingSomething )
                         , ( "!border-black border-dashed", isDraggingSomething && isDraggingOverAddCategory )
@@ -1105,6 +1112,7 @@ view_ translators community model categories =
                             viewCategoryMetadataModal translators community openCategory formModel
             ]
         }
+        model
 
 
 viewCategoryTree :
@@ -1127,7 +1135,7 @@ viewCategoryTree translators model rootZipper currentTree =
 viewCategory : Shop.Category.Model -> Html Msg
 viewCategory category =
     button
-        [ class "hover:underline"
+        [ class "hover:underline whitespace-nowrap"
         , Utils.onClickNoBubble (ClickedCategory category.id)
         ]
         [ text category.name
@@ -1220,11 +1228,11 @@ viewCategoryWithChildren translators model zipper children =
                     False
     in
     div
-        (class "transition-colors rounded-sm border border-dashed border-transparent"
+        (class "transition-colors rounded-sm"
             :: classList
                 [ ( "bg-gray-300 rounded-sm cursor-wait", EverySet.member category.id model.deleting )
                 , ( "!bg-green/30", isValidDropzone && isDraggingSomething )
-                , ( "border-black", isValidDropzone && isDraggingSomething && isDraggingOver )
+                , ( "outline-black outline-offset-0", isValidDropzone && isDraggingSomething && isDraggingOver )
                 ]
             :: (if isValidDropzone then
                     Dnd.dropZone (OnTopOf category.id) GotDndMsg
@@ -1239,7 +1247,7 @@ viewCategoryWithChildren translators model zipper children =
 
               else
                 class ""
-            , class "parent"
+            , class "parent grand-parent"
             , classList [ ( "pointer-events-none", EverySet.member category.id model.deleting ) ]
             ]
             [ summary
@@ -1252,19 +1260,35 @@ viewCategoryWithChildren translators model zipper children =
                     :: onClick (ClickedToggleExpandCategory category.id)
                     :: Dnd.draggable category.id GotDndMsg
                 )
-                [ div [ class "flex items-center w-full" ]
+                [ div [ class "flex items-center sticky left-0 w-full" ]
                     [ Icons.arrowDown (String.join " " [ "transition-transform", openArrowClass ])
                     , viewCategory category
                     ]
-                , viewActions model zipper
+                , div
+                    [ class "sticky right-0 bg-white rounded-md transition-color"
+                    , classList
+                        [ ( "bg-transparent", isDraggingSomething )
+                        , ( "z-10", model.actionsDropdown == Just category.id )
+                        ]
+                    ]
+                    [ viewActions
+                        [ classList
+                            [ ( "!bg-green/20", isParentOfNewCategoryForm )
+                            , ( "grand-parent-3-hover:bg-orange-100/20", not isParentOfNewCategoryForm && not isDraggingSomething )
+                            , ( "bg-orange-100/20", hasActionsMenuOpen )
+                            ]
+                        ]
+                        model
+                        zipper
+                    ]
                 ]
-            , div [ class "ml-4 flex flex-col mb-4 mt-2" ]
+            , div [ class "ml-4 mb-4 mt-2" ]
                 [ ul
                     [ class "grid gap-y-2"
                     , classList [ ( "mb-2", not (List.isEmpty children) ) ]
                     ]
                     (List.map (\child -> li [] [ child ]) children)
-                , viewAddCategory translators [] model (Just category)
+                , viewAddCategory translators [ class "w-full sticky left-0" ] model (Just category)
                 ]
             ]
         ]
@@ -1331,8 +1355,8 @@ viewAddCategory translators attrs model maybeParentCategory =
                 viewAddCategoryButton attrs
 
 
-viewActions : Model -> Tree.Zipper.Zipper Shop.Category.Model -> Html Msg
-viewActions model zipper =
+viewActions : List (Html.Attribute Msg) -> Model -> Tree.Zipper.Zipper Shop.Category.Model -> Html Msg
+viewActions attrs model zipper =
     let
         category =
             Tree.Zipper.label zipper
@@ -1359,10 +1383,11 @@ viewActions model zipper =
     in
     div [ class "relative" ]
         [ button
-            [ class "h-8 px-2 rounded-sm transition-colors hover:bg-orange-300/30 active:bg-orange-300/60 action-opener"
-            , classList [ ( "bg-orange-300/60", isDropdownOpen ) ]
-            , Utils.onClickNoBubble (ClickedShowActionsDropdown category.id)
-            ]
+            (class "h-8 px-2 rounded-sm transition-colors hover:!bg-orange-300/30 active:!bg-orange-300/60 action-opener"
+                :: classList [ ( "bg-orange-300/60", isDropdownOpen ) ]
+                :: Utils.onClickNoBubble (ClickedShowActionsDropdown category.id)
+                :: attrs
+            )
             -- TODO - Use correct icon
             [ Icons.plus "h-4 pointer-events-none" ]
         , if not isDropdownOpen then
@@ -1370,7 +1395,7 @@ viewActions model zipper =
 
           else
             ul
-                [ class "absolute z-10 right-0 bg-white border border-gray-300 rounded-md p-2 text-sm shadow-lg animate-fade-in-from-above-sm"
+                [ class "absolute z-50 right-0 bg-white border border-gray-300 rounded-md p-2 text-sm shadow-lg animate-fade-in-from-above-sm"
                 ]
                 [ li []
                     [ viewAction []

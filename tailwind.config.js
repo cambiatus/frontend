@@ -279,6 +279,21 @@ module.exports = {
           )
         })
       })
+    },
+    // Create `grand-parent-*` variants. This works similar to `group-*` variants, but
+    // only works on direct children of the direct children of the `grand-parent` class.
+    function ({ addVariant, e }) {
+      const operations = ['hover']
+
+      operations.forEach((operation) => {
+        [1, 2, 3, 4, 5].forEach((level) => {
+          addVariant(`grand-parent-${level}-${operation}`, ({ modifySelectors, separator }) => {
+            modifySelectors(({ className }) =>
+              `.grand-parent:${operation}>${'*>'.repeat(level)}.grand-parent-${level}-${operation}${e(separator)}${e(className)}`
+            )
+          })
+        })
+      })
     }
   ],
   purge: [
