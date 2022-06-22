@@ -995,12 +995,12 @@ view loggedIn model =
 
 viewPageContainer : { children : List (Html Msg), modals : List (Html Msg) } -> Model -> Html Msg
 viewPageContainer { children, modals } model =
-    div [ class "container mx-auto sm:px-4 sm:mt-6 sm:mb-20" ]
+    div [ class "container mx-auto sm:px-4 sm:mt-6 sm:mb-20 overflow-x-hidden" ]
         (div
             [ class "bg-white container mx-auto pt-6 pb-7 w-full px-4 sm:px-6 sm:rounded sm:shadow-lg lg:w-2/3"
             , classList
                 [ ( "overflow-x-scroll", Maybe.Extra.isNothing model.actionsDropdown )
-                , ( "overflow-x-hidden", Maybe.Extra.isJust model.actionsDropdown )
+                , ( "overflow-y-visible", Maybe.Extra.isJust model.actionsDropdown )
                 ]
             ]
             children
@@ -1404,14 +1404,13 @@ viewActions attrs model zipper =
                 :: Utils.onClickNoBubble (ClickedShowActionsDropdown category.id)
                 :: attrs
             )
-            -- TODO - Use correct icon
-            [ Icons.plus "h-4 pointer-events-none" ]
+            [ Icons.ellipsis "h-4 pointer-events-none text-gray-800" ]
         , if not isDropdownOpen then
             text ""
 
           else
             ul
-                [ class "absolute z-50 right-0 bg-white border border-gray-300 rounded-md p-2 text-sm shadow-lg animate-fade-in-from-above-sm"
+                [ class "absolute right-0 bg-white border border-gray-300 rounded-md p-2 text-sm shadow-lg animate-fade-in-from-above-sm"
                 ]
                 [ li []
                     [ viewAction []

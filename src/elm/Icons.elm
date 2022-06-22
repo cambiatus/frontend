@@ -16,6 +16,7 @@ module Icons exposing
     , coin
     , coinHeart
     , edit
+    , ellipsis
     , exclamation
     , externalLink
     , flag
@@ -315,12 +316,18 @@ trash class_ =
 
 edit : String -> Svg msg
 edit class_ =
-    svg [ fill "currentCOlor", height "26", viewBox "0 0 24 26", width "24", class class_ ]
+    svg [ fill "currentColor", height "26", viewBox "0 0 24 26", width "24", class class_ ]
         [ Svg.path [ clipRule "evenodd", d "M20.3091 24.2273H1.84628V1.77273H12.3085V0H1.84628C0.826607 0 0 0.793677 0 1.77273V24.2273C0 25.2063 0.826607 26 1.84628 26H20.3091C21.3287 26 22.1553 25.2063 22.1553 24.2273V13H20.3091V24.2273Z", fill "currentColor", fillRule "evenodd" ]
             []
         , Svg.path [ clipRule "evenodd", d "M23.46 2.20989L22.1553 0.957161C21.4345 0.265907 20.2668 0.265907 19.5459 0.957161C19.5459 0.957161 9.28678 10.7958 9.13292 11.3926L8.67135 13.1653C8.51335 13.7699 8.69759 14.4096 9.15659 14.8503C9.61558 15.2911 10.2819 15.468 10.9115 15.3163L12.7578 14.8731C13.3732 14.7194 23.46 4.72125 23.46 4.72125C24.18 4.02914 24.18 2.90791 23.46 2.2158V2.20989ZM13.4901 11.7826L12.2285 10.5713L12.1854 10.5358L20.8506 2.2158L22.1553 3.46852L13.4901 11.7826Z", fill "currentColor", fillRule "evenodd" ]
             []
         ]
+
+
+ellipsis : String -> Svg msg
+ellipsis class_ =
+    svg [ width "32", height "32", viewBox "0 0 32 32", fill "none", class class_ ]
+        [ Svg.path [ d "M4 20C6.20934 20 8 18.2089 8 16C8 13.7907 6.20934 12 4 12C1.79066 12 0 13.7907 0 16C0 18.2089 1.79066 20 4 20Z", fill "currentColor" ] [], Svg.path [ d "M28 20C30.2089 20 32 18.2091 32 16C32 13.7909 30.2089 12 28 12C25.7907 12 24 13.7909 24 16C24 18.2091 25.7907 20 28 20Z", fill "currentColor" ] [], Svg.path [ d "M16 20C18.2089 20 20 18.2089 20 16C20 13.7907 18.2089 12 16 12C13.7907 12 12 13.7907 12 16C12 18.2089 13.7907 20 16 20Z", fill "currentColor" ] [] ]
 
 
 settings : String -> Svg msg
