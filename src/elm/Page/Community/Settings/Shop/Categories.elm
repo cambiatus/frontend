@@ -21,7 +21,7 @@ import Form.Text
 import Form.Validate
 import Graphql.Http
 import Graphql.SelectionSet
-import Html exposing (Html, button, details, div, img, li, p, span, summary, text, ul)
+import Html exposing (Html, button, details, div, h2, img, li, p, span, summary, text, ul)
 import Html.Attributes exposing (alt, class, classList, id, src, type_)
 import Html.Attributes.Aria exposing (ariaHidden)
 import Html.Events exposing (onClick)
@@ -1053,8 +1053,20 @@ view_ translators community model categories =
         { children =
             [ case categories of
                 [] ->
-                    -- TODO - Show something when there are no categories yet
-                    text ""
+                    div []
+                        [ img
+                            [ src "/images/not_found.svg"
+                            , alt ""
+                            , class "w-2/3 md:w-1/3 mx-auto"
+                            ]
+                            []
+                        , h2 [ class "w-full md:w-2/3 mx-auto font-bold text-lg text-center mt-4" ]
+                            -- TODO - I18N
+                            [ text "Looks like your community doesn't have any categories!" ]
+                        , p [ class "w-full md:w-2/3 mx-auto text-center mt-2 mb-6" ]
+                            -- TODO - I18N
+                            [ text "Get started by creating a new category below" ]
+                        ]
 
                 first :: others ->
                     let
@@ -1071,10 +1083,10 @@ view_ translators community model categories =
                             categories
                         )
             , viewAddCategory translators
-                (class "w-full border border-transparent sticky left-0"
+                (class "w-full sticky left-0"
                     :: classList
                         [ ( "bg-green/30", isDraggingSomething )
-                        , ( "!border-black border-dashed", isDraggingSomething && isDraggingOverAddCategory )
+                        , ( "outline-black outline-offset-0", isDraggingSomething && isDraggingOverAddCategory )
                         ]
                     :: Dnd.dropZone OnRoot GotDndMsg
                 )
@@ -1282,13 +1294,15 @@ viewCategoryWithChildren translators model zipper children =
                         zipper
                     ]
                 ]
-            , div [ class "ml-4 mb-4 mt-2" ]
+            , div [ class "ml-4 mt-2" ]
                 [ ul
                     [ class "grid gap-y-2"
                     , classList [ ( "mb-2", not (List.isEmpty children) ) ]
                     ]
                     (List.map (\child -> li [] [ child ]) children)
-                , viewAddCategory translators [ class "w-full sticky left-0" ] model (Just category)
+                ]
+            , div [ class "ml-4 mb-4" ]
+                [ viewAddCategory translators [ class "w-full" ] model (Just category)
                 ]
             ]
         ]
@@ -1311,15 +1325,17 @@ viewAddCategory translators attrs model maybeParentCategory =
                     :: onClick (ClickedAddCategory parentId)
                     :: customAttrs
                 )
-                [ Icons.plus "w-4 h-4 mr-2"
-                , case maybeParentCategory of
-                    Nothing ->
-                        -- TODO - I18N
-                        text "Add new category"
+                [ span [ class "sticky left-2 flex items-center" ]
+                    [ Icons.plus "w-4 h-4 mr-2"
+                    , case maybeParentCategory of
+                        Nothing ->
+                            -- TODO - I18N
+                            text "Add new category"
 
-                    Just { name } ->
-                        -- TODO - I18N
-                        text ("Add sub-category of " ++ name)
+                        Just { name } ->
+                            -- TODO - I18N
+                            text ("Add sub-category of " ++ name)
+                    ]
                 ]
     in
     case model.newCategoryState of
