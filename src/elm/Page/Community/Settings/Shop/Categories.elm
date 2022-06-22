@@ -9,6 +9,7 @@ module Page.Community.Settings.Shop.Categories exposing
     )
 
 import Api.Graphql.DeleteStatus
+import Browser.Dom
 import Browser.Events
 import Community
 import Dict
@@ -23,7 +24,7 @@ import Graphql.Http
 import Graphql.SelectionSet
 import Html exposing (Html, button, details, div, h2, img, li, p, span, summary, text, ul)
 import Html.Attributes exposing (alt, class, classList, id, src, type_)
-import Html.Attributes.Aria exposing (ariaHidden)
+import Html.Attributes.Aria exposing (ariaHasPopup, ariaHidden, ariaLabel)
 import Html.Events exposing (onClick)
 import Icons
 import Json.Decode
@@ -102,7 +103,8 @@ type CategoryFormState formInput
 
 
 type Msg
-    = PressedEsc
+    = NoOp
+    | PressedEsc
     | ClickedToggleExpandCategory Shop.Category.Id
     | ClickedAddCategory (Maybe Shop.Category.Id)
     | ClickedCancelAddCategory
@@ -153,6 +155,9 @@ update msg model loggedIn =
                     Nothing
     in
     case msg of
+        NoOp ->
+            UR.init model
+
         PressedEsc ->
             { model
                 | newCategoryState = NotEditing
@@ -207,6 +212,10 @@ update msg model loggedIn =
                         }
             }
                 |> UR.init
+                |> UR.addCmd
+                    (Browser.Dom.focus "new-category-name"
+                        |> Task.attempt (\_ -> NoOp)
+                    )
 
         ClickedCancelAddCategory ->
             { model | newCategoryState = NotEditing }
@@ -995,7 +1004,7 @@ view loggedIn model =
 
 viewPageContainer : { children : List (Html Msg), modals : List (Html Msg) } -> Model -> Html Msg
 viewPageContainer { children, modals } model =
-    div [ class "container mx-auto sm:px-4 sm:mt-6 sm:mb-20 overflow-x-hidden" ]
+    div [ class "container mx-auto sm:px-4 sm:mt-6 pb-40 overflow-x-hidden" ]
         (div
             [ class "bg-white container mx-auto pt-6 pb-7 w-full px-4 sm:px-6 sm:rounded sm:shadow-lg lg:w-2/3"
             , classList
@@ -1144,16 +1153,6 @@ viewCategoryTree translators model rootZipper currentTree =
         currentTree
 
 
-viewCategory : Shop.Category.Model -> Html Msg
-viewCategory category =
-    button
-        [ class "hover:underline whitespace-nowrap"
-        , Utils.onClickNoBubble (ClickedCategory category.id)
-        ]
-        [ text category.name
-        ]
-
-
 viewCategoryWithChildren : Translation.Translators -> Model -> Tree.Zipper.Zipper Shop.Category.Model -> List (Html Msg) -> Html Msg
 viewCategoryWithChildren translators model zipper children =
     let
@@ -1266,7 +1265,7 @@ viewCategoryWithChildren translators model zipper children =
                 (class "marker-hidden flex items-center rounded-sm transition-colors cursor-pointer"
                     :: classList
                         [ ( "!bg-green/20", isParentOfNewCategoryForm )
-                        , ( "parent-hover:bg-orange-100/20", not isParentOfNewCategoryForm && not isDraggingSomething )
+                        , ( "focus:bg-orange-100/20 focus-ring parent-hover:bg-orange-100/20", not isParentOfNewCategoryForm && not isDraggingSomething )
                         , ( "bg-orange-100/20", hasActionsMenuOpen )
                         ]
                     :: onClick (ClickedToggleExpandCategory category.id)
@@ -1274,7 +1273,15 @@ viewCategoryWithChildren translators model zipper children =
                 )
                 [ div [ class "flex items-center sticky left-0 w-full" ]
                     [ Icons.arrowDown (String.join " " [ "transition-transform", openArrowClass ])
-                    , viewCategory category
+                    , button
+                        [ class "hover:underline focus-ring whitespace-nowrap"
+                        , Utils.onClickNoBubble (ClickedCategory category.id)
+
+                        -- TODO - I18N
+                        , ariaLabel (category.name ++ " - Click to edit")
+                        ]
+                        [ text category.name
+                        ]
                     ]
                 , div
                     [ class "sticky right-0 bg-white rounded-md transition-color"
@@ -1321,7 +1328,8 @@ viewAddCategory translators attrs model maybeParentCategory =
 
         viewAddCategoryButton customAttrs =
             button
-                (class "flex items-center px-2 h-8 font-bold transition-colors hover:bg-orange-100/20 rounded-sm whitespace-nowrap"
+                (class "flex items-center px-2 h-8 font-bold transition-colors hover:bg-orange-100/20 rounded-sm whitespace-nowrap focus:bg-orange-100/20 focus-ring"
+                    :: type_ "button"
                     :: onClick (ClickedAddCategory parentId)
                     :: customAttrs
                 )
@@ -1399,9 +1407,12 @@ viewActions attrs model zipper =
     in
     div [ class "relative" ]
         [ button
-            (class "h-8 px-2 rounded-sm transition-colors hover:!bg-orange-300/30 active:!bg-orange-300/60 action-opener"
+            (class "h-8 px-2 rounded-sm transition-colors hover:!bg-orange-300/30 active:!bg-orange-300/60 action-opener focus-ring focus:bg-orange-300/30"
                 :: classList [ ( "bg-orange-300/60", isDropdownOpen ) ]
                 :: Utils.onClickNoBubble (ClickedShowActionsDropdown category.id)
+                :: ariaHasPopup "true"
+                -- TODO - I18N
+                :: ariaLabel ("Actions for " ++ category.name)
                 :: attrs
             )
             [ Icons.ellipsis "h-4 pointer-events-none text-gray-800" ]
@@ -1453,7 +1464,7 @@ viewActions attrs model zipper =
                   else
                     text ""
                 , li []
-                    [ viewAction [ class "text-red hover:bg-red/10" ]
+                    [ viewAction [ class "text-red hover:bg-red/10 focus:bg-red/10" ]
                         { icon = Icons.trash "w-4 ml-1 mr-3"
 
                         -- TODO - I18N
@@ -1474,9 +1485,8 @@ viewAction :
         }
     -> Html Msg
 viewAction containerAttrs { icon, label, onClickMsg } =
-    -- TODO - Focus classes
     button
-        (class "flex items-center w-full pl-2 pr-8 py-1 rounded-md transition-colors whitespace-nowrap font-bold class hover:bg-gray-200"
+        (class "flex items-center w-full pl-2 pr-8 py-1 rounded-md transition-colors whitespace-nowrap font-bold class hover:bg-gray-200 focus:bg-gray-200 focus-ring"
             :: Utils.onClickNoBubble onClickMsg
             :: containerAttrs
         )
@@ -2072,6 +2082,9 @@ isAncestorOf childId parentTree =
 msgToString : Msg -> List String
 msgToString msg =
     case msg of
+        NoOp ->
+            [ "NoOp" ]
+
         PressedEsc ->
             [ "PressedEsc" ]
 

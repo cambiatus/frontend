@@ -270,7 +270,7 @@ module.exports = {
     // Create `parent-*` variants. This works similar to `group-*` variants, but
     // only works on direct children of the `parent` class.
     function ({ addVariant, e }) {
-      const operations = ['hover']
+      const operations = ['hover', 'focus']
 
       operations.forEach((operation) => {
         addVariant(`parent-${operation}`, ({ modifySelectors, separator }) => {
