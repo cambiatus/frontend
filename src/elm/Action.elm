@@ -162,8 +162,11 @@ update isPinConfirmed permissions shared selectedCommunity accName msg model =
             , proof :
                 Maybe
                     { photo : String
-                    , code : String
-                    , time : Time.Posix
+                    , proofCode :
+                        Maybe
+                            { code : String
+                            , time : Time.Posix
+                            }
                     }
             }
             -> Model
@@ -234,8 +237,11 @@ update isPinConfirmed permissions shared selectedCommunity accName msg model =
                                 , proof =
                                     Just
                                         { photo = image
-                                        , code = code
-                                        , time = time
+                                        , proofCode =
+                                            Just
+                                                { code = code
+                                                , time = time
+                                                }
                                         }
                                 }
 
@@ -839,8 +845,11 @@ type alias ClaimedAction =
     , proof :
         Maybe
             { photo : String
-            , code : String
-            , time : Time.Posix
+            , proofCode :
+                Maybe
+                    { code : String
+                    , time : Time.Posix
+                    }
             }
     }
 
@@ -853,15 +862,22 @@ encodeClaimAction c =
                 |> Maybe.map getter
                 |> Maybe.withDefault default
                 |> encoder
+
+        encodeProofCodeItem getter default encoder =
+            c.proof
+                |> Maybe.andThen .proofCode
+                |> Maybe.map getter
+                |> Maybe.withDefault default
+                |> encoder
     in
     Encode.object
         [ ( "community_id", Eos.encodeSymbol c.communityId )
         , ( "action_id", Encode.int c.actionId )
         , ( "maker", Eos.encodeName c.claimer )
         , ( "proof_photo", encodeProofItem .photo "" Encode.string )
-        , ( "proof_code", encodeProofItem .code "" Encode.string )
+        , ( "proof_code", encodeProofCodeItem .code "" Encode.string )
         , ( "proof_time"
-          , encodeProofItem (.time >> Time.posixToMillis >> (\time -> time // 1000))
+          , encodeProofCodeItem (.time >> Time.posixToMillis >> (\time -> time // 1000))
                 0
                 Encode.int
           )

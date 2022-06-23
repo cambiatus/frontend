@@ -76,7 +76,8 @@ type Proof
 
 
 type ProofCode
-    = GeneratingCode
+    = NoCodeNecessary
+    | GeneratingCode
     | WithCode
         { code : String
         , expiration : Time.Posix
@@ -251,7 +252,12 @@ update msg model loggedIn =
                                                                     |> Form.File.initSingle
                                                                     |> Form.init
                                                                 )
-                                                                GeneratingCode
+                                                                (if action.hasProofCode then
+                                                                    GeneratingCode
+
+                                                                 else
+                                                                    NoCodeNecessary
+                                                                )
 
                                                         else
                                                             NoProofNecessary
@@ -470,25 +476,26 @@ update msg model loggedIn =
                                 |> Form.File.initSingle
                                 |> Form.init
                             )
-                            GeneratingCode
+                            (if action.hasProofCode then
+                                GeneratingCode
+
+                             else
+                                NoCodeNecessary
+                            )
 
                     else
                         NoProofNecessary
 
                 generateProofCodePort =
-                    if action.hasProofPhoto then
-                        UR.addPort
-                            { responseAddress = msg
-                            , responseData = Encode.null
-                            , data =
-                                Encode.object
-                                    [ ( "name", Encode.string "accountNameToUint64" )
-                                    , ( "accountName", Eos.Account.encodeName loggedIn.accountName )
-                                    ]
-                            }
-
-                    else
-                        identity
+                    UR.addPort
+                        { responseAddress = msg
+                        , responseData = Encode.null
+                        , data =
+                            Encode.object
+                                [ ( "name", Encode.string "accountNameToUint64" )
+                                , ( "accountName", Eos.Account.encodeName loggedIn.accountName )
+                                ]
+                        }
             in
             { model
                 | claimingStatus =
@@ -652,9 +659,9 @@ update msg model loggedIn =
             case model.claimingStatus of
                 Claiming { action, proof } ->
                     case proof of
-                        WithProof _ (WithCode { code, generation }) ->
-                            UR.init model
-                                |> UR.addPort
+                        WithProof _ proofCode ->
+                            let
+                                claimPort maybeProofCode =
                                     { responseAddress = msg
                                     , responseData = Encode.null
                                     , data =
@@ -673,17 +680,39 @@ update msg model loggedIn =
                                                         , proof =
                                                             Just
                                                                 { photo = proofUrl
-                                                                , code = code
-                                                                , time = generation
+                                                                , proofCode = maybeProofCode
                                                                 }
                                                         }
                                               }
                                             ]
                                     }
-                                |> LoggedIn.withPrivateKey loggedIn
-                                    [ Permission.Claim ]
-                                    model
-                                    { successMsg = msg, errorMsg = NoOp }
+                            in
+                            case proofCode of
+                                GeneratingCode ->
+                                    UR.init model
+
+                                NoCodeNecessary ->
+                                    UR.init model
+                                        |> UR.addPort (claimPort Nothing)
+                                        |> LoggedIn.withPrivateKey loggedIn
+                                            [ Permission.Claim ]
+                                            model
+                                            { successMsg = msg, errorMsg = NoOp }
+
+                                WithCode { code, generation } ->
+                                    UR.init model
+                                        |> UR.addPort
+                                            (claimPort
+                                                (Just
+                                                    { code = code
+                                                    , time = generation
+                                                    }
+                                                )
+                                            )
+                                        |> LoggedIn.withPrivateKey loggedIn
+                                            [ Permission.Claim ]
+                                            model
+                                            { successMsg = msg, errorMsg = NoOp }
 
                         _ ->
                             UR.init model
@@ -747,11 +776,15 @@ update msg model loggedIn =
                                         , action = action
                                         , proof =
                                             WithProof formModel
-                                                (WithCode
-                                                    { code = proofCode
-                                                    , expiration = expiration
-                                                    , generation = loggedIn.shared.now
-                                                    }
+                                                (if action.hasProofCode then
+                                                    WithCode
+                                                        { code = proofCode
+                                                        , expiration = expiration
+                                                        , generation = loggedIn.shared.now
+                                                        }
+
+                                                 else
+                                                    NoCodeNecessary
                                                 )
                                         }
                             }
@@ -1418,6 +1451,9 @@ viewClaimModal ({ translators } as shared) model =
                             let
                                 timeLeft =
                                     case proofCode of
+                                        NoCodeNecessary ->
+                                            Nothing
+
                                         GeneratingCode ->
                                             Nothing
 
@@ -1455,32 +1491,41 @@ viewClaimModal ({ translators } as shared) model =
 
                                     Nothing ->
                                         p [] [ text <| t "community.actions.proof.upload_hint" ]
-                                , div [ class "p-4 mt-4 bg-gray-100 rounded-sm flex flex-col items-center justify-center md:w-1/2 md:mx-auto" ]
-                                    [ span [ class "uppercase text-gray-333 font-bold text-sm" ]
-                                        [ text <| t "community.actions.form.verification_code" ]
-                                    , case proofCode of
-                                        GeneratingCode ->
-                                            span [ class "bg-gray-333 animate-skeleton-loading h-10 w-44 mt-2" ] []
+                                , case proofCode of
+                                    NoCodeNecessary ->
+                                        text ""
 
-                                        WithCode { code } ->
-                                            span [ class "font-bold text-xl text-gray-333" ] [ text code ]
-                                    ]
-                                , p
-                                    [ class "text-purple-500 text-center mt-4"
-                                    , classList [ ( "text-red", isTimeOver ) ]
-                                    ]
-                                    [ text <| t "community.actions.proof.code_period_label"
-                                    , text " "
-                                    , span [ class "font-bold" ]
-                                        [ case timeLeft of
-                                            Nothing ->
-                                                text "30:00"
+                                    GeneratingCode ->
+                                        div [ class "p-4 mt-4 bg-gray-100 rounded-sm flex flex-col items-center justify-center md:w-1/2 md:mx-auto" ]
+                                            [ span [ class "uppercase text-gray-333 font-bold text-sm" ]
+                                                [ text <| t "community.actions.form.verification_code" ]
+                                            , span [ class "bg-gray-333 animate-skeleton-loading h-10 w-44 mt-2" ] []
+                                            ]
 
-                                            Just { minutes, seconds } ->
-                                                (Utils.padInt 2 minutes ++ ":" ++ Utils.padInt 2 seconds)
-                                                    |> text
-                                        ]
-                                    ]
+                                    WithCode { code } ->
+                                        div []
+                                            [ div [ class "p-4 mt-4 bg-gray-100 rounded-sm flex flex-col items-center justify-center md:w-1/2 md:mx-auto" ]
+                                                [ span [ class "uppercase text-gray-333 font-bold text-sm" ]
+                                                    [ text <| t "community.actions.form.verification_code" ]
+                                                , span [ class "font-bold text-xl text-gray-333" ] [ text code ]
+                                                ]
+                                            , p
+                                                [ class "text-purple-500 text-center mt-4"
+                                                , classList [ ( "text-red", isTimeOver ) ]
+                                                ]
+                                                [ text <| t "community.actions.proof.code_period_label"
+                                                , text " "
+                                                , span [ class "font-bold" ]
+                                                    [ case timeLeft of
+                                                        Nothing ->
+                                                            text "30:00"
+
+                                                        Just { minutes, seconds } ->
+                                                            (Utils.padInt 2 minutes ++ ":" ++ Utils.padInt 2 seconds)
+                                                                |> text
+                                                    ]
+                                                ]
+                                            ]
                                 , Form.viewWithoutSubmit [ class "mb-6" ]
                                     translators
                                     (\_ -> [])
