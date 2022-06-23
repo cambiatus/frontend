@@ -119,7 +119,12 @@ initFormInput shared maybeAction =
                 |> Form.RichText.initModel "description-editor"
         , reward =
             maybeAction
-                |> Maybe.map (.reward >> String.fromFloat)
+                |> Maybe.map
+                    (\action ->
+                        Eos.formatSymbolAmount shared.translators
+                            action.objective.community.symbol
+                            action.reward
+                    )
                 |> Maybe.withDefault ""
         , useDateValidation =
             maybeAction
@@ -173,7 +178,12 @@ initFormInput shared maybeAction =
                     }
             , verifierReward =
                 maybeAction
-                    |> Maybe.map (.verifierReward >> String.fromFloat)
+                    |> Maybe.map
+                        (\action ->
+                            Eos.formatSymbolAmount shared.translators
+                                action.objective.community.symbol
+                                action.verifierReward
+                        )
                     |> Maybe.withDefault ""
             , fileValidation =
                 { useFileValidation =
