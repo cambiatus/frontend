@@ -476,27 +476,8 @@ update msg model loggedIn =
             UR.init model
 
         ClickedDeleteCategory categoryId ->
-            case getCategoryZipper categoryId of
-                Nothing ->
-                    model
-                        |> UR.init
-
-                Just zipper ->
-                    if List.isEmpty (Tree.Zipper.children zipper) then
-                        { model | deleting = EverySet.insert categoryId model.deleting }
-                            |> UR.init
-                            |> UR.addExt
-                                (LoggedIn.mutation
-                                    loggedIn
-                                    (Api.Graphql.DeleteStatus.selectionSet
-                                        (Shop.Category.delete categoryId)
-                                    )
-                                    (CompletedDeletingCategory categoryId)
-                                )
-
-                    else
-                        { model | askingForDeleteConfirmation = Just categoryId }
-                            |> UR.init
+            { model | askingForDeleteConfirmation = Just categoryId }
+                |> UR.init
 
         ClosedConfirmDeleteModal ->
             { model | askingForDeleteConfirmation = Nothing }
@@ -607,9 +588,8 @@ update msg model loggedIn =
                         | categoryMetadataModalState =
                             Open categoryId
                                 (Form.init
-                                    -- TODO - Use category title and description
-                                    { metaTitle = Maybe.withDefault "" category.metaTitle
-                                    , metaDescription = Maybe.withDefault "" category.metaDescription
+                                    { metaTitle = Maybe.withDefault category.name category.metaTitle
+                                    , metaDescription = Maybe.withDefault (Markdown.toUnformattedString category.description) category.metaDescription
                                     , metaKeywords = Maybe.withDefault "" category.metaKeywords
                                     }
                                 )
@@ -1829,7 +1809,7 @@ metadataForm translators community category =
             )
         |> Form.with
             (Form.Text.init
-                { label = translators.t "shop.categories.meta.keywords"
+                { label = translators.t "shop.categories.fields.meta.keywords"
                 , id = "meta-keywords-input"
                 }
                 |> Form.textField
