@@ -23,7 +23,7 @@ import Form.Validate
 import Graphql.Http
 import Graphql.SelectionSet
 import Html exposing (Html, button, details, div, h2, img, li, p, span, summary, text, ul)
-import Html.Attributes exposing (alt, class, classList, id, src, type_)
+import Html.Attributes exposing (alt, class, classList, disabled, id, src, type_)
 import Html.Attributes.Aria exposing (ariaHasPopup, ariaHidden, ariaLabel)
 import Html.Events exposing (onClick)
 import Icons
@@ -1480,6 +1480,7 @@ viewCategoryModal translators category formModel =
                 [ button
                     [ class "button button-secondary w-full sm:w-40"
                     , onClick ClosedCategoryModal
+                    , disabled (Form.isDisabled formModel)
                     ]
                     [ text <| translators.t "menu.cancel" ]
                 , button
@@ -1491,6 +1492,7 @@ viewCategoryModal translators category formModel =
                             , onSuccess = SubmittedUpdateCategoryForm
                             }
                         )
+                    , disabled (Form.isDisabled formModel)
                     ]
                     [ text <| translators.t "menu.save" ]
                 ]
@@ -1521,6 +1523,7 @@ viewCategoryMetadataModal translators community category formModel =
                 [ button
                     [ class "button button-secondary w-full sm:w-40"
                     , onClick ClosedMetadataModal
+                    , disabled (Form.isDisabled formModel)
                     ]
                     [ text <| translators.t "menu.cancel" ]
                 , button
@@ -1532,6 +1535,7 @@ viewCategoryMetadataModal translators community category formModel =
                             , onSuccess = SubmittedMetadataForm
                             }
                         )
+                    , disabled (Form.isDisabled formModel)
                     ]
                     [ text <| translators.t "menu.save" ]
                 ]
