@@ -21,6 +21,7 @@ import Browser.Dom as Dom
 import Cambiatus.Object
 import Cambiatus.Object.SearchResult
 import Cambiatus.Query
+import Debouncer.Basic
 import Eos exposing (Symbol)
 import Eos.Account
 import Form
@@ -58,6 +59,7 @@ type alias Model =
     { state : State
     , form : Form.Model FormInput
     , recentQueries : List String
+    , debouncer : Debouncer.Basic.Debouncer Msg Msg
     }
 
 
@@ -66,6 +68,9 @@ init =
     { state = Inactive
     , form = Form.init { query = "" }
     , recentQueries = []
+    , debouncer =
+        Debouncer.Basic.debounce (Debouncer.Basic.fromSeconds 0.3)
+            |> Debouncer.Basic.toDebouncer
     }
 
 
@@ -161,6 +166,7 @@ maximumRecentSearches =
 
 type Msg
     = NoOp
+    | GotDebouncerMsg (Debouncer.Basic.Msg Msg)
     | CancelClicked
     | InputFocused
     | GotRecentSearches String
@@ -169,6 +175,7 @@ type Msg
     | QuerySubmitted
     | TabActivated ActiveTab
     | GotFormMsg (Form.Msg FormInput)
+    | RequestedNewResults String
     | ClearSearchIconClicked
     | FoundItemClicked
     | ClickedScrollToImage { containerId : String, imageId : String }
@@ -190,6 +197,27 @@ update shared symbol model msg =
     case msg of
         NoOp ->
             UR.init model
+
+        GotDebouncerMsg subMsg ->
+            let
+                ( subModel, subCmd, emittedMsg ) =
+                    Debouncer.Basic.update subMsg model.debouncer
+
+                mappedCmd =
+                    Cmd.map GotDebouncerMsg subCmd
+
+                updatedModel =
+                    { model | debouncer = subModel }
+            in
+            case emittedMsg of
+                Just emitted ->
+                    update shared symbol updatedModel emitted
+                        |> UR.addCmd mappedCmd
+
+                Nothing ->
+                    updatedModel
+                        |> UR.init
+                        |> UR.addCmd mappedCmd
 
         FoundItemClicked ->
             { model
@@ -280,13 +308,21 @@ update shared symbol model msg =
                         UR.mapModel (\m -> { m | state = RecentSearchesShowed })
 
                     else if oldQuery /= newQuery then
-                        UR.addExt (sendSearchQuery symbol newQuery)
+                        UR.addMsg
+                            (RequestedNewResults newQuery
+                                |> Debouncer.Basic.provideInput
+                                |> GotDebouncerMsg
+                            )
 
                     else
                         identity
             in
             updateResult
                 |> actOnQueryChange
+
+        RequestedNewResults queryString ->
+            UR.init model
+                |> UR.addExt (sendSearchQuery symbol queryString)
 
         ClearSearchIconClicked ->
             { model
