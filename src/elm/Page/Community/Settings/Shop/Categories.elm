@@ -145,6 +145,9 @@ type alias UpdateResult =
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
 update msg model loggedIn =
     let
+        { t } =
+            loggedIn.shared.translators
+
         getCategoryZipper : Shop.Category.Id -> Maybe (Tree.Zipper.Zipper Shop.Category.Model)
         getCategoryZipper categoryId =
             case Community.getField loggedIn.selectedCommunity .shopCategories of
@@ -356,8 +359,7 @@ update msg model loggedIn =
                                 |> EditingNewCategory
             }
                 |> UR.init
-                -- TODO - I18N
-                |> UR.addExt (LoggedIn.ShowFeedback View.Feedback.Failure "Aww :(")
+                |> UR.addExt (LoggedIn.ShowFeedback View.Feedback.Failure (t "shop.categories.create_error"))
                 |> UR.logImpossible msg
                     "Got Nothing after creating category"
                     (Just loggedIn.accountName)
@@ -376,8 +378,7 @@ update msg model loggedIn =
                                 |> EditingNewCategory
             }
                 |> UR.init
-                -- TODO - I18N
-                |> UR.addExt (LoggedIn.ShowFeedback View.Feedback.Failure "Aww :(")
+                |> UR.addExt (LoggedIn.ShowFeedback View.Feedback.Failure (t "shop.categories.create_error"))
 
         FinishedCreatingCategory _ ->
             UR.init model
@@ -451,8 +452,7 @@ update msg model loggedIn =
         FinishedUpdatingCategory (RemoteData.Success Nothing) ->
             { model | categoryModalState = Closed }
                 |> UR.init
-                -- TODO - I18N
-                |> UR.addExt (LoggedIn.ShowFeedback View.Feedback.Failure "Aww :(")
+                |> UR.addExt (LoggedIn.ShowFeedback View.Feedback.Failure (t "shop.categories.update_error"))
                 |> UR.logImpossible msg
                     "Got Nothing after updating category"
                     (Just loggedIn.accountName)
@@ -462,8 +462,7 @@ update msg model loggedIn =
         FinishedUpdatingCategory (RemoteData.Failure err) ->
             { model | categoryModalState = Closed }
                 |> UR.init
-                -- TODO - I18N
-                |> UR.addExt (LoggedIn.ShowFeedback View.Feedback.Failure "Aww :(")
+                |> UR.addExt (LoggedIn.ShowFeedback View.Feedback.Failure (t "shop.categories.update_error"))
                 |> UR.logGraphqlError msg
                     (Just loggedIn.accountName)
                     "Got an error when updating category"
@@ -547,8 +546,7 @@ update msg model loggedIn =
         CompletedDeletingCategory categoryId (RemoteData.Success (Api.Graphql.DeleteStatus.Error reason)) ->
             { model | deleting = EverySet.remove categoryId model.deleting }
                 |> UR.init
-                -- TODO - I18N
-                |> UR.addExt (LoggedIn.ShowFeedback View.Feedback.Failure "error :(")
+                |> UR.addExt (LoggedIn.ShowFeedback View.Feedback.Failure (t "shop.categories.delete_error"))
                 |> UR.logDeletionStatusError msg
                     (Just loggedIn.accountName)
                     { moduleName = "Page.Community.Settings.Shop.Categories"
@@ -609,6 +607,7 @@ update msg model loggedIn =
                         | categoryMetadataModalState =
                             Open categoryId
                                 (Form.init
+                                    -- TODO - Use category title and description
                                     { metaTitle = Maybe.withDefault "" category.metaTitle
                                     , metaDescription = Maybe.withDefault "" category.metaDescription
                                     , metaKeywords = Maybe.withDefault "" category.metaKeywords
@@ -762,8 +761,7 @@ update msg model loggedIn =
                       }
                     ]
                     err
-                -- TODO - I18N
-                |> UR.addExt (LoggedIn.ShowFeedback View.Feedback.Failure "Something went wrong :(")
+                |> UR.addExt (LoggedIn.ShowFeedback View.Feedback.Failure (t "shop.categories.reorder_error"))
 
         CompletedMovingCategory _ _ ->
             UR.init model
@@ -824,8 +822,7 @@ update msg model loggedIn =
                       }
                     ]
                     err
-                -- TODO - I18N
-                |> UR.addExt (LoggedIn.ShowFeedback View.Feedback.Failure "Something went wrong :(")
+                |> UR.addExt (LoggedIn.ShowFeedback View.Feedback.Failure (t "shop.categories.reorder_error"))
 
         CompletedMovingCategoryToRoot _ _ ->
             UR.init model
@@ -970,8 +967,7 @@ view : LoggedIn.Model -> Model -> { title : String, content : Html Msg }
 view loggedIn model =
     let
         title =
-            -- TODO - I18N
-            "TODO"
+            loggedIn.shared.translators.t "settings.shop.categories.title"
     in
     { title = title
     , content =
@@ -1070,11 +1066,9 @@ view_ translators community model categories =
                             ]
                             []
                         , h2 [ class "w-full md:w-2/3 mx-auto font-bold text-lg text-center mt-4" ]
-                            -- TODO - I18N
-                            [ text "Looks like your community doesn't have any categories!" ]
+                            [ text <| translators.t "shop.categories.empty.description" ]
                         , p [ class "w-full md:w-2/3 mx-auto text-center mt-2 mb-6" ]
-                            -- TODO - I18N
-                            [ text "Get started by creating a new category below" ]
+                            [ text <| translators.t "shop.categories.empty.description" ]
                         ]
 
                 first :: others ->
@@ -1119,7 +1113,12 @@ view_ translators community model categories =
                     text ""
 
                 Just categoryId ->
-                    viewConfirmDeleteCategoryModal categoryId
+                    case findInTrees (\category -> category.id == categoryId) categories of
+                        Nothing ->
+                            text ""
+
+                        Just openCategory ->
+                            viewConfirmDeleteCategoryModal translators openCategory
             , case model.categoryMetadataModalState of
                 Closed ->
                     text ""
@@ -1276,9 +1275,7 @@ viewCategoryWithChildren translators model zipper children =
                     , button
                         [ class "hover:underline focus-ring whitespace-nowrap"
                         , Utils.onClickNoBubble (ClickedCategory category.id)
-
-                        -- TODO - I18N
-                        , ariaLabel (category.name ++ " - Click to edit")
+                        , ariaLabel <| translators.tr "shop.categories.click_category_to_edit" [ ( "category_name", category.name ) ]
                         ]
                         [ text category.name
                         ]
@@ -1290,7 +1287,7 @@ viewCategoryWithChildren translators model zipper children =
                         , ( "z-10", model.actionsDropdown == Just category.id )
                         ]
                     ]
-                    [ viewActions
+                    [ viewActions translators
                         [ classList
                             [ ( "!bg-green/20", isParentOfNewCategoryForm )
                             , ( "grand-parent-3-hover:bg-orange-100/20", not isParentOfNewCategoryForm && not isDraggingSomething )
@@ -1337,12 +1334,10 @@ viewAddCategory translators attrs model maybeParentCategory =
                     [ Icons.plus "w-4 h-4 mr-2"
                     , case maybeParentCategory of
                         Nothing ->
-                            -- TODO - I18N
-                            text "Add new category"
+                            text <| translators.t "shop.categories.add_root"
 
                         Just { name } ->
-                            -- TODO - I18N
-                            text ("Add sub-category of " ++ name)
+                            text <| translators.tr "shop.categories.add_child" [ ( "parent_name", name ) ]
                     ]
                 ]
     in
@@ -1361,11 +1356,9 @@ viewAddCategory translators attrs model maybeParentCategory =
                                 , type_ "button"
                                 , onClick ClickedCancelAddCategory
                                 ]
-                                -- TODO - I18N
-                                [ text "Cancel" ]
+                                [ text <| translators.t "menu.cancel" ]
                             , submitButton [ class "button button-primary w-full sm:w-40" ]
-                                -- TODO - I18N
-                                [ text "Create" ]
+                                [ text <| translators.t "menu.create" ]
                             ]
                         ]
                     )
@@ -1379,8 +1372,8 @@ viewAddCategory translators attrs model maybeParentCategory =
                 viewAddCategoryButton attrs
 
 
-viewActions : List (Html.Attribute Msg) -> Model -> Tree.Zipper.Zipper Shop.Category.Model -> Html Msg
-viewActions attrs model zipper =
+viewActions : Translation.Translators -> List (Html.Attribute Msg) -> Model -> Tree.Zipper.Zipper Shop.Category.Model -> Html Msg
+viewActions translators attrs model zipper =
     let
         category =
             Tree.Zipper.label zipper
@@ -1411,8 +1404,7 @@ viewActions attrs model zipper =
                 :: classList [ ( "bg-orange-300/60", isDropdownOpen ) ]
                 :: Utils.onClickNoBubble (ClickedShowActionsDropdown category.id)
                 :: ariaHasPopup "true"
-                -- TODO - I18N
-                :: ariaLabel ("Actions for " ++ category.name)
+                :: ariaLabel (translators.tr "shop.categories.action_for" [ ( "category_name", category.name ) ])
                 :: attrs
             )
             [ Icons.ellipsis "h-4 pointer-events-none text-gray-800" ]
@@ -1426,18 +1418,14 @@ viewActions attrs model zipper =
                 [ li []
                     [ viewAction []
                         { icon = Icons.edit "w-4 ml-1 mr-3"
-
-                        -- TODO - I18N
-                        , label = "Edit main information"
+                        , label = translators.t "shop.categories.actions.edit_main_information"
                         , onClickMsg = ClickedCategory category.id
                         }
                     ]
                 , li []
                     [ viewAction []
                         { icon = Icons.edit "w-4 ml-1 mr-3"
-
-                        -- TODO - I18N
-                        , label = "Edit sharing data"
+                        , label = translators.t "shop.categories.actions.edit_sharing_data"
                         , onClickMsg = ClickedOpenMetadataModal category.id
                         }
                     ]
@@ -1445,7 +1433,7 @@ viewActions attrs model zipper =
                     li []
                         [ viewAction []
                             { icon = Icons.arrowDown "rotate-180 w-6 mr-2"
-                            , label = "Move up"
+                            , label = translators.t "shop.categories.actions.move_up"
                             , onClickMsg = ClickedMoveUp category.id
                             }
                         ]
@@ -1456,7 +1444,7 @@ viewActions attrs model zipper =
                     li []
                         [ viewAction []
                             { icon = Icons.arrowDown "w-6 mr-2"
-                            , label = "Move down"
+                            , label = translators.t "shop.categories.actions.move_down"
                             , onClickMsg = ClickedMoveDown category.id
                             }
                         ]
@@ -1466,9 +1454,7 @@ viewActions attrs model zipper =
                 , li []
                     [ viewAction [ class "text-red hover:bg-red/10 focus:bg-red/10" ]
                         { icon = Icons.trash "w-4 ml-1 mr-3"
-
-                        -- TODO - I18N
-                        , label = "Delete"
+                        , label = translators.t "shop.categories.actions.delete"
                         , onClickMsg = ClickedDeleteCategory category.id
                         }
                     ]
@@ -1501,10 +1487,7 @@ viewCategoryModal translators category formModel =
         { isVisible = True
         , closeMsg = ClosedCategoryModal
         }
-        -- TODO - I18N
-        |> Modal.withHeader "Editing category"
         |> Modal.withBody
-            -- TODO - Add some description - "Edit icon, name, description and image"
             [ Form.viewWithoutSubmit [ class "mt-2" ]
                 translators
                 (\_ -> [])
@@ -1518,8 +1501,7 @@ viewCategoryModal translators category formModel =
                     [ class "button button-secondary w-full sm:w-40"
                     , onClick ClosedCategoryModal
                     ]
-                    -- TODO - I18N
-                    [ text "Cancel" ]
+                    [ text <| translators.t "menu.cancel" ]
                 , button
                     [ class "button button-primary w-full sm:w-40"
                     , onClick
@@ -1530,8 +1512,7 @@ viewCategoryModal translators category formModel =
                             }
                         )
                     ]
-                    -- TODO - I18N
-                    [ text "Save" ]
+                    [ text <| translators.t "menu.save" ]
                 ]
             ]
         |> Modal.withSize Modal.FullScreen
@@ -1547,8 +1528,7 @@ viewCategoryMetadataModal translators community category formModel =
         |> Modal.withHeader "Editing category sharing data"
         |> Modal.withBody
             [ p [ class "mb-6" ]
-                -- TODO - I18N
-                [ text "This information will be used to display rich links when sharing links to this category" ]
+                [ text <| translators.t "shop.categories.metadata.guidance" ]
             , Form.viewWithoutSubmit [ class "mt-2" ]
                 translators
                 (\_ -> [])
@@ -1562,8 +1542,7 @@ viewCategoryMetadataModal translators community category formModel =
                     [ class "button button-secondary w-full sm:w-40"
                     , onClick ClosedMetadataModal
                     ]
-                    -- TODO - I18N
-                    [ text "Cancel" ]
+                    [ text <| translators.t "menu.cancel" ]
                 , button
                     [ class "button button-primary w-full sm:w-40"
                     , onClick
@@ -1574,28 +1553,23 @@ viewCategoryMetadataModal translators community category formModel =
                             }
                         )
                     ]
-                    -- TODO - I18N
-                    [ text "Save" ]
+                    [ text <| translators.t "menu.save" ]
                 ]
             ]
         |> Modal.withSize Modal.FullScreen
         |> Modal.toHtml
 
 
-viewConfirmDeleteCategoryModal : Shop.Category.Id -> Html Msg
-viewConfirmDeleteCategoryModal categoryId =
+viewConfirmDeleteCategoryModal : Translation.Translators -> Shop.Category.Model -> Html Msg
+viewConfirmDeleteCategoryModal translators category =
     Modal.initWith
         { isVisible = True
         , closeMsg = ClosedConfirmDeleteModal
         }
-        -- TODO - I18N - Include category name
-        |> Modal.withHeader "Delete category"
+        |> Modal.withHeader (translators.tr "shop.categories.delete.title" [ ( "category_name", category.name ) ])
         |> Modal.withBody
-            -- TODO - I18N
-            [ p [] [ text "If you delete this category, all of its sub-categories will also be permanently deleted." ]
-
-            -- TODO - I18N
-            , p [] [ text "Are you sure you want to delete this category?" ]
+            [ p [] [ text <| translators.t "shop.categories.delete.warning" ]
+            , p [] [ text <| translators.t "shop.categories.delete.confirmation" ]
             ]
         |> Modal.withFooter
             [ div [ class "flex flex-col sm:flex-row gap-4" ]
@@ -1603,27 +1577,24 @@ viewConfirmDeleteCategoryModal categoryId =
                     [ class "button button-secondary w-full sm:w-40"
                     , onClick ClosedConfirmDeleteModal
                     ]
-                    -- TODO - I18N
-                    [ text "Cancel" ]
+                    [ text <| translators.t "menu.cancel" ]
                 , button
                     [ class "button button-danger w-full sm:w-40"
-                    , onClick (ConfirmedDeleteCategory categoryId)
+                    , onClick (ConfirmedDeleteCategory category.id)
                     ]
-                    -- TODO - I18N
-                    [ text "Delete" ]
+                    [ text <| translators.t "shop.delete" ]
                 ]
             ]
         |> Modal.toHtml
 
 
-viewShareCategoryPreview : Community.Model -> Shop.Category.Model -> MetadataFormInput -> Html msg
-viewShareCategoryPreview community category values =
+viewShareCategoryPreview : Translation.Translators -> Community.Model -> Shop.Category.Model -> MetadataFormInput -> Html msg
+viewShareCategoryPreview translators community category values =
     div []
-        [ -- TODO - I18N
-          p [ class "label" ] [ text "Preview" ]
-
-        -- TODO - I18N
-        , p [ class "mb-4" ] [ text "This is an aproximation of what the shared content will look like. It will change depending on the platform the link is being shared on." ]
+        [ p [ class "label" ]
+            [ text <| translators.t "shop.categories.metadata.preview" ]
+        , p [ class "mb-4" ]
+            [ text <| translators.t "shop.categories.metadata.preview_text" ]
         , div [ class "isolate mr-3 z-10 ml-auto w-full sm:w-3/4 md:w-2/3 border border-gray-300 rounded-large relative before:absolute before:bg-white before:border-t before:border-r before:border-gray-300 before:-top-px before:rounded-br-super before:rounded-tr-sm before:-right-2 before:w-8 before:h-4 before:-z-10" ]
             [ div [ class "bg-white p-1 rounded-large" ]
                 [ div [ class "flex w-full bg-gray-100 rounded-large" ]
@@ -1703,8 +1674,7 @@ newCategoryForm translators =
         )
         |> Form.with (nameAndSlugForm translators { nameFieldId = "new-category-name" })
         |> Form.with
-            -- TODO - I18N
-            (Form.RichText.init { label = "Description" }
+            (Form.RichText.init { label = translators.t "shop.categories.fields.description" }
                 |> Form.richText
                     { parser =
                         Form.Validate.succeed
@@ -1756,8 +1726,6 @@ updateCategoryForm translators id =
                 |> Form.File.withImageCropperAttributes [ class "rounded-full" ]
                 |> Form.File.withContainerAttributes [ class "mb-10" ]
                 |> Form.File.withEditIconOverlay
-                -- TODO - I18N
-                |> Form.File.withLabel "Icon"
                 |> Form.file
                     { parser = Ok
                     , translators = translators
@@ -1769,8 +1737,7 @@ updateCategoryForm translators id =
             )
         |> Form.with (nameAndSlugForm translators { nameFieldId = "update-category-name" })
         |> Form.with
-            -- TODO - I18N
-            (Form.RichText.init { label = "Description" }
+            (Form.RichText.init { label = translators.t "shop.categories.fields.description" }
                 |> Form.RichText.withContainerAttrs [ class "mb-10" ]
                 |> Form.richText
                     { parser =
@@ -1784,8 +1751,7 @@ updateCategoryForm translators id =
             )
         |> Form.with
             (Form.File.init { id = "update-category-image" }
-                -- TODO - I18N
-                |> Form.File.withLabel "Image"
+                |> Form.File.withLabel (translators.t "shop.categories.fields.image")
                 |> Form.File.withContainerAttributes [ class "w-full" ]
                 |> Form.File.withAddImagesContainerAttributes [ class "!w-full" ]
                 |> Form.File.withAddImagesView (Form.File.defaultAddImagesView [ class "!w-full min-h-48" ])
@@ -1831,8 +1797,7 @@ metadataForm translators community category =
         )
         |> Form.with
             (Form.Text.init
-                -- TODO - I18N
-                { label = "Title"
+                { label = translators.t "shop.categories.fields.meta.title"
                 , id = "meta-title-input"
                 }
                 |> Form.textField
@@ -1848,8 +1813,7 @@ metadataForm translators community category =
             )
         |> Form.with
             (Form.Text.init
-                -- TODO - I18N
-                { label = "Description"
+                { label = translators.t "shop.categories.fields.meta.description"
                 , id = "meta-description-input"
                 }
                 |> Form.textField
@@ -1865,8 +1829,7 @@ metadataForm translators community category =
             )
         |> Form.with
             (Form.Text.init
-                -- TODO - I18N
-                { label = "Keywords"
+                { label = translators.t "shop.categories.meta.keywords"
                 , id = "meta-keywords-input"
                 }
                 |> Form.textField
@@ -1881,7 +1844,7 @@ metadataForm translators community category =
             )
         |> Form.withNoOutput
             (Form.introspect
-                (\values -> Form.arbitrary (viewShareCategoryPreview community category values))
+                (\values -> Form.arbitrary (viewShareCategoryPreview translators community category values))
             )
 
 
@@ -1890,8 +1853,7 @@ nameAndSlugForm translators { nameFieldId } =
     Form.succeed (\name slug -> { name = name, slug = slug })
         |> Form.with
             (Form.Text.init
-                -- TODO - I18N
-                { label = "Name"
+                { label = translators.t "shop.categories.fields.name"
                 , id = nameFieldId
                 }
                 |> Form.Text.withContainerAttrs [ class "mb-4" ]
@@ -1927,17 +1889,14 @@ nameAndSlugForm translators { nameFieldId } =
                         Form.arbitrary
                             (div [ class "mb-10" ]
                                 [ View.Components.label []
-                                    -- TODO - I18N
-                                    { targetId = nameFieldId, labelText = "Slug" }
+                                    { targetId = nameFieldId, labelText = translators.t "shop.categories.fields.slug" }
                                 , if String.isEmpty name then
                                     span [ class "text-gray-400 italic" ]
-                                        -- TODO - I18N
-                                        [ text "Insert a name to generate the slug" ]
+                                        [ text <| translators.t "shop.categories.form.insert_name" ]
 
                                   else
                                     span [ class "form-error" ]
-                                        -- TODO - I18N
-                                        [ text "Invalid slug" ]
+                                        [ text <| translators.t "shop.categories.form.invalid_slug" ]
                                 ]
                             )
 
@@ -1945,8 +1904,7 @@ nameAndSlugForm translators { nameFieldId } =
                         Form.arbitraryWith slug
                             (div [ class "mb-10" ]
                                 [ View.Components.label []
-                                    -- TODO - I18N
-                                    { targetId = nameFieldId, labelText = "Slug" }
+                                    { targetId = nameFieldId, labelText = translators.t "shop.categories.fields.slug" }
 
                                 -- TODO - We should show a preview of the url, like:
                                 -- TODO - "Your url will look like muda.cambiatus.io/shop/categories/organicos--1234"

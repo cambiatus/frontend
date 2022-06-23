@@ -870,6 +870,52 @@
     },
     "disabled": {
       "description": "ለማህበረሰቢ ይህ ሱቁ አለተፈቀደም."
+    },
+    "categories": {
+      "empty": {
+        "title": "የእርስዎ ማህበረሰብ ምንም አይነት ምድቦች ያለው አይመስልም!",
+        "description": "ከዚህ በታች አዲስ ምድብ በመፍጠር ይጀምሩ"
+      },
+      "add_root": "አዲስ ምድብ ያክሉ",
+      "add_child": "የ{{parent_name}} ንዑስ ምድብ አክል",
+      "click_category_to_edit": "{{category_name}} - ለማርትዕ ጠቅ ያድርጉ",
+      "actions_for": "እርምጃዎች ለ {{category_name}}",
+      "fields": {
+        "name": "ስም",
+        "slug": "ስሉግ",
+        "description": "መግለጫ",
+        "image": "ምስል",
+        "meta": {
+          "title": "ርዕስ",
+          "description": "መግለጫ",
+          "keywords": "ቁልፍ ቃላት"
+        }
+      },
+      "form": {
+        "insert_name": "ስሉግን ለማመንጨት ስም ያስገቡ",
+        "invalid_slug": "ልክ ያልሆነ ሸርተቴ"
+      },
+      "metadata": {
+        "guidance": "ይህ መረጃ ይህን ምድብ ሲያጋሩ ተጨማሪ መረጃን ለማሳየት ይጠቅማል።",
+        "preview": "ቅድመ እይታ",
+        "preview_text": "ይህ የተጋራው ይዘት ምን እንደሚመስል ግምታዊ ግምት ነው። አገናኙ እየተጋራበት ባለው መድረክ ላይ በመመስረት ሊለወጥ ይችላል።"
+      },
+      "delete": {
+        "title": "{{category_name}}ን ሰርዝ",
+        "warning": "ይህን ምድብ ከሰረዙት ሁሉም ንዑስ ክፍሎቹ እንዲሁ እስከመጨረሻው ይሰረዛሉ።",
+        "confirmation": "እርግጠኛ ነዎት ይህን ምድብ መሰረዝ ይፈልጋሉ?"
+      },
+      "actions": {
+        "edit_main_information": "ዋና መረጃን ያርትዑ",
+        "edit_sharing_data": "የማጋራት ውሂብን ያርትዑ",
+        "move_up": "ወደ ላይ ተንቀሳቀስ",
+        "move_down": "ወደ ታች ውሰድ",
+        "delete": "ሰርዝ"
+      },
+      "create_error": "ምድቡን ሲፈጥሩ የሆነ ችግር ተፈጥሯል",
+      "update_error": "ምድቡን በማዘመን ላይ የሆነ ችግር ተፈጥሯል",
+      "delete_error": "ምድቡን ሲሰርዝ የሆነ ችግር ተፈጥሯል",
+      "reorder_error": "ምድቡን እንደገና በማዘዝ ላይ የሆነ ችግር ተፈጥሯል"
     }
   },
   "dashboard": {
@@ -1129,6 +1175,12 @@
     "actions": {
       "title": "ተጠባቂ ዉጤቶች እና ተግባራት",
       "description": ""
+    },
+    "shop": {
+      "categories": {
+        "title": "ምድቦች",
+        "description": "ሰዎች ለሽያጭ ምን ዓይነት ዕቃዎችን ማስቀመጥ ይችላሉ"
+      }
     },
     "contacts": {
       "title": "የድጋፍ እውቂያዎች",
