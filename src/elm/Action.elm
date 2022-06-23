@@ -682,21 +682,25 @@ viewClaimWithProofs ((Proof photoStatus proofCode) as proof) ({ t } as translato
             , action.photoProofInstructions
                 |> Maybe.withDefault Markdown.empty
                 |> Markdown.view [ class "mb-4" ]
-            , case proofCode of
-                Just { code_, secondsAfterClaim, availabilityPeriod } ->
-                    case code_ of
-                        Just c ->
-                            viewProofCode
-                                translators
-                                c
-                                secondsAfterClaim
-                                availabilityPeriod
+            , if action.hasProofCode then
+                case proofCode of
+                    Just { code_, secondsAfterClaim, availabilityPeriod } ->
+                        case code_ of
+                            Just c ->
+                                viewProofCode
+                                    translators
+                                    c
+                                    secondsAfterClaim
+                                    availabilityPeriod
 
-                        _ ->
-                            text ""
+                            _ ->
+                                text ""
 
-                _ ->
-                    text ""
+                    _ ->
+                        text ""
+
+              else
+                text ""
             , Form.view []
                 translators
                 (\submitButton ->
