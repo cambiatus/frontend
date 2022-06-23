@@ -1869,7 +1869,6 @@ nameAndSlugForm translators { nameFieldId } =
                                         text <| translators.t "shop.categories.form.insert_name"
 
                                       else
-                                        -- TODO - I18N
                                         text <| translators.t "shop.categories.form.empty_slug"
                                     ]
                         ]
