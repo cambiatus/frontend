@@ -49,7 +49,7 @@ type alias Model =
 create :
     { name : String
     , description : Markdown
-    , slug : Slug
+    , slug : Maybe Slug
     , parentId : Maybe Id
     }
     -> SelectionSet decodesTo Cambiatus.Object.Category
@@ -62,7 +62,10 @@ create { name, slug, description, parentId } =
                     parentId
                         |> Maybe.map (\(Id id) -> id)
                         |> OptionalArgument.fromMaybe
-                , slug = OptionalArgument.Present (Slug.toString slug)
+                , slug =
+                    slug
+                        |> Maybe.map Slug.toString
+                        |> OptionalArgument.fromMaybeWithNull
                 , name = OptionalArgument.Present name
                 , description = OptionalArgument.Present (Markdown.toRawString description)
             }
@@ -71,7 +74,7 @@ create { name, slug, description, parentId } =
 
 update :
     Model
-    -> { icon : Maybe String, name : String, description : Markdown, slug : Slug, image : Maybe String }
+    -> { icon : Maybe String, name : String, description : Markdown, slug : Maybe Slug, image : Maybe String }
     -> SelectionSet decodesTo Cambiatus.Object.Category
     -> SelectionSet (Maybe decodesTo) RootMutation
 update model { icon, name, description, slug, image } =
@@ -81,7 +84,10 @@ update model { icon, name, description, slug, image } =
                 | id = OptionalArgument.Present (unwrapId model.id)
                 , iconUri = OptionalArgument.fromMaybeWithNull icon
                 , imageUri = OptionalArgument.fromMaybeWithNull image
-                , slug = OptionalArgument.Present (Slug.toString slug)
+                , slug =
+                    slug
+                        |> Maybe.map Slug.toString
+                        |> OptionalArgument.fromMaybeWithNull
                 , name = OptionalArgument.Present name
                 , description = OptionalArgument.Present (Markdown.toRawString description)
             }
