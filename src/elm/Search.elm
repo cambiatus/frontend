@@ -115,7 +115,7 @@ sendSearchQuery selectedCommunity queryString =
     in
     RequestQuery
         (Cambiatus.Query.search req (searchResultSelectionSet queryString))
-        GotSearchResults
+        (GotSearchResults { for = queryString })
 
 
 searchResultSelectionSet : String -> SelectionSet SearchResults Cambiatus.Object.SearchResult
@@ -165,7 +165,7 @@ type Msg
     | InputFocused
     | GotRecentSearches String
     | RecentQueryClicked String
-    | GotSearchResults FoundData
+    | GotSearchResults { for : String } FoundData
     | QuerySubmitted
     | TabActivated ActiveTab
     | GotFormMsg (Form.Msg FormInput)
@@ -233,14 +233,17 @@ update shared symbol model msg =
                 _ ->
                     UR.init model
 
-        GotSearchResults res ->
+        GotSearchResults { for } res ->
             { model
                 | state =
                     if String.isEmpty (Form.getValue .query model.form) then
                         model.state
 
-                    else
+                    else if for == Form.getValue .query model.form then
                         ResultsShowed res Nothing
+
+                    else
+                        model.state
             }
                 |> UR.init
 
