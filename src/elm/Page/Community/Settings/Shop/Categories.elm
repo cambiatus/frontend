@@ -1586,7 +1586,7 @@ viewShareCategoryPreview translators community category values =
         , div [ class "isolate mr-3 z-10 ml-auto w-full sm:w-3/4 md:w-2/3 border border-gray-300 rounded-large relative before:absolute before:bg-white before:border-t before:border-r before:border-gray-300 before:-top-px before:rounded-br-super before:rounded-tr-sm before:-right-2 before:w-8 before:h-4 before:-z-10" ]
             [ div [ class "bg-white p-1 rounded-large" ]
                 [ div [ class "flex w-full bg-gray-100 rounded-large" ]
-                    [ case Maybe.Extra.or category.image category.icon of
+                    [ case Maybe.Extra.or category.icon category.image of
                         Nothing ->
                             div [ class "bg-gray-200 p-6 rounded-l-large w-1/4 flex-shrink-0 grid place-items-center" ]
                                 [ Icons.image "" ]
