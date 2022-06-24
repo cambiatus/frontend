@@ -48,7 +48,10 @@ update msg (Model model) =
                 |> UR.init
 
         StoppedDragging ->
-            { model | draggingElement = Nothing }
+            { model
+                | draggingElement = Nothing
+                , draggingOverElement = Nothing
+            }
                 |> Model
                 |> UR.init
 
@@ -60,7 +63,10 @@ update msg (Model model) =
                         |> UR.init
 
                 Just draggingElement ->
-                    model
+                    { model
+                        | draggingElement = Nothing
+                        , draggingOverElement = Nothing
+                    }
                         |> Model
                         |> UR.init
                         |> UR.addExt (Dropped { draggedElement = draggingElement, dropZone = elementId })
