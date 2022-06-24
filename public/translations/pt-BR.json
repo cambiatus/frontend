@@ -939,7 +939,8 @@
       },
       "form": {
         "insert_name": "Insira um nome para gerar o slug",
-        "invalid_slug": "Slug inválido"
+        "invalid_slug": "Slug inválido",
+        "invalid_slug_tooltip": "Carácteres não-latinos não são aceitos em slugs. Para gerar um slug válido, o nome da categoria deve ter ao menos um caráctere latim"
       },
       "metadata": {
         "guidance": "Essa informação vai ser usada para mostrar mais informações quando compartilhando esta categoria",

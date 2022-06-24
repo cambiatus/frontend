@@ -932,7 +932,8 @@
       },
       "form": {
         "insert_name": "Insert a name to generate the slug",
-        "invalid_slug": "Invalid slug"
+        "invalid_slug": "Invalid slug",
+        "invalid_slug_tooltip": "Non-latin characters aren't accepted in slugs. In order to generate a valid slug, the category name must have at least one latin character"
       },
       "metadata": {
         "guidance": "This information will be used to display rich links when sharing this category.",
