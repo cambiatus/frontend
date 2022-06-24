@@ -594,7 +594,8 @@ update msg model loggedIn =
                                 (Form.init
                                     { metaTitle = Maybe.withDefault category.name category.metaTitle
                                     , metaDescription = Maybe.withDefault (Markdown.toUnformattedString category.description) category.metaDescription
-                                    , metaKeywords = Maybe.withDefault "" category.metaKeywords
+                                    , metaKeyword = ""
+                                    , metaKeywords = category.metaKeywords
                                     }
                                 )
                     }
@@ -1777,7 +1778,8 @@ updateCategoryForm translators id =
 type alias MetadataFormInput =
     { metaTitle : String
     , metaDescription : String
-    , metaKeywords : String
+    , metaKeyword : String
+    , metaKeywords : List String
     }
 
 
@@ -1785,9 +1787,7 @@ type alias MetadataFormOutput =
     { id : Shop.Category.Id
     , metaTitle : String
     , metaDescription : String
-
-    -- TODO - Should this be a List String?
-    , metaKeywords : String
+    , metaKeywords : List String
     }
 
 
@@ -1833,24 +1833,71 @@ metadataForm translators community category =
                     , externalError = always Nothing
                     }
             )
-        |> Form.with
-            (Form.Text.init
-                { label = translators.t "shop.categories.fields.meta.keywords"
-                , id = "meta-keywords-input"
-                }
-                |> Form.textField
-                    { parser =
-                        Form.Validate.succeed
-                            -- TODO - Review this validation
-                            >> Form.Validate.validate translators
-                    , value = .metaKeywords
-                    , update = \newMetaKeywords values -> { values | metaKeywords = newMetaKeywords }
-                    , externalError = always Nothing
-                    }
-            )
+        |> Form.with (keywordsForm translators)
         |> Form.withNoOutput
             (Form.introspect
                 (\values -> Form.arbitrary (viewShareCategoryPreview translators community category values))
+            )
+
+
+keywordsForm : Translation.Translators -> Form.Form msg { input | metaKeyword : String, metaKeywords : List String } (List String)
+keywordsForm translators =
+    let
+        viewKeyword keyword =
+            div [ class "bg-green/50 border border-green px-3 py-2 rounded-full text-sm flex items-center text-black" ]
+                [ span [ class "uppercase mr-3" ] [ text keyword ]
+                , button
+                    [ type_ "button"
+                    , onClick (\values -> { values | metaKeywords = List.filter (\x -> x /= keyword) values.metaKeywords })
+                    , class "hover:text-red"
+                    ]
+                    [ Icons.close "w-3 h-3 fill-current" ]
+                ]
+    in
+    Form.introspect (\values -> Form.succeed values.metaKeywords)
+        |> Form.withNoOutput
+            (Form.succeed always
+                |> Form.withGroup [ class "flex mb-2" ]
+                    (Form.Text.init
+                        { label = translators.t "shop.categories.fields.meta.keywords"
+                        , id = "meta-keyword-input"
+                        }
+                        |> Form.Text.withContainerAttrs [ class "mb-0 w-full" ]
+                        |> Form.textField
+                            { parser = Ok
+                            , value = .metaKeyword
+                            , update = \metaKeyword value -> { value | metaKeyword = metaKeyword }
+                            , externalError = always Nothing
+                            }
+                    )
+                    (Form.arbitrary
+                        (button
+                            [ type_ "button"
+                            , class "button button-secondary flex-shrink-0 h-12 ml-4 mt-auto w-auto px-6"
+                            , onClick
+                                (\values ->
+                                    if String.isEmpty values.metaKeyword || List.member values.metaKeyword values.metaKeywords then
+                                        values
+
+                                    else
+                                        { values
+                                            | metaKeyword = ""
+                                            , metaKeywords = values.metaKeyword :: values.metaKeywords
+                                        }
+                                )
+                            ]
+                            [ text <| translators.t "menu.add" ]
+                        )
+                    )
+            )
+        |> Form.withNoOutput
+            (Form.introspect
+                (\values ->
+                    Form.arbitrary
+                        (div [ class "flex flex-wrap mb-10 gap-2" ]
+                            (List.map viewKeyword values.metaKeywords)
+                        )
+                )
             )
 
 

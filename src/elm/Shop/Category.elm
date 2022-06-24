@@ -42,7 +42,7 @@ type alias Model =
     , parentId : Maybe Id
     , metaTitle : Maybe String
     , metaDescription : Maybe String
-    , metaKeywords : Maybe String
+    , metaKeywords : List String
     }
 
 
@@ -100,7 +100,7 @@ update model { icon, name, description, slug, image } =
 
 updateMetadata :
     Model
-    -> { metaTitle : String, metaDescription : String, metaKeywords : String }
+    -> { metaTitle : String, metaDescription : String, metaKeywords : List String }
     -> SelectionSet decodesTo Cambiatus.Object.Category
     -> SelectionSet (Maybe decodesTo) RootMutation
 updateMetadata model { metaTitle, metaDescription, metaKeywords } =
@@ -109,7 +109,7 @@ updateMetadata model { metaTitle, metaDescription, metaKeywords } =
             { optionals
                 | id = OptionalArgument.Present (unwrapId model.id)
                 , metaDescription = OptionalArgument.Present metaDescription
-                , metaKeywords = OptionalArgument.Present metaKeywords
+                , metaKeywords = OptionalArgument.Present (String.join ", " metaKeywords)
                 , metaTitle = OptionalArgument.Present metaTitle
             }
         )
@@ -170,7 +170,13 @@ selectionSet =
         |> SelectionSet.with (Cambiatus.Object.Category.parent idSelectionSet)
         |> SelectionSet.with Cambiatus.Object.Category.metaTitle
         |> SelectionSet.with Cambiatus.Object.Category.metaDescription
-        |> SelectionSet.with Cambiatus.Object.Category.metaKeywords
+        |> SelectionSet.with
+            (Cambiatus.Object.Category.metaKeywords
+                |> SelectionSet.map
+                    (Maybe.map (String.split "," >> List.map String.trim)
+                        >> Maybe.withDefault []
+                    )
+            )
 
 
 
