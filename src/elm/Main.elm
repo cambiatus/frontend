@@ -1,5 +1,6 @@
 module Main exposing (main)
 
+import Action
 import Api.Graphql
 import Browser exposing (Document)
 import Browser.Navigation as Nav
@@ -1093,15 +1094,15 @@ statusToRoute status session =
                     Just Route.CommunitySettingsNewObjective
 
                 Just objectiveId ->
-                    Just (Route.CommunitySettingsEditObjective objectiveId)
+                    Just (Route.CommunitySettingsEditObjective (Action.objectiveIdToInt objectiveId))
 
         CommunitySettingsActionEditor subModel ->
             case subModel.actionId of
                 Nothing ->
-                    Just (Route.CommunitySettingsNewAction subModel.objectiveId)
+                    Just (Route.CommunitySettingsNewAction (Action.objectiveIdToInt subModel.objectiveId))
 
                 Just actionId ->
-                    Just (Route.CommunitySettingsEditAction subModel.objectiveId actionId)
+                    Just (Route.CommunitySettingsEditAction (Action.objectiveIdToInt subModel.objectiveId) actionId)
 
         CommunitySettingsContacts _ ->
             Just Route.CommunitySettingsContacts
@@ -1520,17 +1521,17 @@ changeRouteTo maybeRoute model =
                 |> withLoggedIn Route.CommunitySettingsNewObjective
 
         Just (Route.CommunitySettingsEditObjective objectiveId) ->
-            (\l -> CommunitySettingsObjectiveEditor.initEdit l objectiveId)
+            (\l -> CommunitySettingsObjectiveEditor.initEdit l (Action.objectiveIdFromInt objectiveId))
                 >> updateStatusWith CommunitySettingsObjectiveEditor GotCommunitySettingsObjectiveEditorMsg model
                 |> withLoggedIn (Route.CommunitySettingsEditObjective objectiveId)
 
         Just (Route.CommunitySettingsNewAction objectiveId) ->
-            (\l -> CommunitySettingsActionEditor.init l objectiveId Nothing)
+            (\l -> CommunitySettingsActionEditor.init l (Action.objectiveIdFromInt objectiveId) Nothing)
                 >> updateLoggedInUResult CommunitySettingsActionEditor GotCommunitySettingsActionEditorMsg model
                 |> withLoggedIn (Route.CommunitySettingsNewAction objectiveId)
 
         Just (Route.CommunitySettingsEditAction objectiveId actionId) ->
-            (\l -> CommunitySettingsActionEditor.init l objectiveId (Just actionId))
+            (\l -> CommunitySettingsActionEditor.init l (Action.objectiveIdFromInt objectiveId) (Just actionId))
                 >> updateLoggedInUResult CommunitySettingsActionEditor GotCommunitySettingsActionEditorMsg model
                 |> withLoggedIn (Route.CommunitySettingsEditAction objectiveId actionId)
 
