@@ -932,7 +932,7 @@
       },
       "form": {
         "insert_name": "Insert a name to generate the slug",
-        "empty_slug": "No slug will be generated"
+        "invalid_slug": "Invalid slug"
       },
       "metadata": {
         "guidance": "This information will be used to display rich links when sharing this category.",

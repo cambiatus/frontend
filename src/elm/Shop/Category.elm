@@ -50,7 +50,7 @@ create :
     { icon : Maybe String
     , name : String
     , description : Markdown
-    , slug : Maybe Slug
+    , slug : Slug
     , image : Maybe String
     , parentId : Maybe Id
     }
@@ -65,10 +65,7 @@ create { icon, name, slug, description, image, parentId } =
                         |> Maybe.map (\(Id id) -> id)
                         |> OptionalArgument.fromMaybe
                 , iconUri = OptionalArgument.fromMaybe icon
-                , slug =
-                    slug
-                        |> Maybe.map Slug.toString
-                        |> OptionalArgument.fromMaybeWithNull
+                , slug = OptionalArgument.Present (Slug.toString slug)
                 , name = OptionalArgument.Present name
                 , description = OptionalArgument.Present (Markdown.toRawString description)
                 , imageUri = OptionalArgument.fromMaybe image
@@ -78,7 +75,13 @@ create { icon, name, slug, description, image, parentId } =
 
 update :
     Model
-    -> { icon : Maybe String, name : String, description : Markdown, slug : Maybe Slug, image : Maybe String }
+    ->
+        { icon : Maybe String
+        , name : String
+        , description : Markdown
+        , slug : Slug
+        , image : Maybe String
+        }
     -> SelectionSet decodesTo Cambiatus.Object.Category
     -> SelectionSet (Maybe decodesTo) RootMutation
 update model { icon, name, description, slug, image } =
@@ -88,10 +91,7 @@ update model { icon, name, description, slug, image } =
                 | id = OptionalArgument.Present (unwrapId model.id)
                 , iconUri = OptionalArgument.fromMaybeWithNull icon
                 , imageUri = OptionalArgument.fromMaybeWithNull image
-                , slug =
-                    slug
-                        |> Maybe.map Slug.toString
-                        |> OptionalArgument.fromMaybeWithNull
+                , slug = OptionalArgument.Present (Slug.toString slug)
                 , name = OptionalArgument.Present name
                 , description = OptionalArgument.Present (Markdown.toRawString description)
             }

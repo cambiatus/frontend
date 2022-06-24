@@ -1652,7 +1652,7 @@ type alias NewCategoryFormInput =
 type alias NewCategoryFormOutput =
     { icon : Maybe String
     , name : String
-    , slug : Maybe Slug
+    , slug : Slug
     , description : Markdown
     , image : Maybe String
     }
@@ -1699,7 +1699,7 @@ type alias UpdateCategoryFormOutput =
     { id : Shop.Category.Id
     , icon : Maybe String
     , name : String
-    , slug : Maybe Slug
+    , slug : Slug
     , description : Markdown
     , image : Maybe String
     }
@@ -1854,7 +1854,7 @@ metadataForm translators community category =
             )
 
 
-nameAndSlugForm : Translation.Translators -> { nameFieldId : String } -> Form.Form msg { values | name : String } { name : String, slug : Maybe Slug }
+nameAndSlugForm : Translation.Translators -> { nameFieldId : String } -> Form.Form msg { values | name : String } { name : String, slug : Slug }
 nameAndSlugForm translators { nameFieldId } =
     Form.succeed (\name slug -> { name = name, slug = slug })
         |> Form.with
@@ -1867,6 +1867,16 @@ nameAndSlugForm translators { nameFieldId } =
                     { parser =
                         Form.Validate.succeed
                             >> Form.Validate.stringLongerThan 2
+                            >> Form.Validate.custom
+                                (\name ->
+                                    case Slug.generate name of
+                                        Just _ ->
+                                            Ok name
+
+                                        Nothing ->
+                                            -- We show the error on the slug field below
+                                            Err (\_ -> "")
+                                )
                             >> Form.Validate.validate translators
                     , value = .name
                     , update = \newName values -> { values | name = newName }
@@ -1875,26 +1885,34 @@ nameAndSlugForm translators { nameFieldId } =
             )
         |> Form.with
             ((\{ name } ->
-                Form.arbitraryWith (Slug.generate name)
-                    (div [ class "mb-10" ]
-                        [ View.Components.label []
-                            { targetId = nameFieldId, labelText = translators.t "shop.categories.fields.slug" }
-                        , case Slug.generate name of
-                            Just slug ->
+                case Slug.generate name of
+                    Nothing ->
+                        Form.arbitrary
+                            (div [ class "mb-10" ]
+                                [ View.Components.label []
+                                    { targetId = nameFieldId, labelText = translators.t "shop.categories.fields.slug" }
+                                , if String.isEmpty name then
+                                    span [ class "text-gray-400 italic" ]
+                                        [ text <| translators.t "shop.categories.form.insert_name" ]
+
+                                  else
+                                    span [ class "form-error" ]
+                                        -- TODO - Add tooltip?
+                                        [ text <| translators.t "shop.categories.form.invalid_slug" ]
+                                ]
+                            )
+
+                    Just slug ->
+                        Form.arbitraryWith slug
+                            (div [ class "mb-10" ]
+                                [ View.Components.label []
+                                    { targetId = nameFieldId, labelText = translators.t "shop.categories.fields.slug" }
+
                                 -- TODO - We should show a preview of the url, like:
                                 -- TODO - "Your url will look like muda.cambiatus.io/shop/categories/organicos--1234"
-                                text (Slug.toString slug)
-
-                            Nothing ->
-                                span [ class "text-gray-400 italic" ]
-                                    [ if String.isEmpty name then
-                                        text <| translators.t "shop.categories.form.insert_name"
-
-                                      else
-                                        text <| translators.t "shop.categories.form.empty_slug"
-                                    ]
-                        ]
-                    )
+                                , text (Slug.toString slug)
+                                ]
+                            )
              )
                 |> Form.introspect
             )
