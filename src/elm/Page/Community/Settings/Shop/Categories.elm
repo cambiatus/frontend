@@ -1625,7 +1625,10 @@ viewShareCategoryPreview translators community category values =
 
                           else
                             p [ class "text-sm mt-1 line-clamp-2" ]
-                                [ text values.metaDescription ]
+                                [ text values.metaDescription
+                                , text ". "
+                                , text (String.join ", " values.metaKeywords)
+                                ]
                         , p [ class "text-sm opacity-70 mt-2 mb-4" ]
                             [ text community.subdomain ]
                         ]
