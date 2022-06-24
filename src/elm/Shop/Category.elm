@@ -47,14 +47,16 @@ type alias Model =
 
 
 create :
-    { name : String
+    { icon : Maybe String
+    , name : String
     , description : Markdown
     , slug : Maybe Slug
+    , image : Maybe String
     , parentId : Maybe Id
     }
     -> SelectionSet decodesTo Cambiatus.Object.Category
     -> SelectionSet (Maybe decodesTo) RootMutation
-create { name, slug, description, parentId } =
+create { icon, name, slug, description, image, parentId } =
     Cambiatus.Mutation.category
         (\optionals ->
             { optionals
@@ -62,12 +64,14 @@ create { name, slug, description, parentId } =
                     parentId
                         |> Maybe.map (\(Id id) -> id)
                         |> OptionalArgument.fromMaybe
+                , iconUri = OptionalArgument.fromMaybe icon
                 , slug =
                     slug
                         |> Maybe.map Slug.toString
                         |> OptionalArgument.fromMaybeWithNull
                 , name = OptionalArgument.Present name
                 , description = OptionalArgument.Present (Markdown.toRawString description)
+                , imageUri = OptionalArgument.fromMaybe image
             }
         )
 

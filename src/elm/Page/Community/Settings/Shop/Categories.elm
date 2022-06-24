@@ -209,8 +209,10 @@ update msg model loggedIn =
                         { parent = maybeParentId
                         , form =
                             Form.init
-                                { name = ""
+                                { icon = Form.File.initSingle { fileUrl = Nothing, aspectRatio = Just 1 }
+                                , name = ""
                                 , description = Form.RichText.initModel (newDescriptionInputId maybeParentId) Nothing
+                                , image = Form.File.initSingle { fileUrl = Nothing, aspectRatio = Nothing }
                                 }
                         }
             }
@@ -279,7 +281,7 @@ update msg model loggedIn =
                             LoggedIn.addFeedback
                             model
 
-        SubmittedAddCategoryForm { name, slug, description } ->
+        SubmittedAddCategoryForm { icon, name, slug, description, image } ->
             let
                 parentId =
                     case model.newCategoryState of
@@ -303,9 +305,11 @@ update msg model loggedIn =
                 |> UR.addExt
                     (LoggedIn.mutation loggedIn
                         (Shop.Category.create
-                            { name = name
+                            { icon = icon
+                            , name = name
                             , description = description
                             , slug = slug
+                            , image = image
                             , parentId = parentId
                             }
                             Shop.Category.selectionSet
@@ -1638,27 +1642,38 @@ viewShareCategoryPreview translators community category values =
 
 
 type alias NewCategoryFormInput =
-    { name : String
+    { icon : Form.File.SingleModel
+    , name : String
     , description : Form.RichText.Model
+    , image : Form.File.SingleModel
     }
 
 
 type alias NewCategoryFormOutput =
-    { name : String
+    { icon : Maybe String
+    , name : String
     , slug : Maybe Slug
     , description : Markdown
+    , image : Maybe String
     }
 
 
 newCategoryForm : Translation.Translators -> Form.Form msg NewCategoryFormInput NewCategoryFormOutput
 newCategoryForm translators =
     Form.succeed
-        (\{ name, slug } description ->
-            { name = name, slug = slug, description = description }
+        (\icon { name, slug } description image ->
+            { icon = icon
+            , name = name
+            , slug = slug
+            , description = description
+            , image = image
+            }
         )
+        |> Form.with (iconForm translators "new-category-icon")
         |> Form.with (nameAndSlugForm translators { nameFieldId = "new-category-name" })
         |> Form.with
             (Form.RichText.init { label = translators.t "shop.categories.fields.description" }
+                |> Form.RichText.withContainerAttrs [ class "mb-10" ]
                 |> Form.richText
                     { parser =
                         Form.Validate.succeed
@@ -1669,6 +1684,7 @@ newCategoryForm translators =
                     , externalError = always Nothing
                     }
             )
+        |> Form.with (imageForm translators "new-category-image")
 
 
 type alias UpdateCategoryFormInput =
@@ -1689,6 +1705,45 @@ type alias UpdateCategoryFormOutput =
     }
 
 
+iconForm : Translation.Translators -> String -> Form.Form msg { input | icon : Form.File.SingleModel } (Maybe String)
+iconForm translators fieldId =
+    Form.File.init { id = fieldId }
+        |> Form.File.withImageClass "object-cover rounded-full w-20 h-20"
+        |> Form.File.withEntryContainerAttributes (\_ -> [ class "mx-auto rounded-full w-20 h-20" ])
+        |> Form.File.withAddImagesView (Form.File.defaultAddImagesView [ class "!rounded-full w-20 h-20" ])
+        |> Form.File.withAddImagesContainerAttributes [ class "mx-auto w-20 h-20" ]
+        |> Form.File.withImageCropperAttributes [ class "rounded-full" ]
+        |> Form.File.withContainerAttributes [ class "mb-10" ]
+        |> Form.File.withEditIconOverlay
+        |> Form.file
+            { parser = Ok
+            , translators = translators
+            , value = .icon
+            , update = \newIcon values -> { values | icon = newIcon }
+            , externalError = always Nothing
+            }
+        |> Form.optional
+
+
+imageForm : Translation.Translators -> String -> Form.Form msg { input | image : Form.File.SingleModel } (Maybe String)
+imageForm translators fieldId =
+    Form.File.init { id = fieldId }
+        |> Form.File.withLabel (translators.t "shop.categories.fields.image")
+        |> Form.File.withContainerAttributes [ class "w-full" ]
+        |> Form.File.withAddImagesContainerAttributes [ class "!w-full" ]
+        |> Form.File.withAddImagesView (Form.File.defaultAddImagesView [ class "!w-full min-h-48" ])
+        |> Form.File.withImageClass "rounded-md"
+        |> Form.File.withEditIconOverlay
+        |> Form.file
+            { parser = Ok
+            , translators = translators
+            , value = .image
+            , update = \newImage values -> { values | image = newImage }
+            , externalError = always Nothing
+            }
+        |> Form.optional
+
+
 updateCategoryForm : Translation.Translators -> Shop.Category.Id -> Form.Form msg UpdateCategoryFormInput UpdateCategoryFormOutput
 updateCategoryForm translators id =
     Form.succeed
@@ -1701,24 +1756,7 @@ updateCategoryForm translators id =
             , image = image
             }
         )
-        |> Form.with
-            (Form.File.init { id = "update-category-icon" }
-                |> Form.File.withImageClass "object-cover rounded-full w-20 h-20"
-                |> Form.File.withEntryContainerAttributes (\_ -> [ class "mx-auto rounded-full w-20 h-20" ])
-                |> Form.File.withAddImagesView (Form.File.defaultAddImagesView [ class "!rounded-full w-20 h-20" ])
-                |> Form.File.withAddImagesContainerAttributes [ class "mx-auto w-20 h-20" ]
-                |> Form.File.withImageCropperAttributes [ class "rounded-full" ]
-                |> Form.File.withContainerAttributes [ class "mb-10" ]
-                |> Form.File.withEditIconOverlay
-                |> Form.file
-                    { parser = Ok
-                    , translators = translators
-                    , value = .icon
-                    , update = \newIcon values -> { values | icon = newIcon }
-                    , externalError = always Nothing
-                    }
-                |> Form.optional
-            )
+        |> Form.with (iconForm translators "update-category-icon")
         |> Form.with (nameAndSlugForm translators { nameFieldId = "update-category-name" })
         |> Form.with
             (Form.RichText.init { label = translators.t "shop.categories.fields.description" }
@@ -1733,23 +1771,7 @@ updateCategoryForm translators id =
                     , externalError = always Nothing
                     }
             )
-        |> Form.with
-            (Form.File.init { id = "update-category-image" }
-                |> Form.File.withLabel (translators.t "shop.categories.fields.image")
-                |> Form.File.withContainerAttributes [ class "w-full" ]
-                |> Form.File.withAddImagesContainerAttributes [ class "!w-full" ]
-                |> Form.File.withAddImagesView (Form.File.defaultAddImagesView [ class "!w-full min-h-48" ])
-                |> Form.File.withImageClass "rounded-md"
-                |> Form.File.withEditIconOverlay
-                |> Form.file
-                    { parser = Ok
-                    , translators = translators
-                    , value = .image
-                    , update = \newImage values -> { values | image = newImage }
-                    , externalError = always Nothing
-                    }
-                |> Form.optional
-            )
+        |> Form.with (imageForm translators "update-category-image")
 
 
 type alias MetadataFormInput =
