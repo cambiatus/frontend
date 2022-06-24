@@ -7,13 +7,19 @@ module Action exposing
     , Model
     , Msg(..)
     , Objective
+    , ObjectiveId
     , Proof(..)
+    , completeObjectiveSelectionSet
     , encodeClaimAction
+    , encodeObjectiveId
     , isClaimable
     , isClosed
     , isPastDeadline
     , jsAddressToMsg
     , msgToString
+    , objectiveIdFromInt
+    , objectiveIdSelectionSet
+    , objectiveIdToInt
     , selectionSet
     , subscriptions
     , update
@@ -25,6 +31,7 @@ module Action exposing
 
 import Cambiatus.Enum.Permission as Permission exposing (Permission)
 import Cambiatus.Enum.VerificationType as VerificationType exposing (VerificationType)
+import Cambiatus.Mutation
 import Cambiatus.Object
 import Cambiatus.Object.Action as ActionObject
 import Cambiatus.Object.Community
@@ -34,6 +41,7 @@ import Eos exposing (Symbol)
 import Eos.Account as Eos
 import Form
 import Form.File
+import Graphql.Operation exposing (RootMutation)
 import Graphql.OptionalArgument as OptionalArgument
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Html exposing (Html, br, button, div, i, li, p, span, text, ul)
@@ -162,8 +170,11 @@ update isPinConfirmed permissions shared selectedCommunity accName msg model =
             , proof :
                 Maybe
                     { photo : String
-                    , code : String
-                    , time : Time.Posix
+                    , proofCode :
+                        Maybe
+                            { code : String
+                            , time : Time.Posix
+                            }
                     }
             }
             -> Model
@@ -234,8 +245,11 @@ update isPinConfirmed permissions shared selectedCommunity accName msg model =
                                 , proof =
                                     Just
                                         { photo = image
-                                        , code = code
-                                        , time = time
+                                        , proofCode =
+                                            Just
+                                                { code = code
+                                                , time = time
+                                                }
                                         }
                                 }
 
@@ -463,17 +477,31 @@ communitySelectionSet =
 
 
 type alias Objective =
-    { id : Int
+    { id : ObjectiveId
     , description : Markdown
     , community : Community
     , isCompleted : Bool
     }
 
 
+type ObjectiveId
+    = ObjectiveId Int
+
+
+objectiveIdFromInt : Int -> ObjectiveId
+objectiveIdFromInt =
+    ObjectiveId
+
+
+objectiveIdSelectionSet : SelectionSet ObjectiveId Cambiatus.Object.Objective
+objectiveIdSelectionSet =
+    Cambiatus.Object.Objective.id |> SelectionSet.map ObjectiveId
+
+
 objectiveSelectionSet : SelectionSet Objective Cambiatus.Object.Objective
 objectiveSelectionSet =
     SelectionSet.succeed Objective
-        |> with Cambiatus.Object.Objective.id
+        |> with objectiveIdSelectionSet
         |> with (Markdown.selectionSet Cambiatus.Object.Objective.description)
         |> with (Cambiatus.Object.Objective.community communitySelectionSet)
         |> with Cambiatus.Object.Objective.isCompleted
@@ -511,6 +539,11 @@ selectionSet =
         |> with (Markdown.maybeSelectionSet ActionObject.photoProofInstructions)
         |> with ActionObject.position
         |> with (ActionObject.claimCount (\optionals -> { optionals | status = OptionalArgument.Absent }))
+
+
+completeObjectiveSelectionSet : ObjectiveId -> SelectionSet decodesTo Cambiatus.Object.Objective -> SelectionSet (Maybe decodesTo) RootMutation
+completeObjectiveSelectionSet (ObjectiveId id) =
+    Cambiatus.Mutation.completeObjective { id = id }
 
 
 
@@ -676,21 +709,25 @@ viewClaimWithProofs ((Proof photoStatus proofCode) as proof) ({ t } as translato
             , action.photoProofInstructions
                 |> Maybe.withDefault Markdown.empty
                 |> Markdown.view [ class "mb-4" ]
-            , case proofCode of
-                Just { code_, secondsAfterClaim, availabilityPeriod } ->
-                    case code_ of
-                        Just c ->
-                            viewProofCode
-                                translators
-                                c
-                                secondsAfterClaim
-                                availabilityPeriod
+            , if action.hasProofCode then
+                case proofCode of
+                    Just { code_, secondsAfterClaim, availabilityPeriod } ->
+                        case code_ of
+                            Just c ->
+                                viewProofCode
+                                    translators
+                                    c
+                                    secondsAfterClaim
+                                    availabilityPeriod
 
-                        _ ->
-                            text ""
+                            _ ->
+                                text ""
 
-                _ ->
-                    text ""
+                    _ ->
+                        text ""
+
+              else
+                text ""
             , Form.view []
                 translators
                 (\submitButton ->
@@ -759,6 +796,16 @@ viewProofCode { t } proofCode secondsAfterClaim proofCodeValiditySeconds =
 -- INTEROP
 
 
+encodeObjectiveId : ObjectiveId -> Encode.Value
+encodeObjectiveId (ObjectiveId id) =
+    Encode.int id
+
+
+objectiveIdToInt : ObjectiveId -> Int
+objectiveIdToInt (ObjectiveId id) =
+    id
+
+
 encode : Action -> Encode.Value
 encode action =
     let
@@ -769,7 +816,7 @@ encode action =
     Encode.object
         [ ( "community_id", Eos.encodeSymbol action.objective.community.symbol )
         , ( "action_id", Encode.int action.id )
-        , ( "objective_id", Encode.int action.objective.id )
+        , ( "objective_id", encodeObjectiveId action.objective.id )
         , ( "description", Markdown.encode action.description )
         , ( "reward", Eos.encodeAsset (makeAsset action.reward) )
         , ( "verifier_reward", Eos.encodeAsset (makeAsset action.verifierReward) )
@@ -839,8 +886,11 @@ type alias ClaimedAction =
     , proof :
         Maybe
             { photo : String
-            , code : String
-            , time : Time.Posix
+            , proofCode :
+                Maybe
+                    { code : String
+                    , time : Time.Posix
+                    }
             }
     }
 
@@ -853,15 +903,22 @@ encodeClaimAction c =
                 |> Maybe.map getter
                 |> Maybe.withDefault default
                 |> encoder
+
+        encodeProofCodeItem getter default encoder =
+            c.proof
+                |> Maybe.andThen .proofCode
+                |> Maybe.map getter
+                |> Maybe.withDefault default
+                |> encoder
     in
     Encode.object
         [ ( "community_id", Eos.encodeSymbol c.communityId )
         , ( "action_id", Encode.int c.actionId )
         , ( "maker", Eos.encodeName c.claimer )
         , ( "proof_photo", encodeProofItem .photo "" Encode.string )
-        , ( "proof_code", encodeProofItem .code "" Encode.string )
+        , ( "proof_code", encodeProofCodeItem .code "" Encode.string )
         , ( "proof_time"
-          , encodeProofItem (.time >> Time.posixToMillis >> (\time -> time // 1000))
+          , encodeProofCodeItem (.time >> Time.posixToMillis >> (\time -> time // 1000))
                 0
                 Encode.int
           )

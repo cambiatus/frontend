@@ -446,7 +446,7 @@ addPhotosMutation symbol photos =
 
 
 type alias Objective =
-    { id : Int
+    { id : Action.ObjectiveId
     , description : Markdown
     , creator : Eos.Name
     , actions : List Action
@@ -458,7 +458,7 @@ type alias Objective =
 objectiveSelectionSet : SelectionSet Objective Cambiatus.Object.Objective
 objectiveSelectionSet =
     SelectionSet.succeed Objective
-        |> with Objective.id
+        |> with Action.objectiveIdSelectionSet
         |> with (Markdown.selectionSet Objective.description)
         |> with (Eos.nameSelectionSet Objective.creatorId)
         |> with (Objective.actions identity Action.selectionSet)
@@ -485,7 +485,7 @@ encodeCreateObjectiveAction c =
 
 type alias UpdateObjectiveAction =
     { communityId : Eos.Symbol
-    , objectiveId : Int
+    , objectiveId : Action.ObjectiveId
     , description : Markdown
     , editor : Eos.Name
     }
@@ -495,7 +495,7 @@ encodeUpdateObjectiveAction : UpdateObjectiveAction -> Value
 encodeUpdateObjectiveAction c =
     Encode.object
         [ ( "community_id", Eos.encodeSymbol c.communityId )
-        , ( "objective_id", Encode.int c.objectiveId )
+        , ( "objective_id", Action.encodeObjectiveId c.objectiveId )
         , ( "description", Markdown.encode c.description )
         , ( "editor", Eos.encodeName c.editor )
         ]

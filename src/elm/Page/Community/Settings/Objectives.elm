@@ -9,7 +9,6 @@ import Html exposing (Html, button, div, p, text)
 import Html.Attributes exposing (class, classList, id)
 import Html.Events exposing (onClick)
 import Icons
-import Json.Encode as Encode
 import List.Extra as List
 import Log
 import Markdown
@@ -37,7 +36,7 @@ init loggedIn =
 
 type alias Model =
     { status : Status
-    , openObjective : Maybe Int
+    , openObjective : Maybe Action.ObjectiveId
     , profileSummaries : Dict Int (List Profile.Summary.Model)
     }
 
@@ -82,9 +81,9 @@ view ({ shared } as loggedIn) model =
                             [ div [ class "flex justify-end mb-10" ] [ viewNewObjectiveButton loggedIn community ]
                             , div []
                                 (objectives
-                                    |> List.sortBy .id
+                                    |> List.sortBy (.id >> Action.objectiveIdToInt)
                                     |> List.reverse
-                                    |> List.indexedMap (viewObjective loggedIn model)
+                                    |> List.map (viewObjective loggedIn model)
                                 )
                             ]
                         ]
@@ -130,14 +129,14 @@ viewNewObjectiveButton ({ shared } as loggedIn) community =
         text ""
 
 
-viewObjective : LoggedIn.Model -> Model -> Int -> Community.Objective -> Html Msg
-viewObjective ({ shared } as loggedIn) model index objective =
+viewObjective : LoggedIn.Model -> Model -> Community.Objective -> Html Msg
+viewObjective ({ shared } as loggedIn) model objective =
     let
         isOpen : Bool
         isOpen =
             case model.openObjective of
                 Just obj ->
-                    obj == index
+                    obj == objective.id
 
                 Nothing ->
                     False
@@ -152,7 +151,7 @@ viewObjective ({ shared } as loggedIn) model index objective =
               div
                 [ class "p-4 sm:px-6 cursor-pointer rounded flex justify-between"
                 , classList [ ( "pb-0", isOpen ) ]
-                , onClick (OpenObjective index)
+                , onClick (OpenObjective objective.id)
                 ]
                 [ div [ class "overflow-hidden" ]
                     [ Markdown.view
@@ -190,14 +189,14 @@ viewObjective ({ shared } as loggedIn) model index objective =
                     [ View.Components.disablableLink
                         { isDisabled = objective.isCompleted || not loggedIn.hasAcceptedCodeOfConduct }
                         [ class "button button-secondary button-sm w-full sm:w-48 mt-2 px-1 sm:mr-4"
-                        , Route.href (Route.CommunitySettingsEditObjective objective.id)
+                        , Route.href (Route.CommunitySettingsEditObjective (Action.objectiveIdToInt objective.id))
                         , classList [ ( "button-disabled", objective.isCompleted || not loggedIn.hasAcceptedCodeOfConduct ) ]
                         ]
                         [ text_ "community.objectives.edit" ]
                     , View.Components.disablableLink
                         { isDisabled = objective.isCompleted || not loggedIn.hasAcceptedCodeOfConduct }
                         [ class "button button-secondary button-sm w-full sm:w-48 mt-4 sm:mt-2 px-1 mb-4"
-                        , Route.href (Route.CommunitySettingsNewAction objective.id)
+                        , Route.href (Route.CommunitySettingsNewAction (Action.objectiveIdToInt objective.id))
                         , classList [ ( "button-disabled", objective.isCompleted || not loggedIn.hasAcceptedCodeOfConduct ) ]
                         ]
                         [ text_ "community.actions.new" ]
@@ -213,7 +212,7 @@ viewObjective ({ shared } as loggedIn) model index objective =
         ]
 
 
-viewAction : LoggedIn.Model -> Model -> Int -> Action -> Html Msg
+viewAction : LoggedIn.Model -> Model -> Action.ObjectiveId -> Action -> Html Msg
 viewAction ({ shared } as loggedIn) model objectiveId action =
     let
         symbol =
@@ -331,7 +330,7 @@ viewAction ({ shared } as loggedIn) model objectiveId action =
                                         Just validatorSummary ->
                                             let
                                                 validatorId =
-                                                    [ objectiveId, action.id, validatorIndex ]
+                                                    [ Action.objectiveIdToInt objectiveId, action.id, validatorIndex ]
                                                         |> List.map String.fromInt
                                                         |> (::) "validator"
                                                         |> String.join "-"
@@ -352,7 +351,7 @@ viewAction ({ shared } as loggedIn) model objectiveId action =
                 , View.Components.disablableLink
                     { isDisabled = action.objective.isCompleted || not loggedIn.hasAcceptedCodeOfConduct }
                     [ class "button button-primary button-sm w-full sm:w-40 mt-8 focus:ring-offset-indigo-500"
-                    , Route.href (Route.CommunitySettingsEditAction objectiveId action.id)
+                    , Route.href (Route.CommunitySettingsEditAction (Action.objectiveIdToInt objectiveId) action.id)
                     , classList [ ( "button-disabled", action.objective.isCompleted || not loggedIn.hasAcceptedCodeOfConduct ) ]
                     ]
                     [ text_ "community.actions.edit" ]
@@ -371,7 +370,7 @@ type alias UpdateResult =
 
 type Msg
     = CompletedLoadCommunity Community.Model
-    | OpenObjective Int
+    | OpenObjective Action.ObjectiveId
     | GotProfileSummaryMsg Int Int Profile.Summary.Msg
 
 
@@ -399,7 +398,7 @@ update msg model loggedIn =
                         { type_ = Log.DebugBreadcrumb
                         , category = msg
                         , message = "Closed objective"
-                        , data = Dict.fromList [ ( "objectiveId", Encode.int index ) ]
+                        , data = Dict.fromList [ ( "objectiveId", Action.encodeObjectiveId index ) ]
                         , level = Log.DebugLevel
                         }
 
@@ -410,7 +409,7 @@ update msg model loggedIn =
                         loggedIn.selectedCommunity
                             |> RemoteData.toMaybe
                             |> Maybe.andThen (.objectives >> RemoteData.toMaybe)
-                            |> Maybe.andThen (List.getAt index)
+                            |> Maybe.andThen (List.find (\objective -> objective.id == index))
                             |> Maybe.map .actions
                             |> Maybe.withDefault []
                             |> List.map
@@ -427,7 +426,7 @@ update msg model loggedIn =
                         { type_ = Log.DebugBreadcrumb
                         , category = msg
                         , message = "Closed objective"
-                        , data = Dict.fromList [ ( "objectiveId", Encode.int index ) ]
+                        , data = Dict.fromList [ ( "objectiveId", Action.encodeObjectiveId index ) ]
                         , level = Log.DebugLevel
                         }
 

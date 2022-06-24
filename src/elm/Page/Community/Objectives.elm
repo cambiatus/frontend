@@ -1,10 +1,11 @@
 module Page.Community.Objectives exposing (Model, Msg, init, jsAddressToMsg, msgToString, receiveBroadcast, update, view)
 
 import Action exposing (Action, Msg(..))
+import AssocList exposing (Dict)
 import Browser.Dom
 import Cambiatus.Enum.Permission as Permission
 import Community
-import Dict exposing (Dict)
+import Dict
 import Eos
 import Eos.Account
 import Form
@@ -46,7 +47,7 @@ import View.Modal
 type alias Model =
     { shownObjectives :
         Dict
-            ObjectiveId
+            Action.ObjectiveId
             { visibleAction : Maybe Int
             , visibleActionHeight : Maybe Float
             , previousVisibleAction : Maybe Int
@@ -55,14 +56,10 @@ type alias Model =
             , closedHeight : Maybe Float
             , isClosing : Bool
             }
-    , highlightedAction : Maybe { objectiveId : Int, actionId : Maybe Int }
+    , highlightedAction : Maybe { objectiveId : Action.ObjectiveId, actionId : Maybe Int }
     , sharingAction : Maybe Action
     , claimingStatus : ClaimingStatus
     }
-
-
-type alias ObjectiveId =
-    Int
 
 
 type ClaimingStatus
@@ -76,7 +73,8 @@ type Proof
 
 
 type ProofCode
-    = GeneratingCode
+    = NoCodeNecessary
+    | GeneratingCode
     | WithCode
         { code : String
         , expiration : Time.Posix
@@ -93,15 +91,15 @@ init selectedObjective _ =
                     Nothing
 
                 Route.WithObjectiveSelected { id, action } ->
-                    Just { objectiveId = id, actionId = action }
+                    Just { objectiveId = Action.objectiveIdFromInt id, actionId = action }
         , shownObjectives =
             case selectedObjective of
                 Route.WithNoObjectiveSelected ->
-                    Dict.empty
+                    AssocList.empty
 
                 Route.WithObjectiveSelected { id } ->
-                    Dict.fromList
-                        [ ( id
+                    AssocList.fromList
+                        [ ( Action.objectiveIdFromInt id
                           , { visibleAction = Nothing
                             , visibleActionHeight = Nothing
                             , previousVisibleAction = Nothing
@@ -131,7 +129,7 @@ type Msg
     | FinishedClosingObjective Community.Objective
     | GotObjectiveDetailsHeight Community.Objective (Result Browser.Dom.Error Browser.Dom.Element)
     | GotObjectiveSummaryHeight Community.Objective (Result Browser.Dom.Error Browser.Dom.Element)
-    | GotVisibleActionViewport { objectiveId : ObjectiveId, actionId : Int } (Result Browser.Dom.Error Browser.Dom.Viewport)
+    | GotVisibleActionViewport { objectiveId : Action.ObjectiveId, actionId : Int } (Result Browser.Dom.Error Browser.Dom.Viewport)
     | ClickedScrollToAction Action
     | ClickedShareAction Action
     | ClickedClaimAction { position : Int, action : Action }
@@ -251,7 +249,12 @@ update msg model loggedIn =
                                                                     |> Form.File.initSingle
                                                                     |> Form.init
                                                                 )
-                                                                GeneratingCode
+                                                                (if action.hasProofCode then
+                                                                    GeneratingCode
+
+                                                                 else
+                                                                    NoCodeNecessary
+                                                                )
 
                                                         else
                                                             NoProofNecessary
@@ -291,7 +294,7 @@ update msg model loggedIn =
         ClickedToggleObjectiveVisibility objective ->
             { model
                 | shownObjectives =
-                    Dict.update objective.id
+                    AssocList.update objective.id
                         (\currentValue ->
                             case currentValue of
                                 Nothing ->
@@ -326,13 +329,13 @@ update msg model loggedIn =
                     )
 
         FinishedClosingObjective objective ->
-            { model | shownObjectives = Dict.remove objective.id model.shownObjectives }
+            { model | shownObjectives = AssocList.remove objective.id model.shownObjectives }
                 |> UR.init
 
         GotObjectiveDetailsHeight objective (Ok { element }) ->
             { model
                 | shownObjectives =
-                    Dict.update objective.id
+                    AssocList.update objective.id
                         (Maybe.map (\value -> { value | openHeight = Just element.height }))
                         model.shownObjectives
             }
@@ -357,7 +360,7 @@ update msg model loggedIn =
         GotObjectiveSummaryHeight objective (Ok { element }) ->
             { model
                 | shownObjectives =
-                    Dict.update objective.id
+                    AssocList.update objective.id
                         (Maybe.map (\value -> { value | closedHeight = Just element.height }))
                         model.shownObjectives
             }
@@ -383,7 +386,7 @@ update msg model loggedIn =
             { model
                 | shownObjectives =
                     model.shownObjectives
-                        |> Dict.update objectiveId
+                        |> AssocList.update objectiveId
                             (\maybeValue ->
                                 case maybeValue of
                                     Nothing ->
@@ -434,7 +437,7 @@ update msg model loggedIn =
                                 , ( "url"
                                   , Route.CommunityObjectives
                                         (Route.WithObjectiveSelected
-                                            { id = action.objective.id
+                                            { id = Action.objectiveIdToInt action.objective.id
                                             , action = Just action.id
                                             }
                                         )
@@ -470,25 +473,26 @@ update msg model loggedIn =
                                 |> Form.File.initSingle
                                 |> Form.init
                             )
-                            GeneratingCode
+                            (if action.hasProofCode then
+                                GeneratingCode
+
+                             else
+                                NoCodeNecessary
+                            )
 
                     else
                         NoProofNecessary
 
                 generateProofCodePort =
-                    if action.hasProofPhoto then
-                        UR.addPort
-                            { responseAddress = msg
-                            , responseData = Encode.null
-                            , data =
-                                Encode.object
-                                    [ ( "name", Encode.string "accountNameToUint64" )
-                                    , ( "accountName", Eos.Account.encodeName loggedIn.accountName )
-                                    ]
-                            }
-
-                    else
-                        identity
+                    UR.addPort
+                        { responseAddress = msg
+                        , responseData = Encode.null
+                        , data =
+                            Encode.object
+                                [ ( "name", Encode.string "accountNameToUint64" )
+                                , ( "accountName", Eos.Account.encodeName loggedIn.accountName )
+                                ]
+                        }
             in
             { model
                 | claimingStatus =
@@ -533,7 +537,7 @@ update msg model loggedIn =
                         Just ( actionId, parentObjective ) ->
                             { model
                                 | shownObjectives =
-                                    Dict.update parentObjective.id
+                                    AssocList.update parentObjective.id
                                         (\maybeValue ->
                                             case maybeValue of
                                                 Nothing ->
@@ -579,10 +583,10 @@ update msg model loggedIn =
         StoppedIntersecting targetId ->
             let
                 newShownObjectives =
-                    Dict.foldl
+                    AssocList.foldl
                         (\objectiveId value currDict ->
                             if value.visibleAction == idFromActionCardId targetId then
-                                Dict.insert objectiveId
+                                AssocList.insert objectiveId
                                     { visibleAction = value.previousVisibleAction
                                     , visibleActionHeight = value.previousVisibleActionHeight
                                     , previousVisibleAction = Nothing
@@ -594,7 +598,7 @@ update msg model loggedIn =
                                     currDict
 
                             else if value.previousVisibleAction == idFromActionCardId targetId then
-                                Dict.insert objectiveId
+                                AssocList.insert objectiveId
                                     { value
                                         | previousVisibleAction = Nothing
                                         , previousVisibleActionHeight = Nothing
@@ -602,9 +606,9 @@ update msg model loggedIn =
                                     currDict
 
                             else
-                                Dict.insert objectiveId value currDict
+                                AssocList.insert objectiveId value currDict
                         )
-                        Dict.empty
+                        AssocList.empty
                         model.shownObjectives
             in
             { model | shownObjectives = newShownObjectives }
@@ -652,9 +656,9 @@ update msg model loggedIn =
             case model.claimingStatus of
                 Claiming { action, proof } ->
                     case proof of
-                        WithProof _ (WithCode { code, generation }) ->
-                            UR.init model
-                                |> UR.addPort
+                        WithProof _ proofCode ->
+                            let
+                                claimPort maybeProofCode =
                                     { responseAddress = msg
                                     , responseData = Encode.null
                                     , data =
@@ -673,17 +677,39 @@ update msg model loggedIn =
                                                         , proof =
                                                             Just
                                                                 { photo = proofUrl
-                                                                , code = code
-                                                                , time = generation
+                                                                , proofCode = maybeProofCode
                                                                 }
                                                         }
                                               }
                                             ]
                                     }
-                                |> LoggedIn.withPrivateKey loggedIn
-                                    [ Permission.Claim ]
-                                    model
-                                    { successMsg = msg, errorMsg = NoOp }
+                            in
+                            case proofCode of
+                                GeneratingCode ->
+                                    UR.init model
+
+                                NoCodeNecessary ->
+                                    UR.init model
+                                        |> UR.addPort (claimPort Nothing)
+                                        |> LoggedIn.withPrivateKey loggedIn
+                                            [ Permission.Claim ]
+                                            model
+                                            { successMsg = msg, errorMsg = NoOp }
+
+                                WithCode { code, generation } ->
+                                    UR.init model
+                                        |> UR.addPort
+                                            (claimPort
+                                                (Just
+                                                    { code = code
+                                                    , time = generation
+                                                    }
+                                                )
+                                            )
+                                        |> LoggedIn.withPrivateKey loggedIn
+                                            [ Permission.Claim ]
+                                            model
+                                            { successMsg = msg, errorMsg = NoOp }
 
                         _ ->
                             UR.init model
@@ -747,11 +773,15 @@ update msg model loggedIn =
                                         , action = action
                                         , proof =
                                             WithProof formModel
-                                                (WithCode
-                                                    { code = proofCode
-                                                    , expiration = expiration
-                                                    , generation = loggedIn.shared.now
-                                                    }
+                                                (if action.hasProofCode then
+                                                    WithCode
+                                                        { code = proofCode
+                                                        , expiration = expiration
+                                                        , generation = loggedIn.shared.now
+                                                        }
+
+                                                 else
+                                                    NoCodeNecessary
                                                 )
                                         }
                             }
@@ -898,7 +928,7 @@ view loggedIn model =
                                 , intersectionObserver
                                     { targetSelectors =
                                         filteredObjectives
-                                            |> List.filter (\objective -> List.member objective.id (Dict.keys model.shownObjectives))
+                                            |> List.filter (\objective -> List.member objective.id (AssocList.keys model.shownObjectives))
                                             |> List.concatMap .actions
                                             |> List.filterMap
                                                 (\action ->
@@ -942,7 +972,7 @@ view loggedIn model =
                                                         , ( "action_description", Markdown.toRawString sharingAction.description )
                                                         , ( "url"
                                                           , Route.WithObjectiveSelected
-                                                                { id = sharingAction.objective.id
+                                                                { id = Action.objectiveIdToInt sharingAction.objective.id
                                                                 , action = Just sharingAction.id
                                                                 }
                                                                 |> Route.CommunityObjectives
@@ -1021,7 +1051,7 @@ viewObjective translators model objective =
                 objective.actions
 
         isOpen =
-            Dict.get objective.id model.shownObjectives
+            AssocList.get objective.id model.shownObjectives
                 |> Maybe.map (\{ isClosing } -> not isClosing)
                 |> Maybe.withDefault False
 
@@ -1034,7 +1064,7 @@ viewObjective translators model objective =
                     objectiveId == objective.id && Maybe.Extra.isNothing actionId
 
         maybeShownObjectivesInfo =
-            Dict.get objective.id model.shownObjectives
+            AssocList.get objective.id model.shownObjectives
 
         visibleActionId =
             maybeShownObjectivesInfo
@@ -1068,7 +1098,7 @@ viewObjective translators model objective =
                         100% { height: {{closed-height}}px; }
                     }
                     """
-                        |> String.replace "{{id}}" (String.fromInt objective.id)
+                        |> String.replace "{{id}}" (String.fromInt (Action.objectiveIdToInt objective.id))
                         |> String.replace "{{open-height}}" (String.fromFloat open)
                         |> String.replace "{{closed-height}}" (String.fromFloat closed)
                         |> text
@@ -1089,12 +1119,12 @@ viewObjective translators model objective =
                 class ""
 
               else
-                style "animation-name" ("shrink-details-" ++ String.fromInt objective.id)
+                style "animation-name" ("shrink-details-" ++ String.fromInt (Action.objectiveIdToInt objective.id))
             , Html.Events.on "animationend"
                 (Decode.field "animationName" Decode.string
                     |> Decode.andThen
                         (\animationName ->
-                            if animationName == "shrink-details-" ++ String.fromInt objective.id then
+                            if animationName == "shrink-details-" ++ String.fromInt (Action.objectiveIdToInt objective.id) then
                                 Decode.succeed (FinishedClosingObjective objective)
 
                             else
@@ -1418,6 +1448,9 @@ viewClaimModal ({ translators } as shared) model =
                             let
                                 timeLeft =
                                     case proofCode of
+                                        NoCodeNecessary ->
+                                            Nothing
+
                                         GeneratingCode ->
                                             Nothing
 
@@ -1455,32 +1488,41 @@ viewClaimModal ({ translators } as shared) model =
 
                                     Nothing ->
                                         p [] [ text <| t "community.actions.proof.upload_hint" ]
-                                , div [ class "p-4 mt-4 bg-gray-100 rounded-sm flex flex-col items-center justify-center md:w-1/2 md:mx-auto" ]
-                                    [ span [ class "uppercase text-gray-333 font-bold text-sm" ]
-                                        [ text <| t "community.actions.form.verification_code" ]
-                                    , case proofCode of
-                                        GeneratingCode ->
-                                            span [ class "bg-gray-333 animate-skeleton-loading h-10 w-44 mt-2" ] []
+                                , case proofCode of
+                                    NoCodeNecessary ->
+                                        text ""
 
-                                        WithCode { code } ->
-                                            span [ class "font-bold text-xl text-gray-333" ] [ text code ]
-                                    ]
-                                , p
-                                    [ class "text-purple-500 text-center mt-4"
-                                    , classList [ ( "text-red", isTimeOver ) ]
-                                    ]
-                                    [ text <| t "community.actions.proof.code_period_label"
-                                    , text " "
-                                    , span [ class "font-bold" ]
-                                        [ case timeLeft of
-                                            Nothing ->
-                                                text "30:00"
+                                    GeneratingCode ->
+                                        div [ class "p-4 mt-4 bg-gray-100 rounded-sm flex flex-col items-center justify-center md:w-1/2 md:mx-auto" ]
+                                            [ span [ class "uppercase text-gray-333 font-bold text-sm" ]
+                                                [ text <| t "community.actions.form.verification_code" ]
+                                            , span [ class "bg-gray-333 animate-skeleton-loading h-10 w-44 mt-2" ] []
+                                            ]
 
-                                            Just { minutes, seconds } ->
-                                                (Utils.padInt 2 minutes ++ ":" ++ Utils.padInt 2 seconds)
-                                                    |> text
-                                        ]
-                                    ]
+                                    WithCode { code } ->
+                                        div []
+                                            [ div [ class "p-4 mt-4 bg-gray-100 rounded-sm flex flex-col items-center justify-center md:w-1/2 md:mx-auto" ]
+                                                [ span [ class "uppercase text-gray-333 font-bold text-sm" ]
+                                                    [ text <| t "community.actions.form.verification_code" ]
+                                                , span [ class "font-bold text-xl text-gray-333" ] [ text code ]
+                                                ]
+                                            , p
+                                                [ class "text-purple-500 text-center mt-4"
+                                                , classList [ ( "text-red", isTimeOver ) ]
+                                                ]
+                                                [ text <| t "community.actions.proof.code_period_label"
+                                                , text " "
+                                                , span [ class "font-bold" ]
+                                                    [ case timeLeft of
+                                                        Nothing ->
+                                                            text "30:00"
+
+                                                        Just { minutes, seconds } ->
+                                                            (Utils.padInt 2 minutes ++ ":" ++ Utils.padInt 2 seconds)
+                                                                |> text
+                                                    ]
+                                                ]
+                                            ]
                                 , Form.viewWithoutSubmit [ class "mb-6" ]
                                     translators
                                     (\_ -> [])
@@ -1584,19 +1626,19 @@ generateProofCode action claimerAccountUint64 time =
         |> String.slice 0 8
 
 
-objectiveDetailsId : { objective | id : Int } -> String
+objectiveDetailsId : { objective | id : Action.ObjectiveId } -> String
 objectiveDetailsId objective =
-    "objective-details-" ++ String.fromInt objective.id
+    "objective-details-" ++ String.fromInt (Action.objectiveIdToInt objective.id)
 
 
-objectiveSummaryId : { objective | id : Int } -> String
+objectiveSummaryId : { objective | id : Action.ObjectiveId } -> String
 objectiveSummaryId objective =
-    "objective-summary-" ++ String.fromInt objective.id
+    "objective-summary-" ++ String.fromInt (Action.objectiveIdToInt objective.id)
 
 
-objectiveContainerId : { objective | id : Int } -> String
+objectiveContainerId : { objective | id : Action.ObjectiveId } -> String
 objectiveContainerId objective =
-    "objective-container-" ++ String.fromInt objective.id
+    "objective-container-" ++ String.fromInt (Action.objectiveIdToInt objective.id)
 
 
 actionCardId : Action -> String
