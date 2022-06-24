@@ -272,7 +272,7 @@ minimalProfile =
 actionObjective : Random.Generator Action.Objective
 actionObjective =
     Random.constant Action.Objective
-        |> with (Random.int 0 Random.maxInt)
+        |> with (Random.int 0 Random.maxInt |> Random.map Action.objectiveIdFromInt)
         |> with (Markdown.generator string)
         |> with (symbol |> Random.map (\symbol_ -> { symbol = symbol_ }))
         |> with Random.Extra.bool

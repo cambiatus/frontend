@@ -1,7 +1,6 @@
 module Page.Community.Settings.ObjectiveEditor exposing (Model, Msg, initEdit, initNew, jsAddressToMsg, msgToString, receiveBroadcast, update, view)
 
 import Action
-import Cambiatus.Mutation as Mutation
 import Cambiatus.Object
 import Cambiatus.Object.Objective as Objective
 import Community
@@ -11,7 +10,6 @@ import Eos.Account as Eos
 import Form exposing (Form)
 import Form.RichText
 import Graphql.Http
-import Graphql.Operation exposing (RootMutation)
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Html exposing (Html, a, br, button, div, h2, img, p, span, text)
 import Html.Attributes exposing (alt, class, disabled, src, style, type_)
@@ -45,7 +43,7 @@ initNew loggedIn =
     )
 
 
-initEdit : LoggedIn.Model -> Int -> ( Model, Cmd Msg )
+initEdit : LoggedIn.Model -> Action.ObjectiveId -> ( Model, Cmd Msg )
 initEdit loggedIn objectiveId =
     ( { status = Loading
       , objectiveId = Just objectiveId
@@ -60,7 +58,7 @@ initEdit loggedIn objectiveId =
 
 type alias Model =
     { status : Status
-    , objectiveId : Maybe Int
+    , objectiveId : Maybe Action.ObjectiveId
     }
 
 
@@ -409,12 +407,6 @@ objectiveSelectionSet =
         |> with Objective.isCompleted
 
 
-completeObjectiveSelectionSet : Int -> SelectionSet (Maybe Objective) RootMutation
-completeObjectiveSelectionSet objectiveId =
-    Mutation.completeObjective { id = objectiveId }
-        objectiveSelectionSet
-
-
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
 update msg model loggedIn =
     let
@@ -666,7 +658,7 @@ update msg model loggedIn =
                                               , extras =
                                                     Dict.fromList
                                                         [ ( "actionId", Encode.int action.id )
-                                                        , ( "objectiveId", Encode.int objective.id )
+                                                        , ( "objectiveId", Action.encodeObjectiveId objective.id )
                                                         , ( "tries", Encode.int tries )
                                                         , ( "maximumRetries", Encode.int maxRetries )
                                                         ]
@@ -891,7 +883,7 @@ update msg model loggedIn =
                                     "Got an error when updating an objective"
                                     { moduleName = "Page.Community.Settings.ObjectiveEditor", function = "update" }
                                     [ { name = "Objective"
-                                      , extras = Dict.fromList [ ( "ID", Encode.int objective.id ) ]
+                                      , extras = Dict.fromList [ ( "ID", Action.encodeObjectiveId objective.id ) ]
                                       }
                                     ]
                                     v
@@ -967,7 +959,7 @@ completeActionOrObjective loggedIn model msg completionStatus objective =
     case List.head completionStatus.left of
         Nothing ->
             LoggedIn.mutation loggedIn
-                (completeObjectiveSelectionSet objective.id)
+                (Action.completeObjectiveSelectionSet objective.id objectiveSelectionSet)
                 GotCompleteObjectiveResponse
                 |> UR.addExt
 

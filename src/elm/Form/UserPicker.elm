@@ -66,7 +66,7 @@ This is how you actually use this component!
 import Avatar
 import Eos.Account
 import Html exposing (Html, button, div, li, span, ul)
-import Html.Attributes exposing (class, classList, disabled, type_)
+import Html.Attributes exposing (class, classList, disabled, id, type_)
 import Html.Attributes.Aria exposing (ariaLabel)
 import Html.Events exposing (onClick)
 import Icons
@@ -299,9 +299,10 @@ view ((Options options) as wrappedOptions) viewConfig toMsg =
             |> Html.map (toMsg << GotSelectMsg)
         , viewConfig.error
         , ul [ class "mt-4 flex flex-wrap gap-6" ]
-            (List.map
-                (viewSelectedProfile wrappedOptions viewConfig
-                    >> Html.map toMsg
+            (List.indexedMap
+                (\index profile ->
+                    viewSelectedProfile index wrappedOptions viewConfig profile
+                        |> Html.map toMsg
                 )
                 selectedProfiles
             )
@@ -309,11 +310,12 @@ view ((Options options) as wrappedOptions) viewConfig toMsg =
 
 
 viewSelectedProfile :
-    Options msg
+    Int
+    -> Options msg
     -> ViewConfig msg
     -> ProfileWithSummary
     -> Html Msg
-viewSelectedProfile (Options options) viewConfig { profile, summary } =
+viewSelectedProfile index (Options options) viewConfig { profile, summary } =
     let
         (Model model) =
             viewConfig.value
@@ -321,7 +323,7 @@ viewSelectedProfile (Options options) viewConfig { profile, summary } =
         addRelativeSelector =
             case options.profileSummarySelectors.relative of
                 Nothing ->
-                    Profile.Summary.withRelativeSelector ("#" ++ model.id ++ " ~ ul")
+                    Profile.Summary.withRelativeSelector ("#" ++ model.id ++ "-" ++ String.fromInt index)
 
                 Just selector ->
                     Profile.Summary.withRelativeSelector selector
@@ -337,6 +339,7 @@ viewSelectedProfile (Options options) viewConfig { profile, summary } =
     li
         [ class "flex flex-col items-center"
         , classList [ ( "relative", options.areProfilesRelative ) ]
+        , id (model.id ++ "-" ++ String.fromInt index)
         ]
         [ summary
             |> addRelativeSelector

@@ -40,6 +40,7 @@
             "justinmimbs/time-extra": "1.1.0",
             "krisajenkins/remotedata": "6.0.1",
             "pdamoc/elm-hashids": "1.0.4",
+            "pzp1997/assoc-list": "1.0.0",
             "robinheghan/elm-phone-numbers": "1.0.0",
             "robinheghan/murmur3": "1.0.0",
             "rtfeldman/elm-iso8601-date-strings": "1.1.3",

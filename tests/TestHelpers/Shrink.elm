@@ -100,10 +100,15 @@ minimalProfile profile =
 -- ACTION
 
 
+objectiveId : Shrinker Action.ObjectiveId
+objectiveId =
+    Shrink.convert Action.objectiveIdFromInt Action.objectiveIdToInt int
+
+
 actionObjective : Shrinker Action.Objective
 actionObjective objective =
     noShrink Action.Objective
-        |> andMap (int objective.id)
+        |> andMap (objectiveId objective.id)
         |> andMap (Markdown.shrink objective.description)
         |> andMap (noShrink objective.community)
         |> andMap (bool objective.isCompleted)

@@ -54,15 +54,11 @@ import View.Feedback as Feedback
 -- INIT
 
 
-type alias ObjectiveId =
-    Int
-
-
 type alias ActionId =
     Int
 
 
-init : LoggedIn.Model -> ObjectiveId -> Maybe ActionId -> UpdateResult
+init : LoggedIn.Model -> Action.ObjectiveId -> Maybe ActionId -> UpdateResult
 init _ objectiveId actionId =
     { objectiveId = objectiveId
     , actionId = actionId
@@ -77,7 +73,7 @@ init _ objectiveId actionId =
 
 
 type alias Model =
-    { objectiveId : ObjectiveId
+    { objectiveId : Action.ObjectiveId
     , actionId : Maybe ActionId
     , status : Status
     }
@@ -119,7 +115,12 @@ initFormInput shared maybeAction =
                 |> Form.RichText.initModel "description-editor"
         , reward =
             maybeAction
-                |> Maybe.map (.reward >> String.fromFloat)
+                |> Maybe.map
+                    (\action ->
+                        Eos.formatSymbolAmount shared.translators
+                            action.objective.community.symbol
+                            action.reward
+                    )
                 |> Maybe.withDefault ""
         , useDateValidation =
             maybeAction
@@ -173,7 +174,12 @@ initFormInput shared maybeAction =
                     }
             , verifierReward =
                 maybeAction
-                    |> Maybe.map (.verifierReward >> String.fromFloat)
+                    |> Maybe.map
+                        (\action ->
+                            Eos.formatSymbolAmount shared.translators
+                                action.objective.community.symbol
+                                action.verifierReward
+                        )
                     |> Maybe.withDefault ""
             , fileValidation =
                 { useFileValidation =
@@ -383,7 +389,7 @@ upsertAction { markAsCompleted } msg maybeAction loggedIn model formOutput =
                     Encode.object
                         [ ( "community_id", Eos.encodeSymbol formOutput.reward.symbol )
                         , ( "action_id", Encode.int (Maybe.withDefault 0 model.actionId) )
-                        , ( "objective_id", Encode.int model.objectiveId )
+                        , ( "objective_id", Action.encodeObjectiveId model.objectiveId )
                         , ( "creator", Eos.encodeName loggedIn.accountName )
                         , ( "description", Markdown.encode formOutput.description )
                         , ( "reward", Eos.encodeAsset formOutput.reward )
