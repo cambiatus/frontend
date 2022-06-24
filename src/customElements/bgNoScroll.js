@@ -5,6 +5,7 @@ export default () => (
     constructor () {
       super()
 
+      this._preventScrollingClasses = []
       this._classesHandledByOthers = []
     }
 
