@@ -1896,9 +1896,16 @@ nameAndSlugForm translators { nameFieldId } =
                                         [ text <| translators.t "shop.categories.form.insert_name" ]
 
                                   else
-                                    span [ class "form-error" ]
-                                        -- TODO - Add tooltip?
-                                        [ text <| translators.t "shop.categories.form.invalid_slug" ]
+                                    div [ class "flex" ]
+                                        [ span [ class "form-error" ]
+                                            [ text <| translators.t "shop.categories.form.invalid_slug" ]
+                                        , View.Components.tooltip
+                                            -- TODO - I18N
+                                            { message = "Non-latin characters aren't accepted in slugs. In order to generate a valid slug, the category name must have at least one latin character"
+                                            , iconClass = "text-red"
+                                            , containerClass = "self-end"
+                                            }
+                                        ]
                                 ]
                             )
 

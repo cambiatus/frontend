@@ -323,6 +323,7 @@ requireInvitationToggle { t } =
                 |> Form.Toggle.withTooltip
                     { message = t "settings.community_info.invitation.description"
                     , iconClass = "text-orange-300"
+                    , containerClass = ""
                     }
                 |> Form.Toggle.withContainerAttrs []
                 |> Form.toggle

@@ -756,6 +756,7 @@ verificationForm loggedIn community =
                         , View.Components.tooltip
                             { message = t "community.actions.form.automatic_tooltip"
                             , iconClass = ""
+                            , containerClass = ""
                             }
                         ]
                     )

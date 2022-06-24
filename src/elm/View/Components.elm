@@ -142,9 +142,9 @@ masonryLayout breakpoints { transitionWithParent } attrs children =
 -- ELEMENTS
 
 
-tooltip : { message : String, iconClass : String } -> Html msg
-tooltip { message, iconClass } =
-    span [ class "icon-tooltip ml-1 z-10" ]
+tooltip : { message : String, iconClass : String, containerClass : String } -> Html msg
+tooltip { message, iconClass, containerClass } =
+    span [ class ("icon-tooltip ml-1 z-10 " ++ containerClass) ]
         [ Icons.question ("inline-block " ++ iconClass)
         , p [ class "icon-tooltip-content" ]
             [ text message ]
