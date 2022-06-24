@@ -132,6 +132,8 @@ type Msg
     | CompletedMovingCategoryToRoot Shop.Category.Id (RemoteData (Graphql.Http.Error (Maybe ())) (Maybe ()))
     | ClickedMoveUp Shop.Category.Id
     | ClickedMoveDown Shop.Category.Id
+    | GotKeywordDndMsg (Dnd.Msg Int Int)
+    | ClickedRemoveMetaKeyword Int
 
 
 type alias UpdateResult =
@@ -596,6 +598,7 @@ update msg model loggedIn =
                                     , metaDescription = Maybe.withDefault (Markdown.toUnformattedString category.description) category.metaDescription
                                     , metaKeyword = ""
                                     , metaKeywords = category.metaKeywords
+                                    , keywordsDnd = Dnd.init
                                     }
                                 )
                     }
@@ -881,6 +884,75 @@ update msg model loggedIn =
 
                 _ ->
                     UR.init model
+
+        GotKeywordDndMsg subMsg ->
+            case model.categoryMetadataModalState of
+                Closed ->
+                    UR.init model
+
+                Open categoryId formModel ->
+                    Dnd.update subMsg (Form.getValue .keywordsDnd formModel)
+                        |> UR.fromChild
+                            (\newDnd ->
+                                { model
+                                    | categoryMetadataModalState =
+                                        Open categoryId
+                                            (Form.updateValues
+                                                (\values -> { values | keywordsDnd = newDnd })
+                                                formModel
+                                            )
+                                }
+                            )
+                            GotKeywordDndMsg
+                            updateKeywordsDnd
+                            model
+
+        ClickedRemoveMetaKeyword index ->
+            case model.categoryMetadataModalState of
+                Closed ->
+                    UR.init model
+
+                Open categoryId formModel ->
+                    { model
+                        | categoryMetadataModalState =
+                            formModel
+                                |> Form.updateValues (\values -> { values | metaKeywords = List.Extra.removeAt index values.metaKeywords })
+                                |> Open categoryId
+                    }
+                        |> UR.init
+
+
+updateKeywordsDnd : Dnd.ExtMsg Int Int -> UpdateResult -> UpdateResult
+updateKeywordsDnd ext ur =
+    case ext of
+        Dnd.Dropped { draggedElement, dropZone } ->
+            case ur.model.categoryMetadataModalState of
+                Closed ->
+                    ur
+
+                Open categoryId formModel ->
+                    UR.mapModel
+                        (\model ->
+                            { model
+                                | categoryMetadataModalState =
+                                    Open categoryId
+                                        (Form.updateValues
+                                            (\values ->
+                                                { values
+                                                    | metaKeywords =
+                                                        List.Extra.swapAt draggedElement
+                                                            dropZone
+                                                            values.metaKeywords
+                                                }
+                                            )
+                                            formModel
+                                        )
+                            }
+                        )
+                        ur
+
+        Dnd.DraggedOver _ ->
+            ur
 
 
 updateDnd : LoggedIn.Model -> Dnd.ExtMsg Shop.Category.Id DropZone -> UpdateResult -> UpdateResult
@@ -1783,6 +1855,7 @@ type alias MetadataFormInput =
     , metaDescription : String
     , metaKeyword : String
     , metaKeywords : List String
+    , keywordsDnd : Dnd.Model Int Int
     }
 
 
@@ -1794,7 +1867,7 @@ type alias MetadataFormOutput =
     }
 
 
-metadataForm : Translation.Translators -> Community.Model -> Shop.Category.Model -> Form.Form msg MetadataFormInput MetadataFormOutput
+metadataForm : Translation.Translators -> Community.Model -> Shop.Category.Model -> Form.Form Msg MetadataFormInput MetadataFormOutput
 metadataForm translators community category =
     Form.succeed
         (\metaTitle metaDescription metaKeywords ->
@@ -1843,15 +1916,38 @@ metadataForm translators community category =
             )
 
 
-keywordsForm : Translation.Translators -> Form.Form msg { input | metaKeyword : String, metaKeywords : List String } (List String)
+keywordsForm :
+    Translation.Translators
+    ->
+        Form.Form
+            Msg
+            { input
+                | metaKeyword : String
+                , metaKeywords : List String
+                , keywordsDnd : Dnd.Model Int Int
+            }
+            (List String)
 keywordsForm translators =
     let
-        viewKeyword keyword =
-            div [ class "bg-green/50 border border-green px-3 py-2 rounded-full text-sm flex items-center text-black" ]
+        viewKeyword dnd index keyword =
+            div
+                (class "bg-green/50 border border-green px-3 py-2 rounded-full text-sm flex items-center text-black cursor-move transition-colors"
+                    :: classList
+                        [ ( "border-dashed border-black !bg-green/80", Dnd.getDraggingOverElement dnd == Just index )
+                        , ( "!bg-green/80", Dnd.getDraggingElement dnd == Just index )
+                        ]
+                    :: Dnd.draggable index GotKeywordDndMsg
+                    ++ (if Dnd.getDraggingElement dnd == Just index then
+                            []
+
+                        else
+                            Dnd.dropZone index GotKeywordDndMsg
+                       )
+                )
                 [ span [ class "uppercase mr-3" ] [ text keyword ]
                 , button
                     [ type_ "button"
-                    , onClick (\values -> { values | metaKeywords = List.filter (\x -> x /= keyword) values.metaKeywords })
+                    , onClick (ClickedRemoveMetaKeyword index)
                     , class "hover:text-red"
                     ]
                     [ Icons.close "w-3 h-3 fill-current" ]
@@ -1896,9 +1992,11 @@ keywordsForm translators =
         |> Form.withNoOutput
             (Form.introspect
                 (\values ->
-                    Form.arbitrary
+                    Form.unsafeArbitrary
                         (div [ class "flex flex-wrap mb-10 gap-2" ]
-                            (List.map viewKeyword values.metaKeywords)
+                            (List.indexedMap (viewKeyword values.keywordsDnd)
+                                values.metaKeywords
+                            )
                         )
                 )
             )
@@ -2184,3 +2282,9 @@ msgToString msg =
 
         ClickedMoveDown _ ->
             [ "ClickedMoveDown" ]
+
+        GotKeywordDndMsg subMsg ->
+            "GotKeywordDndMsg" :: Dnd.msgToString subMsg
+
+        ClickedRemoveMetaKeyword _ ->
+            [ "ClickedRemoveMetaKeyword" ]
