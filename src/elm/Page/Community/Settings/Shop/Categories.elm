@@ -1329,6 +1329,12 @@ viewCategoryWithChildren translators model zipper children =
                 )
                 [ div [ class "flex items-center sticky left-0 w-full" ]
                     [ Icons.arrowDown (String.join " " [ "transition-transform", openArrowClass ])
+                    , case category.icon of
+                        Nothing ->
+                            text ""
+
+                        Just icon ->
+                            img [ src icon, alt "", class "h-6 w-6 rounded-full mr-2" ] []
                     , button
                         [ class "hover:underline focus-ring whitespace-nowrap"
                         , Utils.onClickNoBubble (ClickedCategory category.id)
