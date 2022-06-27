@@ -283,7 +283,7 @@ module.exports = {
     // Create `grand-parent-*` variants. This works similar to `group-*` variants, but
     // only works on direct children of the direct children of the `grand-parent` class.
     function ({ addVariant, e }) {
-      const operations = ['hover']
+      const operations = ['hover', 'focus']
 
       operations.forEach((operation) => {
         [1, 2, 3, 4, 5].forEach((level) => {

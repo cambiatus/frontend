@@ -1318,10 +1318,10 @@ viewCategoryWithChildren translators model zipper children =
             , classList [ ( "pointer-events-none", EverySet.member category.id model.deleting ) ]
             ]
             [ summary
-                (class "marker-hidden flex items-center rounded-sm transition-colors cursor-pointer"
+                (class "marker-hidden flex items-center rounded-sm transition-colors cursor-pointer grand-parent focus-ring"
                     :: classList
                         [ ( "!bg-green/20", isParentOfNewCategoryForm )
-                        , ( "focus:bg-orange-100/20 focus-ring parent-hover:bg-orange-100/20", not isParentOfNewCategoryForm && not isDraggingSomething )
+                        , ( "focus:bg-orange-100/20 parent-hover:bg-orange-100/20", not isParentOfNewCategoryForm && not isDraggingSomething )
                         , ( "bg-orange-100/20", hasActionsMenuOpen )
                         ]
                     :: onClick (ClickedToggleExpandCategory category.id)
@@ -1335,11 +1335,7 @@ viewCategoryWithChildren translators model zipper children =
 
                         Just icon ->
                             img [ src icon, alt "", class "h-6 w-6 rounded-full mr-2" ] []
-                    , button
-                        [ class "hover:underline focus-ring whitespace-nowrap"
-                        , Utils.onClickNoBubble (ClickedCategory category.id)
-                        , ariaLabel <| translators.tr "shop.categories.click_category_to_edit" [ ( "category_name", category.name ) ]
-                        ]
+                    , span [ class "whitespace-nowrap" ]
                         [ text category.name
                         ]
                     ]
@@ -1351,12 +1347,9 @@ viewCategoryWithChildren translators model zipper children =
                         ]
                     ]
                     [ viewActions translators
-                        [ classList
-                            [ ( "!bg-green/20", isParentOfNewCategoryForm )
-                            , ( "grand-parent-3-hover:bg-orange-100/20", not isParentOfNewCategoryForm && not isDraggingSomething )
-                            , ( "bg-orange-100/20", hasActionsMenuOpen )
-                            ]
-                        ]
+                        { isParentOfNewCategoryForm = isParentOfNewCategoryForm
+                        , isDraggingSomething = isDraggingSomething
+                        }
                         model
                         zipper
                     ]
@@ -1435,8 +1428,16 @@ viewAddCategory translators attrs model maybeParentCategory =
                 viewAddCategoryButton attrs
 
 
-viewActions : Translation.Translators -> List (Html.Attribute Msg) -> Model -> Tree.Zipper.Zipper Shop.Category.Model -> Html Msg
-viewActions translators attrs model zipper =
+viewActions :
+    Translation.Translators
+    ->
+        { isParentOfNewCategoryForm : Bool
+        , isDraggingSomething : Bool
+        }
+    -> Model
+    -> Tree.Zipper.Zipper Shop.Category.Model
+    -> Html Msg
+viewActions translators { isParentOfNewCategoryForm, isDraggingSomething } model zipper =
     let
         category =
             Tree.Zipper.label zipper
@@ -1460,26 +1461,54 @@ viewActions translators attrs model zipper =
                 (Maybe.Extra.isNothing (goUpWithoutChildren zipper)
                     && Maybe.Extra.isNothing (Tree.Zipper.parent zipper)
                 )
+
+        buttonClassListsFromParent =
+            classList
+                [ ( "hover:!bg-orange-300/30 active:!bg-orange-300/60 focus:bg-orange-300/30", not isParentOfNewCategoryForm )
+                , ( "hover:!bg-green/30 active:!bg-green/60 focus:!bg-green/30", isParentOfNewCategoryForm )
+                ]
     in
-    div [ class "relative" ]
+    div
+        [ class "relative flex rounded-sm transition-colors"
+        , classList
+            [ ( "bg-green/20", isParentOfNewCategoryForm )
+            , ( "grand-parent-1-focus:bg-orange-100/20 grand-parent-2-hover:bg-orange-100/20", not isParentOfNewCategoryForm && not isDraggingSomething )
+            , ( "bg-orange-100/20", isDropdownOpen )
+            ]
+        ]
         [ button
-            (class "h-8 px-2 rounded-sm transition-colors hover:!bg-orange-300/30 active:!bg-orange-300/60 action-opener focus-ring focus:bg-orange-300/30"
-                :: classList [ ( "bg-orange-300/60", isDropdownOpen ) ]
-                :: Utils.onClickNoBubble (ClickedShowActionsDropdown category.id)
-                :: ariaHasPopup "true"
-                :: ariaLabel (translators.tr "shop.categories.action_for" [ ( "category_name", category.name ) ])
-                :: attrs
-            )
+            [ class "hidden sm:block h-8 px-2 mr-2 rounded-sm transition-colors hover:!bg-orange-300/30 active:!bg-orange-300/60 focus-ring focus:bg-orange-300/30"
+            , Utils.onClickNoBubble (ClickedCategory category.id)
+            , buttonClassListsFromParent
+            , ariaLabel (translators.tr "shop.categories.click_category_to_edit" [ ( "category_name", category.name ) ])
+            ]
+            [ Icons.edit "max-h-4 w-8"
+            ]
+        , div
+            [ class "w-2"
+            ]
+            []
+        , button
+            [ class "h-8 px-2 rounded-sm transition-colors action-opener focus-ring"
+            , classList
+                [ ( "bg-orange-300/60", isDropdownOpen && not isParentOfNewCategoryForm )
+                , ( "bg-green/30", isDropdownOpen && isParentOfNewCategoryForm )
+                ]
+            , buttonClassListsFromParent
+            , Utils.onClickNoBubble (ClickedShowActionsDropdown category.id)
+            , ariaHasPopup "true"
+            , ariaLabel (translators.tr "shop.categories.action_for" [ ( "category_name", category.name ) ])
+            ]
             [ Icons.ellipsis "h-4 pointer-events-none text-gray-800" ]
         , if not isDropdownOpen then
             text ""
 
           else
             ul
-                [ class "absolute right-0 bg-white border border-gray-300 rounded-md p-2 text-sm shadow-lg animate-fade-in-from-above-sm"
+                [ class "absolute right-0 top-full bg-white border border-gray-300 rounded-md p-2 text-sm shadow-lg animate-fade-in-from-above-sm"
                 ]
                 [ li []
-                    [ viewAction []
+                    [ viewAction [ class "sm:hidden" ]
                         { icon = Icons.edit "w-4 ml-1 mr-3"
                         , label = translators.t "shop.categories.actions.edit_main_information"
                         , onClickMsg = ClickedCategory category.id
