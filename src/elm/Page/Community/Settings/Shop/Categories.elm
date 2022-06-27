@@ -1100,6 +1100,16 @@ view_ translators community model categories =
         isDraggingSomething =
             Maybe.Extra.isJust (Dnd.getDraggingElement model.dnd)
 
+        isDraggingRootCategory =
+            case Dnd.getDraggingElement model.dnd of
+                Nothing ->
+                    False
+
+                Just draggingId ->
+                    categories
+                        |> List.map Tree.label
+                        |> List.any (\tree -> tree.id == draggingId)
+
         isDraggingOverAddCategory =
             case Dnd.getDraggingOverElement model.dnd of
                 Nothing ->
@@ -1110,6 +1120,18 @@ view_ translators community model categories =
 
                 Just OnRoot ->
                     True
+
+        maybeNewRootCategoryForm =
+            case model.newCategoryState of
+                NotEditing ->
+                    Nothing
+
+                EditingNewCategory { parent, form } ->
+                    if Maybe.Extra.isNothing parent then
+                        Just form
+
+                    else
+                        Nothing
     in
     viewPageContainer
         { children =
@@ -1142,16 +1164,31 @@ view_ translators community model categories =
                             )
                             categories
                         )
-            , viewAddCategory translators
-                (class "w-full sticky left-0"
+            , div
+                (class "w-full rounded-sm transition-all ease-out"
                     :: classList
-                        [ ( "bg-green/30", isDraggingSomething )
-                        , ( "outline-black outline-offset-0", isDraggingSomething && isDraggingOverAddCategory )
+                        [ ( "h-0", not isDraggingSomething )
+                        , ( "bg-green/30 h-8", isDraggingSomething && not isDraggingRootCategory )
+                        , ( "outline-black outline-offset-0", isDraggingSomething && isDraggingOverAddCategory && not isDraggingRootCategory )
                         ]
-                    :: Dnd.dropZone OnRoot GotDndMsg
+                    :: (if isDraggingRootCategory then
+                            []
+
+                        else
+                            Dnd.dropZone OnRoot GotDndMsg
+                       )
                 )
-                model
-                Nothing
+                []
+            , case maybeNewRootCategoryForm of
+                Nothing ->
+                    button
+                        [ class "button button-primary w-full sticky left-0 mt-8"
+                        , onClick (ClickedAddCategory Nothing)
+                        ]
+                        [ text <| translators.t "shop.categories.add_root" ]
+
+                Just formModel ->
+                    viewNewCategoryForm [] translators formModel
             ]
         , modals =
             [ case model.categoryModalState of
@@ -1362,7 +1399,7 @@ viewCategoryWithChildren translators model zipper children =
                     (List.map (\child -> li [] [ child ]) children)
                 ]
             , div [ class "ml-4 mb-4" ]
-                [ viewAddCategory translators [ class "w-full" ] model (Just category)
+                [ viewAddCategory translators [ class "w-full" ] model category
                 ]
             ]
         ]
@@ -1372,28 +1409,20 @@ viewAddCategory :
     Translation.Translators
     -> List (Html.Attribute Msg)
     -> Model
-    -> Maybe Shop.Category.Model
+    -> Shop.Category.Model
     -> Html Msg
-viewAddCategory translators attrs model maybeParentCategory =
+viewAddCategory translators attrs model parentCategory =
     let
-        parentId =
-            Maybe.map .id maybeParentCategory
-
         viewAddCategoryButton customAttrs =
             button
                 (class "flex items-center px-2 h-8 font-bold transition-colors hover:bg-orange-100/20 rounded-sm whitespace-nowrap focus:bg-orange-100/20 focus-ring"
                     :: type_ "button"
-                    :: onClick (ClickedAddCategory parentId)
+                    :: onClick (ClickedAddCategory (Just parentCategory.id))
                     :: customAttrs
                 )
                 [ span [ class "sticky left-2 flex items-center" ]
                     [ Icons.plus "w-4 h-4 mr-2"
-                    , case maybeParentCategory of
-                        Nothing ->
-                            text <| translators.t "shop.categories.add_root"
-
-                        Just { name } ->
-                            text <| translators.tr "shop.categories.add_child" [ ( "parent_name", name ) ]
+                    , text <| translators.tr "shop.categories.add_child" [ ( "parent_name", parentCategory.name ) ]
                     ]
                 ]
     in
@@ -1402,30 +1431,35 @@ viewAddCategory translators attrs model maybeParentCategory =
             viewAddCategoryButton attrs
 
         EditingNewCategory newCategoryData ->
-            if newCategoryData.parent == parentId then
-                Form.view (class "border !border-gray-300 rounded-md p-4" :: attrs)
-                    translators
-                    (\submitButton ->
-                        [ div [ class "flex flex-col sm:flex-row justify-end gap-4 mt-10" ]
-                            [ button
-                                [ class "button button-secondary w-full sm:w-40"
-                                , type_ "button"
-                                , onClick ClickedCancelAddCategory
-                                ]
-                                [ text <| translators.t "menu.cancel" ]
-                            , submitButton [ class "button button-primary w-full sm:w-40" ]
-                                [ text <| translators.t "menu.create" ]
-                            ]
-                        ]
-                    )
-                    (newCategoryForm translators)
-                    newCategoryData.form
-                    { toMsg = GotAddCategoryFormMsg
-                    , onSubmit = SubmittedAddCategoryForm
-                    }
+            if newCategoryData.parent == Just parentCategory.id then
+                viewNewCategoryForm attrs translators newCategoryData.form
 
             else
                 viewAddCategoryButton attrs
+
+
+viewNewCategoryForm : List (Html.Attribute Msg) -> Translation.Translators -> Form.Model NewCategoryFormInput -> Html Msg
+viewNewCategoryForm attrs translators formModel =
+    Form.view (class "border !border-gray-300 rounded-md p-4" :: attrs)
+        translators
+        (\submitButton ->
+            [ div [ class "flex flex-col sm:flex-row justify-end gap-4 mt-10" ]
+                [ button
+                    [ class "button button-secondary w-full sm:w-40"
+                    , type_ "button"
+                    , onClick ClickedCancelAddCategory
+                    ]
+                    [ text <| translators.t "menu.cancel" ]
+                , submitButton [ class "button button-primary w-full sm:w-40" ]
+                    [ text <| translators.t "menu.create" ]
+                ]
+            ]
+        )
+        (newCategoryForm translators)
+        formModel
+        { toMsg = GotAddCategoryFormMsg
+        , onSubmit = SubmittedAddCategoryForm
+        }
 
 
 viewActions :
@@ -1484,10 +1518,6 @@ viewActions translators { isParentOfNewCategoryForm, isDraggingSomething } model
             ]
             [ Icons.edit "max-h-4 w-8"
             ]
-        , div
-            [ class "w-2"
-            ]
-            []
         , button
             [ class "h-8 px-2 rounded-sm transition-colors action-opener focus-ring"
             , classList
