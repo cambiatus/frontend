@@ -108,7 +108,7 @@ type Msg
     | ClickedToggleExpandCategory Shop.Category.Id
     | ClickedAddCategory (Maybe Shop.Category.Id)
     | ClickedCancelAddCategory
-    | ClickedCategory Shop.Category.Id
+    | ClickedEditCategory Shop.Category.Id
     | ClosedCategoryModal
     | GotAddCategoryFormMsg (Form.Msg NewCategoryFormInput)
     | SubmittedAddCategoryForm NewCategoryFormOutput
@@ -228,7 +228,7 @@ update msg model loggedIn =
             { model | newCategoryState = NotEditing }
                 |> UR.init
 
-        ClickedCategory categoryId ->
+        ClickedEditCategory categoryId ->
             case getCategoryZipper categoryId |> Maybe.map Tree.Zipper.label of
                 Just category ->
                     { model
@@ -1478,7 +1478,7 @@ viewActions translators { isParentOfNewCategoryForm, isDraggingSomething } model
         ]
         [ button
             [ class "hidden sm:block h-8 px-2 mr-2 rounded-sm transition-colors hover:!bg-orange-300/30 active:!bg-orange-300/60 focus-ring focus:bg-orange-300/30"
-            , Utils.onClickNoBubble (ClickedCategory category.id)
+            , Utils.onClickNoBubble (ClickedEditCategory category.id)
             , buttonClassListsFromParent
             , ariaLabel (translators.tr "shop.categories.click_category_to_edit" [ ( "category_name", category.name ) ])
             ]
@@ -1511,7 +1511,7 @@ viewActions translators { isParentOfNewCategoryForm, isDraggingSomething } model
                     [ viewAction [ class "sm:hidden" ]
                         { icon = Icons.edit "w-4 ml-1 mr-3"
                         , label = translators.t "shop.categories.actions.edit_main_information"
-                        , onClickMsg = ClickedCategory category.id
+                        , onClickMsg = ClickedEditCategory category.id
                         }
                     ]
                 , li []
@@ -2246,8 +2246,8 @@ msgToString msg =
         ClickedCancelAddCategory ->
             [ "ClickedCancelAddCategory" ]
 
-        ClickedCategory _ ->
-            [ "ClickedCategory" ]
+        ClickedEditCategory _ ->
+            [ "ClickedEditCategory" ]
 
         ClosedCategoryModal ->
             [ "ClosedCategoryModal" ]
