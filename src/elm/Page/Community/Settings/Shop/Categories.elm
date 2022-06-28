@@ -22,8 +22,8 @@ import Form.Text
 import Form.Validate
 import Graphql.Http
 import Graphql.SelectionSet
-import Html exposing (Html, button, details, div, h2, img, li, p, span, summary, text, ul)
-import Html.Attributes exposing (alt, class, classList, disabled, id, src, type_)
+import Html exposing (Html, button, details, div, h2, img, li, menu, p, span, summary, text, ul)
+import Html.Attributes exposing (alt, class, classList, disabled, id, src, style, type_)
 import Html.Attributes.Aria exposing (ariaHasPopup, ariaHidden, ariaLabel)
 import Html.Events exposing (onClick)
 import Icons
@@ -58,11 +58,17 @@ type alias Model =
     , newCategoryState : NewCategoryState
     , categoryModalState : CategoryFormState UpdateCategoryFormInput
     , categoryMetadataModalState : CategoryFormState MetadataFormInput
-    , actionsDropdown : Maybe Shop.Category.Id
+    , actionsDropdown : DropdownState
     , askingForDeleteConfirmation : Maybe Shop.Category.Id
     , deleting : EverySet Shop.Category.Id
     , dnd : Dnd.Model Shop.Category.Id DropZone
     }
+
+
+type DropdownState
+    = DropdownClosed
+    | DropdownOpenOnMouse { x : Float, y : Float } Shop.Category.Id
+    | DropdownOpenOnButton Shop.Category.Id
 
 
 type DropZone
@@ -76,7 +82,7 @@ init _ =
     , newCategoryState = NotEditing
     , categoryModalState = Closed
     , categoryMetadataModalState = Closed
-    , actionsDropdown = Nothing
+    , actionsDropdown = DropdownClosed
     , askingForDeleteConfirmation = Nothing
     , deleting = EverySet.empty
     , dnd = Dnd.init
@@ -121,6 +127,7 @@ type Msg
     | ConfirmedDeleteCategory Shop.Category.Id
     | CompletedDeletingCategory Shop.Category.Id (RemoteData (Graphql.Http.Error Api.Graphql.DeleteStatus.DeleteStatus) Api.Graphql.DeleteStatus.DeleteStatus)
     | ClickedShowActionsDropdown Shop.Category.Id
+    | OpenedContextMenuForAction { x : Float, y : Float } Shop.Category.Id
     | ClosedActionsDropdown
     | ClickedOpenMetadataModal Shop.Category.Id
     | GotMetadataFormMsg (Form.Msg MetadataFormInput)
@@ -167,7 +174,7 @@ update msg model loggedIn =
             { model
                 | newCategoryState = NotEditing
                 , categoryModalState = Closed
-                , actionsDropdown = Nothing
+                , actionsDropdown = DropdownClosed
                 , askingForDeleteConfirmation = Nothing
             }
                 |> UR.init
@@ -252,12 +259,12 @@ update msg model loggedIn =
                                             }
                                     }
                                 )
-                        , actionsDropdown = Nothing
+                        , actionsDropdown = DropdownClosed
                     }
                         |> UR.init
 
                 Nothing ->
-                    { model | actionsDropdown = Nothing }
+                    { model | actionsDropdown = DropdownClosed }
                         |> UR.init
 
         ClosedCategoryModal ->
@@ -568,16 +575,35 @@ update msg model loggedIn =
         ClickedShowActionsDropdown categoryId ->
             { model
                 | actionsDropdown =
-                    if model.actionsDropdown == Just categoryId then
-                        Nothing
+                    case model.actionsDropdown of
+                        DropdownClosed ->
+                            DropdownOpenOnButton categoryId
 
-                    else
-                        Just categoryId
+                        DropdownOpenOnButton _ ->
+                            DropdownClosed
+
+                        DropdownOpenOnMouse _ _ ->
+                            DropdownOpenOnButton categoryId
+            }
+                |> UR.init
+
+        OpenedContextMenuForAction coordinates categoryId ->
+            { model
+                | actionsDropdown =
+                    case model.actionsDropdown of
+                        DropdownClosed ->
+                            DropdownOpenOnMouse coordinates categoryId
+
+                        DropdownOpenOnButton _ ->
+                            DropdownOpenOnMouse coordinates categoryId
+
+                        DropdownOpenOnMouse _ _ ->
+                            DropdownClosed
             }
                 |> UR.init
 
         ClosedActionsDropdown ->
-            { model | actionsDropdown = Nothing }
+            { model | actionsDropdown = DropdownClosed }
                 |> UR.init
 
         ClickedOpenMetadataModal categoryId ->
@@ -1057,12 +1083,24 @@ view loggedIn model =
 
 viewPageContainer : Translation.Translators -> { children : List (Html Msg), modals : List (Html Msg) } -> Model -> Html Msg
 viewPageContainer translators { children, modals } model =
+    let
+        isActionsDropdownOpen =
+            case model.actionsDropdown of
+                DropdownClosed ->
+                    False
+
+                DropdownOpenOnButton _ ->
+                    True
+
+                DropdownOpenOnMouse _ _ ->
+                    True
+    in
     div [ class "container mx-auto sm:px-4 sm:mt-6 pb-40 overflow-x-hidden" ]
         (div
             [ class "bg-white container mx-auto pt-6 pb-7 w-full px-4 sm:px-6 sm:rounded sm:shadow-lg lg:w-2/3"
             , classList
-                [ ( "overflow-x-scroll", Maybe.Extra.isNothing model.actionsDropdown )
-                , ( "overflow-y-visible", Maybe.Extra.isJust model.actionsDropdown )
+                [ ( "overflow-x-scroll", not isActionsDropdownOpen )
+                , ( "overflow-y-visible", isActionsDropdownOpen )
                 ]
             ]
             (p [ class "text-gray-900 mb-10" ]
@@ -1282,10 +1320,15 @@ viewCategoryWithChildren translators model zipper children =
 
         hasActionsMenuOpen =
             case model.actionsDropdown of
-                Nothing ->
+                DropdownClosed ->
                     False
 
-                Just actionsDropdown ->
+                DropdownOpenOnButton actionsDropdown ->
+                    isAncestorOf
+                        actionsDropdown
+                        (Tree.Zipper.tree zipper)
+
+                DropdownOpenOnMouse _ actionsDropdown ->
                     isAncestorOf
                         actionsDropdown
                         (Tree.Zipper.tree zipper)
@@ -1365,6 +1408,21 @@ viewCategoryWithChildren translators model zipper children =
                         , ( "bg-orange-100/20", hasActionsMenuOpen )
                         ]
                     :: onClick (ClickedToggleExpandCategory category.id)
+                    :: Html.Events.preventDefaultOn "contextmenu"
+                        (Json.Decode.map2
+                            (\x y ->
+                                ( OpenedContextMenuForAction { x = x, y = y } category.id
+                                , case model.actionsDropdown of
+                                    DropdownOpenOnMouse _ _ ->
+                                        False
+
+                                    _ ->
+                                        True
+                                )
+                            )
+                            (Json.Decode.field "clientX" Json.Decode.float)
+                            (Json.Decode.field "clientY" Json.Decode.float)
+                        )
                     :: Dnd.draggable category.id GotDndMsg
                 )
                 [ div [ class "flex items-center sticky left-0 w-full" ]
@@ -1383,7 +1441,17 @@ viewCategoryWithChildren translators model zipper children =
                     [ class "sticky right-0 bg-white rounded-md transition-color"
                     , classList
                         [ ( "bg-transparent", isDraggingSomething )
-                        , ( "z-10", model.actionsDropdown == Just category.id )
+                        , ( "z-10"
+                          , case model.actionsDropdown of
+                                DropdownClosed ->
+                                    False
+
+                                DropdownOpenOnButton actionsDropdown ->
+                                    actionsDropdown == category.id
+
+                                DropdownOpenOnMouse _ actionsDropdown ->
+                                    actionsDropdown == category.id
+                          )
                         ]
                     ]
                     [ viewActions translators
@@ -1481,10 +1549,13 @@ viewActions translators { isParentOfNewCategoryForm, isDraggingSomething } model
 
         isDropdownOpen =
             case model.actionsDropdown of
-                Nothing ->
+                DropdownClosed ->
                     False
 
-                Just actionsDropdown ->
+                DropdownOpenOnButton actionsDropdown ->
+                    actionsDropdown == category.id
+
+                DropdownOpenOnMouse _ actionsDropdown ->
                     actionsDropdown == category.id
 
         canGoDown =
@@ -1537,9 +1608,25 @@ viewActions translators { isParentOfNewCategoryForm, isDraggingSomething } model
             text ""
 
           else
-            ul
-                [ class "absolute right-0 top-full bg-white border border-gray-300 rounded-md p-2 text-sm shadow-lg animate-fade-in-from-above-sm"
-                ]
+            let
+                openOnMouseAttrs =
+                    case model.actionsDropdown of
+                        DropdownOpenOnMouse { x, y } _ ->
+                            [ style "left" (String.fromFloat x ++ "px")
+                            , style "top" (String.fromFloat y ++ "px")
+                            , class "fixed"
+                            ]
+
+                        _ ->
+                            []
+            in
+            menu
+                (class "bg-white border border-gray-300 rounded-md p-2 text-sm shadow-lg animate-fade-in-from-above-sm marker-hidden"
+                    :: classList
+                        [ ( "absolute right-0 top-full", model.actionsDropdown == DropdownOpenOnButton category.id )
+                        ]
+                    :: openOnMouseAttrs
+                )
                 [ li []
                     [ viewAction [ class "sm:hidden" ]
                         { icon = Icons.edit "w-4 ml-1 mr-3"
@@ -2146,27 +2233,34 @@ nameAndSlugForm translators { nameFieldId } =
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
+    let
+        closeDropdownSubscription =
+            Browser.Events.onClick
+                (Json.Decode.oneOf
+                    [ Json.Decode.at [ "target", "className" ] Json.Decode.string
+                        |> Json.Decode.andThen
+                            (\targetClass ->
+                                if String.contains "action-opener" targetClass then
+                                    Json.Decode.fail ""
+
+                                else
+                                    Json.Decode.succeed ClosedActionsDropdown
+                            )
+                    , Json.Decode.succeed ClosedActionsDropdown
+                    ]
+                )
+    in
     Sub.batch
         [ Utils.escSubscription PressedEsc
         , case model.actionsDropdown of
-            Nothing ->
+            DropdownClosed ->
                 Sub.none
 
-            Just _ ->
-                Browser.Events.onClick
-                    (Json.Decode.oneOf
-                        [ Json.Decode.at [ "target", "className" ] Json.Decode.string
-                            |> Json.Decode.andThen
-                                (\targetClass ->
-                                    if String.contains "action-opener" targetClass then
-                                        Json.Decode.fail ""
+            DropdownOpenOnButton _ ->
+                closeDropdownSubscription
 
-                                    else
-                                        Json.Decode.succeed ClosedActionsDropdown
-                                )
-                        , Json.Decode.succeed ClosedActionsDropdown
-                        ]
-                    )
+            DropdownOpenOnMouse _ _ ->
+                closeDropdownSubscription
         ]
 
 
@@ -2317,6 +2411,9 @@ msgToString msg =
 
         ClickedShowActionsDropdown _ ->
             [ "ClickedShowActionsDropdown" ]
+
+        OpenedContextMenuForAction _ _ ->
+            [ "OpenedContextMenuForAction" ]
 
         ClosedActionsDropdown ->
             [ "ClosedActionsDropdown" ]
