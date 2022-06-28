@@ -100,7 +100,7 @@ update model { icon, name, description, slug, image } =
 
 updateMetadata :
     Model
-    -> { metaTitle : String, metaDescription : String, metaKeywords : List String }
+    -> { metaTitle : Maybe String, metaDescription : Maybe String, metaKeywords : List String }
     -> SelectionSet decodesTo Cambiatus.Object.Category
     -> SelectionSet (Maybe decodesTo) RootMutation
 updateMetadata model { metaTitle, metaDescription, metaKeywords } =
@@ -108,9 +108,9 @@ updateMetadata model { metaTitle, metaDescription, metaKeywords } =
         (\optionals ->
             { optionals
                 | id = OptionalArgument.Present (unwrapId model.id)
-                , metaDescription = OptionalArgument.Present metaDescription
+                , metaDescription = OptionalArgument.fromMaybe metaDescription
                 , metaKeywords = OptionalArgument.Present (String.join ", " metaKeywords)
-                , metaTitle = OptionalArgument.Present metaTitle
+                , metaTitle = OptionalArgument.fromMaybe metaTitle
             }
         )
 

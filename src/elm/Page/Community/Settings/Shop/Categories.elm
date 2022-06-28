@@ -649,6 +649,10 @@ update msg model loggedIn =
                     UR.init model
 
                 Just zipper ->
+                    let
+                        category =
+                            Tree.Zipper.label zipper
+                    in
                     { model
                         | categoryMetadataModalState =
                             case model.categoryMetadataModalState of
@@ -661,9 +665,19 @@ update msg model loggedIn =
                         |> UR.init
                         |> UR.addExt
                             (LoggedIn.mutation loggedIn
-                                (Shop.Category.updateMetadata (Tree.Zipper.label zipper)
-                                    { metaTitle = formOutput.metaTitle
-                                    , metaDescription = formOutput.metaDescription
+                                (Shop.Category.updateMetadata category
+                                    { metaTitle =
+                                        if Maybe.Extra.isNothing category.metaTitle && formOutput.metaTitle == category.name then
+                                            Nothing
+
+                                        else
+                                            Just formOutput.metaTitle
+                                    , metaDescription =
+                                        if Maybe.Extra.isNothing category.metaDescription && formOutput.metaDescription == Markdown.toUnformattedString category.description then
+                                            Nothing
+
+                                        else
+                                            Just formOutput.metaDescription
                                     , metaKeywords = formOutput.metaKeywords
                                     }
                                     Shop.Category.selectionSet
