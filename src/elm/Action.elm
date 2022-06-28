@@ -160,6 +160,7 @@ type Msg
 type ExternalMsg
     = SentFeedback Feedback.Model
     | ShowInsufficientPermissions
+    | AskedAuthentication
 
 
 type alias LoggedIn loggedIn profile role =

@@ -2440,22 +2440,21 @@ update msg model =
                         case extMsg of
                             Auth.CompletedAuth accountName auth ->
                                 let
-                                    cmd =
+                                    sendActionMsg =
                                         case model.claimingAction.status of
                                             Action.ClaimInProgress action maybeProof ->
                                                 -- If action claim is in progress,
                                                 -- send a message to finish the claiming process
                                                 -- when the user confirms the PIN.
-                                                Task.succeed (GotActionMsg (Action.ActionClaimed action maybeProof))
-                                                    |> Task.perform identity
+                                                UR.addMsg (GotActionMsg (Action.ActionClaimed action maybeProof))
 
                                             _ ->
-                                                Cmd.none
+                                                identity
                                 in
                                 closeModal uResult
                                     |> UR.mapModel (\m -> { m | auth = auth })
                                     |> UR.addExt AuthenticationSucceed
-                                    |> UR.addCmd cmd
+                                    |> sendActionMsg
                                     |> UR.addExt RunAfterPrivateKeyCallbacks
                                     |> UR.addBreadcrumb
                                         { type_ = Log.DefaultBreadcrumb
@@ -2861,12 +2860,6 @@ handleActionMsg ({ shared } as model) actionMsg =
                 actionModelToLoggedIn : Action.Model -> Model
                 actionModelToLoggedIn a =
                     { model | claimingAction = a }
-                        |> (if a.needsPinConfirmation then
-                                askedAuthentication
-
-                            else
-                                identity
-                           )
             in
             Action.update model community.symbol actionMsg model.claimingAction
                 |> UR.map
@@ -2879,6 +2872,9 @@ handleActionMsg ({ shared } as model) actionMsg =
 
                             Action.ShowInsufficientPermissions ->
                                 UR.mapModel (\prevModel -> { prevModel | showInsufficientPermissionsModal = True })
+
+                            Action.AskedAuthentication ->
+                                UR.mapModel askedAuthentication
                     )
                 |> UR.addCmd
                     (case actionMsg of
