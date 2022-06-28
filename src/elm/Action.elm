@@ -78,7 +78,6 @@ import View.Modal as Modal
 
 type alias Model =
     { status : ClaimingActionStatus
-    , needsPinConfirmation : Bool
     , sharingAction : Maybe Action
     }
 
@@ -86,7 +85,6 @@ type alias Model =
 init : Model
 init =
     { status = NotAsked
-    , needsPinConfirmation = False
     , sharingAction = Nothing
     }
 
@@ -212,25 +210,23 @@ update loggedIn selectedCommunity msg model =
                             }
                     }
             }
-            -> Model
-            -> UR.UpdateResult Model Msg ExternalMsg
-        claimOrAskForPin { actionId, proof } m =
+            -> UpdateResult
+            -> UpdateResult
+        claimOrAskForPin { actionId, proof } =
             if Auth.hasPrivateKey loggedIn.auth then
-                m
-                    |> UR.init
-                    |> UR.addPort
-                        (claimActionPort
-                            msg
-                            loggedIn.shared.contracts.community
-                            { communityId = selectedCommunity
-                            , actionId = actionId
-                            , claimer = loggedIn.accountName
-                            , proof = proof
-                            }
-                        )
+                UR.addPort
+                    (claimActionPort
+                        msg
+                        loggedIn.shared.contracts.community
+                        { communityId = selectedCommunity
+                        , actionId = actionId
+                        , claimer = loggedIn.accountName
+                        , proof = proof
+                        }
+                    )
 
             else
-                m |> UR.init
+                UR.addExt AskedAuthentication
     in
     case ( msg, model.status ) of
         ( ClaimButtonClicked action, _ ) ->
@@ -239,10 +235,8 @@ update loggedIn selectedCommunity msg model =
 
         ( ActionClaimed action Nothing, _ ) ->
             if hasPermissions [ Permission.Claim ] then
-                { model
-                    | status = ClaimInProgress action Nothing
-                    , needsPinConfirmation = not (Auth.hasPrivateKey loggedIn.auth)
-                }
+                { model | status = ClaimInProgress action Nothing }
+                    |> UR.init
                     |> claimOrAskForPin
                         { actionId = action.id
                         , proof = Nothing
@@ -266,10 +260,8 @@ update loggedIn selectedCommunity msg model =
             if hasPermissions [ Permission.Claim ] then
                 case proofRecord.image of
                     Just image ->
-                        { model
-                            | status = ClaimInProgress action (Just proofRecord)
-                            , needsPinConfirmation = not (Auth.hasPrivateKey loggedIn.auth)
-                        }
+                        { model | status = ClaimInProgress action (Just proofRecord) }
+                            |> UR.init
                             |> claimOrAskForPin
                                 { actionId = action.id
                                 , proof =
@@ -284,7 +276,7 @@ update loggedIn selectedCommunity msg model =
                                 }
 
                     Nothing ->
-                        { model | needsPinConfirmation = False }
+                        model
                             |> UR.init
                             |> UR.addExt (SentFeedback (Feedback.Visible Feedback.Failure (t "community.actions.proof.no_upload_error")))
 
@@ -303,7 +295,6 @@ update loggedIn selectedCommunity msg model =
                         )
                         Nothing
                         |> PhotoUploaderShowed action
-                , needsPinConfirmation = False
             }
                 |> UR.init
                 |> UR.addCmd (Task.perform GotProofTime Time.now)
@@ -314,10 +305,7 @@ update loggedIn selectedCommunity msg model =
                     tr "dashboard.check_claim.success" [ ( "symbolCode", Eos.symbolToSymbolCodeString selectedCommunity ) ]
                         |> Feedback.Visible Feedback.Success
             in
-            { model
-                | status = NotAsked
-                , needsPinConfirmation = False
-            }
+            { model | status = NotAsked }
                 |> UR.init
                 |> UR.addCmd
                     (Eos.nameToString loggedIn.accountName
@@ -328,10 +316,7 @@ update loggedIn selectedCommunity msg model =
                 |> UR.addExt FinishedClaimProcess
 
         ( GotActionClaimedResponse (Err val), _ ) ->
-            { model
-                | status = NotAsked
-                , needsPinConfirmation = False
-            }
+            { model | status = NotAsked }
                 |> UR.init
                 |> UR.addExt (SentFeedback (Feedback.Visible Feedback.Failure (t "dashboard.check_claim.failure")))
                 |> UR.logJsonValue msg
@@ -343,10 +328,7 @@ update loggedIn selectedCommunity msg model =
                 |> UR.addExt FinishedClaimProcess
 
         ( ClaimConfirmationClosed, _ ) ->
-            { model
-                | status = NotAsked
-                , needsPinConfirmation = False
-            }
+            { model | status = NotAsked }
                 |> UR.init
 
         ( GotProofTime posix, PhotoUploaderShowed action _ ) ->
@@ -368,7 +350,6 @@ update loggedIn selectedCommunity msg model =
                         )
                         initProofCodeParts
                         |> PhotoUploaderShowed action
-                , needsPinConfirmation = False
             }
                 |> UR.init
                 |> UR.addPort
@@ -392,14 +373,11 @@ update loggedIn selectedCommunity msg model =
                             | code_ = Just verificationCode
                         }
             in
-            { model
-                | status = PhotoUploaderShowed action (Proof photoStatus newProofCode)
-                , needsPinConfirmation = False
-            }
+            { model | status = PhotoUploaderShowed action (Proof photoStatus newProofCode) }
                 |> UR.init
 
         ( GotUint64Name (Err err), _ ) ->
-            { model | needsPinConfirmation = False }
+            model
                 |> UR.init
                 -- TODO - I18N
                 |> UR.addExt (SentFeedback (Feedback.Visible Feedback.Failure "Failed while creating proof code."))
@@ -462,17 +440,11 @@ update loggedIn selectedCommunity msg model =
                         |> Just
             in
             if isProofCodeActive then
-                { model
-                    | status = PhotoUploaderShowed action (Proof photoStatus newProofCode)
-                    , needsPinConfirmation = False
-                }
+                { model | status = PhotoUploaderShowed action (Proof photoStatus newProofCode) }
                     |> UR.init
 
             else
-                { model
-                    | status = NotAsked
-                    , needsPinConfirmation = False
-                }
+                { model | status = NotAsked }
                     |> UR.init
                     |> UR.addExt (SentFeedback (Feedback.Visible Feedback.Failure (t "community.actions.proof.time_expired")))
 
@@ -529,9 +501,7 @@ update loggedIn selectedCommunity msg model =
                     )
 
         _ ->
-            { model
-                | needsPinConfirmation = False
-            }
+            model
                 |> UR.init
 
 
