@@ -1372,7 +1372,7 @@ viewCategoryWithChildren translators model zipper children =
 
                         Just icon ->
                             img [ src icon, alt "", class "h-6 w-6 rounded-full mr-2" ] []
-                    , span [ class "whitespace-nowrap" ]
+                    , span [ class "whitespace-nowrap font-bold text-black" ]
                         [ text category.name
                         ]
                     ]
@@ -1415,13 +1415,13 @@ viewAddCategory translators attrs model parentCategory =
     let
         viewAddCategoryButton customAttrs =
             button
-                (class "flex items-center px-2 h-8 font-bold transition-colors hover:bg-orange-100/20 rounded-sm whitespace-nowrap focus:bg-orange-100/20 focus-ring"
+                (class "flex items-center px-2 h-8 transition-colors hover:bg-orange-100/20 rounded-sm whitespace-nowrap focus:bg-orange-100/20 focus-ring"
                     :: type_ "button"
                     :: onClick (ClickedAddCategory (Just parentCategory.id))
                     :: customAttrs
                 )
-                [ span [ class "sticky left-2 flex items-center" ]
-                    [ Icons.plus "w-4 h-4 mr-2"
+                [ span [ class "sticky left-2 flex items-center transition-colors text-orange-500/70 grand-parent-2-hover:text-orange-500/90" ]
+                    [ Icons.plus "w-4 h-4 mr-2 fill-current"
                     , text <| translators.tr "shop.categories.add_child" [ ( "parent_name", parentCategory.name ) ]
                     ]
                 ]
