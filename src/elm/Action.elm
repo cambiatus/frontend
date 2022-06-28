@@ -161,6 +161,7 @@ type ExternalMsg
     = SentFeedback Feedback.Model
     | ShowInsufficientPermissions
     | AskedAuthentication
+    | FinishedClaimProcess
 
 
 type alias LoggedIn loggedIn profile role =
@@ -324,6 +325,7 @@ update loggedIn selectedCommunity msg model =
                         |> Route.pushUrl loggedIn.shared.navKey
                     )
                 |> UR.addExt (SentFeedback feedback)
+                |> UR.addExt FinishedClaimProcess
 
         ( GotActionClaimedResponse (Err val), _ ) ->
             { model
@@ -338,6 +340,7 @@ update loggedIn selectedCommunity msg model =
                     { moduleName = "Action", function = "update" }
                     []
                     val
+                |> UR.addExt FinishedClaimProcess
 
         ( ClaimConfirmationClosed, _ ) ->
             { model

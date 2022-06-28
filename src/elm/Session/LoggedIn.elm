@@ -2875,14 +2875,9 @@ handleActionMsg ({ shared } as model) actionMsg =
 
                             Action.AskedAuthentication ->
                                 UR.mapModel askedAuthentication
-                    )
-                |> UR.addCmd
-                    (case actionMsg of
-                        Action.AgreedToClaimWithProof _ ->
-                            Task.perform identity (Task.succeed SearchClosed)
 
-                        _ ->
-                            Cmd.none
+                            Action.FinishedClaimProcess ->
+                                UR.addMsg SearchClosed
                     )
 
         _ ->
