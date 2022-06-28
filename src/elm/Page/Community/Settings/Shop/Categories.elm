@@ -1572,6 +1572,32 @@ viewActions translators { isParentOfNewCategoryForm, isDraggingSomething } model
                 DropdownOpenOnMouse _ actionsDropdown ->
                     actionsDropdown == category.id
 
+        isDropdownOpenOnButton =
+            case model.actionsDropdown of
+                DropdownClosed ->
+                    False
+
+                DropdownOpenOnButton actionsDropdown ->
+                    actionsDropdown == category.id
+
+                DropdownOpenOnMouse _ actionsDropdown ->
+                    False
+
+        hasActionsMenuOpen =
+            case model.actionsDropdown of
+                DropdownClosed ->
+                    False
+
+                DropdownOpenOnButton actionsDropdown ->
+                    isAncestorOf
+                        actionsDropdown
+                        (Tree.Zipper.tree zipper)
+
+                DropdownOpenOnMouse _ actionsDropdown ->
+                    isAncestorOf
+                        actionsDropdown
+                        (Tree.Zipper.tree zipper)
+
         canGoDown =
             not
                 (Maybe.Extra.isNothing (goDownWithoutChildren zipper)
@@ -1595,7 +1621,7 @@ viewActions translators { isParentOfNewCategoryForm, isDraggingSomething } model
         , classList
             [ ( "bg-green/20", isParentOfNewCategoryForm )
             , ( "grand-parent-1-focus:bg-orange-100/20 grand-parent-2-hover:bg-orange-100/20", not isParentOfNewCategoryForm && not isDraggingSomething )
-            , ( "bg-orange-100/20", isDropdownOpen )
+            , ( "bg-orange-100/20", hasActionsMenuOpen )
             ]
         ]
         [ button
@@ -1609,8 +1635,8 @@ viewActions translators { isParentOfNewCategoryForm, isDraggingSomething } model
         , button
             [ class "h-8 px-2 rounded-sm transition-colors action-opener focus-ring"
             , classList
-                [ ( "bg-orange-300/60", isDropdownOpen && not isParentOfNewCategoryForm )
-                , ( "bg-green/30", isDropdownOpen && isParentOfNewCategoryForm )
+                [ ( "bg-orange-300/60", isDropdownOpenOnButton && not isParentOfNewCategoryForm )
+                , ( "bg-green/30", isDropdownOpenOnButton && isParentOfNewCategoryForm )
                 ]
             , buttonClassListsFromParent
             , Utils.onClickNoBubble (ClickedShowActionsDropdown category.id)
