@@ -458,20 +458,20 @@ update loggedIn selectedCommunity msg model =
                     }
                         |> Just
             in
-            (if isProofCodeActive then
+            if isProofCodeActive then
                 { model
                     | status = PhotoUploaderShowed action (Proof photoStatus newProofCode)
                     , needsPinConfirmation = False
                 }
+                    |> UR.init
 
-             else
+            else
                 { model
                     | status = NotAsked
                     , needsPinConfirmation = False
                 }
-            )
-                |> UR.init
-                |> UR.addExt (SentFeedback (Feedback.Visible Feedback.Failure (t "community.actions.proof.time_expired")))
+                    |> UR.init
+                    |> UR.addExt (SentFeedback (Feedback.Visible Feedback.Failure (t "community.actions.proof.time_expired")))
 
         ( ClickedShareAction action, _ ) ->
             let
