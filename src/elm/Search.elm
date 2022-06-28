@@ -582,15 +582,12 @@ viewSearchBody translators selectedCommunity today searchToMsg actionToMsg searc
                                     (List.map
                                         (Action.viewCard translators
                                             { containerAttrs = [ class "mb-4 lg:mb-6" ]
-                                            , sideIcon = div [] []
-                                            , onShare = NoOp
-                                            , onClaim = NoOp
-                                            , shareButtonId = ""
+                                            , sideIcon = Icons.flag "w-8 text-green fill-current"
+                                            , toMsg = actionToMsg
                                             }
                                         )
                                         results.actions
                                     )
-                                    |> Html.map searchToMsg
                                 ]
 
                         Just MembersTab ->

@@ -289,7 +289,7 @@ initModel shared lastKnownPin maybePrivateKey_ accountName authToken =
       , unreadCount = 0
       , feedback = Feedback.Hidden
       , searchModel = Search.init
-      , claimingAction = { status = Action.NotAsked, feedback = Nothing, needsPinConfirmation = False }
+      , claimingAction = Action.init
       , authToken = authToken
       , hasSeenDashboard = False
       , queuedCommunityFields = []
@@ -2860,23 +2860,7 @@ handleActionMsg ({ shared } as model) actionMsg =
             let
                 actionModelToLoggedIn : Action.Model -> Model
                 actionModelToLoggedIn a =
-                    { model
-                        | claimingAction = a
-                        , feedback =
-                            case ( a.feedback, actionMsg ) of
-                                ( _, Action.Tick _ ) ->
-                                    -- Don't change feedback each second
-                                    model.feedback
-
-                                ( Just (Action.Failure s), _ ) ->
-                                    Feedback.Visible Feedback.Failure s
-
-                                ( Just (Action.Success s), _ ) ->
-                                    Feedback.Visible Feedback.Success s
-
-                                ( Nothing, _ ) ->
-                                    model.feedback
-                    }
+                    { model | claimingAction = a }
                         |> (if a.needsPinConfirmation then
                                 askedAuthentication
 
@@ -2884,16 +2868,7 @@ handleActionMsg ({ shared } as model) actionMsg =
                                 identity
                            )
             in
-            Action.update (hasPrivateKey model)
-                (model.profile
-                    |> RemoteData.map (.roles >> List.concatMap .permissions)
-                    |> RemoteData.withDefault []
-                )
-                shared
-                community.symbol
-                model.accountName
-                actionMsg
-                model.claimingAction
+            Action.update model community.symbol actionMsg model.claimingAction
                 |> UR.map
                     actionModelToLoggedIn
                     GotActionMsg

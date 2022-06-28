@@ -1,6 +1,5 @@
 module Action exposing
     ( Action
-    , ActionFeedback(..)
     , ClaimingActionStatus(..)
     , Community
     , ExternalMsg(..)
@@ -12,6 +11,7 @@ module Action exposing
     , completeObjectiveSelectionSet
     , encodeClaimAction
     , encodeObjectiveId
+    , init
     , isClaimable
     , isClosed
     , isPastDeadline
@@ -30,6 +30,8 @@ module Action exposing
     , viewSearchActions
     )
 
+import Auth
+import Browser.Dom
 import Cambiatus.Enum.Permission as Permission exposing (Permission)
 import Cambiatus.Enum.VerificationType as VerificationType exposing (VerificationType)
 import Cambiatus.Mutation
@@ -42,6 +44,7 @@ import Eos exposing (Symbol)
 import Eos.Account as Eos
 import Form
 import Form.File
+import Graphql.Http
 import Graphql.Operation exposing (RootMutation)
 import Graphql.OptionalArgument as OptionalArgument
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
@@ -55,6 +58,7 @@ import Json.Encode as Encode
 import Markdown exposing (Markdown)
 import Ports
 import Profile
+import RemoteData exposing (RemoteData)
 import Route
 import Session.Shared exposing (Shared, Translators)
 import Sha256 exposing (sha256)
@@ -62,6 +66,7 @@ import Task
 import Time
 import Translation
 import UpdateResult as UR
+import Url
 import Utils
 import View.Feedback as Feedback
 import View.Modal as Modal
@@ -73,8 +78,16 @@ import View.Modal as Modal
 
 type alias Model =
     { status : ClaimingActionStatus
-    , feedback : Maybe ActionFeedback
     , needsPinConfirmation : Bool
+    , sharingAction : Maybe Action
+    }
+
+
+init : Model
+init =
+    { status = NotAsked
+    , needsPinConfirmation = False
+    , sharingAction = Nothing
     }
 
 
@@ -83,11 +96,6 @@ type ClaimingActionStatus
     | ClaimInProgress Action (Maybe { proof : Proof, image : Maybe String })
     | PhotoUploaderShowed Action Proof
     | NotAsked
-
-
-type ActionFeedback
-    = Failure String
-    | Success String
 
 
 type Proof
@@ -103,6 +111,7 @@ type alias ProofCode =
 
 
 type alias Action =
+    -- TODO - Use opaque type for id
     { id : Int
     , description : Markdown
     , image : Maybe String
@@ -143,6 +152,9 @@ type Msg
     | GotUint64Name (Result Encode.Value String)
     | GotFormMsg (Form.Msg Form.File.SingleModel)
     | Tick Time.Posix
+      -- Share Action Messages
+    | ClickedShareAction Action
+    | CopiedShareLinkToClipboard Int
 
 
 type ExternalMsg
@@ -150,19 +162,37 @@ type ExternalMsg
     | ShowInsufficientPermissions
 
 
+type alias LoggedIn loggedIn profile role =
+    { loggedIn
+        | profile :
+            RemoteData
+                (Graphql.Http.Error (Maybe profile))
+                { profile | roles : List { role | permissions : List Permission } }
+        , shared : Shared
+        , accountName : Eos.Name
+        , auth : Auth.Model
+    }
+
+
+type alias UpdateResult =
+    UR.UpdateResult Model Msg ExternalMsg
+
+
 update :
-    Bool
-    -> List Permission
-    -> Shared
+    LoggedIn loggedIn profile role
     -> Symbol
-    -> Eos.Name
     -> Msg
     -> Model
-    -> UR.UpdateResult Model Msg ExternalMsg
-update isPinConfirmed permissions shared selectedCommunity accName msg model =
+    -> UpdateResult
+update loggedIn selectedCommunity msg model =
     let
+        permissions =
+            loggedIn.profile
+                |> RemoteData.map (.roles >> List.concatMap .permissions)
+                |> RemoteData.withDefault []
+
         { t, tr } =
-            shared.translators
+            loggedIn.shared.translators
 
         hasPermissions necessaryPermissions =
             List.all (\permission -> List.member permission permissions)
@@ -183,16 +213,16 @@ update isPinConfirmed permissions shared selectedCommunity accName msg model =
             -> Model
             -> UR.UpdateResult Model Msg ExternalMsg
         claimOrAskForPin { actionId, proof } m =
-            if isPinConfirmed then
+            if Auth.hasPrivateKey loggedIn.auth then
                 m
                     |> UR.init
                     |> UR.addPort
                         (claimActionPort
                             msg
-                            shared.contracts.community
+                            loggedIn.shared.contracts.community
                             { communityId = selectedCommunity
                             , actionId = actionId
-                            , claimer = accName
+                            , claimer = loggedIn.accountName
                             , proof = proof
                             }
                         )
@@ -202,18 +232,14 @@ update isPinConfirmed permissions shared selectedCommunity accName msg model =
     in
     case ( msg, model.status ) of
         ( ClaimButtonClicked action, _ ) ->
-            { model
-                | status = ConfirmationOpen action
-                , feedback = Nothing
-            }
+            { model | status = ConfirmationOpen action }
                 |> UR.init
 
         ( ActionClaimed action Nothing, _ ) ->
             if hasPermissions [ Permission.Claim ] then
                 { model
                     | status = ClaimInProgress action Nothing
-                    , feedback = Nothing
-                    , needsPinConfirmation = not isPinConfirmed
+                    , needsPinConfirmation = not (Auth.hasPrivateKey loggedIn.auth)
                 }
                     |> claimOrAskForPin
                         { actionId = action.id
@@ -240,8 +266,7 @@ update isPinConfirmed permissions shared selectedCommunity accName msg model =
                     Just image ->
                         { model
                             | status = ClaimInProgress action (Just proofRecord)
-                            , feedback = Nothing
-                            , needsPinConfirmation = not isPinConfirmed
+                            , needsPinConfirmation = not (Auth.hasPrivateKey loggedIn.auth)
                         }
                             |> claimOrAskForPin
                                 { actionId = action.id
@@ -257,11 +282,9 @@ update isPinConfirmed permissions shared selectedCommunity accName msg model =
                                 }
 
                     Nothing ->
-                        { model
-                            | feedback = Failure (t "community.actions.proof.no_upload_error") |> Just
-                            , needsPinConfirmation = False
-                        }
+                        { model | needsPinConfirmation = False }
                             |> UR.init
+                            |> UR.addExt (SentFeedback (Feedback.Visible Feedback.Failure (t "community.actions.proof.no_upload_error")))
 
             else
                 { model | status = NotAsked }
@@ -278,7 +301,6 @@ update isPinConfirmed permissions shared selectedCommunity accName msg model =
                         )
                         Nothing
                         |> PhotoUploaderShowed action
-                , feedback = Nothing
                 , needsPinConfirmation = False
             }
                 |> UR.init
@@ -288,33 +310,29 @@ update isPinConfirmed permissions shared selectedCommunity accName msg model =
             let
                 feedback =
                     tr "dashboard.check_claim.success" [ ( "symbolCode", Eos.symbolToSymbolCodeString selectedCommunity ) ]
-                        |> Success
+                        |> Feedback.Visible Feedback.Success
             in
             { model
                 | status = NotAsked
-                , feedback = Just feedback
                 , needsPinConfirmation = False
             }
                 |> UR.init
                 |> UR.addCmd
-                    (Eos.nameToString accName
+                    (Eos.nameToString loggedIn.accountName
                         |> Route.ProfileClaims
-                        |> Route.pushUrl shared.navKey
+                        |> Route.pushUrl loggedIn.shared.navKey
                     )
+                |> UR.addExt (SentFeedback feedback)
 
         ( GotActionClaimedResponse (Err val), _ ) ->
-            let
-                feedback =
-                    Failure (t "dashboard.check_claim.failure")
-            in
             { model
                 | status = NotAsked
-                , feedback = Just feedback
                 , needsPinConfirmation = False
             }
                 |> UR.init
+                |> UR.addExt (SentFeedback (Feedback.Visible Feedback.Failure (t "dashboard.check_claim.failure")))
                 |> UR.logJsonValue msg
-                    (Just accName)
+                    (Just loggedIn.accountName)
                     "Got an error when claiming an action"
                     { moduleName = "Action", function = "update" }
                     []
@@ -323,7 +341,6 @@ update isPinConfirmed permissions shared selectedCommunity accName msg model =
         ( ClaimConfirmationClosed, _ ) ->
             { model
                 | status = NotAsked
-                , feedback = Nothing
                 , needsPinConfirmation = False
             }
                 |> UR.init
@@ -347,7 +364,6 @@ update isPinConfirmed permissions shared selectedCommunity accName msg model =
                         )
                         initProofCodeParts
                         |> PhotoUploaderShowed action
-                , feedback = Nothing
                 , needsPinConfirmation = False
             }
                 |> UR.init
@@ -357,7 +373,7 @@ update isPinConfirmed permissions shared selectedCommunity accName msg model =
                     , data =
                         Encode.object
                             [ ( "name", Encode.string "accountNameToUint64" )
-                            , ( "accountName", Encode.string (Eos.nameToString accName) )
+                            , ( "accountName", Encode.string (Eos.nameToString loggedIn.accountName) )
                             ]
                     }
 
@@ -374,19 +390,17 @@ update isPinConfirmed permissions shared selectedCommunity accName msg model =
             in
             { model
                 | status = PhotoUploaderShowed action (Proof photoStatus newProofCode)
-                , feedback = Nothing
                 , needsPinConfirmation = False
             }
                 |> UR.init
 
         ( GotUint64Name (Err err), _ ) ->
-            { model
-                | feedback = Just <| Failure "Failed while creating proof code."
-                , needsPinConfirmation = False
-            }
+            { model | needsPinConfirmation = False }
                 |> UR.init
+                -- TODO - I18N
+                |> UR.addExt (SentFeedback (Feedback.Visible Feedback.Failure "Failed while creating proof code."))
                 |> UR.logJsonValue msg
-                    (Just accName)
+                    (Just loggedIn.accountName)
                     "Got error when converting name to Uint64"
                     { moduleName = "Action", function = "update" }
                     []
@@ -399,7 +413,7 @@ update isPinConfirmed permissions shared selectedCommunity accName msg model =
                         Proof formModel_ _ ->
                             formModel_
             in
-            Form.update shared subMsg formModel
+            Form.update loggedIn.shared subMsg formModel
                 |> UR.fromChild
                     (\newForm ->
                         { model
@@ -420,7 +434,7 @@ update isPinConfirmed permissions shared selectedCommunity accName msg model =
                     model
 
         ( GotFormMsg subMsg, PhotoUploaderShowed action (Proof formModel proofCode) ) ->
-            Form.update shared subMsg formModel
+            Form.update loggedIn.shared subMsg formModel
                 |> UR.fromChild
                     (\newForm ->
                         { model | status = PhotoUploaderShowed action (Proof newForm proofCode) }
@@ -452,17 +466,74 @@ update isPinConfirmed permissions shared selectedCommunity accName msg model =
              else
                 { model
                     | status = NotAsked
-                    , feedback = Failure (t "community.actions.proof.time_expired") |> Just
                     , needsPinConfirmation = False
                 }
             )
                 |> UR.init
+                |> UR.addExt (SentFeedback (Feedback.Visible Feedback.Failure (t "community.actions.proof.time_expired")))
+
+        ( ClickedShareAction action, _ ) ->
+            let
+                sharePort =
+                    if loggedIn.shared.canShare then
+                        { responseAddress = msg
+                        , responseData = Encode.null
+                        , data =
+                            Encode.object
+                                [ ( "name", Encode.string "share" )
+                                , ( "title", Markdown.encode action.description )
+                                , ( "url"
+                                  , Route.CommunityObjectives
+                                        (Route.WithObjectiveSelected
+                                            { id = objectiveIdToInt action.objective.id
+                                            , action = Just action.id
+                                            }
+                                        )
+                                        |> Route.addRouteToUrl loggedIn.shared
+                                        |> Url.toString
+                                        |> Encode.string
+                                  )
+                                ]
+                        }
+
+                    else
+                        { responseAddress = msg
+                        , responseData = Encode.int action.id
+                        , data =
+                            Encode.object
+                                [ ( "name", Encode.string "copyToClipboard" )
+                                , ( "id", Encode.string "share-fallback-input" )
+                                ]
+                        }
+            in
+            { model | sharingAction = Just action }
+                |> UR.init
+                |> UR.addPort sharePort
+
+        ( CopiedShareLinkToClipboard actionId, _ ) ->
+            model
+                |> UR.init
+                |> UR.addExt
+                    (SentFeedback
+                        (Feedback.Visible Feedback.Success
+                            (loggedIn.shared.translators.t "copied_to_clipboard")
+                        )
+                    )
+                |> UR.addCmd
+                    (Browser.Dom.focus (shareActionButtonId actionId)
+                        |> Task.attempt (\_ -> NoOp)
+                    )
 
         _ ->
             { model
                 | needsPinConfirmation = False
             }
                 |> UR.init
+
+
+shareActionButtonId : Int -> String
+shareActionButtonId actionId =
+    "share-action-button-" ++ String.fromInt actionId
 
 
 
@@ -800,13 +871,11 @@ viewCard :
     ->
         { containerAttrs : List (Html.Attribute msg)
         , sideIcon : Html msg
-        , onShare : msg
-        , onClaim : msg
-        , shareButtonId : String
+        , toMsg : Msg -> msg
         }
     -> Action
     -> Html msg
-viewCard ({ t } as translators) { containerAttrs, sideIcon, onShare, onClaim, shareButtonId } action =
+viewCard ({ t } as translators) { containerAttrs, sideIcon, toMsg } action =
     li (class "bg-white rounded self-start w-full flex-shrink-0" :: containerAttrs)
         [ case action.image of
             Nothing ->
@@ -862,8 +931,8 @@ viewCard ({ t } as translators) { containerAttrs, sideIcon, onShare, onClaim, sh
                 ]
                 [ button
                     [ class "button button-secondary w-full"
-                    , onClick onShare
-                    , id shareButtonId
+                    , onClick (ClickedShareAction action |> toMsg)
+                    , id (shareActionButtonId action.id)
                     ]
                     [ Icons.share "mr-2 flex-shrink-0"
                     , text <| t "share"
@@ -871,7 +940,7 @@ viewCard ({ t } as translators) { containerAttrs, sideIcon, onShare, onClaim, sh
                 , if isClaimable action then
                     button
                         [ class "button button-primary w-full sm:col-span-1"
-                        , onClick onClaim
+                        , onClick (ClaimButtonClicked action |> toMsg)
                         ]
                         [ if action.hasProofPhoto then
                             Icons.camera "w-4 mr-2 flex-shrink-0"
@@ -1046,6 +1115,31 @@ jsAddressToMsg addr val =
                 |> Result.map (Just << GotUint64Name)
                 |> Result.withDefault Nothing
 
+        "ClickedShareAction" :: _ ->
+            case
+                Decode.decodeValue
+                    (Decode.map2
+                        (\hasCopied actionId ->
+                            if hasCopied then
+                                Just actionId
+
+                            else
+                                Nothing
+                        )
+                        (Decode.field "copied" Decode.bool)
+                        (Decode.field "addressData" Decode.int)
+                    )
+                    val
+            of
+                Ok (Just actionId) ->
+                    Just (CopiedShareLinkToClipboard actionId)
+
+                Ok Nothing ->
+                    Just NoOp
+
+                Err _ ->
+                    Just NoOp
+
         _ ->
             Nothing
 
@@ -1085,6 +1179,12 @@ msgToString msg =
 
         GotFormMsg subMsg ->
             "GotFormMsg" :: Form.msgToString subMsg
+
+        ClickedShareAction _ ->
+            [ "ClickedShareAction" ]
+
+        CopiedShareLinkToClipboard _ ->
+            [ "CopiedShareLinkToClipboard" ]
 
 
 

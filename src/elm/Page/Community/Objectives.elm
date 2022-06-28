@@ -1246,9 +1246,10 @@ viewObjective translators model objective =
                                                 , ariaHidden True
                                                 ]
                                                 [ text (String.fromInt (index + 1)), text "." ]
-                                        , onShare = ClickedShareAction action
-                                        , onClaim = ClickedClaimAction { position = index + 1, action = action }
-                                        , shareButtonId = shareActionButtonId action.id
+
+                                        -- , onShare = ClickedShareAction action
+                                        -- , onClaim = ClickedClaimAction { position = index + 1, action = action }
+                                        , toMsg = \_ -> NoOp
                                         }
                                         action
                                 )
