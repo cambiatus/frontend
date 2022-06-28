@@ -1237,7 +1237,7 @@ view_ translators community model categories =
             , case maybeNewRootCategoryForm of
                 Nothing ->
                     button
-                        [ class "button button-primary w-full sticky left-0 mt-8"
+                        [ class "button button-primary w-full sm:w-auto whitespace-nowrap sm:px-4 sticky left-0 mt-8"
                         , onClick (ClickedAddCategory Nothing)
                         ]
                         [ text <| translators.t "shop.categories.add_root" ]
