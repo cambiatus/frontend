@@ -911,6 +911,7 @@
       "description": "Shop is disabled in this community."
     },
     "categories": {
+      "admin_page_description": "Add and manage the categories that will be available in the shop.",
       "empty": {
         "title": "Looks like your community doesn't have any categories!",
         "description": "Get started by creating a new category below"

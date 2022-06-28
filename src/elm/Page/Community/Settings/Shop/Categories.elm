@@ -1032,10 +1032,10 @@ view loggedIn model =
             [ Page.viewHeader loggedIn title
             , case Community.getField loggedIn.selectedCommunity .shopCategories of
                 RemoteData.NotAsked ->
-                    viewLoading model
+                    viewLoading loggedIn.shared.translators model
 
                 RemoteData.Loading ->
-                    viewLoading model
+                    viewLoading loggedIn.shared.translators model
 
                 RemoteData.Failure fieldErr ->
                     case fieldErr of
@@ -1055,8 +1055,8 @@ view loggedIn model =
     }
 
 
-viewPageContainer : { children : List (Html Msg), modals : List (Html Msg) } -> Model -> Html Msg
-viewPageContainer { children, modals } model =
+viewPageContainer : Translation.Translators -> { children : List (Html Msg), modals : List (Html Msg) } -> Model -> Html Msg
+viewPageContainer translators { children, modals } model =
     div [ class "container mx-auto sm:px-4 sm:mt-6 pb-40 overflow-x-hidden" ]
         (div
             [ class "bg-white container mx-auto pt-6 pb-7 w-full px-4 sm:px-6 sm:rounded sm:shadow-lg lg:w-2/3"
@@ -1065,20 +1065,23 @@ viewPageContainer { children, modals } model =
                 , ( "overflow-y-visible", Maybe.Extra.isJust model.actionsDropdown )
                 ]
             ]
-            children
+            (p [ class "text-gray-900 mb-10" ]
+                [ text <| translators.t "shop.categories.admin_page_description" ]
+                :: children
+            )
             :: modals
         )
 
 
-viewLoading : Model -> Html Msg
-viewLoading model =
+viewLoading : Translation.Translators -> Model -> Html Msg
+viewLoading translators model =
     let
         viewBar : List (Html.Attribute Msg) -> Html Msg
         viewBar attributes =
             div (class "animate-skeleton-loading max-w-full h-8 rounded-sm mt-2" :: attributes)
                 []
     in
-    viewPageContainer
+    viewPageContainer translators
         { modals = []
         , children =
             [ viewBar [ class "mt-0" ]
@@ -1133,7 +1136,7 @@ view_ translators community model categories =
                     else
                         Nothing
     in
-    viewPageContainer
+    viewPageContainer translators
         { children =
             [ case categories of
                 [] ->

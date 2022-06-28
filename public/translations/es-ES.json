@@ -914,6 +914,7 @@
       "description": "La tienda está deshabilitada en esta comunidad."
     },
     "categories": {
+      "admin_page_description": "Añade y gestiona las categorías que estarán disponibles en la tienda.",
       "empty": {
         "title": "¡Parece que tu comunidad no tiene ninguna categoría!",
         "description": "Comience creando una nueva categoría abajo"

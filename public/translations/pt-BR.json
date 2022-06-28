@@ -918,6 +918,7 @@
       "description": "A loja está desativada nesta comunidade."
     },
     "categories": {
+      "admin_page_description": "Adicione e gerencie as categories que ficarão disponíveis na loja.",
       "empty": {
         "title": "Parece que sua comunidade ainda não tem nenhuma categoria!",
         "description": "Comece criando uma nova categoria abaixo"

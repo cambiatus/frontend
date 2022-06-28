@@ -914,6 +914,7 @@
       "description": "La botiga està desactivada en aquesta comunitat."
     },
     "categories": {
+      "admin_page_description": "Afegeix i gestiona les categories que estaran disponibles a la botiga.",
       "empty": {
         "title": "Sembla que la teva comunitat no té cap categoria!",
         "description": "Comenceu creant una categoria nova a continuació"
