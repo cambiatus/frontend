@@ -2856,14 +2856,8 @@ handleActionMsg : Model -> Action.Msg -> UpdateResult msg
 handleActionMsg ({ shared } as model) actionMsg =
     case model.selectedCommunity of
         RemoteData.Success community ->
-            let
-                actionModelToLoggedIn : Action.Model -> Model
-                actionModelToLoggedIn a =
-                    { model | claimingAction = a }
-            in
             Action.update model community.symbol actionMsg model.claimingAction
-                |> UR.map
-                    actionModelToLoggedIn
+                |> UR.fromChild (\actionModel -> { model | claimingAction = actionModel })
                     GotActionMsg
                     (\ext ->
                         case ext of
@@ -2879,6 +2873,7 @@ handleActionMsg ({ shared } as model) actionMsg =
                             Action.FinishedClaimProcess ->
                                 UR.addMsg SearchClosed
                     )
+                    model
 
         _ ->
             UR.init model
