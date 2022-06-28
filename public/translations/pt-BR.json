@@ -929,7 +929,7 @@
       "actions_for": "Ações para {{category_name}}",
       "fields": {
         "name": "Nome",
-        "slug": "Slug",
+        "slug": "URL de Compartilhamento",
         "description": "Descrição",
         "image": "Imagem",
         "meta": {
@@ -939,9 +939,9 @@
         }
       },
       "form": {
-        "insert_name": "Insira um nome para gerar o slug",
-        "invalid_slug": "Slug inválido",
-        "invalid_slug_tooltip": "Carácteres não-latinos não são aceitos em slugs. Para gerar um slug válido, o nome da categoria deve ter ao menos um caráctere latim"
+        "insert_name": "Insira um nome para gerar a URL de compartilhamento",
+        "invalid_slug": "URL de compartilhamento inválida",
+        "invalid_slug_tooltip": "Caracteres não-latinos não são aceitos em URLs. Para gerar um URL válido, o nome da categoria deve ter ao menos um caractere latim"
       },
       "metadata": {
         "guidance": "Essa informação vai ser usada para mostrar mais informações quando compartilhando esta categoria",
