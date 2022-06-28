@@ -24,6 +24,7 @@ module Action exposing
     , subscriptions
     , update
     , updateAction
+    , viewCard
     , viewClaimConfirmation
     , viewClaimWithProofs
     , viewSearchActions
@@ -44,8 +45,9 @@ import Form.File
 import Graphql.Operation exposing (RootMutation)
 import Graphql.OptionalArgument as OptionalArgument
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
-import Html exposing (Html, br, button, div, i, li, p, span, text, ul)
-import Html.Attributes exposing (class, classList, disabled, type_)
+import Html exposing (Html, br, button, div, h4, i, img, li, p, span, text, ul)
+import Html.Attributes exposing (alt, class, classList, disabled, id, src, type_)
+import Html.Attributes.Aria
 import Html.Events exposing (onClick)
 import Icons
 import Json.Decode as Decode
@@ -58,6 +60,7 @@ import Session.Shared exposing (Shared, Translators)
 import Sha256 exposing (sha256)
 import Task
 import Time
+import Translation
 import UpdateResult as UR
 import Utils
 import View.Feedback as Feedback
@@ -788,6 +791,99 @@ viewProofCode { t } proofCode secondsAfterClaim proofCodeValiditySeconds =
             [ text (t "community.actions.proof.code_period_label")
             , text " "
             , text timer
+            ]
+        ]
+
+
+viewCard :
+    Translation.Translators
+    ->
+        { containerAttrs : List (Html.Attribute msg)
+        , sideIcon : Html msg
+        , onShare : msg
+        , onClaim : msg
+        , shareButtonId : String
+        }
+    -> Action
+    -> Html msg
+viewCard ({ t } as translators) { containerAttrs, sideIcon, onShare, onClaim, shareButtonId } action =
+    li (class "bg-white rounded self-start w-full flex-shrink-0" :: containerAttrs)
+        [ case action.image of
+            Nothing ->
+                text ""
+
+            Just "" ->
+                text ""
+
+            Just image ->
+                div [ class "mt-2 mx-2 relative" ]
+                    [ img [ src image, alt "", class "rounded" ] []
+                    , div [ class "bg-gradient-to-t from-[#01003a14] to-[#01003a00] absolute top-0 left-0 w-full h-full rounded" ] []
+                    ]
+        , div [ class "px-4 pt-4 pb-6" ]
+            [ div [ class "flex" ]
+                [ sideIcon
+                , div [ class "ml-5 mt-1 min-w-0 w-full" ]
+                    [ h4 [ Html.Attributes.title (Markdown.toRawString action.description) ]
+                        [ Markdown.view [ class "line-clamp-3 hide-children-from-2" ] action.description ]
+                    , span [ class "sr-only" ]
+                        [ text <|
+                            t "community.objectives.reward"
+                                ++ ": "
+                                ++ Eos.assetToString translators
+                                    { amount = action.reward
+                                    , symbol = action.objective.community.symbol
+                                    }
+                        ]
+                    , span
+                        [ class "font-bold text-sm text-gray-900 uppercase block mt-6"
+                        , Html.Attributes.Aria.ariaHidden True
+                        ]
+                        [ text <| t "community.objectives.reward" ]
+                    , div
+                        [ class "mt-1 text-green font-bold"
+                        , Html.Attributes.Aria.ariaHidden True
+                        ]
+                        [ span [ class "text-2xl mr-1" ]
+                            [ text
+                                (Eos.formatSymbolAmount
+                                    translators
+                                    action.objective.community.symbol
+                                    action.reward
+                                )
+                            ]
+                        , text (Eos.symbolToSymbolCodeString action.objective.community.symbol)
+                        ]
+                    ]
+                ]
+            , div
+                [ class "grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 mt-6"
+                , classList [ ( "sm:grid-cols-1", not (isClaimable action) ) ]
+                ]
+                [ button
+                    [ class "button button-secondary w-full"
+                    , onClick onShare
+                    , id shareButtonId
+                    ]
+                    [ Icons.share "mr-2 flex-shrink-0"
+                    , text <| t "share"
+                    ]
+                , if isClaimable action then
+                    button
+                        [ class "button button-primary w-full sm:col-span-1"
+                        , onClick onClaim
+                        ]
+                        [ if action.hasProofPhoto then
+                            Icons.camera "w-4 mr-2 flex-shrink-0"
+
+                          else
+                            text ""
+                        , text <| t "dashboard.claim"
+                        ]
+
+                  else
+                    text ""
+                ]
             ]
         ]
 

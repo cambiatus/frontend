@@ -32,6 +32,7 @@ import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Html exposing (Html, a, br, button, div, h3, img, li, p, span, strong, text, ul)
 import Html.Attributes exposing (alt, autocomplete, class, classList, disabled, minlength, src, tabindex, type_)
+import Html.Attributes.Aria exposing (role)
 import Html.Events exposing (onClick, onFocus)
 import Icons
 import Json.Decode as Decode exposing (list, string)
@@ -572,8 +573,24 @@ viewSearchBody translators selectedCommunity today searchToMsg actionToMsg searc
                             div [ class "w-full" ]
                                 [ viewTabs translators results ActionsTab
                                     |> Html.map searchToMsg
-                                , Action.viewSearchActions translators today results.actions
-                                    |> Html.map actionToMsg
+                                , View.Components.masonryLayout
+                                    [ View.Components.Sm ]
+                                    { transitionWithParent = False }
+                                    [ class "grid mt-4 lg:mt-6 marker-hidden gap-4 lg:gap-x-6 sm:grid-cols-2 lg:grid-cols-3"
+                                    , role "list"
+                                    ]
+                                    (List.map
+                                        (Action.viewCard translators
+                                            { containerAttrs = [ class "mb-4 lg:mb-6" ]
+                                            , sideIcon = div [] []
+                                            , onShare = NoOp
+                                            , onClaim = NoOp
+                                            , shareButtonId = ""
+                                            }
+                                        )
+                                        results.actions
+                                    )
+                                    |> Html.map searchToMsg
                                 ]
 
                         Just MembersTab ->

@@ -97,7 +97,8 @@ dialogBubble { class_, relativeSelector, scrollSelector } elements =
 
 
 type Breakpoint
-    = Lg
+    = Sm
+    | Lg
     | Xl
 
 
@@ -120,6 +121,9 @@ masonryLayout breakpoints { transitionWithParent } attrs children =
     let
         classesForBreakpoint breakpoint =
             case breakpoint of
+                Sm ->
+                    "sm:gap-y-0 sm:grid sm:auto-rows-[1px]"
+
                 Lg ->
                     -- Tailwind might purge if we do something with List.map instead of explicitly writing these
                     "lg:gap-y-0 lg:grid lg:auto-rows-[1px]"
@@ -620,6 +624,9 @@ with our tailwind config
 breakpointToPixels : Breakpoint -> Int
 breakpointToPixels breakpoint =
     case breakpoint of
+        Sm ->
+            640
+
         Lg ->
             1024
 

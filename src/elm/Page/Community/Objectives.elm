@@ -1231,7 +1231,27 @@ viewObjective translators model objective =
                             , role "list"
                             ]
                             (List.indexedMap
-                                (viewAction translators model objective)
+                                (\index action ->
+                                    Action.viewCard translators
+                                        { containerAttrs =
+                                            [ class "mb-6 snap-center snap-always animate-fade-in-from-above motion-reduce:animate-none"
+                                            , classList [ ( "border border-green ring ring-green ring-opacity-30", isHighlighted ) ]
+                                            , style "animation-delay" ("calc(75ms * " ++ String.fromInt index ++ ")")
+                                            , id (actionCardId action)
+                                            , Html.Events.on "animationend" (Decode.succeed (FinishedOpeningActions objective))
+                                            ]
+                                        , sideIcon =
+                                            span
+                                                [ class "text-lg text-gray-500 font-bold"
+                                                , ariaHidden True
+                                                ]
+                                                [ text (String.fromInt (index + 1)), text "." ]
+                                        , onShare = ClickedShareAction action
+                                        , onClaim = ClickedClaimAction { position = index + 1, action = action }
+                                        , shareButtonId = shareActionButtonId action.id
+                                        }
+                                        action
+                                )
                                 filteredActions
                             )
                     ]
@@ -1259,108 +1279,6 @@ viewObjective translators model objective =
                                 []
                         )
                 )
-            ]
-        ]
-
-
-viewAction : Translation.Translators -> Model -> Community.Objective -> Int -> Action -> Html Msg
-viewAction ({ t } as translators) model objective index action =
-    let
-        isHighlighted =
-            case model.highlightedAction of
-                Nothing ->
-                    False
-
-                Just { actionId } ->
-                    actionId == Just action.id
-    in
-    li
-        [ class "bg-white rounded self-start w-full flex-shrink-0 snap-center snap-always mb-6 animate-fade-in-from-above motion-reduce:animate-none"
-        , classList [ ( "border border-green ring ring-green ring-opacity-30", isHighlighted ) ]
-        , style "animation-delay" ("calc(75ms * " ++ String.fromInt index ++ ")")
-        , id (actionCardId action)
-        , Html.Events.on "animationend" (Decode.succeed (FinishedOpeningActions objective))
-        ]
-        [ case action.image of
-            Nothing ->
-                text ""
-
-            Just "" ->
-                text ""
-
-            Just image ->
-                div [ class "mt-2 mx-2 relative" ]
-                    [ img [ src image, alt "", class "rounded" ] []
-                    , div [ class "bg-gradient-to-t from-[#01003a14] to-[#01003a00] absolute top-0 left-0 w-full h-full rounded" ] []
-                    ]
-        , div [ class "px-4 pt-4 pb-6" ]
-            [ div [ class "flex" ]
-                [ span
-                    [ class "text-lg text-gray-500 font-bold"
-                    , ariaHidden True
-                    ]
-                    [ text (String.fromInt (index + 1)), text "." ]
-                , div [ class "ml-5 mt-1 min-w-0 w-full" ]
-                    [ h4 [ title (Markdown.toRawString action.description) ]
-                        [ Markdown.view [ class "line-clamp-3 hide-children-from-2" ] action.description ]
-                    , span [ class "sr-only" ]
-                        [ text <|
-                            t "community.objectives.reward"
-                                ++ ": "
-                                ++ Eos.assetToString translators
-                                    { amount = action.reward
-                                    , symbol = action.objective.community.symbol
-                                    }
-                        ]
-                    , span
-                        [ class "font-bold text-sm text-gray-900 uppercase block mt-6"
-                        , ariaHidden True
-                        ]
-                        [ text <| t "community.objectives.reward" ]
-                    , div
-                        [ class "mt-1 text-green font-bold"
-                        , ariaHidden True
-                        ]
-                        [ span [ class "text-2xl mr-1" ]
-                            [ text
-                                (Eos.formatSymbolAmount
-                                    translators
-                                    action.objective.community.symbol
-                                    action.reward
-                                )
-                            ]
-                        , text (Eos.symbolToSymbolCodeString action.objective.community.symbol)
-                        ]
-                    ]
-                ]
-            , div
-                [ class "grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 mt-6"
-                , classList [ ( "sm:grid-cols-1", not (Action.isClaimable action) ) ]
-                ]
-                [ button
-                    [ class "button button-secondary w-full"
-                    , onClick (ClickedShareAction action)
-                    , id (shareActionButtonId action.id)
-                    ]
-                    [ Icons.share "mr-2 flex-shrink-0"
-                    , text <| t "share"
-                    ]
-                , if Action.isClaimable action then
-                    button
-                        [ class "button button-primary w-full sm:col-span-1"
-                        , onClick (ClickedClaimAction { position = index + 1, action = action })
-                        ]
-                        [ if action.hasProofPhoto then
-                            Icons.camera "w-4 mr-2 flex-shrink-0"
-
-                          else
-                            text ""
-                        , text <| t "dashboard.claim"
-                        ]
-
-                  else
-                    text ""
-                ]
             ]
         ]
 
