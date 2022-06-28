@@ -220,7 +220,7 @@ update msg model loggedIn =
             }
                 |> UR.init
                 |> UR.addCmd
-                    (Browser.Dom.focus "new-category-name"
+                    (Browser.Dom.focus "new-category-icon"
                         |> Task.attempt (\_ -> NoOp)
                     )
 
