@@ -2218,7 +2218,7 @@ nameAndSlugForm translators { nameFieldId } =
                             >> Form.Validate.stringLongerThan 2
                             >> Form.Validate.custom
                                 (\name ->
-                                    case Slug.generate name of
+                                    case Utils.slugify name of
                                         Just _ ->
                                             Ok name
 
@@ -2234,7 +2234,7 @@ nameAndSlugForm translators { nameFieldId } =
             )
         |> Form.with
             ((\{ name } ->
-                case Slug.generate name of
+                case Utils.slugify name of
                     Nothing ->
                         Form.arbitrary
                             (div [ class "mb-10" ]

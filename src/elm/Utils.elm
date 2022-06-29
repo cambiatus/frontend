@@ -12,6 +12,7 @@ module Utils exposing
     , onSubmitPreventAll
     , padInt
     , previousDay
+    , slugify
     , spawnMessage
     )
 
@@ -23,6 +24,7 @@ import Html.Events
 import Iso8601
 import Json.Decode as Decode
 import Mask
+import Slug
 import Task
 import Time exposing (Posix)
 
@@ -169,3 +171,21 @@ spawnMessage : msg -> Cmd msg
 spawnMessage msg =
     Task.succeed msg
         |> Task.perform identity
+
+
+{-| Try to turn a String into a Slug, replacing some accentuated characters.
+Use this instead of `Slug.generate`, so we can have better slugs!
+-}
+slugify : String -> Maybe Slug.Slug
+slugify input =
+    input
+        |> String.replace "á" "a"
+        |> String.replace "ã" "a"
+        |> String.replace "à" "a"
+        |> String.replace "ç" "c"
+        |> String.replace "é" "e"
+        |> String.replace "í" "i"
+        |> String.replace "ñ" "n"
+        |> String.replace "ó" "o"
+        |> String.replace "õ" "o"
+        |> Slug.generate
