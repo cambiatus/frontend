@@ -326,8 +326,8 @@ edit class_ =
 
 ellipsis : String -> Svg msg
 ellipsis class_ =
-    svg [ width "32", height "32", viewBox "0 0 32 32", fill "none", class class_ ]
-        [ Svg.path [ d "M4 20C6.20934 20 8 18.2089 8 16C8 13.7907 6.20934 12 4 12C1.79066 12 0 13.7907 0 16C0 18.2089 1.79066 20 4 20Z", fill "currentColor" ] [], Svg.path [ d "M28 20C30.2089 20 32 18.2091 32 16C32 13.7909 30.2089 12 28 12C25.7907 12 24 13.7909 24 16C24 18.2091 25.7907 20 28 20Z", fill "currentColor" ] [], Svg.path [ d "M16 20C18.2089 20 20 18.2089 20 16C20 13.7907 18.2089 12 16 12C13.7907 12 12 13.7907 12 16C12 18.2089 13.7907 20 16 20Z", fill "currentColor" ] [] ]
+    svg [ width "16", height "16", viewBox "0 0 16 16", fill "none", class class_ ]
+        [ Svg.path [ d "M7.33334 8.00001C7.33334 8.3682 7.63182 8.66668 8.00001 8.66668C8.36819 8.66668 8.66667 8.3682 8.66667 8.00001C8.66667 7.63182 8.36819 7.33334 8.00001 7.33334C7.63182 7.33334 7.33334 7.63182 7.33334 8.00001Z", fill "currentColor", stroke "currentColor", strokeWidth "1.75", strokeLinecap "round", strokeLinejoin "round" ] [], Svg.path [ d "M2.66667 8.00001C2.66667 8.3682 2.96514 8.66668 3.33333 8.66668C3.70152 8.66668 4 8.3682 4 8.00001C4 7.63182 3.70152 7.33334 3.33333 7.33334C2.96514 7.33334 2.66667 7.63182 2.66667 8.00001Z", fill "currentColor", stroke "currentColor", strokeWidth "1.75", strokeLinecap "round", strokeLinejoin "round" ] [], Svg.path [ d "M12 8.00001C12 8.3682 12.2985 8.66668 12.6667 8.66668C13.0349 8.66668 13.3333 8.3682 13.3333 8.00001C13.3333 7.63182 13.0349 7.33334 12.6667 7.33334C12.2985 7.33334 12 7.63182 12 8.00001Z", fill "currentColor", stroke "currentColor", strokeWidth "1.75", strokeLinecap "round", strokeLinejoin "round" ] [] ]
 
 
 settings : String -> Svg msg

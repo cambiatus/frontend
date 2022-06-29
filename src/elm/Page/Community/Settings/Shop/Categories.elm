@@ -1630,7 +1630,7 @@ viewActions translators { isParentOfNewCategoryForm, isDraggingSomething } model
             , buttonClassListsFromParent
             , ariaLabel (translators.tr "shop.categories.click_category_to_edit" [ ( "category_name", category.name ) ])
             ]
-            [ Icons.edit "max-h-4 w-8"
+            [ Icons.edit "max-h-4 w-4"
             ]
         , button
             [ class "h-8 px-2 rounded-sm transition-colors action-opener focus-ring"
@@ -1643,7 +1643,7 @@ viewActions translators { isParentOfNewCategoryForm, isDraggingSomething } model
             , ariaHasPopup "true"
             , ariaLabel (translators.tr "shop.categories.action_for" [ ( "category_name", category.name ) ])
             ]
-            [ Icons.ellipsis "h-4 pointer-events-none text-gray-800" ]
+            [ Icons.ellipsis "h-4 w-4 pointer-events-none text-gray-800" ]
         , if not isDropdownOpen then
             text ""
 
