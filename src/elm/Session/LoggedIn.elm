@@ -2853,7 +2853,7 @@ update msg model =
 
 
 handleActionMsg : Model -> Action.Msg -> UpdateResult msg
-handleActionMsg ({ shared } as model) actionMsg =
+handleActionMsg model actionMsg =
     case model.selectedCommunity of
         RemoteData.Success community ->
             Action.update model community.symbol actionMsg model.claimingAction
