@@ -934,7 +934,8 @@
       "form": {
         "insert_name": "Insert a name to generate the sharing URL",
         "invalid_slug": "Invalid sharing URL",
-        "invalid_slug_tooltip": "Non-latin characters aren't accepted in URLs. In order to generate a valid URL, the category name must have at least one latin character"
+        "invalid_slug_tooltip": "Non-latin characters aren't accepted in URLs. In order to generate a valid URL, the category name must have at least one latin character",
+        "image_guidance": "Prefer images in landscape mode with high quality"
       },
       "metadata": {
         "guidance": "This information will be used to display rich links when sharing this category.",

@@ -937,7 +937,8 @@
       "form": {
         "insert_name": "Introduïu un nom per generar l'URL compartit",
         "invalid_slug": "URL compartit no vàlid",
-        "invalid_slug_tooltip": "Els caràcters no llatins no s'accepten als URLs. Per generar un URL vàlid, el nom de la categoria ha de tenir almenys un caràcter llatí"
+        "invalid_slug_tooltip": "Els caràcters no llatins no s'accepten als URLs. Per generar un URL vàlid, el nom de la categoria ha de tenir almenys un caràcter llatí",
+        "image_guidance": "Preferiu imatges en mode horitzontal amb alta qualitat"
       },
       "metadata": {
         "guidance": "Aquesta informació s'utilitzarà per mostrar més informació en compartir aquesta categoria.",

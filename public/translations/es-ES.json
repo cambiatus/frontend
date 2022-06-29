@@ -937,7 +937,8 @@
       "form": {
         "insert_name": "Inserta un nombre para generar la URL para compartir",
         "invalid_slug": "URL para compartir no válida",
-        "invalid_slug_tooltip": "Los caracteres no latinos no se aceptan en URLs. Para generar un URL válido, el nombre de la categoría debe tener al menos un carácter latino"
+        "invalid_slug_tooltip": "Los caracteres no latinos no se aceptan en URLs. Para generar un URL válido, el nombre de la categoría debe tener al menos un carácter latino",
+        "image_guidance": "Prefiere imágenes en modo horizontal con alta calidad"
       },
       "metadata": {
         "guidance": "Esta información se utilizará para mostrar más información al compartir esta categoría.",

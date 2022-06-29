@@ -2013,6 +2013,12 @@ imageForm translators fieldId =
             , externalError = always Nothing
             }
         |> Form.optional
+        |> Form.withNoOutput
+            (Form.arbitrary
+                (p [ class "mt-2 text-gray-900" ]
+                    [ text <| translators.t "shop.categories.form.image_guidance" ]
+                )
+            )
 
 
 updateCategoryForm : Translation.Translators -> Shop.Category.Id -> Form.Form msg UpdateCategoryFormInput UpdateCategoryFormOutput

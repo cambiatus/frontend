@@ -941,7 +941,8 @@
       "form": {
         "insert_name": "Insira um nome para gerar a URL de compartilhamento",
         "invalid_slug": "URL de compartilhamento inválida",
-        "invalid_slug_tooltip": "Caracteres não-latinos não são aceitos em URLs. Para gerar um URL válido, o nome da categoria deve ter ao menos um caractere latim"
+        "invalid_slug_tooltip": "Caracteres não-latinos não são aceitos em URLs. Para gerar um URL válido, o nome da categoria deve ter ao menos um caractere latim",
+        "image_guidance": "Prefira imagens em modo paisagem com alta qualidade"
       },
       "metadata": {
         "guidance": "Essa informação vai ser usada para mostrar mais informações quando compartilhando esta categoria",
