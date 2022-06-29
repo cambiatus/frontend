@@ -31,6 +31,7 @@
             "elm-community/maybe-extra": "5.2.1",
             "elm-explorations/test": "1.2.2",
             "fapian/elm-html-aria": "1.4.0",
+            "hecrj/elm-slug": "1.0.2",
             "justinmimbs/date": "3.2.1",
             "krisajenkins/remotedata": "6.0.1",
             "pablohirafuji/elm-syntax-highlight": "3.4.1",
