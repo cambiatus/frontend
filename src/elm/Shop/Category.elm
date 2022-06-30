@@ -221,6 +221,7 @@ treesSelectionSet categoriesSelectionSet =
                             Nothing
                     )
                     children
+                    |> List.sortBy (Tree.label >> .position)
                 )
     in
     categoriesSelectionSet selectionSet
@@ -235,6 +236,7 @@ treesSelectionSet categoriesSelectionSet =
                             Nothing
                     )
                     allCategories
+                    |> List.sortBy (Tree.label >> .position)
             )
 
 
