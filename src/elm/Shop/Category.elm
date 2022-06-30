@@ -116,13 +116,12 @@ updateMetadata model { metaTitle, metaDescription, metaKeywords } =
         )
 
 
-addChild : Tree -> Id -> SelectionSet decodesTo Cambiatus.Object.Category -> SelectionSet (Maybe decodesTo) RootMutation
-addChild tree (Id newChildId) =
-    -- TODO - Accept (Maybe position)
+addChild : Tree -> Id -> Int -> SelectionSet decodesTo Cambiatus.Object.Category -> SelectionSet (Maybe decodesTo) RootMutation
+addChild tree newChildId position =
     let
-        toSubcategoryInput category =
-            { id = unwrapId category.id
-            , position = category.position
+        toSubcategoryInput index categoryId =
+            { id = unwrapId categoryId
+            , position = index
             }
     in
     Cambiatus.Mutation.category
@@ -130,16 +129,9 @@ addChild tree (Id newChildId) =
             { optionals
                 | categories =
                     Tree.children tree
-                        |> List.map (Tree.label >> toSubcategoryInput)
-                        |> (\existingChildren ->
-                                existingChildren
-                                    ++ [ { id = newChildId
-
-                                         -- TODO - Check this
-                                         , position = List.length existingChildren
-                                         }
-                                       ]
-                           )
+                        |> List.map (Tree.label >> .id)
+                        |> (\childrenIds -> List.take position childrenIds ++ newChildId :: List.drop position childrenIds)
+                        |> List.indexedMap toSubcategoryInput
                         |> OptionalArgument.Present
                 , id =
                     Tree.label tree
