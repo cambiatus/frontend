@@ -424,17 +424,21 @@ buildSubcategoryInput :
     SubcategoryInputRequiredFields
     -> SubcategoryInput
 buildSubcategoryInput required =
-    { id = required.id }
+    { id = required.id, position = required.position }
 
 
 type alias SubcategoryInputRequiredFields =
-    { id : Int }
+    { id : Int
+    , position : Int
+    }
 
 
 {-| Type for the SubcategoryInput input object.
 -}
 type alias SubcategoryInput =
-    { id : Int }
+    { id : Int
+    , position : Int
+    }
 
 
 {-| Encode a SubcategoryInput into a value that can be used as an argument.
@@ -442,7 +446,7 @@ type alias SubcategoryInput =
 encodeSubcategoryInput : SubcategoryInput -> Value
 encodeSubcategoryInput input =
     Encode.maybeObject
-        [ ( "id", Encode.int input.id |> Just ) ]
+        [ ( "id", Encode.int input.id |> Just ), ( "position", Encode.int input.position |> Just ) ]
 
 
 buildTransferDirection :

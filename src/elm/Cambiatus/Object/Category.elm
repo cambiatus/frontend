@@ -78,6 +78,11 @@ parent object_ =
     Object.selectionForCompositeField "parent" [] object_ (identity >> Decode.nullable)
 
 
+position : SelectionSet Int Cambiatus.Object.Category
+position =
+    Object.selectionForField "Int" "position" [] Decode.int
+
+
 products :
     SelectionSet decodesTo Cambiatus.Object.Product
     -> SelectionSet (Maybe (List decodesTo)) Cambiatus.Object.Category

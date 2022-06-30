@@ -43,6 +43,7 @@ type alias Model =
     , metaTitle : Maybe String
     , metaDescription : Maybe String
     , metaKeywords : List String
+    , position : Int
     }
 
 
@@ -117,18 +118,28 @@ updateMetadata model { metaTitle, metaDescription, metaKeywords } =
 
 addChild : Tree -> Id -> SelectionSet decodesTo Cambiatus.Object.Category -> SelectionSet (Maybe decodesTo) RootMutation
 addChild tree (Id newChildId) =
+    -- TODO - Accept (Maybe position)
+    let
+        toSubcategoryInput category =
+            { id = unwrapId category.id
+            , position = category.position
+            }
+    in
     Cambiatus.Mutation.category
         (\optionals ->
             { optionals
                 | categories =
                     Tree.children tree
-                        |> List.map
-                            (Tree.label
-                                >> .id
-                                >> unwrapId
-                                >> (\id -> { id = id })
-                            )
-                        |> (\existingChildren -> existingChildren ++ [ { id = newChildId } ])
+                        |> List.map (Tree.label >> toSubcategoryInput)
+                        |> (\existingChildren ->
+                                existingChildren
+                                    ++ [ { id = newChildId
+
+                                         -- TODO - Check this
+                                         , position = List.length existingChildren
+                                         }
+                                       ]
+                           )
                         |> OptionalArgument.Present
                 , id =
                     Tree.label tree
@@ -141,6 +152,7 @@ addChild tree (Id newChildId) =
 
 moveToRoot : Id -> SelectionSet decodesTo Cambiatus.Object.Category -> SelectionSet (Maybe decodesTo) RootMutation
 moveToRoot (Id id) =
+    -- TODO - Accept position
     Cambiatus.Mutation.category
         (\optionals ->
             { optionals
@@ -177,6 +189,7 @@ selectionSet =
                         >> Maybe.withDefault []
                     )
             )
+        |> SelectionSet.with Cambiatus.Object.Category.position
 
 
 

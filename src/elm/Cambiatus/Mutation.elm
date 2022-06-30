@@ -58,6 +58,7 @@ type alias CategoryOptionalArguments =
     , metaTitle : OptionalArgument String
     , name : OptionalArgument String
     , parentId : OptionalArgument Int
+    , position : OptionalArgument Int
     , slug : OptionalArgument String
     }
 
@@ -75,10 +76,10 @@ category :
 category fillInOptionals object_ =
     let
         filledInOptionals =
-            fillInOptionals { categories = Absent, description = Absent, iconUri = Absent, id = Absent, imageUri = Absent, metaDescription = Absent, metaKeywords = Absent, metaTitle = Absent, name = Absent, parentId = Absent, slug = Absent }
+            fillInOptionals { categories = Absent, description = Absent, iconUri = Absent, id = Absent, imageUri = Absent, metaDescription = Absent, metaKeywords = Absent, metaTitle = Absent, name = Absent, parentId = Absent, position = Absent, slug = Absent }
 
         optionalArgs =
-            [ Argument.optional "categories" filledInOptionals.categories (Cambiatus.InputObject.encodeSubcategoryInput |> Encode.list), Argument.optional "description" filledInOptionals.description Encode.string, Argument.optional "iconUri" filledInOptionals.iconUri Encode.string, Argument.optional "id" filledInOptionals.id Encode.int, Argument.optional "imageUri" filledInOptionals.imageUri Encode.string, Argument.optional "metaDescription" filledInOptionals.metaDescription Encode.string, Argument.optional "metaKeywords" filledInOptionals.metaKeywords Encode.string, Argument.optional "metaTitle" filledInOptionals.metaTitle Encode.string, Argument.optional "name" filledInOptionals.name Encode.string, Argument.optional "parentId" filledInOptionals.parentId Encode.int, Argument.optional "slug" filledInOptionals.slug Encode.string ]
+            [ Argument.optional "categories" filledInOptionals.categories (Cambiatus.InputObject.encodeSubcategoryInput |> Encode.list), Argument.optional "description" filledInOptionals.description Encode.string, Argument.optional "iconUri" filledInOptionals.iconUri Encode.string, Argument.optional "id" filledInOptionals.id Encode.int, Argument.optional "imageUri" filledInOptionals.imageUri Encode.string, Argument.optional "metaDescription" filledInOptionals.metaDescription Encode.string, Argument.optional "metaKeywords" filledInOptionals.metaKeywords Encode.string, Argument.optional "metaTitle" filledInOptionals.metaTitle Encode.string, Argument.optional "name" filledInOptionals.name Encode.string, Argument.optional "parentId" filledInOptionals.parentId Encode.int, Argument.optional "position" filledInOptionals.position Encode.int, Argument.optional "slug" filledInOptionals.slug Encode.string ]
                 |> List.filterMap identity
     in
     Object.selectionForCompositeField "category" optionalArgs object_ (identity >> Decode.nullable)
