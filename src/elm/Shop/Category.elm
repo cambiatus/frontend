@@ -69,6 +69,7 @@ create { icon, name, slug, description, image, parentId } =
                 , name = OptionalArgument.Present name
                 , description = OptionalArgument.Present (Markdown.toRawString description)
                 , imageUri = OptionalArgument.fromMaybe image
+                , position = OptionalArgument.Present 0
             }
         )
 
