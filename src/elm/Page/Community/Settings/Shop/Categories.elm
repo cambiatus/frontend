@@ -1552,7 +1552,7 @@ viewActions translators { isParentOfNewCategoryForm, isDraggingSomething } model
                 DropdownOpenOnButton actionsDropdown ->
                     actionsDropdown == category.id
 
-                DropdownOpenOnMouse _ actionsDropdown ->
+                DropdownOpenOnMouse _ _ ->
                     False
 
         hasActionsMenuOpen =
@@ -1633,7 +1633,7 @@ viewActions translators { isParentOfNewCategoryForm, isDraggingSomething } model
                             []
             in
             menu
-                (class "bg-white border border-gray-300 rounded-md p-2 text-sm shadow-lg animate-fade-in-from-above-sm marker-hidden"
+                (class "bg-white border border-gray-300 rounded-md p-2 my-0 text-sm shadow-lg animate-fade-in-from-above-sm marker-hidden"
                     :: classList
                         [ ( "absolute right-0 top-full", model.actionsDropdown == DropdownOpenOnButton category.id )
                         ]
