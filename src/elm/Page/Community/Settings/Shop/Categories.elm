@@ -28,7 +28,6 @@ import Html.Attributes.Aria exposing (ariaHasPopup, ariaHidden, ariaLabel)
 import Html.Events exposing (onClick)
 import Icons
 import Json.Decode
-import Json.Encode
 import List.Extra
 import Markdown exposing (Markdown)
 import Maybe.Extra
@@ -137,8 +136,8 @@ type Msg
     | ClosedMetadataModal
     | GotDndMsg (Dnd.Msg Shop.Category.Id DropZone)
     | DraggedOverCategoryForAWhile Shop.Category.Id
-    | CompletedMovingCategory Shop.Category.Id Int (RemoteData (Graphql.Http.Error (Maybe Shop.Category.Id)) (Maybe Shop.Category.Id))
-    | CompletedMovingCategoryToRoot Shop.Category.Id Int (RemoteData (Graphql.Http.Error (Maybe ())) (Maybe ()))
+    | CompletedMovingCategory Shop.Category.Id (RemoteData (Graphql.Http.Error (Maybe Shop.Category.Id)) (Maybe Shop.Category.Id))
+    | CompletedMovingCategoryToRoot Shop.Category.Id (RemoteData (Graphql.Http.Error (Maybe ())) (Maybe ()))
     | ClickedMoveUp Shop.Category.Id
     | ClickedMoveDown Shop.Category.Id
     | GotKeywordDndMsg (Dnd.Msg Int Int)
@@ -715,14 +714,13 @@ update msg model loggedIn =
                 Just OnRoot ->
                     UR.init model
 
-        CompletedMovingCategory categoryId position (RemoteData.Success (Just parentId)) ->
+        CompletedMovingCategory categoryId (RemoteData.Success (Just parentId)) ->
             case getCategoryZipper categoryId of
                 Just childZipper ->
                     let
                         zipperWithMovedChild =
                             moveChild
                                 { childZipper = childZipper
-                                , newPosition = position
                                 , parentId = parentId
                                 }
                     in
@@ -753,7 +751,7 @@ update msg model loggedIn =
                     model
                         |> UR.init
 
-        CompletedMovingCategory categoryId position (RemoteData.Success Nothing) ->
+        CompletedMovingCategory categoryId (RemoteData.Success Nothing) ->
             UR.init model
                 |> UR.logImpossible msg
                     "Got Nothing when trying to move a child category"
@@ -762,15 +760,11 @@ update msg model loggedIn =
                     , function = "update"
                     }
                     [ { name = "Category"
-                      , extras =
-                            Dict.fromList
-                                [ ( "id", Shop.Category.encodeId categoryId )
-                                , ( "position", Json.Encode.int position )
-                                ]
+                      , extras = Dict.fromList [ ( "id", Shop.Category.encodeId categoryId ) ]
                       }
                     ]
 
-        CompletedMovingCategory categoryId position (RemoteData.Failure err) ->
+        CompletedMovingCategory categoryId (RemoteData.Failure err) ->
             UR.init model
                 |> UR.logGraphqlError msg
                     (Just loggedIn.accountName)
@@ -779,20 +773,16 @@ update msg model loggedIn =
                     , function = "update"
                     }
                     [ { name = "Category"
-                      , extras =
-                            Dict.fromList
-                                [ ( "id", Shop.Category.encodeId categoryId )
-                                , ( "position", Json.Encode.int position )
-                                ]
+                      , extras = Dict.fromList [ ( "id", Shop.Category.encodeId categoryId ) ]
                       }
                     ]
                     err
                 |> UR.addExt (LoggedIn.ShowFeedback View.Feedback.Failure (t "shop.categories.reorder_error"))
 
-        CompletedMovingCategory _ _ _ ->
+        CompletedMovingCategory _ _ ->
             UR.init model
 
-        CompletedMovingCategoryToRoot categoryId position (RemoteData.Success (Just ())) ->
+        CompletedMovingCategoryToRoot categoryId (RemoteData.Success (Just ())) ->
             case Community.getField loggedIn.selectedCommunity .shopCategories of
                 RemoteData.Success ( _, categories ) ->
                     case findInForest (\{ id } -> id == categoryId) categories of
@@ -802,10 +792,7 @@ update msg model loggedIn =
                         Just childZipper ->
                             let
                                 zipperWithMovedChild =
-                                    moveToRoot
-                                        { childZipper = childZipper
-                                        , newPosition = position
-                                        }
+                                    moveToRoot { childZipper = childZipper }
                             in
                             model
                                 |> UR.init
@@ -819,7 +806,7 @@ update msg model loggedIn =
                 _ ->
                     UR.init model
 
-        CompletedMovingCategoryToRoot categoryId position (RemoteData.Success Nothing) ->
+        CompletedMovingCategoryToRoot categoryId (RemoteData.Success Nothing) ->
             UR.init model
                 |> UR.logImpossible msg
                     "Got Nothing when trying to move a child category to root"
@@ -828,15 +815,11 @@ update msg model loggedIn =
                     , function = "update"
                     }
                     [ { name = "Category"
-                      , extras =
-                            Dict.fromList
-                                [ ( "id", Shop.Category.encodeId categoryId )
-                                , ( "position", Json.Encode.int position )
-                                ]
+                      , extras = Dict.fromList [ ( "id", Shop.Category.encodeId categoryId ) ]
                       }
                     ]
 
-        CompletedMovingCategoryToRoot categoryId position (RemoteData.Failure err) ->
+        CompletedMovingCategoryToRoot categoryId (RemoteData.Failure err) ->
             UR.init model
                 |> UR.logGraphqlError msg
                     (Just loggedIn.accountName)
@@ -845,17 +828,13 @@ update msg model loggedIn =
                     , function = "update"
                     }
                     [ { name = "Category"
-                      , extras =
-                            Dict.fromList
-                                [ ( "id", Shop.Category.encodeId categoryId )
-                                , ( "position", Json.Encode.int position )
-                                ]
+                      , extras = Dict.fromList [ ( "id", Shop.Category.encodeId categoryId ) ]
                       }
                     ]
                     err
                 |> UR.addExt (LoggedIn.ShowFeedback View.Feedback.Failure (t "shop.categories.reorder_error"))
 
-        CompletedMovingCategoryToRoot _ _ _ ->
+        CompletedMovingCategoryToRoot _ _ ->
             UR.init model
 
         ClickedMoveUp categoryId ->
@@ -863,55 +842,26 @@ update msg model loggedIn =
                 Just zipper ->
                     case goUpWithoutChildren zipper of
                         Nothing ->
-                            let
-                                newPosition =
-                                    case Tree.Zipper.parent zipper of
-                                        Just parentZipper ->
-                                            (Tree.Zipper.label parentZipper).position - 1
-
-                                        Nothing ->
-                                            (Tree.Zipper.label zipper).position
-                            in
                             model
                                 |> UR.init
                                 |> UR.addExt
                                     (LoggedIn.mutation loggedIn
                                         (Shop.Category.moveToRoot categoryId
-                                            newPosition
                                             (Graphql.SelectionSet.succeed ())
                                         )
-                                        (CompletedMovingCategoryToRoot categoryId newPosition)
+                                        (CompletedMovingCategoryToRoot categoryId)
                                     )
 
                         Just newParentZipper ->
-                            let
-                                newPosition =
-                                    if Just newParentZipper == Tree.Zipper.previousSibling zipper then
-                                        Tree.Zipper.children newParentZipper
-                                            |> List.length
-
-                                    else
-                                        Tree.Zipper.parent zipper
-                                            |> Maybe.map
-                                                (Tree.Zipper.label
-                                                    >> .position
-                                                    >> (\position -> position - 1)
-                                                )
-                                            |> Maybe.withDefault
-                                                (Tree.Zipper.children newParentZipper
-                                                    |> List.length
-                                                )
-                            in
                             model
                                 |> UR.init
                                 |> UR.addExt
                                     (LoggedIn.mutation loggedIn
                                         (Shop.Category.addChild (Tree.Zipper.tree newParentZipper)
                                             categoryId
-                                            newPosition
                                             Shop.Category.idSelectionSet
                                         )
-                                        (CompletedMovingCategory categoryId newPosition)
+                                        (CompletedMovingCategory categoryId)
                                     )
 
                 Nothing ->
@@ -922,47 +872,26 @@ update msg model loggedIn =
                 Just zipper ->
                     case goDownWithoutChildren zipper of
                         Nothing ->
-                            let
-                                newPosition =
-                                    case Tree.Zipper.parent zipper of
-                                        Just parentZipper ->
-                                            (Tree.Zipper.label parentZipper).position + 1
-
-                                        Nothing ->
-                                            (Tree.Zipper.label zipper).position
-                            in
                             model
                                 |> UR.init
                                 |> UR.addExt
                                     (LoggedIn.mutation loggedIn
                                         (Shop.Category.moveToRoot categoryId
-                                            newPosition
                                             (Graphql.SelectionSet.succeed ())
                                         )
-                                        (CompletedMovingCategoryToRoot categoryId newPosition)
+                                        (CompletedMovingCategoryToRoot categoryId)
                                     )
 
                         Just newParentZipper ->
-                            let
-                                newPosition =
-                                    if Just newParentZipper == Tree.Zipper.nextSibling zipper then
-                                        0
-
-                                    else
-                                        Tree.Zipper.parent zipper
-                                            |> Maybe.map (Tree.Zipper.label >> .position >> (+) 1)
-                                            |> Maybe.withDefault 0
-                            in
                             model
                                 |> UR.init
                                 |> UR.addExt
                                     (LoggedIn.mutation loggedIn
                                         (Shop.Category.addChild (Tree.Zipper.tree newParentZipper)
                                             categoryId
-                                            newPosition
                                             Shop.Category.idSelectionSet
                                         )
-                                        (CompletedMovingCategory categoryId newPosition)
+                                        (CompletedMovingCategory categoryId)
                                     )
 
                 Nothing ->
@@ -1051,35 +980,23 @@ updateDnd loggedIn ext ur =
                                     ur
 
                                 Just parentZipper ->
-                                    let
-                                        newPosition =
-                                            Tree.Zipper.children parentZipper
-                                                |> List.length
-                                    in
                                     UR.addExt
                                         (LoggedIn.mutation loggedIn
                                             (Shop.Category.addChild (Tree.Zipper.tree parentZipper)
                                                 draggedElement
-                                                newPosition
                                                 Shop.Category.idSelectionSet
                                             )
-                                            (CompletedMovingCategory draggedElement newPosition)
+                                            (CompletedMovingCategory draggedElement)
                                         )
                                         ur
 
                         OnRoot ->
-                            let
-                                newPosition =
-                                    -- TODO
-                                    0
-                            in
                             UR.addExt
                                 (LoggedIn.mutation loggedIn
                                     (Shop.Category.moveToRoot draggedElement
-                                        newPosition
                                         (Graphql.SelectionSet.succeed ())
                                     )
-                                    (CompletedMovingCategoryToRoot draggedElement newPosition)
+                                    (CompletedMovingCategoryToRoot draggedElement)
                                 )
                                 ur
 
@@ -2430,11 +2347,10 @@ goDownWithoutChildren zipper =
 
 moveChild :
     { childZipper : Tree.Zipper.Zipper Shop.Category.Model
-    , newPosition : Int
     , parentId : Shop.Category.Id
     }
     -> Tree.Zipper.Zipper Shop.Category.Model
-moveChild { childZipper, newPosition, parentId } =
+moveChild { childZipper, parentId } =
     case Tree.Zipper.removeTree childZipper of
         Nothing ->
             childZipper
@@ -2445,33 +2361,14 @@ moveChild { childZipper, newPosition, parentId } =
                     childZipper
 
                 Just newParentZipper ->
-                    let
-                        newChild =
-                            Tree.Zipper.label childZipper
-
-                        incrementPosition childTree =
-                            let
-                                child =
-                                    Tree.label childTree
-                            in
-                            if child.position >= newPosition && child.id /= newChild.id then
-                                Tree.replaceLabel { child | position = child.position + 1 } childTree
-
-                            else
-                                childTree
-                    in
                     Tree.Zipper.mapTree
                         (\parentTree ->
                             parentTree
-                                |> Tree.prependChild
-                                    (Tree.Zipper.tree childZipper
-                                        |> Tree.mapLabel (\c -> { c | position = newPosition })
-                                    )
+                                |> Tree.prependChild (Tree.Zipper.tree childZipper)
                                 |> Tree.mapChildren
                                     (\newChildren ->
                                         newChildren
-                                            |> List.map incrementPosition
-                                            |> List.sortBy (Tree.label >> .position)
+                                            |> List.sortBy (Tree.label >> .name)
                                     )
                         )
                         newParentZipper
@@ -2479,19 +2376,14 @@ moveChild { childZipper, newPosition, parentId } =
 
 moveToRoot :
     { childZipper : Tree.Zipper.Zipper Shop.Category.Model
-    , newPosition : Int
     }
     -> Tree.Zipper.Zipper Shop.Category.Model
-moveToRoot { childZipper, newPosition } =
+moveToRoot { childZipper } =
     let
         insertNewChild : List Shop.Category.Tree -> List Shop.Category.Tree
         insertNewChild forest =
             Tree.Zipper.tree childZipper
-                |> Tree.mapLabel (\category -> { category | position = newPosition })
                 |> (\newChild -> newChild :: forest)
-
-        movingId =
-            Tree.Zipper.label childZipper |> .id
     in
     childZipper
         |> Tree.Zipper.removeTree
@@ -2499,19 +2391,7 @@ moveToRoot { childZipper, newPosition } =
             (\zipperWithoutChild ->
                 toFlatForest zipperWithoutChild
                     |> insertNewChild
-                    |> List.map
-                        (\tree ->
-                            let
-                                category =
-                                    Tree.label tree
-                            in
-                            if category.position >= newPosition && category.id /= movingId then
-                                Tree.replaceLabel { category | position = category.position + 1 } tree
-
-                            else
-                                tree
-                        )
-                    |> List.sortBy (Tree.label >> .position)
+                    |> List.sortBy (Tree.label >> .name)
                     |> fromFlatForest
             )
         |> Maybe.withDefault childZipper
@@ -2636,10 +2516,10 @@ msgToString msg =
         DraggedOverCategoryForAWhile _ ->
             [ "DraggedOverCategoryForAWhile" ]
 
-        CompletedMovingCategory _ _ r ->
+        CompletedMovingCategory _ r ->
             [ "CompletedMovingCategory", UR.remoteDataToString r ]
 
-        CompletedMovingCategoryToRoot _ _ r ->
+        CompletedMovingCategoryToRoot _ r ->
             [ "CompletedMovingCategoryToRoot", UR.remoteDataToString r ]
 
         ClickedMoveUp _ ->

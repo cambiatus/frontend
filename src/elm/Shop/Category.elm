@@ -43,7 +43,6 @@ type alias Model =
     , metaTitle : Maybe String
     , metaDescription : Maybe String
     , metaKeywords : List String
-    , position : Int
     }
 
 
@@ -116,12 +115,12 @@ updateMetadata model { metaTitle, metaDescription, metaKeywords } =
         )
 
 
-addChild : Tree -> Id -> Int -> SelectionSet decodesTo Cambiatus.Object.Category -> SelectionSet (Maybe decodesTo) RootMutation
-addChild tree newChildId position =
+addChild : Tree -> Id -> SelectionSet decodesTo Cambiatus.Object.Category -> SelectionSet (Maybe decodesTo) RootMutation
+addChild tree newChildId =
     let
         toSubcategoryInput index categoryId =
             { id = unwrapId categoryId
-            , position = index
+            , position = 0
             }
     in
     Cambiatus.Mutation.category
@@ -130,7 +129,7 @@ addChild tree newChildId position =
                 | categories =
                     Tree.children tree
                         |> List.map (Tree.label >> .id)
-                        |> (\childrenIds -> List.take position childrenIds ++ newChildId :: List.drop position childrenIds)
+                        |> (\childrenIds -> newChildId :: childrenIds)
                         |> List.indexedMap toSubcategoryInput
                         |> OptionalArgument.Present
                 , id =
@@ -142,9 +141,8 @@ addChild tree newChildId position =
         )
 
 
-moveToRoot : Id -> Int -> SelectionSet decodesTo Cambiatus.Object.Category -> SelectionSet (Maybe decodesTo) RootMutation
-moveToRoot (Id id) position =
-    -- TODO - Use position
+moveToRoot : Id -> SelectionSet decodesTo Cambiatus.Object.Category -> SelectionSet (Maybe decodesTo) RootMutation
+moveToRoot (Id id) =
     Cambiatus.Mutation.category
         (\optionals ->
             { optionals
@@ -181,7 +179,6 @@ selectionSet =
                         >> Maybe.withDefault []
                     )
             )
-        |> SelectionSet.with Cambiatus.Object.Category.position
 
 
 
@@ -213,7 +210,7 @@ treesSelectionSet categoriesSelectionSet =
                             Nothing
                     )
                     children
-                    |> List.sortBy (Tree.label >> .position)
+                    |> List.sortBy (Tree.label >> .name)
                 )
     in
     categoriesSelectionSet selectionSet
@@ -228,7 +225,7 @@ treesSelectionSet categoriesSelectionSet =
                             Nothing
                     )
                     allCategories
-                    |> List.sortBy (Tree.label >> .position)
+                    |> List.sortBy (Tree.label >> .name)
             )
 
 
