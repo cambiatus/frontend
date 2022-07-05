@@ -1751,8 +1751,7 @@ viewCategoryMetadataModal translators community category formModel =
         { isVisible = True
         , closeMsg = ClosedMetadataModal
         }
-        -- TODO - I18N
-        |> Modal.withHeaderElement (p [ class "md:px-2 md:mt-2" ] [ text "Editing category sharing data" ])
+        |> Modal.withHeaderElement (p [ class "md:px-2 md:mt-2" ] [ text <| translators.t "shop.categories.metadata.title" ])
         |> Modal.withBody
             [ p [ class "mb-6 md:px-2" ]
                 [ text <| translators.t "shop.categories.metadata.guidance" ]

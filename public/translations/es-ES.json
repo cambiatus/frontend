@@ -941,6 +941,7 @@
         "image_guidance": "Prefiere imágenes en modo horizontal con alta calidad"
       },
       "metadata": {
+        "title": "Contenido compartido",
         "guidance": "Esta información se utilizará para mostrar más información al compartir esta categoría.",
         "preview": "Avance",
         "preview_text": "Esta es una aproximación de cómo se verá el contenido compartido. Puede cambiar según la plataforma en la que se comparte el enlace."

@@ -945,6 +945,7 @@
         "image_guidance": "Prefira imagens em modo paisagem com alta qualidade"
       },
       "metadata": {
+        "title": "Dados de compartilhamento",
         "guidance": "Essa informação vai ser usada para mostrar mais informações quando compartilhando esta categoria",
         "preview": "Pré-visualização",
         "preview_text": "Essa é uma aproximação de como o conteúdo compartilhado será exibido. Isso pode mudar dependendo da plataforma em que o link está sendo compartilhado."

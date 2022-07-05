@@ -938,6 +938,7 @@
         "image_guidance": "Prefer images in landscape mode with high quality"
       },
       "metadata": {
+        "title": "Sharing data",
         "guidance": "This information will be used to display rich links when sharing this category.",
         "preview": "Preview",
         "preview_text": "This is an approximation of what the shared content will look like. It might change depending on the platform the link is being shared on."
