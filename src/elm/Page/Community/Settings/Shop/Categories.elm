@@ -1419,7 +1419,10 @@ viewCategoryWithChildren translators model zipper children =
 
                         Just icon ->
                             img [ src icon, alt "", class "h-6 w-6 rounded-full mr-2" ] []
-                    , span [ class "whitespace-nowrap font-bold text-black" ]
+                    , span
+                        [ class "whitespace-nowrap text-black"
+                        , classList [ ( "font-bold", Maybe.Extra.isNothing category.parentId ) ]
+                        ]
                         [ text category.name
                         ]
                     ]
