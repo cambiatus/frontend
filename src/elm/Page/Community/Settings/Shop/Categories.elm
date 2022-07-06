@@ -67,7 +67,7 @@ type alias Model =
 
 type DropdownState
     = DropdownClosed
-    | DropdownOpenOnMouse { x : Float, y : Float } Shop.Category.Id
+    | DropdownOpenOnMouse { x : Float, y : Float } Shop.Category.Id Browser.Dom.Viewport
     | DropdownOpenOnButton Shop.Category.Id
 
 
@@ -129,6 +129,7 @@ type Msg
     | CompletedDeletingCategory Shop.Category.Id (RemoteData (Graphql.Http.Error Api.Graphql.DeleteStatus.DeleteStatus) Api.Graphql.DeleteStatus.DeleteStatus)
     | ClickedShowActionsDropdown Shop.Category.Id
     | OpenedContextMenuForAction { x : Float, y : Float } Shop.Category.Id
+    | GotViewportForContextMenuForAction { x : Float, y : Float } Shop.Category.Id Browser.Dom.Viewport
     | ClosedActionsDropdown
     | ClickedOpenMetadataModal Shop.Category.Id
     | GotMetadataFormMsg (Form.Msg MetadataFormInput)
@@ -583,22 +584,32 @@ update msg model loggedIn =
                         DropdownOpenOnButton _ ->
                             DropdownClosed
 
-                        DropdownOpenOnMouse _ _ ->
+                        DropdownOpenOnMouse _ _ _ ->
                             DropdownOpenOnButton categoryId
             }
                 |> UR.init
 
         OpenedContextMenuForAction coordinates categoryId ->
+            let
+                getViewport =
+                    Browser.Dom.getViewport
+                        |> Task.perform (\viewport -> GotViewportForContextMenuForAction coordinates categoryId viewport)
+            in
+            model
+                |> UR.init
+                |> UR.addCmd getViewport
+
+        GotViewportForContextMenuForAction coordinates categoryId viewport ->
             { model
                 | actionsDropdown =
                     case model.actionsDropdown of
                         DropdownClosed ->
-                            DropdownOpenOnMouse coordinates categoryId
+                            DropdownOpenOnMouse coordinates categoryId viewport
 
                         DropdownOpenOnButton _ ->
-                            DropdownOpenOnMouse coordinates categoryId
+                            DropdownOpenOnMouse coordinates categoryId viewport
 
-                        DropdownOpenOnMouse _ _ ->
+                        DropdownOpenOnMouse _ _ _ ->
                             DropdownClosed
             }
                 |> UR.init
@@ -1078,7 +1089,7 @@ viewPageContainer translators { children, modals } model =
                 DropdownOpenOnButton _ ->
                     True
 
-                DropdownOpenOnMouse _ _ ->
+                DropdownOpenOnMouse _ _ _ ->
                     True
     in
     div [ class "container mx-auto sm:px-4 sm:mt-6 pb-40 overflow-x-hidden" ]
@@ -1314,7 +1325,7 @@ viewCategoryWithChildren translators model zipper children =
                         actionsDropdown
                         (Tree.Zipper.tree zipper)
 
-                DropdownOpenOnMouse _ actionsDropdown ->
+                DropdownOpenOnMouse _ actionsDropdown _ ->
                     isAncestorOf
                         actionsDropdown
                         (Tree.Zipper.tree zipper)
@@ -1403,7 +1414,7 @@ viewCategoryWithChildren translators model zipper children =
                                 else
                                     ( OpenedContextMenuForAction { x = x, y = y } category.id
                                     , case model.actionsDropdown of
-                                        DropdownOpenOnMouse _ _ ->
+                                        DropdownOpenOnMouse _ _ _ ->
                                             False
 
                                         _ ->
@@ -1443,7 +1454,7 @@ viewCategoryWithChildren translators model zipper children =
                                 DropdownOpenOnButton actionsDropdown ->
                                     actionsDropdown == category.id
 
-                                DropdownOpenOnMouse _ actionsDropdown ->
+                                DropdownOpenOnMouse _ actionsDropdown _ ->
                                     actionsDropdown == category.id
                           )
                         ]
@@ -1549,7 +1560,7 @@ viewActions translators { isParentOfNewCategoryForm, isDraggingSomething } model
                 DropdownOpenOnButton actionsDropdown ->
                     actionsDropdown == category.id
 
-                DropdownOpenOnMouse _ actionsDropdown ->
+                DropdownOpenOnMouse _ actionsDropdown _ ->
                     actionsDropdown == category.id
 
         isDropdownOpenOnButton =
@@ -1560,7 +1571,7 @@ viewActions translators { isParentOfNewCategoryForm, isDraggingSomething } model
                 DropdownOpenOnButton actionsDropdown ->
                     actionsDropdown == category.id
 
-                DropdownOpenOnMouse _ _ ->
+                DropdownOpenOnMouse _ _ _ ->
                     False
 
         hasActionsMenuOpen =
@@ -1573,7 +1584,7 @@ viewActions translators { isParentOfNewCategoryForm, isDraggingSomething } model
                         actionsDropdown
                         (Tree.Zipper.tree zipper)
 
-                DropdownOpenOnMouse _ actionsDropdown ->
+                DropdownOpenOnMouse _ actionsDropdown _ ->
                     isAncestorOf
                         actionsDropdown
                         (Tree.Zipper.tree zipper)
@@ -1631,10 +1642,14 @@ viewActions translators { isParentOfNewCategoryForm, isDraggingSomething } model
             let
                 openOnMouseAttrs =
                     case model.actionsDropdown of
-                        DropdownOpenOnMouse { x, y } _ ->
-                            [ style "left" (String.fromFloat x ++ "px")
+                        DropdownOpenOnMouse { x, y } _ { viewport } ->
+                            [ class "fixed"
                             , style "top" (String.fromFloat y ++ "px")
-                            , class "fixed"
+                            , if x < viewport.width / 2 then
+                                style "left" (String.fromFloat x ++ "px")
+
+                              else
+                                style "right" (String.fromFloat (viewport.width - x) ++ "px")
                             ]
 
                         _ ->
@@ -2285,7 +2300,7 @@ subscriptions model =
             DropdownOpenOnButton _ ->
                 closeDropdownSubscription
 
-            DropdownOpenOnMouse _ _ ->
+            DropdownOpenOnMouse _ _ _ ->
                 closeDropdownSubscription
         ]
 
@@ -2502,6 +2517,9 @@ msgToString msg =
 
         OpenedContextMenuForAction _ _ ->
             [ "OpenedContextMenuForAction" ]
+
+        GotViewportForContextMenuForAction _ _ _ ->
+            [ "GotViewportForContextMenuForAction" ]
 
         ClosedActionsDropdown ->
             [ "ClosedActionsDropdown" ]
