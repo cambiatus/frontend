@@ -19,6 +19,13 @@ import Graphql.SelectionSet exposing (SelectionSet)
 import Json.Decode as Decode
 
 
+categories :
+    SelectionSet decodesTo Cambiatus.Object.Category
+    -> SelectionSet (List decodesTo) Cambiatus.Object.Product
+categories object_ =
+    Object.selectionForCompositeField "categories" [] object_ (identity >> Decode.list)
+
+
 community :
     SelectionSet decodesTo Cambiatus.Object.Community
     -> SelectionSet decodesTo Cambiatus.Object.Product

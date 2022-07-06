@@ -329,30 +329,29 @@ encodeNewCommunityInput input =
 
 
 buildProductsFilterInput :
-    ProductsFilterInputRequiredFields
-    -> (ProductsFilterInputOptionalFields -> ProductsFilterInputOptionalFields)
+    (ProductsFilterInputOptionalFields -> ProductsFilterInputOptionalFields)
     -> ProductsFilterInput
-buildProductsFilterInput required fillOptionals =
+buildProductsFilterInput fillOptionals =
     let
         optionals =
             fillOptionals
-                { inStock = Absent }
+                { account = Absent, categoriesIds = Absent, inStock = Absent }
     in
-    { account = required.account, inStock = optionals.inStock }
-
-
-type alias ProductsFilterInputRequiredFields =
-    { account : String }
+    { account = optionals.account, categoriesIds = optionals.categoriesIds, inStock = optionals.inStock }
 
 
 type alias ProductsFilterInputOptionalFields =
-    { inStock : OptionalArgument Bool }
+    { account : OptionalArgument String
+    , categoriesIds : OptionalArgument (List (Maybe Int))
+    , inStock : OptionalArgument Bool
+    }
 
 
 {-| Type for the ProductsFilterInput input object.
 -}
 type alias ProductsFilterInput =
-    { account : String
+    { account : OptionalArgument String
+    , categoriesIds : OptionalArgument (List (Maybe Int))
     , inStock : OptionalArgument Bool
     }
 
@@ -362,7 +361,7 @@ type alias ProductsFilterInput =
 encodeProductsFilterInput : ProductsFilterInput -> Value
 encodeProductsFilterInput input =
     Encode.maybeObject
-        [ ( "account", Encode.string input.account |> Just ), ( "inStock", Encode.bool |> Encode.optional input.inStock ) ]
+        [ ( "account", Encode.string |> Encode.optional input.account ), ( "categoriesIds", (Encode.int |> Encode.maybe |> Encode.list) |> Encode.optional input.categoriesIds ), ( "inStock", Encode.bool |> Encode.optional input.inStock ) ]
 
 
 buildPushSubscriptionInput :
@@ -419,6 +418,35 @@ encodeReadNotificationInput : ReadNotificationInput -> Value
 encodeReadNotificationInput input =
     Encode.maybeObject
         [ ( "id", Encode.int input.id |> Just ) ]
+
+
+buildSubcategoryInput :
+    SubcategoryInputRequiredFields
+    -> SubcategoryInput
+buildSubcategoryInput required =
+    { id = required.id, position = required.position }
+
+
+type alias SubcategoryInputRequiredFields =
+    { id : Int
+    , position : Int
+    }
+
+
+{-| Type for the SubcategoryInput input object.
+-}
+type alias SubcategoryInput =
+    { id : Int
+    , position : Int
+    }
+
+
+{-| Encode a SubcategoryInput into a value that can be used as an argument.
+-}
+encodeSubcategoryInput : SubcategoryInput -> Value
+encodeSubcategoryInput input =
+    Encode.maybeObject
+        [ ( "id", Encode.int input.id |> Just ), ( "position", Encode.int input.position |> Just ) ]
 
 
 buildTransferDirection :

@@ -5,6 +5,7 @@ module Form exposing
     , textField, richText, toggle, checkbox, radio, select, file, fileMultiple, datePicker, userPicker, userPickerMultiple, arbitrary, arbitraryWith, unsafeArbitrary
     , view, viewWithoutSubmit, Model, init, Msg, update, updateValues, getValue, hasFieldsLoading, msgToString
     , withDisabled
+    , isDisabled
     , parse
     )
 
@@ -88,6 +89,11 @@ documentation if you're stuck.
 ### Changing attributes and state
 
 @docs withDisabled
+
+
+### Checking attributes and state
+
+@docs isDisabled
 
 
 ## Validating
@@ -1015,6 +1021,15 @@ when you want to disable the form after the user submits it.
 withDisabled : Bool -> Model values -> Model values
 withDisabled disabled (Model model) =
     Model { model | disabled = disabled }
+
+
+{-| Checks if the form is disabled. It's useful to disable submit buttons when
+using `viewWithoutSubmit` or when some parts of the UI should be disabled when
+the form is disabled.
+-}
+isDisabled : Model values -> Bool
+isDisabled (Model model) =
+    model.disabled
 
 
 {-| Determines which errors we should show. This is opaque so it can't be

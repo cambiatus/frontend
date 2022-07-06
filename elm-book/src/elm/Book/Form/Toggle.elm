@@ -81,7 +81,7 @@ view model =
                 identity
 
             else
-                Form.Toggle.withTooltip { message = model.tooltip, iconClass = "" }
+                Form.Toggle.withTooltip { message = model.tooltip, iconClass = "", containerClass = "" }
     in
     Html.div [ Html.Attributes.class "space-y-4" ]
         [ Html.div []
@@ -170,6 +170,7 @@ chapter =
                         |> Form.Toggle.withTooltip
                             { message = "Some longer description about what the toggle does. By the way, we can also add attributes to the question mark icon, such as changing the color on it"
                             , iconClass = ""
+                            , containerClass = ""
                             }
                     )
                     (baseViewOptions False)

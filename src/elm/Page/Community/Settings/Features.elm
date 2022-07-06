@@ -153,6 +153,7 @@ view loggedIn model =
                                     Just
                                         { message = t "community.kyc.info"
                                         , iconClass = "text-orange-300"
+                                        , containerClass = ""
                                         }
                                }
                              , { label = "sponsorship.title"

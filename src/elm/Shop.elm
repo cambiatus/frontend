@@ -235,10 +235,14 @@ productsQuery filter accName communityId =
     case filter of
         UserSales ->
             let
-                args =
-                    \_ ->
-                        { filters = Present { account = Eos.nameToString accName, inStock = Absent }
-                        }
+                args _ =
+                    { filters =
+                        Present
+                            { account = Present (Eos.nameToString accName)
+                            , inStock = Absent
+                            , categoriesIds = Absent
+                            }
+                    }
             in
             Query.products args { communityId = Eos.symbolToString communityId } productSelectionSet
 
@@ -322,6 +326,7 @@ upsert { id, symbol, title, description, images, price, stockTracking } =
 
                     Just (Id unwrappedId) ->
                         Present unwrappedId
+            , categories = Absent
             , communityId = Present (Eos.symbolToString symbol)
             , title = Present title
             , description = Present (Markdown.toRawString description)

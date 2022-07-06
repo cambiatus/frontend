@@ -28,6 +28,7 @@ import Page.Community.Settings.News.Editor as CommunitySettingsNewsEditor
 import Page.Community.Settings.ObjectiveEditor as CommunitySettingsObjectiveEditor
 import Page.Community.Settings.Objectives as CommunitySettingsObjectives
 import Page.Community.Settings.Settings as CommunitySettings
+import Page.Community.Settings.Shop.Categories as CommunitySettingsShopCategories
 import Page.Community.Settings.Sponsorship as CommunitySettingsSponsorship
 import Page.Community.Settings.Sponsorship.Fiat as CommunitySettingsSponsorshipFiat
 import Page.Community.Settings.Sponsorship.ThankYouMessage as CommunitySettingsSponsorshipThankYouMessage
@@ -144,6 +145,10 @@ subscriptions model =
                 CommunitySponsor.subscriptions subModel
                     |> Sub.map GotCommunitySponsorMsg
 
+            CommunitySettingsShopCategories subModel ->
+                CommunitySettingsShopCategories.subscriptions subModel
+                    |> Sub.map GotCommunitySettingsShopCategoriesMsg
+
             _ ->
                 Sub.none
         ]
@@ -171,6 +176,7 @@ type Status
     | CommunityObjectives CommunityObjectives.Model
     | CommunityEditor CommunityEditor.Model
     | CommunitySettings CommunitySettings.Model
+    | CommunitySettingsShopCategories CommunitySettingsShopCategories.Model
     | CommunitySettingsFeatures CommunitySettingsFeatures.Model
     | CommunitySettingsInfo CommunitySettingsInfo.Model
     | CommunitySettingsNews CommunitySettingsNews.Model
@@ -224,6 +230,7 @@ type Msg
     | GotCommunityObjectivesMsg CommunityObjectives.Msg
     | GotCommunityEditorMsg CommunityEditor.Msg
     | GotCommunitySettingsMsg CommunitySettings.Msg
+    | GotCommunitySettingsShopCategoriesMsg CommunitySettingsShopCategories.Msg
     | GotCommunitySettingsFeaturesMsg CommunitySettingsFeatures.Msg
     | GotCommunitySettingsInfoMsg CommunitySettingsInfo.Msg
     | GotCommunitySettingsNewsMsg CommunitySettingsNews.Msg
@@ -466,6 +473,11 @@ update msg model =
         ( GotCommunitySettingsMsg subMsg, CommunitySettings subModel ) ->
             CommunitySettings.update subMsg subModel
                 >> updateLoggedInUResult CommunitySettings GotCommunitySettingsMsg model
+                |> withLoggedIn
+
+        ( GotCommunitySettingsShopCategoriesMsg subMsg, CommunitySettingsShopCategories subModel ) ->
+            CommunitySettingsShopCategories.update subMsg subModel
+                >> updateLoggedInUResult CommunitySettingsShopCategories GotCommunitySettingsShopCategoriesMsg model
                 |> withLoggedIn
 
         ( GotCommunitySettingsFeaturesMsg subMsg, CommunitySettingsFeatures subModel ) ->
@@ -1049,6 +1061,9 @@ statusToRoute status session =
         CommunitySettings _ ->
             Just Route.CommunitySettings
 
+        CommunitySettingsShopCategories _ ->
+            Just Route.CommunitySettingsShopCategories
+
         CommunitySettingsFeatures _ ->
             Just Route.CommunitySettingsFeatures
 
@@ -1445,6 +1460,11 @@ changeRouteTo maybeRoute model =
                 >> updateStatusWith CommunitySettings GotCommunitySettingsMsg model
                 |> withLoggedIn Route.CommunitySettings
 
+        Just Route.CommunitySettingsShopCategories ->
+            CommunitySettingsShopCategories.init
+                >> updateLoggedInUResult CommunitySettingsShopCategories GotCommunitySettingsShopCategoriesMsg model
+                |> withLoggedIn Route.CommunitySettingsShopCategories
+
         Just Route.CommunitySettingsFeatures ->
             CommunitySettingsFeatures.init
                 >> updateStatusWith CommunitySettingsFeatures GotCommunitySettingsFeaturesMsg model
@@ -1728,6 +1748,9 @@ msgToString msg =
         GotCommunitySettingsMsg subMsg ->
             "GotCommunitySettingsMsg" :: CommunitySettings.msgToString subMsg
 
+        GotCommunitySettingsShopCategoriesMsg subMsg ->
+            "GotCommunitySettingsShopCategoriesMsg" :: CommunitySettingsShopCategories.msgToString subMsg
+
         GotCommunitySettingsFeaturesMsg subMsg ->
             "GotCommunitySettingsFeaturesMsg" :: CommunitySettingsFeatures.msgToString subMsg
 
@@ -1957,6 +1980,9 @@ view model =
 
         CommunitySettings subModel ->
             viewLoggedIn subModel LoggedIn.CommunitySettings GotCommunitySettingsMsg CommunitySettings.view
+
+        CommunitySettingsShopCategories subModel ->
+            viewLoggedIn subModel LoggedIn.CommunitySettingsShopCategories GotCommunitySettingsShopCategoriesMsg CommunitySettingsShopCategories.view
 
         CommunitySettingsFeatures subModel ->
             viewLoggedIn subModel LoggedIn.CommunitySettingsFeatures GotCommunitySettingsFeaturesMsg CommunitySettingsFeatures.view

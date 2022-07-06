@@ -213,7 +213,7 @@ view ((Options options) as wrappedOptions) viewConfig toMsg =
                     , type_ "button"
                     , disabled options.disabled
                     ]
-                    [ Icons.trash "group-hover:opacity-80" ]
+                    [ Icons.trash "text-red group-hover:opacity-80" ]
 
               else
                 text ""

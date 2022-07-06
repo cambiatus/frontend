@@ -912,6 +912,56 @@
     },
     "disabled": {
       "description": "La botiga està desactivada en aquesta comunitat."
+    },
+    "categories": {
+      "admin_page_description": "Afegeix i gestiona les categories que estaran disponibles a la botiga.",
+      "empty": {
+        "title": "Sembla que la teva comunitat no té cap categoria!",
+        "description": "Comenceu creant una categoria nova a continuació"
+      },
+      "add_root": "Afegeix una nova categoria",
+      "add_child": "Afegeix una subcategoria de {{parent_name}}",
+      "click_category_to_edit": "{{category_name}} - feu clic per editar",
+      "actions_for": "Accions per a {{category_name}}",
+      "fields": {
+        "name": "Nom",
+        "slug": "URL Compartit",
+        "description": "Descripció",
+        "image": "Imatge",
+        "meta": {
+          "title": "Títol",
+          "description": "Descripció",
+          "keywords": "Paraules clau"
+        }
+      },
+      "form": {
+        "insert_name": "Introduïu un nom per generar l'URL compartit",
+        "invalid_slug": "URL compartit no vàlid",
+        "invalid_slug_tooltip": "Els caràcters no llatins no s'accepten als URLs. Per generar un URL vàlid, el nom de la categoria ha de tenir almenys un caràcter llatí",
+        "image_guidance": "Preferiu imatges en mode horitzontal amb alta qualitat"
+      },
+      "metadata": {
+        "title": "Contingut compartit",
+        "guidance": "Aquesta informació s'utilitzarà per mostrar més informació en compartir aquesta categoria.",
+        "preview": "Vista prèvia",
+        "preview_text": "Aquesta és una aproximació de com serà el contingut compartit. Pot canviar en funció de la plataforma en què es comparteix l'enllaç."
+      },
+      "delete": {
+        "title": "Suprimeix {{category_name}}",
+        "warning": "Si suprimiu aquesta categoria, totes les seves subcategories també se suprimiran permanentment.",
+        "confirmation": "Esteu segur que voleu suprimir aquesta categoria?"
+      },
+      "actions": {
+        "edit_main_information": "Edita la informació principal",
+        "edit_sharing_data": "Edita les dades per compartir",
+        "move_up": "Moure cap amunt",
+        "move_down": "Moure cap avall",
+        "delete": "Suprimeix"
+      },
+      "create_error": "S'ha produït un error en crear la categoria",
+      "update_error": "S'ha produït un error en actualitzar la categoria",
+      "delete_error": "S'ha produït un error en suprimir la categoria",
+      "reorder_error": "S'ha produït un error en reordenar la categoria"
     }
   },
   "dashboard": {
@@ -1170,6 +1220,12 @@
     "actions": {
       "title": "Objetius i Ações",
       "description": ""
+    },
+    "shop": {
+      "categories": {
+        "title": "Categories",
+        "description": "Quins tipus d'articles la gent pot posar a la venda"
+      }
     },
     "contacts": {
       "title": "Contactes de suport",

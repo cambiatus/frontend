@@ -47,6 +47,44 @@ addCommunityPhotos requiredArgs object_ =
     Object.selectionForCompositeField "addCommunityPhotos" [ Argument.required "symbol" requiredArgs.symbol Encode.string, Argument.required "urls" requiredArgs.urls (Encode.string |> Encode.list) ] object_ (identity >> Decode.nullable)
 
 
+type alias CategoryOptionalArguments =
+    { categories : OptionalArgument (List Cambiatus.InputObject.SubcategoryInput)
+    , description : OptionalArgument String
+    , iconUri : OptionalArgument String
+    , id : OptionalArgument Int
+    , imageUri : OptionalArgument String
+    , metaDescription : OptionalArgument String
+    , metaKeywords : OptionalArgument String
+    , metaTitle : OptionalArgument String
+    , name : OptionalArgument String
+    , parentId : OptionalArgument Int
+    , position : OptionalArgument Int
+    , slug : OptionalArgument String
+    }
+
+
+{-| [Auth required - Admin only] Upserts a category
+
+  - categories - List of subcategories; Associates given IDs as subcategories to this category
+  - parentId - Parent category ID
+
+-}
+category :
+    (CategoryOptionalArguments -> CategoryOptionalArguments)
+    -> SelectionSet decodesTo Cambiatus.Object.Category
+    -> SelectionSet (Maybe decodesTo) RootMutation
+category fillInOptionals object_ =
+    let
+        filledInOptionals =
+            fillInOptionals { categories = Absent, description = Absent, iconUri = Absent, id = Absent, imageUri = Absent, metaDescription = Absent, metaKeywords = Absent, metaTitle = Absent, name = Absent, parentId = Absent, position = Absent, slug = Absent }
+
+        optionalArgs =
+            [ Argument.optional "categories" filledInOptionals.categories (Cambiatus.InputObject.encodeSubcategoryInput |> Encode.list), Argument.optional "description" filledInOptionals.description Encode.string, Argument.optional "iconUri" filledInOptionals.iconUri Encode.string, Argument.optional "id" filledInOptionals.id Encode.int, Argument.optional "imageUri" filledInOptionals.imageUri Encode.string, Argument.optional "metaDescription" filledInOptionals.metaDescription Encode.string, Argument.optional "metaKeywords" filledInOptionals.metaKeywords Encode.string, Argument.optional "metaTitle" filledInOptionals.metaTitle Encode.string, Argument.optional "name" filledInOptionals.name Encode.string, Argument.optional "parentId" filledInOptionals.parentId Encode.int, Argument.optional "position" filledInOptionals.position Encode.int, Argument.optional "slug" filledInOptionals.slug Encode.string ]
+                |> List.filterMap identity
+    in
+    Object.selectionForCompositeField "category" optionalArgs object_ (identity >> Decode.nullable)
+
+
 type alias CommunityRequiredArguments =
     { communityId : String
     , input : Cambiatus.InputObject.CommunityUpdateInput
@@ -101,6 +139,20 @@ deleteAddress :
     -> SelectionSet (Maybe decodesTo) RootMutation
 deleteAddress object_ =
     Object.selectionForCompositeField "deleteAddress" [] object_ (identity >> Decode.nullable)
+
+
+type alias DeleteCategoryRequiredArguments =
+    { id : Int }
+
+
+{-| [Auth required - Admin only] Deletes a category
+-}
+deleteCategory :
+    DeleteCategoryRequiredArguments
+    -> SelectionSet decodesTo Cambiatus.Object.DeleteStatus
+    -> SelectionSet (Maybe decodesTo) RootMutation
+deleteCategory requiredArgs object_ =
+    Object.selectionForCompositeField "deleteCategory" [ Argument.required "id" requiredArgs.id Encode.int ] object_ (identity >> Decode.nullable)
 
 
 {-| [Auth required] A mutation to delete user's kyc data
@@ -240,7 +292,8 @@ preference fillInOptionals object_ =
 
 
 type alias ProductOptionalArguments =
-    { communityId : OptionalArgument String
+    { categories : OptionalArgument (List Int)
+    , communityId : OptionalArgument String
     , description : OptionalArgument String
     , id : OptionalArgument Int
     , images : OptionalArgument (List String)
@@ -252,6 +305,9 @@ type alias ProductOptionalArguments =
 
 
 {-| [Auth required] Upserts a product
+
+  - categories - List of categories ID you want to relate to this product
+
 -}
 product :
     (ProductOptionalArguments -> ProductOptionalArguments)
@@ -260,10 +316,10 @@ product :
 product fillInOptionals object_ =
     let
         filledInOptionals =
-            fillInOptionals { communityId = Absent, description = Absent, id = Absent, images = Absent, price = Absent, title = Absent, trackStock = Absent, units = Absent }
+            fillInOptionals { categories = Absent, communityId = Absent, description = Absent, id = Absent, images = Absent, price = Absent, title = Absent, trackStock = Absent, units = Absent }
 
         optionalArgs =
-            [ Argument.optional "communityId" filledInOptionals.communityId Encode.string, Argument.optional "description" filledInOptionals.description Encode.string, Argument.optional "id" filledInOptionals.id Encode.int, Argument.optional "images" filledInOptionals.images (Encode.string |> Encode.list), Argument.optional "price" filledInOptionals.price Encode.float, Argument.optional "title" filledInOptionals.title Encode.string, Argument.optional "trackStock" filledInOptionals.trackStock Encode.bool, Argument.optional "units" filledInOptionals.units Encode.int ]
+            [ Argument.optional "categories" filledInOptionals.categories (Encode.int |> Encode.list), Argument.optional "communityId" filledInOptionals.communityId Encode.string, Argument.optional "description" filledInOptionals.description Encode.string, Argument.optional "id" filledInOptionals.id Encode.int, Argument.optional "images" filledInOptionals.images (Encode.string |> Encode.list), Argument.optional "price" filledInOptionals.price Encode.float, Argument.optional "title" filledInOptionals.title Encode.string, Argument.optional "trackStock" filledInOptionals.trackStock Encode.bool, Argument.optional "units" filledInOptionals.units Encode.int ]
                 |> List.filterMap identity
     in
     Object.selectionForCompositeField "product" optionalArgs object_ (identity >> Decode.nullable)

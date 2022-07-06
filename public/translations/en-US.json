@@ -909,6 +909,56 @@
     },
     "disabled": {
       "description": "Shop is disabled in this community."
+    },
+    "categories": {
+      "admin_page_description": "Add and manage the categories that will be available in the shop.",
+      "empty": {
+        "title": "Looks like your community doesn't have any categories!",
+        "description": "Get started by creating a new category below"
+      },
+      "add_root": "Add new category",
+      "add_child": "Add sub-category of {{parent_name}}",
+      "click_category_to_edit": "{{category_name}} - Click to edit",
+      "actions_for": "Actions for {{category_name}}",
+      "fields": {
+        "name": "Name",
+        "slug": "Sharing URL",
+        "description": "Description",
+        "image": "Image",
+        "meta": {
+          "title": "Title",
+          "description": "Description",
+          "keywords": "Keywords"
+        }
+      },
+      "form": {
+        "insert_name": "Insert a name to generate the sharing URL",
+        "invalid_slug": "Invalid sharing URL",
+        "invalid_slug_tooltip": "Non-latin characters aren't accepted in URLs. In order to generate a valid URL, the category name must have at least one latin character",
+        "image_guidance": "Prefer images in landscape mode with high quality"
+      },
+      "metadata": {
+        "title": "Sharing data",
+        "guidance": "This information will be used to display rich links when sharing this category.",
+        "preview": "Preview",
+        "preview_text": "This is an approximation of what the shared content will look like. It might change depending on the platform the link is being shared on."
+      },
+      "delete": {
+        "title": "Delete {{category_name}}",
+        "warning": "If you delete this category, all of its sub-categories will also be permanently deleted.",
+        "confirmation": "Are you sure you want to delete this category?"
+      },
+      "actions": {
+        "edit_main_information": "Edit main information",
+        "edit_sharing_data": "Edit sharing data",
+        "move_up": "Move up",
+        "move_down": "Move down",
+        "delete": "Delete"
+      },
+      "create_error": "Something went wrong when creating the category",
+      "update_error": "Something went wrong when updating the category",
+      "delete_error": "Something went wrong when deleting the category",
+      "reorder_error": "Something went wrong when reordering the category"
     }
   },
   "dashboard": {
@@ -1168,6 +1218,12 @@
     "actions": {
       "title": "Objectives and Actions",
       "description": ""
+    },
+    "shop": {
+      "categories": {
+        "title": "Categories",
+        "description": "What kinds of items people can put for sale"
+      }
     },
     "contacts": {
       "title": "Support contacts",

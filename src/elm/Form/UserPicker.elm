@@ -361,7 +361,7 @@ viewSelectedProfile index (Options options) viewConfig { profile, summary } =
                       )
                     ]
             ]
-            [ Icons.trash "" ]
+            [ Icons.trash "text-red" ]
         ]
 
 
