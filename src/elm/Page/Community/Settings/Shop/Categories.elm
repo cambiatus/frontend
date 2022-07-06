@@ -1395,19 +1395,24 @@ viewCategoryWithChildren translators model zipper children =
                         ]
                     :: onClick (ClickedToggleExpandCategory category.id)
                     :: Html.Events.preventDefaultOn "contextmenu"
-                        (Json.Decode.map2
-                            (\x y ->
-                                ( OpenedContextMenuForAction { x = x, y = y } category.id
-                                , case model.actionsDropdown of
-                                    DropdownOpenOnMouse _ _ ->
-                                        False
+                        (Json.Decode.map3
+                            (\x y button ->
+                                if button == 0 then
+                                    ( NoOp, False )
 
-                                    _ ->
-                                        True
-                                )
+                                else
+                                    ( OpenedContextMenuForAction { x = x, y = y } category.id
+                                    , case model.actionsDropdown of
+                                        DropdownOpenOnMouse _ _ ->
+                                            False
+
+                                        _ ->
+                                            True
+                                    )
                             )
                             (Json.Decode.field "clientX" Json.Decode.float)
                             (Json.Decode.field "clientY" Json.Decode.float)
+                            (Json.Decode.field "button" Json.Decode.int)
                         )
                     :: Dnd.draggable category.id GotDndMsg
                 )
