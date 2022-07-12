@@ -624,10 +624,6 @@ broadcast broadcastMessage status =
                     Dashboard.receiveBroadcast broadcastMessage
                         |> Maybe.map GotDashboardMsg
 
-                Shop _ _ ->
-                    Shop.receiveBroadcast broadcastMessage
-                        |> Maybe.map GotShopMsg
-
                 Transfer _ ->
                     Transfer.receiveBroadcast broadcastMessage
                         |> Maybe.map GotTransferMsg
@@ -1567,7 +1563,7 @@ changeRouteTo maybeRoute model =
 
         Just (Route.Shop maybeFilter) ->
             (\l -> Shop.init l maybeFilter)
-                >> updateStatusWith (Shop maybeFilter) GotShopMsg model
+                >> updateLoggedInUResult (Shop maybeFilter) GotShopMsg model
                 |> withLoggedIn (Route.Shop maybeFilter)
 
         Just (Route.NewSale step) ->

@@ -3,7 +3,6 @@ module Page.Shop exposing
     , Msg
     , init
     , msgToString
-    , receiveBroadcast
     , update
     , view
     )
@@ -14,7 +13,7 @@ import Community exposing (Balance)
 import Eos
 import Eos.Account
 import Graphql.Http
-import Html exposing (Html, a, br, div, h1, h2, img, li, p, span, text, ul)
+import Html exposing (Html, a, br, div, h1, h2, i, img, li, p, span, text, ul)
 import Html.Attributes exposing (alt, class, classList, src)
 import Html.Attributes.Aria exposing (ariaLabel)
 import Http
@@ -37,18 +36,16 @@ import View.Components
 -- INIT
 
 
-init : LoggedIn.Model -> Filter -> ( Model, Cmd Msg )
+init : LoggedIn.Model -> Filter -> UpdateResult
 init loggedIn filter =
-    let
-        model =
-            initModel filter
-    in
-    ( model
-    , Cmd.batch
-        [ LoggedIn.maybeInitWith CompletedLoadCommunity .selectedCommunity loggedIn
-        , Api.getBalances loggedIn.shared loggedIn.accountName CompletedLoadBalances
-        ]
-    )
+    initModel filter
+        |> UR.init
+        |> UR.addCmd (Api.getBalances loggedIn.shared loggedIn.accountName CompletedLoadBalances)
+        |> UR.addExt
+            (LoggedIn.query loggedIn
+                (Shop.productsQuery filter loggedIn.accountName)
+                CompletedSalesLoad
+            )
 
 
 
@@ -72,7 +69,7 @@ initModel filter =
 
 type Status
     = Loading
-    | Loaded Eos.Symbol (List Card)
+    | Loaded (List Card)
     | LoadingFailed (Graphql.Http.Error (List Product))
 
 
@@ -129,7 +126,7 @@ view loggedIn model =
             else
                 text ""
 
-        content =
+        content symbol =
             case model.cards of
                 Loading ->
                     div [ class "container mx-auto px-4 mt-6 mb-10" ]
@@ -142,7 +139,7 @@ view loggedIn model =
                 LoadingFailed e ->
                     Page.fullPageGraphQLError (t "shop.title") e
 
-                Loaded symbol cards ->
+                Loaded cards ->
                     div [ class "container mx-auto px-4 mt-6" ]
                         (if List.isEmpty cards && model.filter == Shop.All then
                             [ viewFrozenAccountCard
@@ -166,14 +163,15 @@ view loggedIn model =
     in
     { title = title
     , content =
-        case RemoteData.map .hasShop loggedIn.selectedCommunity of
-            RemoteData.Success True ->
-                content
+        case loggedIn.selectedCommunity of
+            RemoteData.Success community ->
+                if community.hasShop then
+                    content community.symbol
 
-            RemoteData.Success False ->
-                Page.fullPageNotFound
-                    (t "error.pageNotFound")
-                    (t "shop.disabled.description")
+                else
+                    Page.fullPageNotFound
+                        (t "error.pageNotFound")
+                        (t "shop.disabled.description")
 
             RemoteData.Loading ->
                 Page.fullPageLoading loggedIn.shared
@@ -420,8 +418,7 @@ type alias UpdateResult =
 
 type Msg
     = NoOp
-    | CompletedSalesLoad Eos.Symbol (RemoteData (Graphql.Http.Error (List Product)) (List Product))
-    | CompletedLoadCommunity Community.Model
+    | CompletedSalesLoad (RemoteData (Graphql.Http.Error (List Product)) (List Product))
     | CompletedLoadBalances (Result Http.Error (List Balance))
     | ClickedAcceptCodeOfConduct
     | ClickedScrollToImage { containerId : String, imageId : String }
@@ -435,10 +432,10 @@ update msg model loggedIn =
         NoOp ->
             UR.init model
 
-        CompletedSalesLoad symbol (RemoteData.Success sales) ->
-            UR.init { model | cards = Loaded symbol (List.map cardFromSale sales) }
+        CompletedSalesLoad (RemoteData.Success sales) ->
+            UR.init { model | cards = Loaded (List.map cardFromSale sales) }
 
-        CompletedSalesLoad _ (RemoteData.Failure err) ->
+        CompletedSalesLoad (RemoteData.Failure err) ->
             UR.init { model | cards = LoadingFailed err }
                 |> UR.logGraphqlError msg
                     (Just loggedIn.accountName)
@@ -447,16 +444,8 @@ update msg model loggedIn =
                     []
                     err
 
-        CompletedSalesLoad _ _ ->
+        CompletedSalesLoad _ ->
             UR.init model
-
-        CompletedLoadCommunity community ->
-            UR.init model
-                |> UR.addExt
-                    (LoggedIn.query loggedIn
-                        (Shop.productsQuery model.filter loggedIn.accountName community.symbol)
-                        (CompletedSalesLoad community.symbol)
-                    )
 
         CompletedLoadBalances res ->
             case res of
@@ -489,7 +478,7 @@ update msg model loggedIn =
 
         ImageStartedIntersecting cardId imageId ->
             case model.cards of
-                Loaded symbol cards ->
+                Loaded cards ->
                     let
                         newCards =
                             List.Extra.updateIf
@@ -502,7 +491,7 @@ update msg model loggedIn =
                                 )
                                 cards
                     in
-                    { model | cards = Loaded symbol newCards }
+                    { model | cards = Loaded newCards }
                         |> UR.init
 
                 _ ->
@@ -510,7 +499,7 @@ update msg model loggedIn =
 
         ImageStoppedIntersecting cardId imageId ->
             case model.cards of
-                Loaded symbol cards ->
+                Loaded cards ->
                     let
                         newCards : List Card
                         newCards =
@@ -531,21 +520,11 @@ update msg model loggedIn =
                                 )
                                 cards
                     in
-                    { model | cards = Loaded symbol newCards }
+                    { model | cards = Loaded newCards }
                         |> UR.init
 
                 _ ->
                     UR.init model
-
-
-receiveBroadcast : LoggedIn.BroadcastMsg -> Maybe Msg
-receiveBroadcast broadcastMsg =
-    case broadcastMsg of
-        LoggedIn.CommunityLoaded community ->
-            Just (CompletedLoadCommunity community)
-
-        _ ->
-            Nothing
 
 
 msgToString : Msg -> List String
@@ -554,11 +533,8 @@ msgToString msg =
         NoOp ->
             [ "NoOp" ]
 
-        CompletedSalesLoad _ r ->
+        CompletedSalesLoad r ->
             [ "CompletedSalesLoad", UR.remoteDataToString r ]
-
-        CompletedLoadCommunity _ ->
-            [ "CompletedLoadCommunity" ]
 
         CompletedLoadBalances _ ->
             [ "CompletedLoadBalances" ]
