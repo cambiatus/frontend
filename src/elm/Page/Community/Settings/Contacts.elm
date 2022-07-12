@@ -87,36 +87,25 @@ update msg model loggedIn =
         SubmittedForm formOutput ->
             case model of
                 Authorized formModel ->
-                    case loggedIn.selectedCommunity of
-                        RemoteData.Success { symbol } ->
-                            Authorized (Form.withDisabled True formModel)
-                                |> UR.init
-                                |> UR.addExt
-                                    (LoggedIn.mutation loggedIn
-                                        (Cambiatus.Mutation.community
-                                            { communityId = Eos.symbolToString symbol
-                                            , input =
-                                                { contacts =
-                                                    formOutput
-                                                        |> List.map Contact.toGraphqlInput
-                                                        |> Graphql.OptionalArgument.Present
-                                                , hasNews = Graphql.OptionalArgument.Absent
-                                                }
-                                            }
-                                            (Cambiatus.Object.Community.contacts Contact.selectionSet
-                                                |> Graphql.SelectionSet.map (List.filterMap identity)
-                                            )
-                                        )
-                                        CompletedSubmittingForm
+                    Authorized (Form.withDisabled True formModel)
+                        |> UR.init
+                        |> UR.addExt
+                            (LoggedIn.mutation loggedIn
+                                (Cambiatus.Mutation.community
+                                    { input =
+                                        { contacts =
+                                            formOutput
+                                                |> List.map Contact.toGraphqlInput
+                                                |> Graphql.OptionalArgument.Present
+                                        , hasNews = Graphql.OptionalArgument.Absent
+                                        }
+                                    }
+                                    (Cambiatus.Object.Community.contacts Contact.selectionSet
+                                        |> Graphql.SelectionSet.map (List.filterMap identity)
                                     )
-
-                        _ ->
-                            UR.init model
-                                |> UR.logImpossible msg
-                                    "Submitted form, but community wasn't loaded"
-                                    (Just loggedIn.accountName)
-                                    { moduleName = "Page.Community.Settings.Contacts", function = "update" }
-                                    []
+                                )
+                                CompletedSubmittingForm
+                            )
 
                 _ ->
                     UR.init model
