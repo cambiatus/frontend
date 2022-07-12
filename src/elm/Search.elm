@@ -112,14 +112,10 @@ type alias FoundData =
     RemoteData (Graphql.Http.Error SearchResults) SearchResults
 
 
-sendSearchQuery : Symbol -> String -> ExternalMsg
-sendSearchQuery selectedCommunity queryString =
-    let
-        req =
-            { communityId = Eos.symbolToString selectedCommunity }
-    in
+sendSearchQuery : String -> ExternalMsg
+sendSearchQuery queryString =
     RequestQuery
-        (Cambiatus.Query.search req (searchResultSelectionSet queryString))
+        (Cambiatus.Query.search (searchResultSelectionSet queryString))
         (GotSearchResults { for = queryString })
 
 
@@ -205,8 +201,8 @@ type ExternalMsg
     | RequestQuery (SelectionSet SearchResults RootQuery) (FoundData -> Msg)
 
 
-update : Shared -> Symbol -> Model -> Msg -> UpdateResult
-update shared symbol model msg =
+update : Shared -> Model -> Msg -> UpdateResult
+update shared model msg =
     case msg of
         NoOp ->
             UR.init model
@@ -224,7 +220,7 @@ update shared symbol model msg =
             in
             case emittedMsg of
                 Just emitted ->
-                    update shared symbol updatedModel emitted
+                    update shared updatedModel emitted
                         |> UR.addCmd mappedCmd
 
                 Nothing ->
@@ -241,7 +237,6 @@ update shared symbol model msg =
 
         RecentQueryClicked q ->
             update shared
-                symbol
                 { model
                     | state = ResultsShowed RemoteData.Loading Nothing
                     , form = Form.updateValues (\form -> { form | query = q }) model.form
@@ -335,7 +330,7 @@ update shared symbol model msg =
 
         RequestedNewResults queryString ->
             UR.init model
-                |> UR.addExt (sendSearchQuery symbol queryString)
+                |> UR.addExt (sendSearchQuery queryString)
 
         ClearSearchIconClicked ->
             { model
@@ -377,7 +372,7 @@ update shared symbol model msg =
             }
                 |> UR.init
                 |> UR.addCmd (storeRecentSearches newRecentSearches)
-                |> UR.addExt (sendSearchQuery symbol currentQuery)
+                |> UR.addExt (sendSearchQuery currentQuery)
 
         ClickedScrollToImage { containerId, imageId } ->
             model

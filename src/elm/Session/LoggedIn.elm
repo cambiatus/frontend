@@ -2066,31 +2066,26 @@ update msg model =
                 |> UR.init
 
         GotSearchMsg searchMsg ->
-            case model.selectedCommunity of
-                RemoteData.Success community ->
-                    Search.update shared community.symbol model.searchModel searchMsg
-                        |> UR.fromChild (\searchModel -> { model | searchModel = searchModel })
-                            GotSearchMsg
-                            (\extMsg ur ->
-                                case extMsg of
-                                    Search.SetFeedback feedback ->
-                                        ur
-                                            |> UR.mapModel (\newModel -> { newModel | feedback = feedback })
+            Search.update shared model.searchModel searchMsg
+                |> UR.fromChild (\searchModel -> { model | searchModel = searchModel })
+                    GotSearchMsg
+                    (\extMsg ur ->
+                        case extMsg of
+                            Search.SetFeedback feedback ->
+                                ur
+                                    |> UR.mapModel (\newModel -> { newModel | feedback = feedback })
 
-                                    Search.RequestQuery selectionSet resultMsg ->
-                                        ur
-                                            |> UR.addCmd
-                                                (internalQuery ur.model
-                                                    selectionSet
-                                                    (resultMsg >> GotSearchMsg)
-                                                )
-                            )
-                            { model | hasSeenDashboard = model.hasSeenDashboard || Search.isOpenMsg searchMsg }
-                        |> UR.mapModel
-                            (\newModel -> { newModel | hasSeenDashboard = newModel.hasSeenDashboard || Search.isOpenMsg searchMsg })
-
-                _ ->
-                    UR.init model
+                            Search.RequestQuery selectionSet resultMsg ->
+                                ur
+                                    |> UR.addCmd
+                                        (internalQuery ur.model
+                                            selectionSet
+                                            (resultMsg >> GotSearchMsg)
+                                        )
+                    )
+                    { model | hasSeenDashboard = model.hasSeenDashboard || Search.isOpenMsg searchMsg }
+                |> UR.mapModel
+                    (\newModel -> { newModel | hasSeenDashboard = newModel.hasSeenDashboard || Search.isOpenMsg searchMsg })
 
         CompletedLoadTranslation lang (Ok transl) ->
             case model.profile of
