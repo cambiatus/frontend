@@ -2240,7 +2240,7 @@ update msg model =
                         Encode.object
                             [ ( "name", Encode.string "subscribeToHighlightedNewsChanged" )
                             , ( "subscription"
-                              , highlightedNewsSubscription newCommunity.symbol
+                              , highlightedNewsSubscription
                                     |> Graphql.Document.serializeSubscription
                                     |> Encode.string
                               )
@@ -2575,9 +2575,7 @@ update msg model =
                 RemoteData.Success community ->
                     case
                         Decode.decodeValue
-                            (highlightedNewsSubscription community.symbol
-                                |> Graphql.Document.decoder
-                            )
+                            (Graphql.Document.decoder highlightedNewsSubscription)
                             payload
                     of
                         Ok highlightedNews ->
@@ -3218,10 +3216,9 @@ unreadCountSubscription name =
     Subscription.unreads args unreadSelection
 
 
-highlightedNewsSubscription : Eos.Symbol -> SelectionSet (Maybe Community.News.Model) RootSubscription
-highlightedNewsSubscription symbol =
-    Subscription.highlightedNews { communityId = Eos.symbolToString symbol }
-        Community.News.selectionSet
+highlightedNewsSubscription : SelectionSet (Maybe Community.News.Model) RootSubscription
+highlightedNewsSubscription =
+    Subscription.highlightedNews Community.News.selectionSet
 
 
 
