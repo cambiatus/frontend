@@ -142,7 +142,20 @@ searchResultSelectionSet queryString =
         )
         |> with (Cambiatus.Object.SearchResult.products (\_ -> { query = Present queryString }) Shop.productSelectionSet)
         |> with (Cambiatus.Object.SearchResult.actions (\_ -> { query = Present queryString }) Action.selectionSet)
-        |> with (Cambiatus.Object.SearchResult.members (\_ -> { query = Present queryString }) Profile.minimalSelectionSet)
+        |> with
+            (Cambiatus.Object.SearchResult.members
+                (\_ ->
+                    { filters =
+                        Present
+                            { orderDirection = Absent
+                            , orderMembersBy = Absent
+                            , searchMembersBy = Absent
+                            , searchString = Present queryString
+                            }
+                    }
+                )
+                Profile.minimalSelectionSet
+            )
 
 
 storeRecentSearches : List String -> Cmd msg
