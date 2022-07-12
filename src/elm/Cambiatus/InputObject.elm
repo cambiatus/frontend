@@ -6,6 +6,8 @@ module Cambiatus.InputObject exposing (..)
 
 import Cambiatus.Enum.ContactType
 import Cambiatus.Enum.Direction
+import Cambiatus.Enum.OrderByFields
+import Cambiatus.Enum.SearchByFields
 import Cambiatus.Enum.TransferDirectionValue
 import Cambiatus.Enum.VerificationType
 import Cambiatus.Interface
@@ -301,6 +303,44 @@ encodeKycDataUpdateInput : KycDataUpdateInput -> Value
 encodeKycDataUpdateInput input =
     Encode.maybeObject
         [ ( "countryId", (Cambiatus.ScalarCodecs.codecs |> Cambiatus.Scalar.unwrapEncoder .codecId) input.countryId |> Just ), ( "document", Encode.string input.document |> Just ), ( "documentType", Encode.string input.documentType |> Just ), ( "phone", Encode.string input.phone |> Just ), ( "userType", Encode.string input.userType |> Just ) ]
+
+
+buildMembersFilterInput :
+    (MembersFilterInputOptionalFields -> MembersFilterInputOptionalFields)
+    -> MembersFilterInput
+buildMembersFilterInput fillOptionals =
+    let
+        optionals =
+            fillOptionals
+                { orderDirection = Absent, orderMembersBy = Absent, searchMembersBy = Absent, searchString = Absent }
+    in
+    { orderDirection = optionals.orderDirection, orderMembersBy = optionals.orderMembersBy, searchMembersBy = optionals.searchMembersBy, searchString = optionals.searchString }
+
+
+type alias MembersFilterInputOptionalFields =
+    { orderDirection : OptionalArgument Cambiatus.Enum.Direction.Direction
+    , orderMembersBy : OptionalArgument Cambiatus.Enum.OrderByFields.OrderByFields
+    , searchMembersBy : OptionalArgument (List (Maybe Cambiatus.Enum.SearchByFields.SearchByFields))
+    , searchString : OptionalArgument String
+    }
+
+
+{-| Type for the MembersFilterInput input object.
+-}
+type alias MembersFilterInput =
+    { orderDirection : OptionalArgument Cambiatus.Enum.Direction.Direction
+    , orderMembersBy : OptionalArgument Cambiatus.Enum.OrderByFields.OrderByFields
+    , searchMembersBy : OptionalArgument (List (Maybe Cambiatus.Enum.SearchByFields.SearchByFields))
+    , searchString : OptionalArgument String
+    }
+
+
+{-| Encode a MembersFilterInput into a value that can be used as an argument.
+-}
+encodeMembersFilterInput : MembersFilterInput -> Value
+encodeMembersFilterInput input =
+    Encode.maybeObject
+        [ ( "orderDirection", Encode.enum Cambiatus.Enum.Direction.toString |> Encode.optional input.orderDirection ), ( "orderMembersBy", Encode.enum Cambiatus.Enum.OrderByFields.toString |> Encode.optional input.orderMembersBy ), ( "searchMembersBy", (Encode.enum Cambiatus.Enum.SearchByFields.toString |> Encode.maybe |> Encode.list) |> Encode.optional input.searchMembersBy ), ( "searchString", Encode.string |> Encode.optional input.searchString ) ]
 
 
 buildNewCommunityInput :
