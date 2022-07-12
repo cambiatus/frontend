@@ -628,10 +628,6 @@ broadcast broadcastMessage status =
                     Transfer.receiveBroadcast broadcastMessage
                         |> Maybe.map GotTransferMsg
 
-                Analysis _ ->
-                    Analysis.receiveBroadcast broadcastMessage
-                        |> Maybe.map GotAnalysisMsg
-
                 ProfileClaims _ ->
                     ProfileClaims.receiveBroadcast broadcastMessage
                         |> Maybe.map GotProfileClaimsMsg
@@ -1631,7 +1627,7 @@ changeRouteTo maybeRoute model =
 
         Just Route.Analysis ->
             (\l -> Analysis.init l)
-                >> updateStatusWith Analysis GotAnalysisMsg model
+                >> updateLoggedInUResult Analysis GotAnalysisMsg model
                 |> withLoggedIn Route.Analysis
 
 
