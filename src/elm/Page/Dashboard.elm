@@ -1034,7 +1034,7 @@ update msg model ({ shared, accountName } as loggedIn) =
                     , showContactModal = not showModalRequestingSponsor && shouldShowContactModal loggedIn model
                 }
                 |> UR.addCmd (fetchBalance shared accountName community)
-                |> UR.addExt (fetchAvailableAnalysis loggedIn Nothing community)
+                |> UR.addExt (fetchAvailableAnalysis loggedIn Nothing)
                 |> UR.addExt (fetchTransfers loggedIn community Nothing model)
                 |> markSponsorModalAsSeen
 
@@ -1424,13 +1424,9 @@ fetchTransfers loggedIn community maybeCursor model =
         CompletedLoadUserTransfers
 
 
-fetchAvailableAnalysis : LoggedIn.Model -> Maybe String -> Community.Model -> LoggedIn.External Msg
-fetchAvailableAnalysis loggedIn maybeCursor community =
+fetchAvailableAnalysis : LoggedIn.Model -> Maybe String -> LoggedIn.External Msg
+fetchAvailableAnalysis loggedIn maybeCursor =
     let
-        arg =
-            { communityId = Eos.symbolToString community.symbol
-            }
-
         optionalArguments =
             \a ->
                 { a
@@ -1464,7 +1460,6 @@ fetchAvailableAnalysis loggedIn maybeCursor community =
     in
     LoggedIn.query loggedIn
         (Cambiatus.Query.pendingClaims optionalArguments
-            arg
             (Claim.claimPaginatedSelectionSet loggedIn.shared.now)
         )
         ClaimsLoaded
