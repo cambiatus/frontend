@@ -282,48 +282,34 @@ update msg model loggedIn =
         SubmittedForm formOutput ->
             case model of
                 Editing action _ ->
-                    case loggedIn.selectedCommunity of
-                        RemoteData.Success community ->
-                            let
-                                schedulingTime =
-                                    formOutput.publicationDate
-                                        |> Maybe.map (Iso8601.fromTime >> Cambiatus.Scalar.DateTime)
+                    let
+                        schedulingTime =
+                            formOutput.publicationDate
+                                |> Maybe.map (Iso8601.fromTime >> Cambiatus.Scalar.DateTime)
 
-                                optionalArgs optionals =
-                                    case action of
-                                        CreateNew ->
-                                            { optionals
-                                                | scheduling = OptionalArgument.fromMaybe schedulingTime
-                                                , communityId = OptionalArgument.Present <| Eos.symbolToString community.symbol
-                                            }
+                        optionalArgs optionals =
+                            case action of
+                                CreateNew ->
+                                    { optionals | scheduling = OptionalArgument.fromMaybe schedulingTime }
 
-                                        EditExisting news ->
-                                            { optionals
-                                                | communityId = OptionalArgument.Present <| Eos.symbolToString community.symbol
-                                                , id = OptionalArgument.Present news.id
-                                                , scheduling = OptionalArgument.fromMaybeWithNull schedulingTime
-                                            }
+                                EditExisting news ->
+                                    { optionals
+                                        | id = OptionalArgument.Present news.id
+                                        , scheduling = OptionalArgument.fromMaybeWithNull schedulingTime
+                                    }
 
-                                mutation =
-                                    Cambiatus.Mutation.news
-                                        optionalArgs
-                                        { description = Markdown.toRawString formOutput.description
-                                        , title = formOutput.title
-                                        }
-                                        Community.News.selectionSet
-                            in
-                            model
-                                |> setDisabled True
-                                |> UR.init
-                                |> UR.addExt (LoggedIn.mutation loggedIn mutation CompletedSaving)
-
-                        _ ->
-                            UR.init model
-                                |> UR.logImpossible msg
-                                    "Tried saving communication, but community wasn't loaded"
-                                    (Just loggedIn.accountName)
-                                    { moduleName = "Page.Community.Settings.News.Editor", function = "update" }
-                                    [ Log.contextFromCommunity loggedIn.selectedCommunity ]
+                        mutation =
+                            Cambiatus.Mutation.news
+                                optionalArgs
+                                { description = Markdown.toRawString formOutput.description
+                                , title = formOutput.title
+                                }
+                                Community.News.selectionSet
+                    in
+                    model
+                        |> setDisabled True
+                        |> UR.init
+                        |> UR.addExt (LoggedIn.mutation loggedIn mutation CompletedSaving)
 
                 _ ->
                     UR.init model
