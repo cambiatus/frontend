@@ -28,16 +28,11 @@ type alias AnalyzedClaimsOptionalArguments =
     }
 
 
-type alias AnalyzedClaimsRequiredArguments =
-    { communityId : String }
-
-
 analyzedClaims :
     (AnalyzedClaimsOptionalArguments -> AnalyzedClaimsOptionalArguments)
-    -> AnalyzedClaimsRequiredArguments
     -> SelectionSet decodesTo Cambiatus.Object.ClaimConnection
     -> SelectionSet (Maybe decodesTo) RootQuery
-analyzedClaims fillInOptionals requiredArgs object_ =
+analyzedClaims fillInOptionals object_ =
     let
         filledInOptionals =
             fillInOptionals { after = Absent, before = Absent, filter = Absent, first = Absent, last = Absent }
@@ -46,7 +41,7 @@ analyzedClaims fillInOptionals requiredArgs object_ =
             [ Argument.optional "after" filledInOptionals.after Encode.string, Argument.optional "before" filledInOptionals.before Encode.string, Argument.optional "filter" filledInOptionals.filter Cambiatus.InputObject.encodeClaimsFilter, Argument.optional "first" filledInOptionals.first Encode.int, Argument.optional "last" filledInOptionals.last Encode.int ]
                 |> List.filterMap identity
     in
-    Object.selectionForCompositeField "analyzedClaims" (optionalArgs ++ [ Argument.required "communityId" requiredArgs.communityId Encode.string ]) object_ (identity >> Decode.nullable)
+    Object.selectionForCompositeField "analyzedClaims" optionalArgs object_ (identity >> Decode.nullable)
 
 
 type alias ClaimRequiredArguments =
@@ -208,18 +203,13 @@ type alias PendingClaimsOptionalArguments =
     }
 
 
-type alias PendingClaimsRequiredArguments =
-    { communityId : String }
-
-
 {-| [Auth required] A list of claims
 -}
 pendingClaims :
     (PendingClaimsOptionalArguments -> PendingClaimsOptionalArguments)
-    -> PendingClaimsRequiredArguments
     -> SelectionSet decodesTo Cambiatus.Object.ClaimConnection
     -> SelectionSet (Maybe decodesTo) RootQuery
-pendingClaims fillInOptionals requiredArgs object_ =
+pendingClaims fillInOptionals object_ =
     let
         filledInOptionals =
             fillInOptionals { after = Absent, before = Absent, filter = Absent, first = Absent, last = Absent }
@@ -228,7 +218,7 @@ pendingClaims fillInOptionals requiredArgs object_ =
             [ Argument.optional "after" filledInOptionals.after Encode.string, Argument.optional "before" filledInOptionals.before Encode.string, Argument.optional "filter" filledInOptionals.filter Cambiatus.InputObject.encodeClaimsFilter, Argument.optional "first" filledInOptionals.first Encode.int, Argument.optional "last" filledInOptionals.last Encode.int ]
                 |> List.filterMap identity
     in
-    Object.selectionForCompositeField "pendingClaims" (optionalArgs ++ [ Argument.required "communityId" requiredArgs.communityId Encode.string ]) object_ (identity >> Decode.nullable)
+    Object.selectionForCompositeField "pendingClaims" optionalArgs object_ (identity >> Decode.nullable)
 
 
 type alias ProductRequiredArguments =
@@ -263,18 +253,13 @@ type alias ProductsOptionalArguments =
     { filters : OptionalArgument Cambiatus.InputObject.ProductsFilterInput }
 
 
-type alias ProductsRequiredArguments =
-    { communityId : String }
-
-
 {-| [Auth required] Products in a community
 -}
 products :
     (ProductsOptionalArguments -> ProductsOptionalArguments)
-    -> ProductsRequiredArguments
     -> SelectionSet decodesTo Cambiatus.Object.Product
     -> SelectionSet (List decodesTo) RootQuery
-products fillInOptionals requiredArgs object_ =
+products fillInOptionals object_ =
     let
         filledInOptionals =
             fillInOptionals { filters = Absent }
@@ -283,21 +268,16 @@ products fillInOptionals requiredArgs object_ =
             [ Argument.optional "filters" filledInOptionals.filters Cambiatus.InputObject.encodeProductsFilterInput ]
                 |> List.filterMap identity
     in
-    Object.selectionForCompositeField "products" (optionalArgs ++ [ Argument.required "communityId" requiredArgs.communityId Encode.string ]) object_ (identity >> Decode.list)
-
-
-type alias SearchRequiredArguments =
-    { communityId : String }
+    Object.selectionForCompositeField "products" optionalArgs object_ (identity >> Decode.list)
 
 
 {-| [Auth required] Searches the community for a product or action
 -}
 search :
-    SearchRequiredArguments
-    -> SelectionSet decodesTo Cambiatus.Object.SearchResult
+    SelectionSet decodesTo Cambiatus.Object.SearchResult
     -> SelectionSet decodesTo RootQuery
-search requiredArgs object_ =
-    Object.selectionForCompositeField "search" [ Argument.required "communityId" requiredArgs.communityId Encode.string ] object_ identity
+search object_ =
+    Object.selectionForCompositeField "search" [] object_ identity
 
 
 type alias TransferRequiredArguments =

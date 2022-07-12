@@ -86,9 +86,7 @@ category fillInOptionals object_ =
 
 
 type alias CommunityRequiredArguments =
-    { communityId : String
-    , input : Cambiatus.InputObject.CommunityUpdateInput
-    }
+    { input : Cambiatus.InputObject.CommunityUpdateInput }
 
 
 {-| [Auth required - Admin only] Updates various fields in a community
@@ -98,7 +96,7 @@ community :
     -> SelectionSet decodesTo Cambiatus.Object.Community
     -> SelectionSet (Maybe decodesTo) RootMutation
 community requiredArgs object_ =
-    Object.selectionForCompositeField "community" [ Argument.required "communityId" requiredArgs.communityId Encode.string, Argument.required "input" requiredArgs.input Cambiatus.InputObject.encodeCommunityUpdateInput ] object_ (identity >> Decode.nullable)
+    Object.selectionForCompositeField "community" [ Argument.required "input" requiredArgs.input Cambiatus.InputObject.encodeCommunityUpdateInput ] object_ (identity >> Decode.nullable)
 
 
 type alias CompleteObjectiveRequiredArguments =
@@ -117,7 +115,6 @@ completeObjective requiredArgs object_ =
 
 type alias ContributionRequiredArguments =
     { amount : Float
-    , communityId : String
     , currency : Cambiatus.Enum.CurrencyType.CurrencyType
     }
 
@@ -129,7 +126,7 @@ contribution :
     -> SelectionSet decodesTo Cambiatus.Object.Contribution
     -> SelectionSet (Maybe decodesTo) RootMutation
 contribution requiredArgs object_ =
-    Object.selectionForCompositeField "contribution" [ Argument.required "amount" requiredArgs.amount Encode.float, Argument.required "communityId" requiredArgs.communityId Encode.string, Argument.required "currency" requiredArgs.currency (Encode.enum Cambiatus.Enum.CurrencyType.toString) ] object_ (identity >> Decode.nullable)
+    Object.selectionForCompositeField "contribution" [ Argument.required "amount" requiredArgs.amount Encode.float, Argument.required "currency" requiredArgs.currency (Encode.enum Cambiatus.Enum.CurrencyType.toString) ] object_ (identity >> Decode.nullable)
 
 
 {-| [Auth required] A mutation to delete user's address data
@@ -210,18 +207,13 @@ type alias HighlightedNewsOptionalArguments =
     { newsId : OptionalArgument Int }
 
 
-type alias HighlightedNewsRequiredArguments =
-    { communityId : String }
-
-
 {-| [Auth required - Admin only] Set highlighted news of community. If news\_id is not present, sets highlighted as nil
 -}
 highlightedNews :
     (HighlightedNewsOptionalArguments -> HighlightedNewsOptionalArguments)
-    -> HighlightedNewsRequiredArguments
     -> SelectionSet decodesTo Cambiatus.Object.Community
     -> SelectionSet (Maybe decodesTo) RootMutation
-highlightedNews fillInOptionals requiredArgs object_ =
+highlightedNews fillInOptionals object_ =
     let
         filledInOptionals =
             fillInOptionals { newsId = Absent }
@@ -230,12 +222,11 @@ highlightedNews fillInOptionals requiredArgs object_ =
             [ Argument.optional "newsId" filledInOptionals.newsId Encode.int ]
                 |> List.filterMap identity
     in
-    Object.selectionForCompositeField "highlightedNews" (optionalArgs ++ [ Argument.required "communityId" requiredArgs.communityId Encode.string ]) object_ (identity >> Decode.nullable)
+    Object.selectionForCompositeField "highlightedNews" optionalArgs object_ (identity >> Decode.nullable)
 
 
 type alias NewsOptionalArguments =
-    { communityId : OptionalArgument String
-    , id : OptionalArgument Int
+    { id : OptionalArgument Int
     , scheduling : OptionalArgument Cambiatus.ScalarCodecs.DateTime
     }
 
@@ -256,10 +247,10 @@ news :
 news fillInOptionals requiredArgs object_ =
     let
         filledInOptionals =
-            fillInOptionals { communityId = Absent, id = Absent, scheduling = Absent }
+            fillInOptionals { id = Absent, scheduling = Absent }
 
         optionalArgs =
-            [ Argument.optional "communityId" filledInOptionals.communityId Encode.string, Argument.optional "id" filledInOptionals.id Encode.int, Argument.optional "scheduling" filledInOptionals.scheduling (Cambiatus.ScalarCodecs.codecs |> Cambiatus.Scalar.unwrapEncoder .codecDateTime) ]
+            [ Argument.optional "id" filledInOptionals.id Encode.int, Argument.optional "scheduling" filledInOptionals.scheduling (Cambiatus.ScalarCodecs.codecs |> Cambiatus.Scalar.unwrapEncoder .codecDateTime) ]
                 |> List.filterMap identity
     in
     Object.selectionForCompositeField "news" (optionalArgs ++ [ Argument.required "description" requiredArgs.description Encode.string, Argument.required "title" requiredArgs.title Encode.string ]) object_ (identity >> Decode.nullable)
@@ -293,7 +284,6 @@ preference fillInOptionals object_ =
 
 type alias ProductOptionalArguments =
     { categories : OptionalArgument (List Int)
-    , communityId : OptionalArgument String
     , description : OptionalArgument String
     , id : OptionalArgument Int
     , images : OptionalArgument (List String)
@@ -316,10 +306,10 @@ product :
 product fillInOptionals object_ =
     let
         filledInOptionals =
-            fillInOptionals { categories = Absent, communityId = Absent, description = Absent, id = Absent, images = Absent, price = Absent, title = Absent, trackStock = Absent, units = Absent }
+            fillInOptionals { categories = Absent, description = Absent, id = Absent, images = Absent, price = Absent, title = Absent, trackStock = Absent, units = Absent }
 
         optionalArgs =
-            [ Argument.optional "categories" filledInOptionals.categories (Encode.int |> Encode.list), Argument.optional "communityId" filledInOptionals.communityId Encode.string, Argument.optional "description" filledInOptionals.description Encode.string, Argument.optional "id" filledInOptionals.id Encode.int, Argument.optional "images" filledInOptionals.images (Encode.string |> Encode.list), Argument.optional "price" filledInOptionals.price Encode.float, Argument.optional "title" filledInOptionals.title Encode.string, Argument.optional "trackStock" filledInOptionals.trackStock Encode.bool, Argument.optional "units" filledInOptionals.units Encode.int ]
+            [ Argument.optional "categories" filledInOptionals.categories (Encode.int |> Encode.list), Argument.optional "description" filledInOptionals.description Encode.string, Argument.optional "id" filledInOptionals.id Encode.int, Argument.optional "images" filledInOptionals.images (Encode.string |> Encode.list), Argument.optional "price" filledInOptionals.price Encode.float, Argument.optional "title" filledInOptionals.title Encode.string, Argument.optional "trackStock" filledInOptionals.trackStock Encode.bool, Argument.optional "units" filledInOptionals.units Encode.int ]
                 |> List.filterMap identity
     in
     Object.selectionForCompositeField "product" optionalArgs object_ (identity >> Decode.nullable)
