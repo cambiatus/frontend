@@ -13,7 +13,7 @@ import Community exposing (Balance)
 import Eos
 import Eos.Account
 import Graphql.Http
-import Html exposing (Html, a, br, div, h1, h2, i, img, li, p, span, text, ul)
+import Html exposing (Html, a, br, div, h1, h2, img, li, p, span, text, ul)
 import Html.Attributes exposing (alt, class, classList, src)
 import Html.Attributes.Aria exposing (ariaLabel)
 import Http

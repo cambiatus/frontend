@@ -7,7 +7,6 @@ import Cambiatus.Scalar
 import Community
 import Community.News
 import Date
-import Eos
 import Eos.Account
 import Form
 import Form.DatePicker

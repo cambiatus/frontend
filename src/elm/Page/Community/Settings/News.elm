@@ -4,7 +4,6 @@ import Cambiatus.Mutation
 import Cambiatus.Object.Community
 import Community
 import Community.News
-import Eos
 import Form.Toggle
 import Graphql.Http
 import Graphql.OptionalArgument

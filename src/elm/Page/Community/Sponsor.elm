@@ -8,7 +8,6 @@ import Cambiatus.Object.Contribution
 import Community
 import Dict
 import Environment
-import Eos
 import Form exposing (Form)
 import Form.Select
 import Form.Text
