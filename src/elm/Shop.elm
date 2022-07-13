@@ -230,8 +230,8 @@ productPreviewQuery (Id productId) =
     Query.productPreview { id = productId } productPreviewSelectionSet
 
 
-productsQuery : Filter -> Eos.Name -> Symbol -> SelectionSet (List Product) RootQuery
-productsQuery filter accName communityId =
+productsQuery : Filter -> Eos.Name -> SelectionSet (List Product) RootQuery
+productsQuery filter accName =
     case filter of
         UserSales ->
             let
@@ -244,20 +244,14 @@ productsQuery filter accName communityId =
                             }
                     }
             in
-            Query.products args { communityId = Eos.symbolToString communityId } productSelectionSet
+            Query.products args productSelectionSet
 
         All ->
-            let
-                args =
-                    { communityId = Eos.symbolToString communityId
-                    }
-            in
-            Query.products identity args productSelectionSet
+            Query.products identity productSelectionSet
 
 
 createProduct :
-    { symbol : Symbol
-    , title : String
+    { title : String
     , description : Markdown
     , images : List String
     , price : Float
@@ -268,7 +262,6 @@ createProduct :
 createProduct options selectionSet =
     upsert
         { id = Nothing
-        , symbol = options.symbol
         , title = options.title
         , description = options.description
         , images = options.images
@@ -283,7 +276,6 @@ keep the existing images, you must include them in the `images` field.
 -}
 updateProduct :
     { id : Id
-    , symbol : Symbol
     , title : String
     , description : Markdown
     , images : List String
@@ -295,7 +287,6 @@ updateProduct :
 updateProduct options selectionSet =
     upsert
         { id = Just options.id
-        , symbol = options.symbol
         , title = options.title
         , description = options.description
         , images = options.images
@@ -307,7 +298,6 @@ updateProduct options selectionSet =
 
 upsert :
     { id : Maybe Id
-    , symbol : Symbol
     , title : String
     , description : Markdown
     , images : List String
@@ -316,7 +306,7 @@ upsert :
     }
     -> SelectionSet decodesTo Cambiatus.Object.Product
     -> SelectionSet (Maybe decodesTo) RootMutation
-upsert { id, symbol, title, description, images, price, stockTracking } =
+upsert { id, title, description, images, price, stockTracking } =
     Mutation.product
         (\_ ->
             { id =
@@ -327,7 +317,6 @@ upsert { id, symbol, title, description, images, price, stockTracking } =
                     Just (Id unwrappedId) ->
                         Present unwrappedId
             , categories = Absent
-            , communityId = Present (Eos.symbolToString symbol)
             , title = Present title
             , description = Present (Markdown.toRawString description)
             , images = Present images

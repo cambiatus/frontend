@@ -849,8 +849,7 @@ update msg model loggedIn =
                                     (LoggedIn.mutation
                                         loggedIn
                                         (Shop.createProduct
-                                            { symbol = priceAndInventory.price.symbol
-                                            , title = mainInformation.title
+                                            { title = mainInformation.title
                                             , description = mainInformation.description
                                             , images = images
                                             , price = priceAndInventory.price.amount
@@ -873,7 +872,6 @@ update msg model loggedIn =
                                         loggedIn
                                         (Shop.updateProduct
                                             { id = sale.id
-                                            , symbol = priceAndInventory.price.symbol
                                             , title = mainInformation.title
                                             , description = mainInformation.description
                                             , images = images

@@ -214,6 +214,11 @@ location =
     Object.selectionForField "(Maybe String)" "location" [] (Decode.string |> Decode.nullable)
 
 
+memberSince : SelectionSet Cambiatus.ScalarCodecs.DateTime Cambiatus.Object.User
+memberSince =
+    Object.selectionForField "ScalarCodecs.DateTime" "memberSince" [] (Cambiatus.ScalarCodecs.codecs |> Cambiatus.Scalar.unwrapCodecs |> .codecDateTime |> .decoder)
+
+
 name : SelectionSet (Maybe String) Cambiatus.Object.User
 name =
     Object.selectionForField "(Maybe String)" "name" [] (Decode.string |> Decode.nullable)

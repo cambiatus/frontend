@@ -8,7 +8,6 @@ import Cambiatus.Object.Contribution
 import Community
 import Dict
 import Environment
-import Eos
 import Form exposing (Form)
 import Form.Select
 import Form.Text
@@ -139,29 +138,17 @@ update msg model loggedIn =
                             []
 
         StartedCreatingContribution id formOutput ->
-            case loggedIn.selectedCommunity of
-                RemoteData.Success community ->
-                    { model | isCreatingOrder = True }
-                        |> UR.init
-                        |> UR.addExt
-                            (LoggedIn.mutation loggedIn
-                                (createContributionSelectionSet
-                                    { amount = formOutput.amount
-                                    , communityId = community.symbol
-                                    , currency = toCurrencyType formOutput.currency
-                                    }
-                                )
-                                (CreatedContribution id)
-                            )
-
-                _ ->
-                    model
-                        |> UR.init
-                        |> UR.logImpossible msg
-                            "Started creating contribution, but community wasn't loaded"
-                            (Just loggedIn.accountName)
-                            { moduleName = "Page.Community.Sponsor", function = "update" }
-                            []
+            { model | isCreatingOrder = True }
+                |> UR.init
+                |> UR.addExt
+                    (LoggedIn.mutation loggedIn
+                        (createContributionSelectionSet
+                            { amount = formOutput.amount
+                            , currency = toCurrencyType formOutput.currency
+                            }
+                        )
+                        (CreatedContribution id)
+                    )
 
         CreatedContribution id (RemoteData.Success (Just contribution)) ->
             model
@@ -569,10 +556,10 @@ subscriptions _ =
 -- GRAPHQL
 
 
-createContributionSelectionSet : { amount : Float, communityId : Eos.Symbol, currency : Cambiatus.Enum.CurrencyType.CurrencyType } -> SelectionSet (Maybe Contribution) RootMutation
-createContributionSelectionSet { amount, communityId, currency } =
+createContributionSelectionSet : { amount : Float, currency : Cambiatus.Enum.CurrencyType.CurrencyType } -> SelectionSet (Maybe Contribution) RootMutation
+createContributionSelectionSet { amount, currency } =
     Cambiatus.Mutation.contribution
-        { amount = amount, communityId = Eos.symbolToString communityId, currency = currency }
+        { amount = amount, currency = currency }
         (SelectionSet.succeed Contribution
             |> SelectionSet.with Cambiatus.Object.Contribution.amount
             |> SelectionSet.with (Cambiatus.Object.Contribution.community Cambiatus.Object.Community.name)
