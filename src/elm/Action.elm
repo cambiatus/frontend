@@ -26,6 +26,7 @@ module Action exposing
     , updateAction
     , viewCard
     , viewClaimConfirmation
+    , viewClaimModal
     , viewClaimWithProofs
     , viewSearchActions
     )
@@ -747,6 +748,15 @@ claimWithProofsForm translators =
             , update = \newValue _ -> newValue
             , externalError = always Nothing
             }
+
+
+viewClaimModal : Shared -> Model -> Html Msg
+viewClaimModal shared model =
+    Modal.initWith
+        { closeMsg = NoOp
+        , isVisible = True
+        }
+        |> Modal.toHtml
 
 
 viewClaimWithProofs : Proof -> Translators -> Bool -> Action -> Html Msg

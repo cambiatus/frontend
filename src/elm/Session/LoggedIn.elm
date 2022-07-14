@@ -418,30 +418,43 @@ viewHelper pageMsg page profile_ ({ shared } as model) content =
             ]
 
         mainView =
-            case ( Search.isActive model.searchModel, model.claimingAction.status ) of
-                ( True, _ ) ->
-                    case model.selectedCommunity of
-                        RemoteData.Success community ->
-                            [ Search.viewSearchBody
-                                shared.translators
-                                community.symbol
-                                shared.now
-                                (GotSearchMsg >> pageMsg)
-                                (GotActionMsg >> pageMsg)
-                                model.searchModel
-                            ]
+            -- case ( Search.isActive model.searchModel, model.claimingAction.status ) of
+            --     ( True, _ ) ->
+            --         case model.selectedCommunity of
+            --             RemoteData.Success community ->
+            --                 [ Search.viewSearchBody
+            --                     shared.translators
+            --                     community.symbol
+            --                     shared.now
+            --                     (GotSearchMsg >> pageMsg)
+            --                     (GotActionMsg >> pageMsg)
+            --                     model.searchModel
+            --                 ]
+            --             _ ->
+            --                 []
+            --     ( False, Action.PhotoUploaderShowed action p ) ->
+            --         viewClaimWithProofs action p False
+            --     ( False, Action.ClaimInProgress action (Just p) ) ->
+            --         viewClaimWithProofs action p.proof True
+            --     _ ->
+            --         viewPageBody model profile_ page content
+            if Search.isActive model.searchModel then
+                case model.selectedCommunity of
+                    RemoteData.Success community ->
+                        [ Search.viewSearchBody
+                            shared.translators
+                            community.symbol
+                            shared.now
+                            (GotSearchMsg >> pageMsg)
+                            (GotActionMsg >> pageMsg)
+                            model.searchModel
+                        ]
 
-                        _ ->
-                            []
+                    _ ->
+                        []
 
-                ( False, Action.PhotoUploaderShowed action p ) ->
-                    viewClaimWithProofs action p False
-
-                ( False, Action.ClaimInProgress action (Just p) ) ->
-                    viewClaimWithProofs action p.proof True
-
-                _ ->
-                    viewPageBody model profile_ page content
+            else
+                viewPageBody model profile_ page content
     in
     div
         [ class "min-h-screen flex flex-col" ]
@@ -489,6 +502,8 @@ viewHelper pageMsg page profile_ ({ shared } as model) content =
                , viewCommunityContactsModal model
                     |> Html.map pageMsg
                , Action.viewClaimConfirmation shared.translators model.claimingAction
+                    |> Html.map (GotActionMsg >> pageMsg)
+               , Action.viewClaimModal model.shared model.claimingAction
                     |> Html.map (GotActionMsg >> pageMsg)
                , viewAuthModal pageMsg model
                , communitySelectorModal model
