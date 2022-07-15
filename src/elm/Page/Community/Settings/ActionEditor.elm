@@ -209,7 +209,7 @@ type Msg
     | ClosedAuthModal
     | GotFormMsg (Form.Msg FormInput)
     | SubmittedForm (Maybe Action) FormOutput
-    | ClickedMarkAsComplete (Maybe Action) FormOutput
+    | ClickedToggleCompleted Action FormOutput
     | CompletedSavingAction (Result Value String)
 
 
@@ -295,13 +295,13 @@ update msg model ({ shared } as loggedIn) =
                     model
                     { successMsg = msg, errorMsg = ClosedAuthModal }
 
-        ClickedMarkAsComplete maybeAction formOutput ->
+        ClickedToggleCompleted action formOutput ->
             { model | status = mapForm (Form.withDisabled True) model.status }
                 |> UR.init
                 |> UR.addPort
-                    (upsertAction { markAsCompleted = True }
+                    (upsertAction { markAsCompleted = not action.isCompleted }
                         msg
-                        maybeAction
+                        (Just action)
                         loggedIn
                         model
                         formOutput
@@ -1062,23 +1062,24 @@ view ({ shared } as loggedIn) model =
                                           else
                                             text <| t "menu.create"
                                         ]
-                                    , if Maybe.Extra.isJust model.actionId then
-                                        button
-                                            [ type_ "button"
-                                            , class "button button-secondary w-full mt-4 sm:w-48 sm:mt-0 sm:ml-4"
-                                            , disabled (not loggedIn.hasAcceptedCodeOfConduct)
-                                            , onClick
-                                                (Form.parse form_
-                                                    formModel
-                                                    { onError = GotFormMsg
-                                                    , onSuccess = ClickedMarkAsComplete maybeAction
-                                                    }
-                                                )
-                                            ]
-                                            [ text <| t "community.actions.form.mark_completed" ]
+                                    , case maybeAction of
+                                        Just action ->
+                                            button
+                                                [ type_ "button"
+                                                , class "button button-secondary w-full mt-4 sm:w-48 sm:mt-0 sm:ml-4"
+                                                , disabled (not loggedIn.hasAcceptedCodeOfConduct)
+                                                , onClick
+                                                    (Form.parse form_
+                                                        formModel
+                                                        { onError = GotFormMsg
+                                                        , onSuccess = ClickedToggleCompleted action
+                                                        }
+                                                    )
+                                                ]
+                                                [ text <| t "community.actions.form.mark_completed" ]
 
-                                      else
-                                        text ""
+                                        Nothing ->
+                                            text ""
                                     ]
                                 ]
                             )
@@ -1153,7 +1154,7 @@ jsAddressToMsg addr val =
         "SubmittedForm" :: _ ->
             decodeCompletedSavingAction
 
-        "ClickedMarkAsComplete" :: _ ->
+        "ClickedToggleCompleted" :: _ ->
             decodeCompletedSavingAction
 
         _ ->
@@ -1175,8 +1176,8 @@ msgToString msg =
         SubmittedForm _ _ ->
             [ "SubmittedForm" ]
 
-        ClickedMarkAsComplete _ _ ->
-            [ "ClickedMarkAsComplete" ]
+        ClickedToggleCompleted _ _ ->
+            [ "ClickedToggleCompleted" ]
 
         CompletedSavingAction r ->
             [ "CompletedSavingAction", UR.resultToString r ]
