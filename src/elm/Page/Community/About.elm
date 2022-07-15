@@ -409,11 +409,15 @@ viewCommunityCard ({ translators } as shared) community =
                                 ]
                         )
                 )
-            , a
-                [ class "button button-secondary w-full mt-8"
-                , Route.href (Route.CommunityObjectives Route.WithNoObjectiveSelected)
-                ]
-                [ text <| translators.tr "community.earn" [ ( "symbol", Eos.symbolToSymbolCodeString community.symbol ) ] ]
+            , if community.hasObjectives then
+                a
+                    [ class "button button-secondary w-full mt-8"
+                    , Route.href (Route.CommunityObjectives Route.WithNoObjectiveSelected)
+                    ]
+                    [ text <| translators.tr "community.earn" [ ( "symbol", Eos.symbolToSymbolCodeString community.symbol ) ] ]
+
+              else
+                text ""
             ]
         ]
 
