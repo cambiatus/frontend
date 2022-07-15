@@ -755,16 +755,20 @@ viewWelcomeCard ({ shared } as loggedIn) community balance =
                     ]
                 ]
             , ul [ class "px-4 pt-2 divide-y divide-y-gray-100" ]
-                [ listItem Icons.cambiatusCoin
-                    (not loggedIn.hasAcceptedCodeOfConduct)
-                    "w-5"
-                    (tr "dashboard.how_to_earn" [ ( "symbol", Eos.symbolToSymbolCodeString community.symbol ) ])
-                    (\attrs ->
-                        View.Components.disablableLink
-                            { isDisabled = not loggedIn.hasAcceptedCodeOfConduct }
-                            (Route.href (Route.CommunityObjectives Route.WithNoObjectiveSelected) :: attrs)
-                    )
-                    []
+                [ if community.hasObjectives then
+                    listItem Icons.cambiatusCoin
+                        (not loggedIn.hasAcceptedCodeOfConduct)
+                        "w-5"
+                        (tr "dashboard.how_to_earn" [ ( "symbol", Eos.symbolToSymbolCodeString community.symbol ) ])
+                        (\attrs ->
+                            View.Components.disablableLink
+                                { isDisabled = not loggedIn.hasAcceptedCodeOfConduct }
+                                (Route.href (Route.CommunityObjectives Route.WithNoObjectiveSelected) :: attrs)
+                        )
+                        []
+
+                  else
+                    text ""
                 , listItem Icons.profile
                     (not loggedIn.hasAcceptedCodeOfConduct)
                     "w-5 h-5"
