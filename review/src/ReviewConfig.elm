@@ -91,6 +91,7 @@ config =
         , ( [ "View.Select.newConfig", "View.Select.view", "View.Select.update" ]
           , [ "Form.UserPicker" ]
           )
+        , ( [ "Slug.generate" ], [ "Utils" ] )
         ]
     ]
         -- Ignore generated code

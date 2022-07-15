@@ -4,7 +4,6 @@ import Cambiatus.Mutation
 import Cambiatus.Object.Community
 import Community
 import Community.News
-import Eos
 import Form.Toggle
 import Graphql.Http
 import Graphql.OptionalArgument
@@ -88,12 +87,12 @@ update msg model loggedIn =
                     case community.highlightedNews of
                         Nothing ->
                             UR.init model
-                                |> setHighlightNews loggedIn community newsId isHighlighted
+                                |> setHighlightNews loggedIn newsId isHighlighted
 
                         Just highlightedNews ->
                             if highlightedNews.id == newsId then
                                 UR.init model
-                                    |> setHighlightNews loggedIn community newsId isHighlighted
+                                    |> setHighlightNews loggedIn newsId isHighlighted
 
                             else
                                 { model
@@ -157,24 +156,13 @@ update msg model loggedIn =
                 |> UR.init
 
         ConfirmedHighlightNews newsId ->
-            case loggedIn.selectedCommunity of
-                RemoteData.Success community ->
-                    model
-                        |> UR.init
-                        |> setHighlightNews loggedIn community newsId True
-
-                _ ->
-                    model
-                        |> UR.init
-                        |> UR.logImpossible msg
-                            "Confirmed setting highlighted news, but community wasn't loaded"
-                            (Just loggedIn.accountName)
-                            { moduleName = "Page.Community.Settings.News", function = "update" }
-                            [ Log.contextFromCommunity loggedIn.selectedCommunity ]
+            model
+                |> UR.init
+                |> setHighlightNews loggedIn newsId True
 
 
-setHighlightNews : LoggedIn.Model -> Community.Model -> Int -> Bool -> (UpdateResult -> UpdateResult)
-setHighlightNews loggedIn community newsId isHighlighted =
+setHighlightNews : LoggedIn.Model -> Int -> Bool -> (UpdateResult -> UpdateResult)
+setHighlightNews loggedIn newsId isHighlighted =
     LoggedIn.mutation loggedIn
         (Cambiatus.Mutation.highlightedNews
             (\optionals ->
@@ -187,7 +175,6 @@ setHighlightNews loggedIn community newsId isHighlighted =
                             Graphql.OptionalArgument.Null
                 }
             )
-            { communityId = Eos.symbolToString community.symbol }
             (Cambiatus.Object.Community.highlightedNews Community.News.selectionSet)
             |> Graphql.SelectionSet.map (Maybe.andThen identity)
         )

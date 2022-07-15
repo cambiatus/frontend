@@ -40,7 +40,7 @@ actions fillInOptionals object_ =
 
 
 type alias MembersOptionalArguments =
-    { query : OptionalArgument String }
+    { filters : OptionalArgument Cambiatus.InputObject.MembersFilterInput }
 
 
 members :
@@ -50,10 +50,10 @@ members :
 members fillInOptionals object_ =
     let
         filledInOptionals =
-            fillInOptionals { query = Absent }
+            fillInOptionals { filters = Absent }
 
         optionalArgs =
-            [ Argument.optional "query" filledInOptionals.query Encode.string ]
+            [ Argument.optional "filters" filledInOptionals.filters Cambiatus.InputObject.encodeMembersFilterInput ]
                 |> List.filterMap identity
     in
     Object.selectionForCompositeField "members" optionalArgs object_ (identity >> Decode.list)

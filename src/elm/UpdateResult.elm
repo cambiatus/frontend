@@ -1,6 +1,6 @@
 module UpdateResult exposing
     ( UpdateResult
-    , init, addCmd, addMsg, addExt, addPort, logHttpError, logImpossible, logGraphqlError, toModelCmd
+    , init, addCmd, addMsg, addExt, addPort, logHttpError, logImpossible, logGraphqlError, logDeletionStatusError, toModelCmd
     , fromChild
     , map, mapModel, setModel
     , addBreadcrumb, logDecodingError, logEvent, logIncompatibleMsg, logJsonValue, remoteDataToString, resultToString
@@ -19,7 +19,7 @@ In a scenario such as displaying a request to sign a transfer or a sale is where
 
 # Common Helpers
 
-@docs init, addCmd, addMsg, addExt, addPort, logHttpError, logImpossible, logGraphqlError, toModelCmd
+@docs init, addCmd, addMsg, addExt, addPort, logHttpError, logImpossible, logGraphqlError, logDeletionStatusError, toModelCmd
 
 
 # Using components
@@ -33,6 +33,7 @@ In a scenario such as displaying a request to sign a transfer or a sale is where
 
 -}
 
+import Api.Graphql.DeleteStatus
 import Eos.Account
 import Graphql.Http
 import Http
@@ -337,6 +338,15 @@ and they're in a configuration that doesn't match (usually pattern-matched as
 logIncompatibleMsg : msg -> Maybe Eos.Account.Name -> Log.Location -> List Log.Context -> UpdateResult m msg eMsg -> UpdateResult m msg eMsg
 logIncompatibleMsg transaction maybeUser location contexts =
     Log.fromIncompatibleMsg transaction maybeUser location contexts
+        |> logEvent
+
+
+{-| Send an Event to Sentry so we can debug later. Should be used when deleting
+something with the GraphQL API, but getting an error from Api.Graphql.DeleteStatus.
+-}
+logDeletionStatusError : msg -> Maybe Eos.Account.Name -> Log.Location -> List Log.Context -> Api.Graphql.DeleteStatus.ErrorReason -> UpdateResult m msg eMsg -> UpdateResult m msg eMsg
+logDeletionStatusError transaction maybeUser location contexts reason =
+    Log.fromDeletionStatusError transaction maybeUser location contexts reason
         |> logEvent
 
 

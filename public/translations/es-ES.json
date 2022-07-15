@@ -912,6 +912,56 @@
     },
     "disabled": {
       "description": "La tienda está deshabilitada en esta comunidad."
+    },
+    "categories": {
+      "admin_page_description": "Añade y gestiona las categorías que estarán disponibles en la tienda.",
+      "empty": {
+        "title": "¡Parece que tu comunidad no tiene ninguna categoría!",
+        "description": "Comience creando una nueva categoría abajo"
+      },
+      "add_root": "Añadir nueva categoria",
+      "add_child": "Añadir subcategoría de {{parent_name}}",
+      "click_category_to_edit": "{{category_name}} - Haz clic para editar",
+      "actions_for": "Acciones para {{category_name}}",
+      "fields": {
+        "name": "Nombre",
+        "slug": "URL para Compartir",
+        "description": "Descripción",
+        "image": "Imagen",
+        "meta": {
+          "title": "Título",
+          "description": "Descripción",
+          "keywords": "Palabras clave"
+        }
+      },
+      "form": {
+        "insert_name": "Inserta un nombre para generar la URL para compartir",
+        "invalid_slug": "URL para compartir no válida",
+        "invalid_slug_tooltip": "Los caracteres no latinos no se aceptan en URLs. Para generar un URL válido, el nombre de la categoría debe tener al menos un carácter latino",
+        "image_guidance": "Prefiere imágenes en modo horizontal con alta calidad"
+      },
+      "metadata": {
+        "title": "Contenido compartido",
+        "guidance": "Esta información se utilizará para mostrar más información al compartir esta categoría.",
+        "preview": "Avance",
+        "preview_text": "Esta es una aproximación de cómo se verá el contenido compartido. Puede cambiar según la plataforma en la que se comparte el enlace."
+      },
+      "delete": {
+        "title": "Eliminar {{category_name}}",
+        "warning": "Si elimina esta categoría, todas sus subcategorías también se eliminarán de forma permanente.",
+        "confirmation": "¿Está seguro de que desea eliminar esta categoría?"
+      },
+      "actions": {
+        "edit_main_information": "Editar información principal",
+        "edit_sharing_data": "Editar dados compartidos",
+        "move_up": "Mover hacia arriba",
+        "move_down": "Mover hacia abajo",
+        "delete": "Eliminar"
+      },
+      "create_error": "Algo salió mal al crear la categoría",
+      "update_error": "Algo salió mal al actualizar la categoría",
+      "delete_error": "Algo salió mal al eliminar la categoría",
+      "reorder_error": "Algo salió mal al reordenar la categoría"
     }
   },
   "dashboard": {
@@ -1171,6 +1221,12 @@
     "actions": {
       "title": "Objetivos y acciones",
       "description": ""
+    },
+    "shop": {
+      "categories": {
+        "title": "Categorías",
+        "description": "Qué tipo de artículos la gente puede poner a la venta"
+      }
     },
     "contacts": {
       "title": "Contactos de soporte",

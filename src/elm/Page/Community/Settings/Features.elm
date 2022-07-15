@@ -153,6 +153,7 @@ view loggedIn model =
                                     Just
                                         { message = t "community.kyc.info"
                                         , iconClass = "text-orange-300"
+                                        , containerClass = ""
                                         }
                                }
                              , { label = "sponsorship.title"
@@ -244,29 +245,16 @@ update msg model loggedIn =
                 |> UR.init
 
         ToggleNews newsValue ->
-            case loggedIn.selectedCommunity of
-                RemoteData.Success community ->
-                    { model | hasNews = newsValue }
-                        |> UR.init
-                        |> UR.addExt
-                            (LoggedIn.mutation loggedIn
-                                (Cambiatus.Mutation.community
-                                    { communityId = Eos.symbolToString community.symbol
-                                    , input = { hasNews = Present newsValue, contacts = Absent }
-                                    }
-                                    Graphql.SelectionSet.empty
-                                )
-                                (\_ -> SaveSuccess)
-                            )
-
-                _ ->
-                    model
-                        |> UR.init
-                        |> UR.logImpossible msg
-                            "Tried toggling community news feature, but community wasn't loaded"
-                            (Just loggedIn.accountName)
-                            { moduleName = "Page.Community.Settings.Features", function = "update" }
-                            [ Log.contextFromCommunity loggedIn.selectedCommunity ]
+            { model | hasNews = newsValue }
+                |> UR.init
+                |> UR.addExt
+                    (LoggedIn.mutation loggedIn
+                        (Cambiatus.Mutation.community
+                            { input = { hasNews = Present newsValue, contacts = Absent } }
+                            Graphql.SelectionSet.empty
+                        )
+                        (\_ -> SaveSuccess)
+                    )
 
         SaveSuccess ->
             let

@@ -916,6 +916,56 @@
     },
     "disabled": {
       "description": "A loja está desativada nesta comunidade."
+    },
+    "categories": {
+      "admin_page_description": "Adicione e gerencie as categories que ficarão disponíveis na loja.",
+      "empty": {
+        "title": "Parece que sua comunidade ainda não tem nenhuma categoria!",
+        "description": "Comece criando uma nova categoria abaixo"
+      },
+      "add_root": "Adicionar nova categoria",
+      "add_child": "Adicionar nova sub-categoria de {{parent_name}}",
+      "click_category_to_edit": "{{category_name}} - Clique para editar",
+      "actions_for": "Ações para {{category_name}}",
+      "fields": {
+        "name": "Nome",
+        "slug": "URL de Compartilhamento",
+        "description": "Descrição",
+        "image": "Imagem",
+        "meta": {
+          "title": "Título",
+          "description": "Descrição",
+          "keywords": "Palavras-chave"
+        }
+      },
+      "form": {
+        "insert_name": "Insira um nome para gerar a URL de compartilhamento",
+        "invalid_slug": "URL de compartilhamento inválida",
+        "invalid_slug_tooltip": "Caracteres não-latinos não são aceitos em URLs. Para gerar um URL válido, o nome da categoria deve ter ao menos um caractere latim",
+        "image_guidance": "Prefira imagens em modo paisagem com alta qualidade"
+      },
+      "metadata": {
+        "title": "Dados de compartilhamento",
+        "guidance": "Essa informação vai ser usada para mostrar mais informações quando compartilhando esta categoria",
+        "preview": "Pré-visualização",
+        "preview_text": "Essa é uma aproximação de como o conteúdo compartilhado será exibido. Isso pode mudar dependendo da plataforma em que o link está sendo compartilhado."
+      },
+      "delete": {
+        "title": "Deletar {{category_name}}",
+        "warning": "Se você deletar esta categoria, todas as suas sub-categorias também serão deletadas permanentemente.",
+        "confirmation": "Tem certeza de que deseja deletar esta categoria?"
+      },
+      "actions": {
+        "edit_main_information": "Editar informações principais",
+        "edit_sharing_data": "Editar dados de compartilhamento",
+        "move_up": "Mover para cima",
+        "move_down": "Mover para baixo",
+        "delete": "Deletar"
+      },
+      "create_error": "Algo de errado aconteceu ao criar a categoria",
+      "update_error": "Algo de errado aconteceu ao editar a categoria",
+      "delete_error": "Algo de errado aconteceu ao deletar a categoria",
+      "reorder_error": "Algo de errado aconteceu ao reordenar a categoria"
     }
   },
   "dashboard": {
@@ -1174,6 +1224,12 @@
     "actions": {
       "title": "Objetivos e Ações",
       "description": ""
+    },
+    "shop": {
+      "categories": {
+        "title": "Categorias",
+        "description": "Que tipos de itens as pessoas podem colocar à venda"
+      }
     },
     "contacts": {
       "title": "Contatos para suporte",

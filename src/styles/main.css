@@ -455,6 +455,10 @@ https://tailwindcss.com/docs/adding-new-utilities */
     width: 0 !important;
     display: none;
   }
+
+  .outline-offset-0 {
+    outline-offset: 0;
+  }
 }
 
 /* End of extra utilities */

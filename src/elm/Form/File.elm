@@ -1358,9 +1358,14 @@ viewEntryModal (Options options) viewConfig { isVisible, index } entry toMsg =
                             , translators.t "form.file.body_file"
                             )
 
-                _ ->
+                LoadedFileType Pdf ->
                     ( translators.t "form.file.edit_file"
                     , translators.t "form.file.body_file"
+                    )
+
+                LoadingFileType ->
+                    ( ""
+                    , ""
                     )
     in
     Modal.initWith

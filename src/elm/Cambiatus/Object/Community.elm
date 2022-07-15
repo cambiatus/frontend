@@ -30,6 +30,13 @@ autoInvite =
     Object.selectionForField "Bool" "autoInvite" [] Decode.bool
 
 
+categories :
+    SelectionSet decodesTo Cambiatus.Object.Category
+    -> SelectionSet (List decodesTo) Cambiatus.Object.Community
+categories object_ =
+    Object.selectionForCompositeField "categories" [] object_ (identity >> Decode.list)
+
+
 claimCount : SelectionSet Int Cambiatus.Object.Community
 claimCount =
     Object.selectionForField "Int" "claimCount" [] Decode.int

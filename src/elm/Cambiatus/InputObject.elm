@@ -6,6 +6,8 @@ module Cambiatus.InputObject exposing (..)
 
 import Cambiatus.Enum.ContactType
 import Cambiatus.Enum.Direction
+import Cambiatus.Enum.OrderByFields
+import Cambiatus.Enum.SearchByFields
 import Cambiatus.Enum.TransferDirectionValue
 import Cambiatus.Enum.VerificationType
 import Cambiatus.Interface
@@ -303,6 +305,44 @@ encodeKycDataUpdateInput input =
         [ ( "countryId", (Cambiatus.ScalarCodecs.codecs |> Cambiatus.Scalar.unwrapEncoder .codecId) input.countryId |> Just ), ( "document", Encode.string input.document |> Just ), ( "documentType", Encode.string input.documentType |> Just ), ( "phone", Encode.string input.phone |> Just ), ( "userType", Encode.string input.userType |> Just ) ]
 
 
+buildMembersFilterInput :
+    (MembersFilterInputOptionalFields -> MembersFilterInputOptionalFields)
+    -> MembersFilterInput
+buildMembersFilterInput fillOptionals =
+    let
+        optionals =
+            fillOptionals
+                { orderDirection = Absent, orderMembersBy = Absent, searchMembersBy = Absent, searchString = Absent }
+    in
+    { orderDirection = optionals.orderDirection, orderMembersBy = optionals.orderMembersBy, searchMembersBy = optionals.searchMembersBy, searchString = optionals.searchString }
+
+
+type alias MembersFilterInputOptionalFields =
+    { orderDirection : OptionalArgument Cambiatus.Enum.Direction.Direction
+    , orderMembersBy : OptionalArgument Cambiatus.Enum.OrderByFields.OrderByFields
+    , searchMembersBy : OptionalArgument (List (Maybe Cambiatus.Enum.SearchByFields.SearchByFields))
+    , searchString : OptionalArgument String
+    }
+
+
+{-| Type for the MembersFilterInput input object.
+-}
+type alias MembersFilterInput =
+    { orderDirection : OptionalArgument Cambiatus.Enum.Direction.Direction
+    , orderMembersBy : OptionalArgument Cambiatus.Enum.OrderByFields.OrderByFields
+    , searchMembersBy : OptionalArgument (List (Maybe Cambiatus.Enum.SearchByFields.SearchByFields))
+    , searchString : OptionalArgument String
+    }
+
+
+{-| Encode a MembersFilterInput into a value that can be used as an argument.
+-}
+encodeMembersFilterInput : MembersFilterInput -> Value
+encodeMembersFilterInput input =
+    Encode.maybeObject
+        [ ( "orderDirection", Encode.enum Cambiatus.Enum.Direction.toString |> Encode.optional input.orderDirection ), ( "orderMembersBy", Encode.enum Cambiatus.Enum.OrderByFields.toString |> Encode.optional input.orderMembersBy ), ( "searchMembersBy", (Encode.enum Cambiatus.Enum.SearchByFields.toString |> Encode.maybe |> Encode.list) |> Encode.optional input.searchMembersBy ), ( "searchString", Encode.string |> Encode.optional input.searchString ) ]
+
+
 buildNewCommunityInput :
     NewCommunityInputRequiredFields
     -> NewCommunityInput
@@ -329,30 +369,29 @@ encodeNewCommunityInput input =
 
 
 buildProductsFilterInput :
-    ProductsFilterInputRequiredFields
-    -> (ProductsFilterInputOptionalFields -> ProductsFilterInputOptionalFields)
+    (ProductsFilterInputOptionalFields -> ProductsFilterInputOptionalFields)
     -> ProductsFilterInput
-buildProductsFilterInput required fillOptionals =
+buildProductsFilterInput fillOptionals =
     let
         optionals =
             fillOptionals
-                { inStock = Absent }
+                { account = Absent, categoriesIds = Absent, inStock = Absent }
     in
-    { account = required.account, inStock = optionals.inStock }
-
-
-type alias ProductsFilterInputRequiredFields =
-    { account : String }
+    { account = optionals.account, categoriesIds = optionals.categoriesIds, inStock = optionals.inStock }
 
 
 type alias ProductsFilterInputOptionalFields =
-    { inStock : OptionalArgument Bool }
+    { account : OptionalArgument String
+    , categoriesIds : OptionalArgument (List (Maybe Int))
+    , inStock : OptionalArgument Bool
+    }
 
 
 {-| Type for the ProductsFilterInput input object.
 -}
 type alias ProductsFilterInput =
-    { account : String
+    { account : OptionalArgument String
+    , categoriesIds : OptionalArgument (List (Maybe Int))
     , inStock : OptionalArgument Bool
     }
 
@@ -362,7 +401,7 @@ type alias ProductsFilterInput =
 encodeProductsFilterInput : ProductsFilterInput -> Value
 encodeProductsFilterInput input =
     Encode.maybeObject
-        [ ( "account", Encode.string input.account |> Just ), ( "inStock", Encode.bool |> Encode.optional input.inStock ) ]
+        [ ( "account", Encode.string |> Encode.optional input.account ), ( "categoriesIds", (Encode.int |> Encode.maybe |> Encode.list) |> Encode.optional input.categoriesIds ), ( "inStock", Encode.bool |> Encode.optional input.inStock ) ]
 
 
 buildPushSubscriptionInput :
@@ -419,6 +458,35 @@ encodeReadNotificationInput : ReadNotificationInput -> Value
 encodeReadNotificationInput input =
     Encode.maybeObject
         [ ( "id", Encode.int input.id |> Just ) ]
+
+
+buildSubcategoryInput :
+    SubcategoryInputRequiredFields
+    -> SubcategoryInput
+buildSubcategoryInput required =
+    { id = required.id, position = required.position }
+
+
+type alias SubcategoryInputRequiredFields =
+    { id : Int
+    , position : Int
+    }
+
+
+{-| Type for the SubcategoryInput input object.
+-}
+type alias SubcategoryInput =
+    { id : Int
+    , position : Int
+    }
+
+
+{-| Encode a SubcategoryInput into a value that can be used as an argument.
+-}
+encodeSubcategoryInput : SubcategoryInput -> Value
+encodeSubcategoryInput input =
+    Encode.maybeObject
+        [ ( "id", Encode.int input.id |> Just ), ( "position", Encode.int input.position |> Just ) ]
 
 
 buildTransferDirection :

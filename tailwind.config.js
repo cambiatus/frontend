@@ -189,6 +189,10 @@ module.exports = {
             'pointer-events': 'auto'
           }
         },
+        'appear-from-above-sm': {
+          '0%': { opacity: 0.25, transform: 'translate(0, -10px)' },
+          '100%': { opacity: 1, transform: 'translate(0, 0)' }
+        },
         'appear-from-above': {
           '0%': { opacity: 0, transform: 'translate(0, -20px)' },
           '100%': { opacity: 1, transform: 'translate(0, 0)' }
@@ -218,6 +222,7 @@ module.exports = {
       },
       animation: {
         'fade-in': 'appear 50ms linear 400ms both',
+        'fade-in-from-above-sm': 'appear-from-above-sm 100ms ease-out both',
         'fade-in-from-above': 'appear-from-above 150ms ease-out both',
         'fade-in-from-above-lg': 'appear-from-above-lg 600ms ease-in-out both',
         'skeleton-loading': 'skeleton-loading-keyframes 1s ease-out infinite alternate',
@@ -261,6 +266,34 @@ module.exports = {
       })
 
       addUtilities(rotateUtilities)
+    },
+    // Create `parent-*` variants. This works similar to `group-*` variants, but
+    // only works on direct children of the `parent` class.
+    function ({ addVariant, e }) {
+      const operations = ['hover', 'focus']
+
+      operations.forEach((operation) => {
+        addVariant(`parent-${operation}`, ({ modifySelectors, separator }) => {
+          modifySelectors(({ className }) =>
+            `.parent:${operation}>.parent-${operation}${e(separator)}${e(className)}`
+          )
+        })
+      })
+    },
+    // Create `grand-parent-*` variants. This works similar to `group-*` variants, but
+    // only works on direct children of the direct children of the `grand-parent` class.
+    function ({ addVariant, e }) {
+      const operations = ['hover', 'focus']
+
+      operations.forEach((operation) => {
+        [1, 2, 3, 4, 5].forEach((level) => {
+          addVariant(`grand-parent-${level}-${operation}`, ({ modifySelectors, separator }) => {
+            modifySelectors(({ className }) =>
+              `.grand-parent:${operation}>${'*>'.repeat(level)}.grand-parent-${level}-${operation}${e(separator)}${e(className)}`
+            )
+          })
+        })
+      })
     }
   ],
   purge: [

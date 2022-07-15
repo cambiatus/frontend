@@ -66,7 +66,7 @@ type Options msg
         { label : Html msg
         , id : String
         , disabled : Bool
-        , tooltip : Maybe { message : String, iconClass : String }
+        , tooltip : Maybe { message : String, iconClass : String, containerClass : String }
         , side : Side
         , statusText : StatusText
         , topLabel : Maybe String
@@ -109,7 +109,7 @@ type StatusText
 {-| Adds a tooltip the user can see when hovering over an icon. Useful when we
 need to give more information to the user
 -}
-withTooltip : { message : String, iconClass : String } -> Options msg -> Options msg
+withTooltip : { message : String, iconClass : String, containerClass : String } -> Options msg -> Options msg
 withTooltip tooltip (Options options) =
     Options { options | tooltip = Just tooltip }
 
