@@ -82,6 +82,7 @@ import Utils
 import View.Components
 import View.Feedback as Feedback
 import View.Modal as Modal
+import Version
 
 
 
@@ -1259,7 +1260,7 @@ viewFooter ({ shared } as model) =
                 [ div [ class "mr-32 md:mr-20 lg:mr-52 md:pt-6" ]
                     [ viewContactSupport
                     , p [ class "text-xs mt-6 text-gray-900" ]
-                        [ text <| tr "footer.version" [ ( "version", shared.version ) ] ]
+                        [ text <| tr "footer.version" [ ( "version", Version.toString shared.version ) ] ]
                     ]
                 , img
                     [ src "/images/man-with-envelope.svg"
