@@ -283,7 +283,7 @@ update msg model ({ shared } as loggedIn) =
             { model | status = mapForm (Form.withDisabled True) model.status }
                 |> UR.init
                 |> UR.addPort
-                    (upsertAction { markAsCompleted = False }
+                    (upsertAction
                         msg
                         maybeAction
                         loggedIn
@@ -299,9 +299,9 @@ update msg model ({ shared } as loggedIn) =
             { model | status = mapForm (Form.withDisabled True) model.status }
                 |> UR.init
                 |> UR.addPort
-                    (upsertAction { markAsCompleted = not action.isCompleted }
+                    (upsertAction
                         msg
-                        (Just action)
+                        (Just { action | isCompleted = not action.isCompleted })
                         loggedIn
                         model
                         formOutput
@@ -338,8 +338,8 @@ update msg model ({ shared } as loggedIn) =
                 |> UR.addExt (ShowFeedback Feedback.Failure (t "error.unknown"))
 
 
-upsertAction : { markAsCompleted : Bool } -> Msg -> Maybe Action -> LoggedIn.Model -> Model -> FormOutput -> Ports.JavascriptOutModel Msg
-upsertAction { markAsCompleted } msg maybeAction loggedIn model formOutput =
+upsertAction : Msg -> Maybe Action -> LoggedIn.Model -> Model -> FormOutput -> Ports.JavascriptOutModel Msg
+upsertAction msg maybeAction loggedIn model formOutput =
     let
         posixDeadline date =
             Time.Extra.partsToPosix loggedIn.shared.timezone
@@ -448,11 +448,12 @@ upsertAction { markAsCompleted } msg maybeAction loggedIn model formOutput =
                                 |> Markdown.encode
                           )
                         , ( "is_completed"
-                          , maybeAction
-                                |> Maybe.map .isCompleted
-                                |> Maybe.withDefault False
-                                |> (\isCompleted -> isCompleted || markAsCompleted)
-                                |> encodeBool
+                          , case maybeAction of
+                                Nothing ->
+                                    encodeBool False
+
+                                Just action ->
+                                    encodeBool action.isCompleted
                           )
                         , ( "image", Encode.string "" )
                         ]
