@@ -488,6 +488,7 @@
     },
     "objectives": {
       "title": "ግቦች",
+      "disabled_objectives_description": "የማህበረሰቡ አላማዎች ተሰናክለዋል",
       "earn": "ያሸንፉ",
       "complete_actions": "ማህበረሰቡ ተከታትሎ ያገኛቸው የተሟሉ ተግባራት",
       "objectives_and": "ዓላማዎች እና",

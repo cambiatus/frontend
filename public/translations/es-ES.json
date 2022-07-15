@@ -530,6 +530,7 @@
     },
     "objectives": {
       "title": "Objetivos",
+      "disabled_objectives_description": "Los objetivos de la comunidad están deshabilitados",
       "earn": "Ganar",
       "complete_actions": "Complete las acciones que la comunidad ha rastreado y gane",
       "objectives_and": "Objetivos y",
