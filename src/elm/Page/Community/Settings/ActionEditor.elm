@@ -1076,7 +1076,12 @@ view ({ shared } as loggedIn) model =
                                                         }
                                                     )
                                                 ]
-                                                [ text <| t "community.actions.form.mark_completed" ]
+                                                [ if action.isCompleted then
+                                                    text <| t "community.actions.form.mark_not_completed"
+
+                                                  else
+                                                    text <| t "community.actions.form.mark_completed"
+                                                ]
 
                                         Nothing ->
                                             text ""
