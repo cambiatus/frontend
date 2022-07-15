@@ -1,12 +1,15 @@
-module Action2 exposing (ClaimingStatus, Msg, msgToString, notClaiming, update)
+module Action2 exposing (ClaimingStatus, ExternalMsg(..), Msg, msgToString, notClaiming, update)
 
 import Action exposing (Action)
+import Auth
+import Cambiatus.Enum.Permission as Permission exposing (Permission)
 import Eos
 import Eos.Account
 import Form
 import Form.File
 import Graphql.Http
 import Json.Encode
+import Profile
 import RemoteData exposing (RemoteData)
 import Route
 import Session.Shared exposing (Shared)
@@ -17,14 +20,14 @@ import UpdateResult as UR
 import View.Feedback
 
 
-notClaiming : ClaimingStatus
-notClaiming =
-    NotClaiming
-
-
 type ClaimingStatus
     = NotClaiming
     | Claiming { action : Action, proof : Proof }
+
+
+notClaiming : ClaimingStatus
+notClaiming =
+    NotClaiming
 
 
 type Proof
@@ -66,6 +69,8 @@ type alias UpdateResult =
 type ExternalMsg
     = SetUpdateTimeEvery Float
     | ShowFeedback View.Feedback.Model
+    | RequiredPrivateKey Msg
+    | ShowInsufficientPermissionsModal
 
 
 type alias Community community =
@@ -77,6 +82,8 @@ type alias LoggedIn loggedIn community =
         | accountName : Eos.Account.Name
         , shared : Shared
         , selectedCommunity : RemoteData (Graphql.Http.Error (Maybe (Community community))) (Community community)
+        , auth : Auth.Model
+        , profile : RemoteData (Graphql.Http.Error (Maybe Profile.Model)) Profile.Model
     }
 
 
@@ -144,14 +151,33 @@ updateClaimingAction msg action proof loggedIn =
     let
         status =
             Claiming { action = action, proof = proof }
+
+        withPrivateKey : List Permission -> UpdateResult -> UpdateResult
+        withPrivateKey requiredPermissions ur =
+            Auth.withPrivateKey loggedIn.auth
+                { requiredPermissions = requiredPermissions
+                , currentPermissions =
+                    RemoteData.toMaybe loggedIn.profile
+                        |> Maybe.map (.roles >> List.concatMap .permissions)
+                }
+                { onAskedPrivateKey = UR.addExt (RequiredPrivateKey (GotClaimingActionMsg msg))
+                , onInsufficientPermissions = UR.addExt ShowInsufficientPermissionsModal
+                , onAbsentPermissions =
+                    UR.logImpossible (GotClaimingActionMsg msg)
+                        "Tried signing eos transaction, but profile wasn't loaded"
+                        (Just loggedIn.accountName)
+                        { moduleName = "Action2"
+                        , function = "updateClaimingAction"
+                        }
+                        []
+                , defaultModel = Claiming { action = action, proof = proof }
+                }
+                (\_ -> ur)
     in
     case msg of
         ConfirmedClaimAction ->
             UR.init status
-                -- TODO - Add this
-                -- |> LoggedIn.withPrivateKey loggedIn
-                --     [ Permission.Claim ]
-                --     model
+                -- TODO - ErrorMsg?
                 --     { successMsg = msg, errorMsg = ClickedCloseClaimModal }
                 |> UR.addPort
                     { responseAddress = GotClaimingActionMsg msg
@@ -174,6 +200,7 @@ updateClaimingAction msg action proof loggedIn =
                               }
                             ]
                     }
+                |> withPrivateKey [ Permission.Claim ]
 
         ConfirmedClaimActionWithPhotoProof { photoProofUrl, proofCode } ->
             let
@@ -211,20 +238,11 @@ updateClaimingAction msg action proof loggedIn =
 
                     else
                         UR.init status
-                            -- TODO - Add this
-                            -- |> LoggedIn.withPrivateKey loggedIn
-                            --     [ Permission.Claim ]
-                            --     model
-                            --     { successMsg = msg, errorMsg = ClickedCloseClaimModal }
                             |> UR.addPort (claimPort Nothing)
+                            |> withPrivateKey [ Permission.Claim ]
 
                 Just code ->
                     UR.init status
-                        -- TODO - Add this
-                        -- |> LoggedIn.withPrivateKey loggedIn
-                        --     [ Permission.Claim ]
-                        --     model
-                        --     { successMsg = msg, errorMsg = ClickedCloseClaimModal }
                         |> UR.addPort
                             (claimPort
                                 (Just
@@ -233,6 +251,7 @@ updateClaimingAction msg action proof loggedIn =
                                     }
                                 )
                             )
+                        |> withPrivateKey [ Permission.Claim ]
 
         GotPhotoProofFormMsg subMsg ->
             case proof of

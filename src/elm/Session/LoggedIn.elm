@@ -2076,9 +2076,20 @@ update msg model =
             Action2.update subMsg model.action2 model
                 |> UR.fromChild (\newAction2 -> { model | action2 = newAction2 })
                     GotAction2Msg
-                    (\ext ur ->
-                        -- TODO
-                        ur
+                    (\ext ->
+                        case ext of
+                            Action2.SetUpdateTimeEvery interval ->
+                                UR.mapModel (\m -> { m | updateTimeEvery = interval })
+
+                            Action2.ShowFeedback feedbackModel ->
+                                UR.mapModel (\m -> { m | feedback = feedbackModel })
+
+                            Action2.RequiredPrivateKey afterAuthMsg ->
+                                UR.mapModel askedAuthentication
+                                    >> UR.addExt (AddAfterPrivateKeyCallback (GotAction2Msg afterAuthMsg))
+
+                            Action2.ShowInsufficientPermissionsModal ->
+                                UR.mapModel (\m -> { m | showInsufficientPermissionsModal = True })
                     )
                     model
 
