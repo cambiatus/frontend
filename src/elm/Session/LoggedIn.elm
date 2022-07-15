@@ -31,6 +31,7 @@ module Session.LoggedIn exposing
     )
 
 import Action
+import Action2
 import Api.Graphql
 import Auth
 import Avatar
@@ -246,6 +247,7 @@ type alias Model =
     , feedback : Feedback.Model
     , searchModel : Search.Model
     , claimingAction : Action.Model
+    , action2 : Action2.ClaimingStatus
     , authToken : Maybe Api.Graphql.Token
     , hasSeenDashboard : Bool
     , queuedCommunityFields : List Community.Field
@@ -290,6 +292,7 @@ initModel shared lastKnownPin maybePrivateKey_ accountName authToken =
       , feedback = Feedback.Hidden
       , searchModel = Search.init
       , claimingAction = Action.init
+      , action2 = Action2.notClaiming
       , authToken = authToken
       , hasSeenDashboard = False
       , queuedCommunityFields = []
@@ -299,11 +302,6 @@ initModel shared lastKnownPin maybePrivateKey_ accountName authToken =
       }
     , Cmd.map GotAuthMsg authCmd
     )
-
-
-hasPrivateKey : Model -> Bool
-hasPrivateKey model =
-    Auth.hasPrivateKey model.auth
 
 
 maybePrivateKey : Model -> Maybe Eos.PrivateKey
@@ -1605,6 +1603,9 @@ mapMsg mapFn msg =
         GotActionMsg subMsg ->
             GotActionMsg subMsg
 
+        GotAction2Msg subMsg ->
+            GotAction2Msg subMsg
+
         SearchClosed ->
             SearchClosed
 
@@ -2021,6 +2022,7 @@ type Msg externalMsg
     | GotFeedbackMsg Feedback.Msg
     | GotSearchMsg Search.Msg
     | GotActionMsg Action.Msg
+    | GotAction2Msg Action2.Msg
     | SearchClosed
     | ClickedProfileIcon
     | GotTimeInternal Time.Posix
@@ -2070,6 +2072,16 @@ update msg model =
 
         GotActionMsg actionMsg ->
             handleActionMsg model actionMsg
+
+        GotAction2Msg subMsg ->
+            Action2.update subMsg model.action2 model
+                |> UR.fromChild (\newAction2 -> { model | action2 = newAction2 })
+                    GotAction2Msg
+                    (\ext ur ->
+                        -- TODO
+                        ur
+                    )
+                    model
 
         SearchClosed ->
             { model | searchModel = Search.closeSearch model.searchModel }
@@ -2905,38 +2917,26 @@ withPrivateKey :
     -> { successMsg : subMsg, errorMsg : subMsg }
     -> UR.UpdateResult subModel subMsg (External subMsg)
     -> UR.UpdateResult subModel subMsg (External subMsg)
-withPrivateKey loggedIn necessaryPermissions subModel subMsg successfulUR =
-    let
-        actWithPrivateKey =
-            if hasPrivateKey loggedIn then
-                successfulUR
-
-            else
-                UR.init subModel
-                    |> UR.addExt (RequiredPrivateKey subMsg)
-    in
-    if List.isEmpty necessaryPermissions then
-        actWithPrivateKey
-
-    else
-        case profile loggedIn of
-            Just validProfile ->
-                if hasPermissions validProfile necessaryPermissions then
-                    actWithPrivateKey
-
-                else
-                    UR.init subModel
-                        |> UR.addExt ShowInsufficientPermissionsModal
-
-            Nothing ->
-                UR.init subModel
-                    |> UR.logImpossible subMsg.successMsg
-                        "Tried signing eos transaction, but profile wasn't loaded"
-                        (Just loggedIn.accountName)
-                        { moduleName = "Session.LoggedIn"
-                        , function = "withPrivateKey"
-                        }
-                        []
+withPrivateKey model requiredPermissions subModel subMsg successfulUR =
+    Auth.withPrivateKey model.auth
+        { requiredPermissions = requiredPermissions
+        , currentPermissions =
+            profile model
+                |> Maybe.map (.roles >> List.concatMap .permissions)
+        }
+        { onAskedPrivateKey = UR.addExt (RequiredPrivateKey subMsg)
+        , onInsufficientPermissions = UR.addExt ShowInsufficientPermissionsModal
+        , onAbsentPermissions =
+            UR.logImpossible subMsg.successMsg
+                "Tried signing eos transaction, but profile wasn't loaded"
+                (Just model.accountName)
+                { moduleName = "Session.LoggedIn"
+                , function = "withPrivateKey"
+                }
+                []
+        , defaultModel = subModel
+        }
+        (\_ -> successfulUR)
 
 
 {-| Determines if a profile has a set of permissions
@@ -2952,41 +2952,28 @@ hasPermissions profile_ permissions =
 
 
 withPrivateKeyInternal : Msg msg -> Model -> List Permission -> (Eos.PrivateKey -> UpdateResult msg) -> UpdateResult msg
-withPrivateKeyInternal msg loggedIn necessaryPermissions successfulUR =
-    let
-        actWithPrivateKey =
-            case maybePrivateKey loggedIn of
-                Just privateKey ->
-                    successfulUR privateKey
-
-                Nothing ->
-                    askedAuthentication loggedIn
-                        |> UR.init
-                        |> UR.addExt (AddAfterPrivateKeyCallback msg)
-    in
-    if List.isEmpty necessaryPermissions then
-        actWithPrivateKey
-
-    else
-        case profile loggedIn of
-            Just validProfile ->
-                if hasPermissions validProfile necessaryPermissions then
-                    actWithPrivateKey
-
-                else
-                    { loggedIn | showInsufficientPermissionsModal = True }
-                        |> UR.init
-
-            _ ->
-                loggedIn
-                    |> UR.init
-                    |> UR.logImpossible msg
-                        "Tried signing eos transaction internally, but profile wasn't loaded"
-                        (Just loggedIn.accountName)
-                        { moduleName = "Session.LoggedIn"
-                        , function = "withPrivateKeyInternal"
-                        }
-                        []
+withPrivateKeyInternal msg model requiredPermissions successfulUR =
+    Auth.withPrivateKey model.auth
+        { requiredPermissions = requiredPermissions
+        , currentPermissions =
+            profile model
+                |> Maybe.map (.roles >> List.concatMap .permissions)
+        }
+        { onAskedPrivateKey =
+            UR.mapModel askedAuthentication
+                >> UR.addExt (AddAfterPrivateKeyCallback msg)
+        , onInsufficientPermissions = UR.mapModel (\m -> { m | showInsufficientPermissionsModal = True })
+        , onAbsentPermissions =
+            UR.logImpossible msg
+                "Tried signing eos transaction internally, but profile wasn't loaded"
+                (Just model.accountName)
+                { moduleName = "Session.LoggedIn"
+                , function = "withPrivateKeyInternal"
+                }
+                []
+        , defaultModel = model
+        }
+        successfulUR
 
 
 isCommunityMember : Model -> Bool
@@ -3270,6 +3257,9 @@ msgToString msg =
 
         GotActionMsg actionMsg ->
             "GotActionMsg" :: Action.msgToString actionMsg
+
+        GotAction2Msg subMsg ->
+            "GotAction2Msg" :: Action2.msgToString subMsg
 
         CompletedLoadTranslation _ r ->
             [ "CompletedLoadTranslation", UR.resultToString r ]

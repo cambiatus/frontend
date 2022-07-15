@@ -10,6 +10,7 @@ module Auth exposing
     , removePrivateKey
     , update
     , view
+    , withPrivateKey
     )
 
 {-| Authentication of a user with Passphrase or Private Key.
@@ -33,6 +34,7 @@ is also related to it.
 
 -}
 
+import Cambiatus.Enum.Permission exposing (Permission)
 import Dict
 import Eos.Account as Eos
 import Html exposing (Html, p, text)
@@ -306,3 +308,55 @@ msgToString msg =
 
         GotPinMsg subMsg ->
             "GotPinMsg" :: Pin.msgToString subMsg
+
+
+{-| A generic function that checks if the user has permissions, and uses their
+private key to perform actions. You can use this function to ask for the user's
+PIN in order to get their private key and try to perform the actions again.
+-}
+withPrivateKey :
+    Model
+    ->
+        { requiredPermissions : List Permission
+        , currentPermissions : Maybe (List Permission)
+        }
+    ->
+        { onAskedPrivateKey : UR.UpdateResult model msg extMsg -> UR.UpdateResult model msg extMsg
+        , onInsufficientPermissions : UR.UpdateResult model msg extMsg -> UR.UpdateResult model msg extMsg
+        , onAbsentPermissions : UR.UpdateResult model msg extMsg -> UR.UpdateResult model msg extMsg
+        , defaultModel : model
+        }
+    -> (Eos.PrivateKey -> UR.UpdateResult model msg extMsg)
+    -> UR.UpdateResult model msg extMsg
+withPrivateKey model { requiredPermissions, currentPermissions } config successfulUR =
+    let
+        actWithPrivateKey =
+            case maybePrivateKey model of
+                Nothing ->
+                    UR.init config.defaultModel
+                        |> config.onAskedPrivateKey
+
+                Just privateKey ->
+                    successfulUR privateKey
+    in
+    if List.isEmpty requiredPermissions then
+        actWithPrivateKey
+
+    else
+        case currentPermissions of
+            Nothing ->
+                config.defaultModel
+                    |> UR.init
+                    |> config.onAbsentPermissions
+
+            Just permissions ->
+                if
+                    List.all
+                        (\permission -> List.member permission permissions)
+                        requiredPermissions
+                then
+                    actWithPrivateKey
+
+                else
+                    UR.init config.defaultModel
+                        |> config.onInsufficientPermissions
