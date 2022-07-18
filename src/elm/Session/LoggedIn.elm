@@ -445,7 +445,7 @@ viewHelper pageMsg page profile_ ({ shared } as model) content =
                             community.symbol
                             shared.now
                             (GotSearchMsg >> pageMsg)
-                            (GotActionMsg >> pageMsg)
+                            (GotAction2Msg >> pageMsg)
                             model.searchModel
                         ]
 

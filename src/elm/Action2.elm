@@ -1,8 +1,12 @@
-module Action2 exposing (ClaimingStatus, ExternalMsg(..), Msg, msgToString, notClaiming, update)
+module Action2 exposing (Action, ClaimingStatus, ExternalMsg(..), Msg, msgToString, notClaiming, selectionSet, update, viewCard)
 
 import Auth
 import Cambiatus.Enum.Permission as Permission exposing (Permission)
 import Cambiatus.Enum.VerificationType as VerificationType exposing (VerificationType)
+import Cambiatus.Object
+import Cambiatus.Object.Action
+import Cambiatus.Object.Community
+import Cambiatus.Object.Objective
 import Cambiatus.Scalar exposing (DateTime)
 import Eos
 import Eos.Account
@@ -10,6 +14,8 @@ import Form
 import Form.File
 import Form.Text
 import Graphql.Http
+import Graphql.OptionalArgument as OptionalArgument
+import Graphql.SelectionSet as SelectionSet exposing (SelectionSet)
 import Html exposing (Html, button, div, h4, img, li, span, text)
 import Html.Attributes exposing (alt, class, classList, id, src, tabindex)
 import Html.Attributes.Aria exposing (ariaHidden)
@@ -584,6 +590,65 @@ viewCard loggedIn { containerAttrs, sideIcon, toMsg } action =
           else
             text ""
         ]
+
+
+
+-- GRAPHQL
+
+
+selectionSet : SelectionSet Action Cambiatus.Object.Action
+selectionSet =
+    SelectionSet.succeed Action
+        |> SelectionSet.with Cambiatus.Object.Action.id
+        |> SelectionSet.with (Markdown.selectionSet Cambiatus.Object.Action.description)
+        |> SelectionSet.with Cambiatus.Object.Action.image
+        |> SelectionSet.with
+            (SelectionSet.map
+                (\o ->
+                    { id = o.id
+                    , description = o.description
+                    , community = o.community
+                    , isCompleted = o.isCompleted
+                    }
+                )
+                (Cambiatus.Object.Action.objective objectiveSelectionSet)
+            )
+        |> SelectionSet.with Cambiatus.Object.Action.reward
+        |> SelectionSet.with Cambiatus.Object.Action.verifierReward
+        |> SelectionSet.with (Eos.Account.nameSelectionSet Cambiatus.Object.Action.creatorId)
+        |> SelectionSet.with (Cambiatus.Object.Action.validators Profile.minimalSelectionSet)
+        |> SelectionSet.with Cambiatus.Object.Action.usages
+        |> SelectionSet.with Cambiatus.Object.Action.usagesLeft
+        |> SelectionSet.with Cambiatus.Object.Action.deadline
+        |> SelectionSet.with Cambiatus.Object.Action.verificationType
+        |> SelectionSet.with Cambiatus.Object.Action.verifications
+        |> SelectionSet.with Cambiatus.Object.Action.isCompleted
+        |> SelectionSet.with (SelectionSet.map (Maybe.withDefault False) Cambiatus.Object.Action.hasProofPhoto)
+        |> SelectionSet.with (SelectionSet.map (Maybe.withDefault False) Cambiatus.Object.Action.hasProofCode)
+        |> SelectionSet.with (Markdown.maybeSelectionSet Cambiatus.Object.Action.photoProofInstructions)
+        |> SelectionSet.with Cambiatus.Object.Action.position
+        |> SelectionSet.with (Cambiatus.Object.Action.claimCount (\optionals -> { optionals | status = OptionalArgument.Absent }))
+
+
+objectiveSelectionSet : SelectionSet Objective Cambiatus.Object.Objective
+objectiveSelectionSet =
+    SelectionSet.succeed Objective
+        |> SelectionSet.with objectiveIdSelectionSet
+        |> SelectionSet.with (Markdown.selectionSet Cambiatus.Object.Objective.description)
+        |> SelectionSet.with (Cambiatus.Object.Objective.community communitySelectionSet)
+        |> SelectionSet.with Cambiatus.Object.Objective.isCompleted
+
+
+objectiveIdSelectionSet : SelectionSet ObjectiveId Cambiatus.Object.Objective
+objectiveIdSelectionSet =
+    Cambiatus.Object.Objective.id |> SelectionSet.map ObjectiveId
+
+
+communitySelectionSet : SelectionSet Community Cambiatus.Object.Community
+communitySelectionSet =
+    SelectionSet.succeed Community
+        |> SelectionSet.with (Eos.symbolSelectionSet Cambiatus.Object.Community.symbol)
+        |> SelectionSet.with Cambiatus.Object.Community.name
 
 
 
