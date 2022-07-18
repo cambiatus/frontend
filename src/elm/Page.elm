@@ -46,6 +46,7 @@ import Time
 import Translation
 import UpdateResult as UR
 import Url exposing (Url)
+import Version exposing (Version)
 import View.Components
 
 
@@ -61,7 +62,7 @@ init flags navKey url =
 
         initialCmds =
             Cmd.batch
-                [ fetchTranslations shared.language
+                [ fetchTranslations shared.version shared.language
                 , fetchTimezone
                 , sharedCmd
                 ]
@@ -102,10 +103,10 @@ init flags navKey url =
                     }
 
 
-fetchTranslations : Translation.Language -> Cmd (Msg externalMsg)
-fetchTranslations language =
+fetchTranslations : Version -> Translation.Language -> Cmd (Msg externalMsg)
+fetchTranslations version language =
     CompletedLoadTranslation language
-        |> Translation.get language
+        |> Translation.get version language
 
 
 fetchTimezone : Cmd (Msg externalMsg)

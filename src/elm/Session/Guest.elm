@@ -40,6 +40,7 @@ import Translation
 import UpdateResult as UR
 import Url
 import Utils
+import Version exposing (Version)
 import View.Feedback as Feedback
 
 
@@ -72,10 +73,10 @@ fetchCommunity shared =
             CompletedLoadCommunityPreview
 
 
-fetchTranslations : Translation.Language -> Cmd Msg
-fetchTranslations language =
+fetchTranslations : Version -> Translation.Language -> Cmd Msg
+fetchTranslations version language =
     CompletedLoadTranslation language
-        |> Translation.get language
+        |> Translation.get version language
 
 
 
@@ -337,7 +338,7 @@ update msg ({ shared } as model) =
         ClickedTryAgainTranslation ->
             { model | shared = Shared.toLoadingTranslation shared }
                 |> UR.init
-                |> UR.addCmd (fetchTranslations shared.language)
+                |> UR.addCmd (fetchTranslations shared.version shared.language)
                 |> UR.addBreadcrumb
                     { type_ = Log.ErrorBreadcrumb
                     , category = msg
@@ -355,7 +356,7 @@ update msg ({ shared } as model) =
                 , showLanguageNav = False
             }
                 |> UR.init
-                |> UR.addCmd (fetchTranslations lang)
+                |> UR.addCmd (fetchTranslations shared.version lang)
 
         PressedEsc ->
             { model | showLanguageNav = False }

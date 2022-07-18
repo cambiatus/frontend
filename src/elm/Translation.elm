@@ -16,6 +16,7 @@ import Http
 import I18Next exposing (Translations)
 import Mask
 import Url.Builder
+import Version exposing (Version)
 
 
 type Language
@@ -139,8 +140,8 @@ defaultLanguage =
     English
 
 
-get : Language -> (Result Http.Error Translations -> msg) -> Cmd msg
-get language toMsg =
+get : Version -> Language -> (Result Http.Error Translations -> msg) -> Cmd msg
+get version language toMsg =
     let
         translation =
             case language of
@@ -160,6 +161,6 @@ get language toMsg =
                     "amh-ETH.json"
     in
     Http.get
-        { url = Url.Builder.absolute [ "translations", translation ] []
+        { url = Url.Builder.absolute [ "translations", translation ] [ Url.Builder.string "version" (Version.toString version) ]
         , expect = Http.expectJson toMsg I18Next.translationsDecoder
         }

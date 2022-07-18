@@ -80,6 +80,7 @@ import Time
 import Translation
 import UpdateResult as UR
 import Utils
+import Version exposing (Version)
 import View.Components
 import View.Feedback as Feedback
 import View.Modal as Modal
@@ -130,10 +131,10 @@ fetchCommunity model maybeSymbol =
         internalQuery model (Community.symbolQuery symbol) CompletedLoadCommunity
 
 
-fetchTranslations : Translation.Language -> Cmd (Msg externalMsg)
-fetchTranslations language =
+fetchTranslations : Version -> Translation.Language -> Cmd (Msg externalMsg)
+fetchTranslations version language =
     CompletedLoadTranslation language
-        |> Translation.get language
+        |> Translation.get version language
 
 
 sendPreferredLanguage : Model -> Translation.Language -> Cmd (Msg externalMsg)
@@ -1270,7 +1271,7 @@ viewFooter ({ shared } as model) =
                 [ div [ class "mr-32 md:mr-20 lg:mr-52 md:pt-6" ]
                     [ viewContactSupport
                     , p [ class "text-xs mt-6 text-gray-900" ]
-                        [ text <| tr "footer.version" [ ( "version", shared.version ) ] ]
+                        [ text <| tr "footer.version" [ ( "version", Version.toString shared.version ) ] ]
                     ]
                 , img
                     [ src "/images/man-with-envelope.svg"
@@ -2144,7 +2145,7 @@ update msg model =
 
         ClickedTryAgainTranslation ->
             UR.init { model | shared = Shared.toLoadingTranslation shared }
-                |> UR.addCmd (fetchTranslations shared.language)
+                |> UR.addCmd (fetchTranslations shared.version shared.language)
                 |> UR.addBreadcrumb
                     { type_ = Log.ErrorBreadcrumb
                     , category = msg
@@ -2438,7 +2439,7 @@ update msg model =
                     | shared = Shared.toLoadingTranslation shared
                     , showUserNav = False
                 }
-                |> UR.addCmd (fetchTranslations lang)
+                |> UR.addCmd (fetchTranslations shared.version lang)
                 |> UR.addCmd (sendPreferredLanguage model lang)
 
         CompletedSendingLanguagePreference (RemoteData.Failure err) ->

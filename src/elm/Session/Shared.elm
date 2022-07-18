@@ -28,12 +28,13 @@ import Ports
 import Time exposing (Posix)
 import Translation
 import Url exposing (Url)
+import Version exposing (Version)
 
 
 type alias Shared =
     { navKey : Nav.Key
     , language : Translation.Language
-    , version : String
+    , version : Version
     , translations : Translations
     , translators : Translators
     , translationsStatus : TranslationStatus
