@@ -1450,7 +1450,7 @@ internalQuery :
     -> (RemoteData (Graphql.Http.Error result) result -> Msg externalMsg)
     -> Cmd (Msg externalMsg)
 internalQuery model selectionSet toMsg =
-    internalGraphqlOperation Api.Graphql.query model selectionSet toMsg
+    internalGraphqlOperation Api.Graphql.loggedInQuery model selectionSet toMsg
 
 
 internalMutation :
@@ -1459,11 +1459,11 @@ internalMutation :
     -> (RemoteData (Graphql.Http.Error result) result -> Msg externalMsg)
     -> Cmd (Msg externalMsg)
 internalMutation model selectionSet toMsg =
-    internalGraphqlOperation Api.Graphql.mutation model selectionSet toMsg
+    internalGraphqlOperation Api.Graphql.loggedInMutation model selectionSet toMsg
 
 
 internalGraphqlOperation :
-    (Shared
+    (Model
      -> Maybe Api.Graphql.Token
      -> SelectionSet result typeLock
      -> (rawOperationResult -> rawOperationResult)
@@ -1477,7 +1477,7 @@ internalGraphqlOperation operation model selectionSet toMsg =
     let
         operationCmd : Api.Graphql.Token -> Cmd (RemoteData (Graphql.Http.Error result) result)
         operationCmd authToken =
-            operation model.shared
+            operation model
                 (Just authToken)
                 selectionSet
                 identity
