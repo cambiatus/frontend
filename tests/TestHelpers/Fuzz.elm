@@ -16,7 +16,7 @@ module TestHelpers.Fuzz exposing
     , updateTokenData
     )
 
-import Action
+import Action2 as Action
 import Avatar
 import Cambiatus.Scalar
 import Claim

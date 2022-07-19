@@ -1,6 +1,6 @@
 module Page.Dashboard.Claim exposing (Model, Msg, init, jsAddressToMsg, msgToString, update, view)
 
-import Action
+import Action2 as Action
 import Cambiatus.Enum.Permission as Permission
 import Cambiatus.Query
 import Claim

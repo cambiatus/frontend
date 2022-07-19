@@ -11,7 +11,7 @@ module TestHelpers.Shrink exposing
     , url
     )
 
-import Action
+import Action2 as Action
 import Avatar
 import Cambiatus.Scalar
 import Claim

@@ -24,7 +24,7 @@ module Claim exposing
     , viewVotingProgress
     )
 
-import Action exposing (Action)
+import Action2 as Action exposing (Action)
 import Api.Relay as Relay
 import Cambiatus.Enum.ClaimStatus as ClaimStatus
 import Cambiatus.Object

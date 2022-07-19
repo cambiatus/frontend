@@ -1,6 +1,6 @@
 module ClaimTests exposing (all)
 
-import Action
+import Action2 as Action
 import Claim
 import Expect
 import Test exposing (..)

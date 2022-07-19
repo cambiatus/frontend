@@ -17,7 +17,7 @@ module TestHelpers.Random exposing
     , updateTokenData
     )
 
-import Action
+import Action2 as Action
 import Avatar
 import Cambiatus.Enum.VerificationType as VerificationType
 import Cambiatus.Scalar
@@ -274,7 +274,11 @@ actionObjective =
     Random.constant Action.Objective
         |> with (Random.int 0 Random.maxInt |> Random.map Action.objectiveIdFromInt)
         |> with (Markdown.generator string)
-        |> with (symbol |> Random.map (\symbol_ -> { symbol = symbol_ }))
+        |> with
+            (Random.map2 (\symbol_ name_ -> { symbol = symbol_, name = name_ })
+                symbol
+                string
+            )
         |> with Random.Extra.bool
 
 

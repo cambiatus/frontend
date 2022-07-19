@@ -3,9 +3,11 @@ module Action2 exposing
     , ClaimingStatus
     , ExternalMsg(..)
     , Msg
+    , Objective
     , ObjectiveId
     , completeObjectiveSelectionSet
     , encodeObjectiveId
+    , isClosed
     , isPastDeadline
     , jsAddressToMsg
     , msgToString
@@ -1099,6 +1101,12 @@ isPastDeadline action now =
 
         Nothing ->
             False
+
+
+isClosed : Action -> Time.Posix -> Bool
+isClosed action now =
+    isPastDeadline action now
+        || (action.usages > 0 && action.usagesLeft == 0)
 
 
 shareActionButtonId : Int -> String
