@@ -668,6 +668,7 @@
         "verification_instructions": "Escreva aqui instruções para os usuários",
         "usages_left_label": "Usos restantes",
         "mark_completed": "Finalizar ação",
+        "mark_not_completed": "Reabrir ação",
         "errors": {
           "description": "A descrição não pode estar vazia",
           "reward": "A recompensa precisa ser maior que 0",

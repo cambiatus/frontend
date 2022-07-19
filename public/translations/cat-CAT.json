@@ -664,6 +664,7 @@
         "verification_instructions": "Escriviu aquí instruccions per als usuaris",
         "usages_left_label": "Usos restants",
         "mark_completed": "Marca com a completat",
+        "mark_not_completed": "Reobrir l'acció",
         "errors": {
           "description": "La descripció no pot estar buida",
           "reward": "La recompensa ha de ser superior a 0",
