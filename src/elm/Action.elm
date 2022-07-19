@@ -1,32 +1,54 @@
 module Action exposing
-    ( Action
-    , ClaimingStatus
-    , ExternalMsg(..)
-    , Id
-    , Msg
-    , Objective
-    , ObjectiveId
-    , completeObjectiveSelectionSet
-    , encodeId
-    , encodeObjectiveId
-    , idFromInt
-    , idFromString
-    , idToInt
-    , idToString
-    , isClosed
-    , isPastDeadline
-    , jsAddressToMsg
-    , msgToString
-    , notClaiming
-    , objectiveIdFromInt
-    , objectiveIdSelectionSet
-    , objectiveIdToInt
-    , selectionSet
-    , update
-    , updateAction
-    , viewCard
-    , viewClaimModal
+    ( Action, Objective
+    , Id, encodeId, idFromInt, idFromString, idToInt, idToString
+    , ObjectiveId, encodeObjectiveId, objectiveIdSelectionSet, objectiveIdFromInt, objectiveIdToInt
+    , isClosed, isPastDeadline
+    , selectionSet, completeObjectiveSelectionSet, updateAction
+    , ClaimingStatus, notClaiming, Msg, update, ExternalMsg(..), msgToString, jsAddressToMsg
+    , viewCard, viewClaimModal
     )
+
+{-|
+
+
+## Main types
+
+@docs Action, Objective
+
+
+### Ids
+
+
+#### Action Ids
+
+@docs Id, encodeId, idFromInt, idFromString, idToInt, idToString
+
+
+#### Objective Ids
+
+@docs ObjectiveId, encodeObjectiveId, objectiveIdSelectionSet, objectiveIdFromInt, objectiveIdToInt
+
+
+## Helper functions
+
+@docs isClosed, isPastDeadline
+
+
+## GraphQL & EOS
+
+@docs selectionSet, completeObjectiveSelectionSet, updateAction
+
+
+## Claiming actions
+
+@docs ClaimingStatus, notClaiming, Msg, update, ExternalMsg, msgToString, jsAddressToMsg
+
+
+### Views
+
+@docs viewCard, viewClaimModal
+
+-}
 
 import Auth
 import Browser.Dom
