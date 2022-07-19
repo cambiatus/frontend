@@ -37,15 +37,15 @@ type alias Model =
     { shownObjectives :
         Dict
             Action.ObjectiveId
-            { visibleAction : Maybe Int
+            { visibleAction : Maybe Action.Id
             , visibleActionHeight : Maybe Float
-            , previousVisibleAction : Maybe Int
+            , previousVisibleAction : Maybe Action.Id
             , previousVisibleActionHeight : Maybe Float
             , openHeight : Maybe Float
             , closedHeight : Maybe Float
             , isClosing : Bool
             }
-    , highlightedAction : Maybe { objectiveId : Action.ObjectiveId, actionId : Maybe Int }
+    , highlightedAction : Maybe { objectiveId : Action.ObjectiveId, actionId : Maybe Action.Id }
     , sharingAction : Maybe Action
     , claimingStatus : ClaimingStatus
     }
@@ -70,7 +70,10 @@ init selectedObjective _ =
                     Nothing
 
                 Route.WithObjectiveSelected { id, action } ->
-                    Just { objectiveId = Action.objectiveIdFromInt id, actionId = action }
+                    Just
+                        { objectiveId = Action.objectiveIdFromInt id
+                        , actionId = Maybe.map Action.idFromInt action
+                        }
         , shownObjectives =
             case selectedObjective of
                 Route.WithNoObjectiveSelected ->
@@ -108,7 +111,7 @@ type Msg
     | FinishedClosingObjective Community.Objective
     | GotObjectiveDetailsHeight Community.Objective (Result Browser.Dom.Error Browser.Dom.Element)
     | GotObjectiveSummaryHeight Community.Objective (Result Browser.Dom.Error Browser.Dom.Element)
-    | GotVisibleActionViewport { objectiveId : Action.ObjectiveId, actionId : Int } (Result Browser.Dom.Error Browser.Dom.Viewport)
+    | GotVisibleActionViewport { objectiveId : Action.ObjectiveId, actionId : Action.Id } (Result Browser.Dom.Error Browser.Dom.Viewport)
     | ClickedScrollToAction Action
     | GotActionMsg Action.Msg
     | StartedIntersecting String
@@ -618,7 +621,7 @@ view loggedIn model =
                                                         , ( "url"
                                                           , Route.WithObjectiveSelected
                                                                 { id = Action.objectiveIdToInt sharingAction.objective.id
-                                                                , action = Just sharingAction.id
+                                                                , action = Just (Action.idToInt sharingAction.id)
                                                                 }
                                                                 |> Route.CommunityObjectives
                                                                 |> Route.addRouteToUrl loggedIn.shared
@@ -914,7 +917,7 @@ viewObjective loggedIn model objective =
                                     [ ( "border-orange-300 bg-orange-300", Just action.id == visibleActionId )
                                     , ( "hover:bg-orange-300/50 hover:border-orange-300/50", Just action.id /= visibleActionId )
                                     ]
-                                , id ("go-to-action-" ++ String.fromInt action.id)
+                                , id ("go-to-action-" ++ Action.idToString action.id)
                                 , onClick (ClickedScrollToAction action)
                                 , ariaLabel <|
                                     translators.tr "community.objectives.go_to_action"
@@ -952,14 +955,14 @@ objectiveContainerId objective =
 
 actionCardId : Action -> String
 actionCardId action =
-    "action-card-" ++ String.fromInt action.id
+    "action-card-" ++ Action.idToString action.id
 
 
-idFromActionCardId : String -> Maybe Int
+idFromActionCardId : String -> Maybe Action.Id
 idFromActionCardId elementId =
     -- Remove the leading "action-card-"
     String.dropLeft 12 elementId
-        |> String.toInt
+        |> Action.idFromString
 
 
 receiveBroadcast : LoggedIn.BroadcastMsg -> Maybe Msg

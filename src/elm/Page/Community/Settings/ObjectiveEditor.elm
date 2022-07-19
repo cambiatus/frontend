@@ -657,7 +657,7 @@ update msg model loggedIn =
                                             [ { name = "Details"
                                               , extras =
                                                     Dict.fromList
-                                                        [ ( "actionId", Encode.int action.id )
+                                                        [ ( "actionId", Action.encodeId action.id )
                                                         , ( "objectiveId", Action.encodeObjectiveId objective.id )
                                                         , ( "tries", Encode.int tries )
                                                         , ( "maximumRetries", Encode.int maxRetries )
@@ -697,7 +697,7 @@ update msg model loggedIn =
                                         , data =
                                             Dict.fromList
                                                 [ ( "tries", Encode.int tries )
-                                                , ( "actionId", Encode.int action.id )
+                                                , ( "actionId", Action.encodeId action.id )
                                                 ]
                                         , level = Log.Warning
                                         }
@@ -969,7 +969,7 @@ completeActionOrObjective loggedIn model msg completionStatus objective =
                     |> Action.updateAction loggedIn.accountName loggedIn.shared
                     |> (\completedAction ->
                             { responseAddress = AcceptedCompleteObjective
-                            , responseData = Encode.int action.id
+                            , responseData = Action.encodeId action.id
                             , data = Eos.encodeTransaction [ completedAction ]
                             }
                        )

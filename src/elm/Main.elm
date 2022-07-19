@@ -1109,7 +1109,11 @@ statusToRoute status session =
                     Just (Route.CommunitySettingsNewAction (Action.objectiveIdToInt subModel.objectiveId))
 
                 Just actionId ->
-                    Just (Route.CommunitySettingsEditAction (Action.objectiveIdToInt subModel.objectiveId) actionId)
+                    Just
+                        (Route.CommunitySettingsEditAction
+                            (Action.objectiveIdToInt subModel.objectiveId)
+                            (Action.idToInt actionId)
+                        )
 
         CommunitySettingsContacts _ ->
             Just Route.CommunitySettingsContacts
@@ -1543,7 +1547,11 @@ changeRouteTo maybeRoute model =
                 |> withLoggedIn (Route.CommunitySettingsNewAction objectiveId)
 
         Just (Route.CommunitySettingsEditAction objectiveId actionId) ->
-            (\l -> CommunitySettingsActionEditor.init l (Action.objectiveIdFromInt objectiveId) (Just actionId))
+            (\l ->
+                CommunitySettingsActionEditor.init l
+                    (Action.objectiveIdFromInt objectiveId)
+                    (Just <| Action.idFromInt actionId)
+            )
                 >> updateLoggedInUResult CommunitySettingsActionEditor GotCommunitySettingsActionEditorMsg model
                 |> withLoggedIn (Route.CommunitySettingsEditAction objectiveId actionId)
 

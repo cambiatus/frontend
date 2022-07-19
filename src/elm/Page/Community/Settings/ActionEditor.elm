@@ -54,11 +54,7 @@ import View.Feedback as Feedback
 -- INIT
 
 
-type alias ActionId =
-    Int
-
-
-init : LoggedIn.Model -> Action.ObjectiveId -> Maybe ActionId -> UpdateResult
+init : LoggedIn.Model -> Action.ObjectiveId -> Maybe Action.Id -> UpdateResult
 init _ objectiveId actionId =
     { objectiveId = objectiveId
     , actionId = actionId
@@ -74,7 +70,7 @@ init _ objectiveId actionId =
 
 type alias Model =
     { objectiveId : Action.ObjectiveId
-    , actionId : Maybe ActionId
+    , actionId : Maybe Action.Id
     , status : Status
     }
 
@@ -388,7 +384,12 @@ upsertAction { markAsCompleted } msg maybeAction loggedIn model formOutput =
               , data =
                     Encode.object
                         [ ( "community_id", Eos.encodeSymbol formOutput.reward.symbol )
-                        , ( "action_id", Encode.int (Maybe.withDefault 0 model.actionId) )
+                        , ( "action_id"
+                          , Action.encodeId
+                                (Maybe.withDefault (Action.idFromInt 0)
+                                    model.actionId
+                                )
+                          )
                         , ( "objective_id", Action.encodeObjectiveId model.objectiveId )
                         , ( "creator", Eos.encodeName loggedIn.accountName )
                         , ( "description", Markdown.encode formOutput.description )

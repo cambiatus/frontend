@@ -1,9 +1,10 @@
 module Page.Community.Settings.Objectives exposing (Model, Msg, init, msgToString, receiveBroadcast, update, view)
 
 import Action exposing (Action)
+import AssocList
 import Cambiatus.Enum.VerificationType as VerificationType
 import Community
-import Dict exposing (Dict)
+import Dict
 import Eos
 import Html exposing (Html, button, div, p, text)
 import Html.Attributes exposing (class, classList, id)
@@ -37,7 +38,7 @@ init loggedIn =
 type alias Model =
     { status : Status
     , openObjective : Maybe Action.ObjectiveId
-    , profileSummaries : Dict Int (List Profile.Summary.Model)
+    , profileSummaries : AssocList.Dict Action.Id (List Profile.Summary.Model)
     }
 
 
@@ -45,7 +46,7 @@ initModel : Model
 initModel =
     { status = Loading
     , openObjective = Nothing
-    , profileSummaries = Dict.empty
+    , profileSummaries = AssocList.empty
     }
 
 
@@ -321,7 +322,7 @@ viewAction ({ shared } as loggedIn) model objectiveId action =
                             (List.indexedMap
                                 (\validatorIndex u ->
                                     case
-                                        Dict.get action.id model.profileSummaries
+                                        AssocList.get action.id model.profileSummaries
                                             |> Maybe.andThen (List.getAt validatorIndex)
                                     of
                                         Nothing ->
@@ -330,7 +331,7 @@ viewAction ({ shared } as loggedIn) model objectiveId action =
                                         Just validatorSummary ->
                                             let
                                                 validatorId =
-                                                    [ Action.objectiveIdToInt objectiveId, action.id, validatorIndex ]
+                                                    [ Action.objectiveIdToInt objectiveId, Action.idToInt action.id, validatorIndex ]
                                                         |> List.map String.fromInt
                                                         |> (::) "validator"
                                                         |> String.join "-"
@@ -351,7 +352,11 @@ viewAction ({ shared } as loggedIn) model objectiveId action =
                 , View.Components.disablableLink
                     { isDisabled = action.objective.isCompleted || not loggedIn.hasAcceptedCodeOfConduct }
                     [ class "button button-primary button-sm w-full sm:w-40 mt-8 focus:ring-offset-indigo-500"
-                    , Route.href (Route.CommunitySettingsEditAction (Action.objectiveIdToInt objectiveId) action.id)
+                    , Route.href
+                        (Route.CommunitySettingsEditAction
+                            (Action.objectiveIdToInt objectiveId)
+                            (Action.idToInt action.id)
+                        )
                     , classList [ ( "button-disabled", action.objective.isCompleted || not loggedIn.hasAcceptedCodeOfConduct ) ]
                     ]
                     [ text_ "community.actions.edit" ]
@@ -371,7 +376,7 @@ type alias UpdateResult =
 type Msg
     = CompletedLoadCommunity Community.Model
     | OpenObjective Action.ObjectiveId
-    | GotProfileSummaryMsg Int Int Profile.Summary.Msg
+    | GotProfileSummaryMsg Action.Id Int Profile.Summary.Msg
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
@@ -392,7 +397,7 @@ update msg model loggedIn =
 
         OpenObjective index ->
             if model.openObjective == Just index then
-                { model | openObjective = Nothing, profileSummaries = Dict.empty }
+                { model | openObjective = Nothing, profileSummaries = AssocList.empty }
                     |> UR.init
                     |> UR.addBreadcrumb
                         { type_ = Log.DebugBreadcrumb
@@ -419,7 +424,7 @@ update msg model loggedIn =
                                         |> Profile.Summary.initMany False
                                     )
                                 )
-                            |> Dict.fromList
+                            |> AssocList.fromList
                 }
                     |> UR.init
                     |> UR.addBreadcrumb
@@ -433,7 +438,7 @@ update msg model loggedIn =
         GotProfileSummaryMsg actionIndex validatorIndex subMsg ->
             { model
                 | profileSummaries =
-                    Dict.update actionIndex
+                    AssocList.update actionIndex
                         (Maybe.withDefault []
                             >> List.updateAt validatorIndex (Profile.Summary.update subMsg)
                             >> Just

@@ -1008,7 +1008,7 @@ viewClaimModal ({ shared, accountName } as loggedIn) profileSummaries claim =
         claimRoute =
             Route.Claim
                 (Action.objectiveIdToInt claim.action.objective.id)
-                claim.action.id
+                (Action.idToInt claim.action.id)
                 claim.id
 
         claimDetailsButton =

@@ -2,11 +2,17 @@ module Action exposing
     ( Action
     , ClaimingStatus
     , ExternalMsg(..)
+    , Id
     , Msg
     , Objective
     , ObjectiveId
     , completeObjectiveSelectionSet
+    , encodeId
     , encodeObjectiveId
+    , idFromInt
+    , idFromString
+    , idToInt
+    , idToString
     , isClosed
     , isPastDeadline
     , jsAddressToMsg
@@ -66,8 +72,7 @@ import View.Modal
 
 
 type alias Action =
-    -- TODO - Use opaque type for id
-    { id : Int
+    { id : Id
     , description : Markdown
     , image : Maybe String
     , objective : Objective
@@ -87,6 +92,10 @@ type alias Action =
     , position : Maybe Int
     , claimCount : Int
     }
+
+
+type Id
+    = Id Int
 
 
 type alias Objective =
@@ -139,7 +148,7 @@ type Msg
     = NoOp
     | ClickedClaimAction Action
     | ClickedShareAction Action
-    | CopiedShareLinkToClipboard Int
+    | CopiedShareLinkToClipboard Id
     | GotClaimingActionMsg ClaimingActionMsg
 
 
@@ -197,7 +206,7 @@ update msg status loggedIn =
                                   , Route.CommunityObjectives
                                         (Route.WithObjectiveSelected
                                             { id = objectiveIdToInt action.objective.id
-                                            , action = Just action.id
+                                            , action = Just (idToInt action.id)
                                             }
                                         )
                                         |> Route.addRouteToUrl loggedIn.shared
@@ -209,7 +218,7 @@ update msg status loggedIn =
 
                     else
                         { responseAddress = msg
-                        , responseData = Json.Encode.int action.id
+                        , responseData = encodeId action.id
                         , data =
                             Json.Encode.object
                                 [ ( "name", Json.Encode.string "copyToClipboard" )
@@ -621,7 +630,7 @@ viewCard loggedIn { containerAttrs, sideIcon, toMsg } action =
                         , ( "url"
                           , Route.WithObjectiveSelected
                                 { id = objectiveIdToInt action.objective.id
-                                , action = Just action.id
+                                , action = Just (idToInt action.id)
                                 }
                                 |> Route.CommunityObjectives
                                 |> Route.addRouteToUrl loggedIn.shared
@@ -913,7 +922,7 @@ claimWithPhotoForm translators =
 selectionSet : SelectionSet Action Cambiatus.Object.Action
 selectionSet =
     SelectionSet.succeed Action
-        |> SelectionSet.with Cambiatus.Object.Action.id
+        |> SelectionSet.with idSelectionSet
         |> SelectionSet.with (Markdown.selectionSet Cambiatus.Object.Action.description)
         |> SelectionSet.with Cambiatus.Object.Action.image
         |> SelectionSet.with
@@ -958,6 +967,11 @@ objectiveIdSelectionSet =
     Cambiatus.Object.Objective.id |> SelectionSet.map ObjectiveId
 
 
+idSelectionSet : SelectionSet Id Cambiatus.Object.Action
+idSelectionSet =
+    Cambiatus.Object.Action.id |> SelectionSet.map Id
+
+
 communitySelectionSet : SelectionSet Community Cambiatus.Object.Community
 communitySelectionSet =
     SelectionSet.succeed Community
@@ -992,7 +1006,7 @@ updateAction accountName shared action =
 
 type alias ClaimedAction =
     { communityId : Eos.Symbol
-    , actionId : Int
+    , actionId : Id
     , claimer : Eos.Account.Name
     , proof :
         Maybe
@@ -1024,7 +1038,7 @@ encodeClaimAction c =
     in
     Json.Encode.object
         [ ( "community_id", Eos.encodeSymbol c.communityId )
-        , ( "action_id", Json.Encode.int c.actionId )
+        , ( "action_id", encodeId c.actionId )
         , ( "maker", Eos.Account.encodeName c.claimer )
         , ( "proof_photo", encodeProofItem .photo "" Json.Encode.string )
         , ( "proof_code", encodeProofCodeItem .code "" Json.Encode.string )
@@ -1041,6 +1055,16 @@ encodeObjectiveId (ObjectiveId id) =
     Json.Encode.int id
 
 
+encodeId : Id -> Json.Encode.Value
+encodeId (Id id) =
+    Json.Encode.int id
+
+
+decodeId : Json.Decode.Decoder Id
+decodeId =
+    Json.Decode.map Id Json.Decode.int
+
+
 encode : Action -> Json.Encode.Value
 encode action =
     let
@@ -1050,7 +1074,7 @@ encode action =
     in
     Json.Encode.object
         [ ( "community_id", Eos.encodeSymbol action.objective.community.symbol )
-        , ( "action_id", Json.Encode.int action.id )
+        , ( "action_id", encodeId action.id )
         , ( "objective_id", encodeObjectiveId action.objective.id )
         , ( "description", Markdown.encode action.description )
         , ( "reward", Eos.encodeAsset (makeAsset action.reward) )
@@ -1109,24 +1133,45 @@ isClosed action now =
         || (action.usages > 0 && action.usagesLeft == 0)
 
 
-shareActionButtonId : Int -> String
+shareActionButtonId : Id -> String
 shareActionButtonId actionId =
-    "share-action-button-" ++ String.fromInt actionId
+    "share-action-button-" ++ String.fromInt (idToInt actionId)
 
 
-shareActionFallbackId : Int -> String
+shareActionFallbackId : Id -> String
 shareActionFallbackId actionId =
-    "share-action-fallback-" ++ String.fromInt actionId
+    "share-action-fallback-" ++ String.fromInt (idToInt actionId)
 
 
 generateProofCode : Action -> String -> Time.Posix -> String
 generateProofCode action claimerAccountUint64 time =
-    (String.fromInt action.id
+    (String.fromInt (idToInt action.id)
         ++ claimerAccountUint64
         ++ String.fromInt (Time.posixToMillis time // 1000)
     )
         |> Sha256.sha256
         |> String.slice 0 8
+
+
+idToInt : Id -> Int
+idToInt (Id id) =
+    id
+
+
+idFromInt : Int -> Id
+idFromInt id =
+    Id id
+
+
+idToString : Id -> String
+idToString (Id id) =
+    String.fromInt id
+
+
+idFromString : String -> Maybe Id
+idFromString =
+    String.toInt
+        >> Maybe.map Id
 
 
 objectiveIdToInt : ObjectiveId -> Int
@@ -1163,7 +1208,7 @@ jsAddressToMsg addr val =
                                 Nothing
                         )
                         (Json.Decode.field "copied" Json.Decode.bool)
-                        (Json.Decode.field "addressData" Json.Decode.int)
+                        (Json.Decode.field "addressData" decodeId)
                     )
                     val
             of
