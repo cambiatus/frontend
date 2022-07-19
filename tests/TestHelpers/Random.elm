@@ -282,10 +282,16 @@ actionObjective =
         |> with Random.Extra.bool
 
 
+actionId : Random.Generator Action.Id
+actionId =
+    Random.int 0 Random.maxInt
+        |> Random.map Action.idFromInt
+
+
 action : Random.Generator Action.Action
 action =
     Random.constant Action.Action
-        |> with (Random.int 0 Random.maxInt)
+        |> with actionId
         |> with (Markdown.generator string)
         |> with (Random.constant Nothing)
         |> with actionObjective

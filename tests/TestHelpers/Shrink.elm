@@ -114,10 +114,15 @@ actionObjective objective =
         |> andMap (bool objective.isCompleted)
 
 
+actionId : Shrinker Action.Id
+actionId =
+    Shrink.convert Action.idFromInt Action.idToInt int
+
+
 action : Shrinker Action.Action
 action action_ =
     noShrink Action.Action
-        |> andMap (int action_.id)
+        |> andMap (actionId action_.id)
         |> andMap (Markdown.shrink action_.description)
         |> andMap (noShrink action_.image)
         |> andMap (actionObjective action_.objective)
