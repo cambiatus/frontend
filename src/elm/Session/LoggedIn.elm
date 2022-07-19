@@ -412,11 +412,6 @@ hideCommunityAndSearch currentPage model =
 viewHelper : (Msg pageMsg -> pageMsg) -> Page -> Profile.Model -> Model -> Html pageMsg -> Html pageMsg
 viewHelper pageMsg page profile_ ({ shared } as model) content =
     let
-        viewClaimWithProofs action proof isLoading =
-            [ Action.viewClaimWithProofs proof shared.translators isLoading action
-                |> Html.map (GotActionMsg >> pageMsg)
-            ]
-
         mainView =
             -- case ( Search.isActive model.searchModel, model.claimingAction.status ) of
             --     ( True, _ ) ->
@@ -3238,6 +3233,10 @@ jsAddressToMsg addr val =
         "GotActionMsg" :: remainAddress ->
             Action.jsAddressToMsg remainAddress val
                 |> Maybe.map GotActionMsg
+
+        "GotAction2Msg" :: remainAddress ->
+            Action2.jsAddressToMsg remainAddress val
+                |> Maybe.map GotAction2Msg
 
         "GotAuthTokenPhrase" :: _ ->
             Api.Graphql.decodeSignedPhrasePort SignedAuthTokenPhrase val

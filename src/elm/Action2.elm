@@ -1,6 +1,7 @@
-module Action2 exposing (Action, ClaimingStatus, ExternalMsg(..), Msg, ObjectiveId, completeObjectiveSelectionSet, encodeClaimAction, encodeObjectiveId, isClaimable, isPastDeadline, msgToString, notClaiming, objectiveIdFromInt, objectiveIdSelectionSet, objectiveIdToInt, selectionSet, update, updateAction, viewCard, viewClaimModal)
+module Action2 exposing (Action, ClaimingStatus, ExternalMsg(..), Msg, ObjectiveId, completeObjectiveSelectionSet, encodeClaimAction, encodeObjectiveId, isClaimable, isPastDeadline, jsAddressToMsg, msgToString, notClaiming, objectiveIdFromInt, objectiveIdSelectionSet, objectiveIdToInt, selectionSet, update, updateAction, viewCard, viewClaimModal)
 
 import Auth
+import Browser.Dom
 import Cambiatus.Enum.Permission as Permission exposing (Permission)
 import Cambiatus.Enum.VerificationType as VerificationType exposing (VerificationType)
 import Cambiatus.Mutation
@@ -23,6 +24,7 @@ import Html.Attributes exposing (alt, class, classList, disabled, id, src, tabin
 import Html.Attributes.Aria exposing (ariaHidden)
 import Html.Events exposing (onClick)
 import Icons
+import Json.Decode
 import Json.Encode
 import Markdown exposing (Markdown)
 import Profile
@@ -30,6 +32,7 @@ import RemoteData exposing (RemoteData)
 import Route
 import Session.Shared exposing (Shared)
 import Sha256
+import Task
 import Time
 import Time.Extra
 import Translation
@@ -114,6 +117,7 @@ type Msg
     = NoOp
     | ClickedClaimAction Action
     | ClickedShareAction Action
+    | CopiedShareLinkToClipboard Int
     | GotClaimingActionMsg ClaimingActionMsg
 
 
@@ -160,7 +164,6 @@ update msg status loggedIn =
         ClickedShareAction action ->
             let
                 sharePort =
-                    -- TODO - Add port listener
                     if loggedIn.shared.canShare then
                         { responseAddress = msg
                         , responseData = Json.Encode.null
@@ -194,6 +197,20 @@ update msg status loggedIn =
             in
             UR.init status
                 |> UR.addPort sharePort
+
+        CopiedShareLinkToClipboard actionId ->
+            status
+                |> UR.init
+                |> UR.addExt
+                    (ShowFeedback
+                        (View.Feedback.Visible View.Feedback.Success
+                            (loggedIn.shared.translators.t "copied_to_clipboard")
+                        )
+                    )
+                |> UR.addCmd
+                    (Browser.Dom.focus (shareActionButtonId actionId)
+                        |> Task.attempt (\_ -> NoOp)
+                    )
 
         ClickedClaimAction action ->
             let
@@ -285,7 +302,6 @@ updateClaimingAction msg action proof loggedIn =
             UR.init NotClaiming
 
         ConfirmedClaimAction ->
-            -- TODO - Add port listener
             UR.init status
                 -- TODO - ErrorMsg?
                 --     { successMsg = msg, errorMsg = ClickedCloseClaimModal }
@@ -313,7 +329,6 @@ updateClaimingAction msg action proof loggedIn =
                 |> withPrivateKey [ Permission.Claim ]
 
         ConfirmedClaimActionWithPhotoProof { photoProofUrl, proofCode } ->
-            -- TODO - Add port listener
             let
                 claimPort maybeProofCode =
                     { responseAddress = GotClaimingActionMsg msg
@@ -1096,8 +1111,94 @@ objectiveIdFromInt id =
     ObjectiveId id
 
 
+jsAddressToMsg : List String -> Json.Encode.Value -> Maybe Msg
+jsAddressToMsg addr val =
+    let
+        decodeConfirmedClaimAction =
+            Json.Decode.decodeValue (Json.Decode.field "transactionId" Json.Decode.string) val
+                |> Result.map (\_ -> ())
+                |> Result.mapError (\_ -> val)
+                |> CompletedClaimingAction
+                |> GotClaimingActionMsg
+                |> Just
+    in
+    case addr of
+        "ClickedShareAction" :: _ ->
+            case
+                Json.Decode.decodeValue
+                    (Json.Decode.map2
+                        (\hasCopied actionId ->
+                            if hasCopied then
+                                Just actionId
+
+                            else
+                                Nothing
+                        )
+                        (Json.Decode.field "copied" Json.Decode.bool)
+                        (Json.Decode.field "addressData" Json.Decode.int)
+                    )
+                    val
+            of
+                Ok (Just actionId) ->
+                    Just (CopiedShareLinkToClipboard actionId)
+
+                Ok Nothing ->
+                    Just NoOp
+
+                Err _ ->
+                    Just NoOp
+
+        "ClickedClaimAction" :: _ ->
+            Json.Decode.decodeValue (Json.Decode.field "uint64name" Json.Decode.string) val
+                |> Result.map (GotUint64Name >> GotClaimingActionMsg)
+                |> Result.toMaybe
+
+        "GotClaimingActionMsg" :: "ConfirmedClaimAction" :: _ ->
+            decodeConfirmedClaimAction
+
+        "GotClaimingActionMsg" :: "ConfirmedClaimActionWithPhotoProof" :: _ ->
+            decodeConfirmedClaimAction
+
+        _ ->
+            Nothing
+
+
 msgToString : Msg -> List String
 msgToString msg =
     case msg of
-        _ ->
-            [ "TODO" ]
+        NoOp ->
+            [ "NoOp" ]
+
+        ClickedClaimAction _ ->
+            [ "ClickedClaimAction" ]
+
+        ClickedShareAction _ ->
+            [ "ClickedShareAction" ]
+
+        CopiedShareLinkToClipboard _ ->
+            [ "CopiedShareLinkToClipboard" ]
+
+        GotClaimingActionMsg subMsg ->
+            "GotClaimingActionMsg" :: claimingActionMsgToString subMsg
+
+
+claimingActionMsgToString : ClaimingActionMsg -> List String
+claimingActionMsgToString msg =
+    case msg of
+        ClickedCloseClaimModal ->
+            [ "ClickedCloseClaimModal" ]
+
+        ConfirmedClaimAction ->
+            [ "ConfirmedClaimAction" ]
+
+        ConfirmedClaimActionWithPhotoProof _ ->
+            [ "ConfirmedClaimActionWithPhotoProof" ]
+
+        GotPhotoProofFormMsg subMsg ->
+            "GotPhotoProofFormMsg" :: Form.msgToString subMsg
+
+        GotUint64Name _ ->
+            [ "GotUint64Name" ]
+
+        CompletedClaimingAction r ->
+            [ "CompletedClaimingAction", UR.resultToString r ]
