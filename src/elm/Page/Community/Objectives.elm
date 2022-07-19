@@ -131,6 +131,7 @@ type Msg
     | GotObjectiveSummaryHeight Community.Objective (Result Browser.Dom.Error Browser.Dom.Element)
     | GotVisibleActionViewport { objectiveId : Action.ObjectiveId, actionId : Int } (Result Browser.Dom.Error Browser.Dom.Viewport)
     | ClickedScrollToAction Action
+    | GotActionMsg Action.Msg
     | ClickedShareAction Action
     | ClickedClaimAction { position : Int, action : Action }
     | ClickedCloseClaimModal
@@ -423,6 +424,10 @@ update msg model loggedIn =
                             , ( "targetId", Encode.string (actionCardId action) )
                             ]
                     }
+
+        GotActionMsg subMsg ->
+            UR.init model
+                |> UR.addExt (LoggedIn.ExternalActionMsg subMsg)
 
         ClickedShareAction action ->
             let
@@ -1252,7 +1257,7 @@ viewObjective loggedIn model objective =
 
                                         -- , onShare = ClickedShareAction action
                                         -- , onClaim = ClickedClaimAction { position = index + 1, action = action }
-                                        , toMsg = \_ -> NoOp
+                                        , toMsg = GotActionMsg
                                         }
                                         action
                                 )
@@ -1675,6 +1680,9 @@ msgToString msg =
 
         ClickedScrollToAction _ ->
             [ "ClickedScrollToAction" ]
+
+        GotActionMsg subMsg ->
+            "GotActionMsg" :: Action.msgToString subMsg
 
         ClickedShareAction _ ->
             [ "ClickedShareAction" ]

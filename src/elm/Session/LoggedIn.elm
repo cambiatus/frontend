@@ -1338,6 +1338,7 @@ type External msg
     | ShowFeedback Feedback.Status String
     | HideFeedback
     | ShowCodeOfConductModal
+    | ExternalActionMsg Action2.Msg
 
 
 {-| Perform a GraphQL query. This function is preferred over `Api.Graphql.query`
@@ -1759,6 +1760,9 @@ mapExternal mapFn msg =
         ShowCodeOfConductModal ->
             ShowCodeOfConductModal
 
+        ExternalActionMsg subMsg ->
+            ExternalActionMsg subMsg
+
 
 type Resource
     = CommunityResource
@@ -1972,6 +1976,9 @@ updateExternal externalMsg ({ shared } as model) =
 
         ShowCodeOfConductModal ->
             { defaultResult | model = { model | codeOfConductModalStatus = CodeOfConductShown } }
+
+        ExternalActionMsg subMsg ->
+            { defaultResult | cmd = Utils.spawnMessage (GotAction2Msg subMsg) }
 
 
 type alias UpdateResult msg =
@@ -3431,3 +3438,6 @@ externalMsgToString externalMsg =
 
         ShowCodeOfConductModal ->
             [ "ShowCodeOfConductModal" ]
+
+        ExternalActionMsg subMsg ->
+            "ExternalActionMsg" :: Action2.msgToString subMsg
