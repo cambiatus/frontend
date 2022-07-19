@@ -2,7 +2,6 @@ module Auth exposing
     ( ExternalMsg(..)
     , Model
     , Msg
-    , hasPrivateKey
     , init
     , jsAddressToMsg
     , maybePrivateKey
@@ -126,16 +125,6 @@ initPinModel lastKnownPin pinVisibility status =
 type Status
     = WithoutPrivateKey
     | WithPrivateKey Eos.PrivateKey
-
-
-hasPrivateKey : Model -> Bool
-hasPrivateKey model =
-    case model.status of
-        WithPrivateKey _ ->
-            True
-
-        WithoutPrivateKey ->
-            False
 
 
 removePrivateKey : Model -> Model

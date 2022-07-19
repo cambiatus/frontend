@@ -1650,10 +1650,6 @@ jsAddressToMsg address val =
             Maybe.map GotCommunityAboutMsg
                 (CommunityAbout.jsAddressToMsg rAddress val)
 
-        "GotCommunityObjectivesMsg" :: rAddress ->
-            Maybe.map GotCommunityObjectivesMsg
-                (CommunityObjectives.jsAddressToMsg rAddress val)
-
         "GotCommunityEditorMsg" :: rAddress ->
             Maybe.map GotCommunityEditorMsg
                 (CommunityEditor.jsAddressToMsg rAddress val)

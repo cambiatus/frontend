@@ -1,4 +1,24 @@
-module Action2 exposing (Action, ClaimingStatus, ExternalMsg(..), Msg, ObjectiveId, completeObjectiveSelectionSet, encodeClaimAction, encodeObjectiveId, isClaimable, isPastDeadline, jsAddressToMsg, msgToString, notClaiming, objectiveIdFromInt, objectiveIdSelectionSet, objectiveIdToInt, selectionSet, update, updateAction, viewCard, viewClaimModal)
+module Action2 exposing
+    ( Action
+    , ClaimingStatus
+    , ExternalMsg(..)
+    , Msg
+    , ObjectiveId
+    , completeObjectiveSelectionSet
+    , encodeObjectiveId
+    , isPastDeadline
+    , jsAddressToMsg
+    , msgToString
+    , notClaiming
+    , objectiveIdFromInt
+    , objectiveIdSelectionSet
+    , objectiveIdToInt
+    , selectionSet
+    , update
+    , updateAction
+    , viewCard
+    , viewClaimModal
+    )
 
 import Auth
 import Browser.Dom
@@ -457,7 +477,7 @@ updateClaimingAction msg action proof loggedIn =
                         |> UR.logImpossible (GotClaimingActionMsg msg)
                             "Completed claiming action, but community wasn't loaded"
                             (Just loggedIn.accountName)
-                            { moduleName = "Page.Community.Objectives", function = "update" }
+                            { moduleName = "Action2", function = "updateClaimingAction" }
                             []
                         |> UR.addCmd
                             (Eos.Account.nameToString loggedIn.accountName
@@ -473,7 +493,7 @@ updateClaimingAction msg action proof loggedIn =
                 |> UR.logJsonValue (GotClaimingActionMsg msg)
                     (Just loggedIn.accountName)
                     "Got an error when claiming an action"
-                    { moduleName = "Page.Community.Objectives", function = "update" }
+                    { moduleName = "Action2", function = "updateClaimingAction" }
                     []
                     val
 
@@ -526,12 +546,12 @@ viewCard loggedIn { containerAttrs, sideIcon, toMsg } action =
                         ]
                     , span
                         [ class "font-bold text-sm text-gray-900 uppercase block mt-6"
-                        , Html.Attributes.Aria.ariaHidden True
+                        , ariaHidden True
                         ]
                         [ text <| t "community.objectives.reward" ]
                     , div
                         [ class "mt-1 text-green font-bold"
-                        , Html.Attributes.Aria.ariaHidden True
+                        , ariaHidden True
                         ]
                         [ span [ class "text-2xl mr-1" ]
                             [ text

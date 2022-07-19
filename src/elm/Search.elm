@@ -564,7 +564,7 @@ type alias LoggedIn loggedIn community =
 
 
 type alias Community community =
-    { community | symbol : Eos.Symbol }
+    { community | symbol : Symbol }
 
 
 viewSearchBody :

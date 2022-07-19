@@ -30,7 +30,6 @@ module Session.LoggedIn exposing
     , withPrivateKey
     )
 
-import Action
 import Action2
 import Api.Graphql
 import Auth
@@ -204,7 +203,6 @@ subscriptions : Model -> Sub (Msg externalMsg)
 subscriptions model =
     Sub.batch
         [ Sub.map GotSearchMsg Search.subscriptions
-        , Sub.map GotActionMsg (Action.subscriptions model.claimingAction)
         , Time.every model.updateTimeEvery GotTimeInternal
         , if model.showUserNav then
             Utils.escSubscription (ShowUserNav False)
@@ -247,7 +245,6 @@ type alias Model =
     , showCommunitySelector : Bool
     , feedback : Feedback.Model
     , searchModel : Search.Model
-    , claimingAction : Action.Model
     , action2 : Action2.ClaimingStatus
     , authToken : Maybe Api.Graphql.Token
     , hasSeenDashboard : Bool
@@ -292,7 +289,6 @@ initModel shared lastKnownPin maybePrivateKey_ accountName authToken =
       , unreadCount = 0
       , feedback = Feedback.Hidden
       , searchModel = Search.init
-      , claimingAction = Action.init
       , action2 = Action2.notClaiming
       , authToken = authToken
       , hasSeenDashboard = False
@@ -496,8 +492,6 @@ viewHelper pageMsg page profile_ ({ shared } as model) content =
                     |> Html.map pageMsg
                , viewCommunityContactsModal model
                     |> Html.map pageMsg
-               , Action.viewClaimConfirmation shared.translators model.claimingAction
-                    |> Html.map (GotActionMsg >> pageMsg)
                , Action2.viewClaimModal model.shared { position = Nothing } model.action2
                     |> Html.map (GotAction2Msg >> pageMsg)
                , viewAuthModal pageMsg model
@@ -1107,9 +1101,6 @@ codeOfConductModal model =
 viewMainMenu : Page -> Model -> Html (Msg externalMsg)
 viewMainMenu page model =
     let
-        closeClaimWithPhoto =
-            GotActionMsg Action.ClaimConfirmationClosed
-
         menuItem title route =
             a
                 [ class "text-center uppercase py-2 hover:text-orange-300 focus-ring focus-visible:ring-orange-300 focus-visible:ring-opacity-50 rounded-sm"
@@ -1118,7 +1109,6 @@ viewMainMenu page model =
                     , ( "text-gray-900", not (isActive page route) )
                     ]
                 , Route.href route
-                , onClick closeClaimWithPhoto
                 ]
                 [ text (model.shared.translators.t title) ]
 
@@ -1319,7 +1309,6 @@ codeOfConductUrl language =
 type External msg
     = UpdatedLoggedIn Model
     | DropFromRouteHistoryWhile (Route -> Bool)
-    | SetUpdateTimeEvery Float
     | ShowInsufficientPermissionsModal
     | AddedCommunity Profile.CommunityInfo
     | ExternalBroadcast BroadcastMsg
@@ -1598,14 +1587,8 @@ mapMsg mapFn msg =
         GotSearchMsg subMsg ->
             GotSearchMsg subMsg
 
-        GotActionMsg subMsg ->
-            GotActionMsg subMsg
-
         GotAction2Msg subMsg ->
             GotAction2Msg subMsg
-
-        SearchClosed ->
-            SearchClosed
 
         ClickedProfileIcon ->
             ClickedProfileIcon
@@ -1697,9 +1680,6 @@ mapExternal mapFn msg =
         DropFromRouteHistoryWhile dropFn ->
             DropFromRouteHistoryWhile dropFn
 
-        SetUpdateTimeEvery n ->
-            SetUpdateTimeEvery n
-
         ShowInsufficientPermissionsModal ->
             ShowInsufficientPermissionsModal
 
@@ -1789,9 +1769,6 @@ updateExternal externalMsg ({ shared } as model) =
 
         DropFromRouteHistoryWhile dropFn ->
             { defaultResult | model = { model | routeHistory = List.dropWhile dropFn model.routeHistory } }
-
-        SetUpdateTimeEvery n ->
-            { defaultResult | model = { model | updateTimeEvery = n } }
 
         ShowInsufficientPermissionsModal ->
             { defaultResult | model = { model | showInsufficientPermissionsModal = True } }
@@ -2025,9 +2002,7 @@ type Msg externalMsg
     | SelectedCommunity Profile.CommunityInfo
     | GotFeedbackMsg Feedback.Msg
     | GotSearchMsg Search.Msg
-    | GotActionMsg Action.Msg
     | GotAction2Msg Action2.Msg
-    | SearchClosed
     | ClickedProfileIcon
     | GotTimeInternal Time.Posix
     | CompletedLoadContributionCount (RemoteData (Graphql.Http.Error (Maybe Int)) (Maybe Int))
@@ -2074,9 +2049,6 @@ update msg model =
             UR.init { model | shared = { shared | now = time } }
                 |> UR.addExt (GotTime time |> Broadcast)
 
-        GotActionMsg actionMsg ->
-            handleActionMsg model actionMsg
-
         GotAction2Msg subMsg ->
             Action2.update subMsg model.action2 model
                 |> UR.fromChild (\newAction2 -> { model | action2 = newAction2 })
@@ -2097,10 +2069,6 @@ update msg model =
                                 UR.mapModel (\m -> { m | showInsufficientPermissionsModal = True })
                     )
                     model
-
-        SearchClosed ->
-            { model | searchModel = Search.closeSearch model.searchModel }
-                |> UR.init
 
         ClickedProfileIcon ->
             { closeAllModals | searchModel = Search.closeSearch model.searchModel }
@@ -2476,22 +2444,9 @@ update msg model =
                     (\extMsg uResult ->
                         case extMsg of
                             Auth.CompletedAuth accountName auth ->
-                                let
-                                    sendActionMsg =
-                                        case model.claimingAction.status of
-                                            Action.ClaimInProgress action maybeProof ->
-                                                -- If action claim is in progress,
-                                                -- send a message to finish the claiming process
-                                                -- when the user confirms the PIN.
-                                                UR.addMsg (GotActionMsg (Action.ActionClaimed action maybeProof))
-
-                                            _ ->
-                                                identity
-                                in
                                 closeModal uResult
                                     |> UR.mapModel (\m -> { m | auth = auth })
                                     |> UR.addExt AuthenticationSucceed
-                                    |> sendActionMsg
                                     |> UR.addExt RunAfterPrivateKeyCallbacks
                                     |> UR.addBreadcrumb
                                         { type_ = Log.DefaultBreadcrumb
@@ -2887,33 +2842,6 @@ update msg model =
                 |> UR.init
 
 
-handleActionMsg : Model -> Action.Msg -> UpdateResult msg
-handleActionMsg model actionMsg =
-    case model.selectedCommunity of
-        RemoteData.Success community ->
-            Action.update model community.symbol actionMsg model.claimingAction
-                |> UR.fromChild (\actionModel -> { model | claimingAction = actionModel })
-                    GotActionMsg
-                    (\ext ->
-                        case ext of
-                            Action.SentFeedback feedback ->
-                                UR.mapModel (\prevModel -> { prevModel | feedback = feedback })
-
-                            Action.ShowInsufficientPermissions ->
-                                UR.mapModel (\prevModel -> { prevModel | showInsufficientPermissionsModal = True })
-
-                            Action.AskedAuthentication ->
-                                UR.mapModel askedAuthentication
-
-                            Action.FinishedClaimProcess ->
-                                UR.addMsg SearchClosed
-                    )
-                    model
-
-        _ ->
-            UR.init model
-
-
 {-| Checks if we already have the user's private key loaded. If it does, returns
 `successfulUR`. If it doesn't, requires authentication and fires the `subMsg`
 again. Necessary to perform EOS transactions
@@ -3230,10 +3158,6 @@ jsAddressToMsg addr val =
                 |> Result.map ReceivedNewHighlightedNews
                 |> Result.toMaybe
 
-        "GotActionMsg" :: remainAddress ->
-            Action.jsAddressToMsg remainAddress val
-                |> Maybe.map GotActionMsg
-
         "GotAction2Msg" :: remainAddress ->
             Action2.jsAddressToMsg remainAddress val
                 |> Maybe.map GotAction2Msg
@@ -3257,17 +3181,11 @@ msgToString msg =
         GotTimeInternal _ ->
             [ "GotTimeInternal" ]
 
-        SearchClosed ->
-            [ "SearchClosed" ]
-
         ClickedProfileIcon ->
             [ "ClickedProfileIcon" ]
 
         GotSearchMsg _ ->
             [ "GotSearchMsg" ]
-
-        GotActionMsg actionMsg ->
-            "GotActionMsg" :: Action.msgToString actionMsg
 
         GotAction2Msg subMsg ->
             "GotAction2Msg" :: Action2.msgToString subMsg
@@ -3395,9 +3313,6 @@ externalMsgToString externalMsg =
 
         DropFromRouteHistoryWhile _ ->
             [ "PopFromRouteHistory" ]
-
-        SetUpdateTimeEvery _ ->
-            [ "SetUpdateTimeEvery" ]
 
         ShowInsufficientPermissionsModal ->
             [ "ShowInsufficientPermissionsModal" ]
