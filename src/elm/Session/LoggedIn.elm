@@ -409,26 +409,6 @@ viewHelper : (Msg pageMsg -> pageMsg) -> Page -> Profile.Model -> Model -> Html 
 viewHelper pageMsg page profile_ ({ shared } as model) content =
     let
         mainView =
-            -- case ( Search.isActive model.searchModel, model.claimingAction.status ) of
-            --     ( True, _ ) ->
-            --         case model.selectedCommunity of
-            --             RemoteData.Success community ->
-            --                 [ Search.viewSearchBody
-            --                     shared.translators
-            --                     community.symbol
-            --                     shared.now
-            --                     (GotSearchMsg >> pageMsg)
-            --                     (GotActionMsg >> pageMsg)
-            --                     model.searchModel
-            --                 ]
-            --             _ ->
-            --                 []
-            --     ( False, Action.PhotoUploaderShowed action p ) ->
-            --         viewClaimWithProofs action p False
-            --     ( False, Action.ClaimInProgress action (Just p) ) ->
-            --         viewClaimWithProofs action p.proof True
-            --     _ ->
-            --         viewPageBody model profile_ page content
             if Search.isActive model.searchModel then
                 case model.selectedCommunity of
                     RemoteData.Success community ->
