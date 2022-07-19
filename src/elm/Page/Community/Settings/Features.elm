@@ -1,5 +1,6 @@
 module Page.Community.Settings.Features exposing (Model, Msg, init, jsAddressToMsg, msgToString, receiveBroadcast, update, view)
 
+import Browser.Dom
 import Cambiatus.Mutation
 import Community
 import Dict
@@ -18,6 +19,7 @@ import Page
 import Ports
 import RemoteData
 import Session.LoggedIn as LoggedIn exposing (External(..))
+import Task
 import UpdateResult as UR
 import View.Feedback as Feedback
 
@@ -25,7 +27,11 @@ import View.Feedback as Feedback
 init : LoggedIn.Model -> ( Model, Cmd Msg )
 init loggedIn =
     ( initModel
-    , LoggedIn.maybeInitWith CompletedLoadCommunity .selectedCommunity loggedIn
+    , Cmd.batch
+        [ LoggedIn.maybeInitWith CompletedLoadCommunity .selectedCommunity loggedIn
+        , Browser.Dom.setViewport 0 0
+            |> Task.perform (\_ -> NoOp)
+        ]
     )
 
 
