@@ -526,6 +526,7 @@
     },
     "objectives": {
       "title": "Objectives",
+      "disabled_objectives_description": "The community objectives are disabled",
       "earn": "Earn",
       "complete_actions": "Complete actions the community has traced and earn",
       "objectives_and": "Objectives and",

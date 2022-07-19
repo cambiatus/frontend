@@ -530,6 +530,7 @@
     },
     "objectives": {
       "title": "Objectius",
+      "disabled_objectives_description": "Els objectius comunitaris estan desactivats",
       "earn": "Guanyar",
       "complete_actions": "Completa les accions que la comunitat ha traçat i guanya",
       "objectives_and": "Objectius i",

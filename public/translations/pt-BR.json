@@ -534,6 +534,7 @@
     },
     "objectives": {
       "title": "Objetivos",
+      "not_found_description": "Os objetivos da habilidade estão desabilitados",
       "earn": "Ganhe",
       "complete_actions": "Complete ações que a comunidade traçou e ganhe",
       "objectives_and": "Objetivos e",

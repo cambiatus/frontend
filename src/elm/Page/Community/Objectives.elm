@@ -853,184 +853,18 @@ update msg model loggedIn =
 view : LoggedIn.Model -> Model -> { title : String, content : Html Msg }
 view loggedIn model =
     let
-        { t, tr } =
-            loggedIn.shared.translators
-
         title =
-            t "community.objectives.title"
+            loggedIn.shared.translators.t "community.objectives.title"
     in
     { title = title
     , content =
         case loggedIn.selectedCommunity of
             RemoteData.Success community ->
-                div [ class "container mx-auto px-4 pt-8 mb-20" ]
-                    [ h1
-                        [ class "lg:w-2/3 lg:mx-auto"
-                        , ariaLabel (t "community.objectives.earn" ++ " " ++ Eos.symbolToSymbolCodeString community.symbol)
-                        ]
-                        [ span [ ariaHidden True ] [ text <| t "community.objectives.earn" ]
-                        , text " "
-                        , span [ class "font-bold", ariaHidden True ]
-                            [ text (Eos.symbolToSymbolCodeString community.symbol) ]
-                        ]
-                    , div [ class "mt-4 bg-white rounded relative lg:w-2/3 lg:mx-auto" ]
-                        [ p
-                            [ class "p-4"
-                            ]
-                            [ span [ class "sr-only" ] [ text <| t "community.objectives.complete_actions" ++ " " ++ Eos.symbolToSymbolCodeString community.symbol ]
-                            , span [ ariaHidden True ] [ text <| t "community.objectives.complete_actions" ]
-                            , text " "
-                            , b [ ariaHidden True ] [ text (Eos.symbolToSymbolCodeString community.symbol) ]
-                            ]
-                        , img
-                            [ src "/images/doggo_holding_coins.svg"
-                            , alt ""
-                            , class "absolute right-1 top-0 -translate-y-2/3"
-                            ]
-                            []
-                        ]
-                    , h2
-                        [ class "mt-6 lg:w-2/3 lg:mx-auto"
-                        , ariaLabel (t "community.objectives.objectives_and" ++ " " ++ t "community.objectives.actions")
-                        ]
-                        [ span [ ariaHidden True ] [ text <| t "community.objectives.objectives_and" ]
-                        , text " "
-                        , span [ class "font-bold", ariaHidden True ] [ text <| t "community.objectives.actions" ]
-                        ]
-                    , case community.objectives of
-                        RemoteData.Success objectives ->
-                            let
-                                filteredObjectives =
-                                    List.filter (\objective -> not objective.isCompleted)
-                                        objectives
-                            in
-                            div []
-                                [ if List.isEmpty filteredObjectives then
-                                    div [ class "lg:w-1/2 xl:w-1/3 lg:mx-auto flex flex-col items-center pt-4 pb-6" ]
-                                        [ img [ src "/images/doggo-laying-down.svg", alt (t "community.objectives.empty_dog_alt") ] []
-                                        , p [ class "mt-4 text-black font-bold" ]
-                                            [ text <| t "community.objectives.empty_title"
-                                            ]
-                                        , p [ class "text-center mt-4" ]
-                                            [ text <| t "community.objectives.empty_objectives_line_1"
-                                            , br [] []
-                                            , br [] []
-                                            , text <| t "community.objectives.empty_objectives_line_2"
-                                            ]
-                                        ]
+                if community.hasObjectives then
+                    viewPage loggedIn community model
 
-                                  else
-                                    ul [ class "space-y-4 mt-4" ]
-                                        (List.map
-                                            (viewObjective loggedIn.shared.translators model)
-                                            filteredObjectives
-                                        )
-                                , intersectionObserver
-                                    { targetSelectors =
-                                        filteredObjectives
-                                            |> List.filter (\objective -> List.member objective.id (AssocList.keys model.shownObjectives))
-                                            |> List.concatMap .actions
-                                            |> List.filterMap
-                                                (\action ->
-                                                    if action.isCompleted then
-                                                        Nothing
-
-                                                    else
-                                                        Just ("#" ++ actionCardId action)
-                                                )
-                                    , threshold = 0.01
-                                    , breakpointToExclude = Just View.Components.Lg
-                                    , onStartedIntersecting = Just StartedIntersecting
-                                    , onStoppedIntersecting = Just StoppedIntersecting
-                                    }
-                                , if not loggedIn.shared.canShare then
-                                    Form.Text.view
-                                        (Form.Text.init
-                                            { label = ""
-                                            , id = "share-fallback-input"
-                                            }
-                                            |> Form.Text.withExtraAttrs
-                                                [ class "absolute opacity-0 left-[-9999em]"
-                                                , tabindex -1
-                                                , ariaHidden True
-                                                ]
-                                            |> Form.Text.withContainerAttrs [ class "mb-0 overflow-hidden" ]
-                                            |> Form.Text.withInputElement (Form.Text.TextareaInput { submitOnEnter = False })
-                                        )
-                                        { onChange = \_ -> NoOp
-                                        , onBlur = NoOp
-                                        , value =
-                                            case model.sharingAction of
-                                                Nothing ->
-                                                    Url.toString loggedIn.shared.url
-
-                                                Just sharingAction ->
-                                                    tr
-                                                        "community.objectives.share_action"
-                                                        [ ( "community_name", community.name )
-                                                        , ( "objective_description", Markdown.toRawString sharingAction.objective.description )
-                                                        , ( "action_description", Markdown.toRawString sharingAction.description )
-                                                        , ( "url"
-                                                          , Route.WithObjectiveSelected
-                                                                { id = Action.objectiveIdToInt sharingAction.objective.id
-                                                                , action = Just sharingAction.id
-                                                                }
-                                                                |> Route.CommunityObjectives
-                                                                |> Route.addRouteToUrl loggedIn.shared
-                                                                |> Url.toString
-                                                          )
-                                                        ]
-                                        , error = text ""
-                                        , hasError = False
-                                        , translators = loggedIn.shared.translators
-                                        , isRequired = False
-                                        }
-
-                                  else
-                                    text ""
-                                , viewClaimModal loggedIn.shared model
-                                ]
-
-                        RemoteData.Loading ->
-                            ul [ class "space-y-4 mt-4" ]
-                                (List.range 0 4
-                                    |> List.map (\_ -> li [ class "bg-white py-10 rounded animate-skeleton-loading lg:w-2/3 lg:mx-auto" ] [])
-                                )
-
-                        RemoteData.NotAsked ->
-                            ul [ class "space-y-4 mt-4" ]
-                                (List.range 0 4
-                                    |> List.map (\_ -> li [ class "bg-white py-10 rounded animate-skeleton-loading lg:w-2/3 lg:mx-auto" ] [])
-                                )
-
-                        RemoteData.Failure _ ->
-                            div [ class "mt-4 bg-white rounded py-6 px-4 flex flex-col items-center lg:w-2/3 lg:mx-auto" ]
-                                [ img
-                                    [ alt ""
-                                    , src "/images/not_found.svg"
-                                    , class "max-h-40"
-                                    ]
-                                    []
-                                , p [ class "text-center mt-4" ]
-                                    [ text <| t "community.objectives.error_loading" ]
-                                ]
-                    , div [ class "bg-white rounded p-4 pb-6 relative mt-18 lg:w-2/3 lg:mx-auto" ]
-                        [ p [ class "text-center mt-2" ] [ text <| t "community.objectives.visit_community_page" ]
-                        , a
-                            [ Route.href Route.CommunityAbout
-                            , class "button button-secondary w-full mt-4"
-                            ]
-                            [ text <| t "community.objectives.go_to_community_page" ]
-                        , div [ class "absolute top-0 left-0 w-full flex justify-center" ]
-                            [ img
-                                [ src "/images/success-doggo.svg"
-                                , alt ""
-                                , class "-translate-y-3/4"
-                                ]
-                                []
-                            ]
-                        ]
-                    ]
+                else
+                    Page.fullPageNotFound title (loggedIn.shared.translators.t "community.objectives.disabled_objectives_description")
 
             RemoteData.Loading ->
                 Page.fullPageLoading loggedIn.shared
@@ -1041,6 +875,182 @@ view loggedIn model =
             RemoteData.Failure err ->
                 Page.fullPageGraphQLError title err
     }
+
+
+viewPage : LoggedIn.Model -> Community.Model -> Model -> Html Msg
+viewPage loggedIn community model =
+    let
+        { t, tr } =
+            loggedIn.shared.translators
+    in
+    div [ class "container mx-auto px-4 pt-8 mb-20" ]
+        [ h1
+            [ class "lg:w-2/3 lg:mx-auto"
+            , ariaLabel (t "community.objectives.earn" ++ " " ++ Eos.symbolToSymbolCodeString community.symbol)
+            ]
+            [ span [ ariaHidden True ] [ text <| t "community.objectives.earn" ]
+            , text " "
+            , span [ class "font-bold", ariaHidden True ]
+                [ text (Eos.symbolToSymbolCodeString community.symbol) ]
+            ]
+        , div [ class "mt-4 bg-white rounded relative lg:w-2/3 lg:mx-auto" ]
+            [ p
+                [ class "p-4"
+                ]
+                [ span [ class "sr-only" ] [ text <| t "community.objectives.complete_actions" ++ " " ++ Eos.symbolToSymbolCodeString community.symbol ]
+                , span [ ariaHidden True ] [ text <| t "community.objectives.complete_actions" ]
+                , text " "
+                , b [ ariaHidden True ] [ text (Eos.symbolToSymbolCodeString community.symbol) ]
+                ]
+            , img
+                [ src "/images/doggo_holding_coins.svg"
+                , alt ""
+                , class "absolute right-1 top-0 -translate-y-2/3"
+                ]
+                []
+            ]
+        , h2
+            [ class "mt-6 lg:w-2/3 lg:mx-auto"
+            , ariaLabel (t "community.objectives.objectives_and" ++ " " ++ t "community.objectives.actions")
+            ]
+            [ span [ ariaHidden True ] [ text <| t "community.objectives.objectives_and" ]
+            , text " "
+            , span [ class "font-bold", ariaHidden True ] [ text <| t "community.objectives.actions" ]
+            ]
+        , case community.objectives of
+            RemoteData.Success objectives ->
+                let
+                    filteredObjectives =
+                        List.filter (\objective -> not objective.isCompleted)
+                            objectives
+                in
+                div []
+                    [ if List.isEmpty filteredObjectives then
+                        div [ class "lg:w-1/2 xl:w-1/3 lg:mx-auto flex flex-col items-center pt-4 pb-6" ]
+                            [ img [ src "/images/doggo-laying-down.svg", alt (t "community.objectives.empty_dog_alt") ] []
+                            , p [ class "mt-4 text-black font-bold" ]
+                                [ text <| t "community.objectives.empty_title"
+                                ]
+                            , p [ class "text-center mt-4" ]
+                                [ text <| t "community.objectives.empty_objectives_line_1"
+                                , br [] []
+                                , br [] []
+                                , text <| t "community.objectives.empty_objectives_line_2"
+                                ]
+                            ]
+
+                      else
+                        ul [ class "space-y-4 mt-4" ]
+                            (List.map
+                                (viewObjective loggedIn.shared.translators model)
+                                filteredObjectives
+                            )
+                    , intersectionObserver
+                        { targetSelectors =
+                            filteredObjectives
+                                |> List.filter (\objective -> List.member objective.id (AssocList.keys model.shownObjectives))
+                                |> List.concatMap .actions
+                                |> List.filterMap
+                                    (\action ->
+                                        if action.isCompleted then
+                                            Nothing
+
+                                        else
+                                            Just ("#" ++ actionCardId action)
+                                    )
+                        , threshold = 0.01
+                        , breakpointToExclude = Just View.Components.Lg
+                        , onStartedIntersecting = Just StartedIntersecting
+                        , onStoppedIntersecting = Just StoppedIntersecting
+                        }
+                    , if not loggedIn.shared.canShare then
+                        Form.Text.view
+                            (Form.Text.init
+                                { label = ""
+                                , id = "share-fallback-input"
+                                }
+                                |> Form.Text.withExtraAttrs
+                                    [ class "absolute opacity-0 left-[-9999em]"
+                                    , tabindex -1
+                                    , ariaHidden True
+                                    ]
+                                |> Form.Text.withContainerAttrs [ class "mb-0 overflow-hidden" ]
+                                |> Form.Text.withInputElement (Form.Text.TextareaInput { submitOnEnter = False })
+                            )
+                            { onChange = \_ -> NoOp
+                            , onBlur = NoOp
+                            , value =
+                                case model.sharingAction of
+                                    Nothing ->
+                                        Url.toString loggedIn.shared.url
+
+                                    Just sharingAction ->
+                                        tr
+                                            "community.objectives.share_action"
+                                            [ ( "community_name", community.name )
+                                            , ( "objective_description", Markdown.toRawString sharingAction.objective.description )
+                                            , ( "action_description", Markdown.toRawString sharingAction.description )
+                                            , ( "url"
+                                              , Route.WithObjectiveSelected
+                                                    { id = Action.objectiveIdToInt sharingAction.objective.id
+                                                    , action = Just sharingAction.id
+                                                    }
+                                                    |> Route.CommunityObjectives
+                                                    |> Route.addRouteToUrl loggedIn.shared
+                                                    |> Url.toString
+                                              )
+                                            ]
+                            , error = text ""
+                            , hasError = False
+                            , translators = loggedIn.shared.translators
+                            , isRequired = False
+                            }
+
+                      else
+                        text ""
+                    , viewClaimModal loggedIn.shared model
+                    ]
+
+            RemoteData.Loading ->
+                ul [ class "space-y-4 mt-4" ]
+                    (List.range 0 4
+                        |> List.map (\_ -> li [ class "bg-white py-10 rounded animate-skeleton-loading lg:w-2/3 lg:mx-auto" ] [])
+                    )
+
+            RemoteData.NotAsked ->
+                ul [ class "space-y-4 mt-4" ]
+                    (List.range 0 4
+                        |> List.map (\_ -> li [ class "bg-white py-10 rounded animate-skeleton-loading lg:w-2/3 lg:mx-auto" ] [])
+                    )
+
+            RemoteData.Failure _ ->
+                div [ class "mt-4 bg-white rounded py-6 px-4 flex flex-col items-center lg:w-2/3 lg:mx-auto" ]
+                    [ img
+                        [ alt ""
+                        , src "/images/not_found.svg"
+                        , class "max-h-40"
+                        ]
+                        []
+                    , p [ class "text-center mt-4" ]
+                        [ text <| t "community.objectives.error_loading" ]
+                    ]
+        , div [ class "bg-white rounded p-4 pb-6 relative mt-18 lg:w-2/3 lg:mx-auto" ]
+            [ p [ class "text-center mt-2" ] [ text <| t "community.objectives.visit_community_page" ]
+            , a
+                [ Route.href Route.CommunityAbout
+                , class "button button-secondary w-full mt-4"
+                ]
+                [ text <| t "community.objectives.go_to_community_page" ]
+            , div [ class "absolute top-0 left-0 w-full flex justify-center" ]
+                [ img
+                    [ src "/images/success-doggo.svg"
+                    , alt ""
+                    , class "-translate-y-3/4"
+                    ]
+                    []
+                ]
+            ]
+        ]
 
 
 viewObjective : Translation.Translators -> Model -> Community.Objective -> Html Msg
