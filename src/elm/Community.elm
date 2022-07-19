@@ -38,7 +38,7 @@ module Community exposing
     , symbolQuery
     )
 
-import Action exposing (Action)
+import Action2 as Action exposing (Action)
 import Cambiatus.Enum.ContributionStatusType
 import Cambiatus.Enum.CurrencyType
 import Cambiatus.Mutation as Mutation

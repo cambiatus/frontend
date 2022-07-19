@@ -1,8 +1,9 @@
-module Action2 exposing (Action, ClaimingStatus, ExternalMsg(..), Msg, msgToString, notClaiming, selectionSet, update, viewCard, viewClaimModal)
+module Action2 exposing (Action, ClaimingStatus, ExternalMsg(..), Msg, ObjectiveId, completeObjectiveSelectionSet, encodeClaimAction, encodeObjectiveId, isClaimable, isPastDeadline, msgToString, notClaiming, objectiveIdFromInt, objectiveIdSelectionSet, objectiveIdToInt, selectionSet, update, updateAction, viewCard, viewClaimModal)
 
 import Auth
 import Cambiatus.Enum.Permission as Permission exposing (Permission)
 import Cambiatus.Enum.VerificationType as VerificationType exposing (VerificationType)
+import Cambiatus.Mutation
 import Cambiatus.Object
 import Cambiatus.Object.Action
 import Cambiatus.Object.Community
@@ -14,6 +15,7 @@ import Form
 import Form.File
 import Form.Text
 import Graphql.Http
+import Graphql.Operation exposing (RootMutation)
 import Graphql.OptionalArgument as OptionalArgument
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet)
 import Html exposing (Html, button, div, h4, img, li, p, span, text)
@@ -926,6 +928,27 @@ communitySelectionSet =
         |> SelectionSet.with Cambiatus.Object.Community.name
 
 
+completeObjectiveSelectionSet : ObjectiveId -> SelectionSet decodesTo Cambiatus.Object.Objective -> SelectionSet (Maybe decodesTo) RootMutation
+completeObjectiveSelectionSet (ObjectiveId id) =
+    Cambiatus.Mutation.completeObjective { id = id }
+
+
+
+-- EOS
+
+
+updateAction : Eos.Account.Name -> Shared -> Action -> Eos.Action
+updateAction accountName shared action =
+    { accountName = shared.contracts.community
+    , name = "upsertaction"
+    , authorization =
+        { actor = accountName
+        , permissionName = Eos.Account.samplePermission
+        }
+    , data = encode action
+    }
+
+
 
 -- JSON
 
@@ -976,6 +999,54 @@ encodeClaimAction c =
         ]
 
 
+encodeObjectiveId : ObjectiveId -> Json.Encode.Value
+encodeObjectiveId (ObjectiveId id) =
+    Json.Encode.int id
+
+
+encode : Action -> Json.Encode.Value
+encode action =
+    let
+        makeAsset : Float -> Eos.Asset
+        makeAsset amount =
+            { symbol = action.objective.community.symbol, amount = amount }
+    in
+    Json.Encode.object
+        [ ( "community_id", Eos.encodeSymbol action.objective.community.symbol )
+        , ( "action_id", Json.Encode.int action.id )
+        , ( "objective_id", encodeObjectiveId action.objective.id )
+        , ( "description", Markdown.encode action.description )
+        , ( "reward", Eos.encodeAsset (makeAsset action.reward) )
+        , ( "verifier_reward", Eos.encodeAsset (makeAsset action.verifierReward) )
+        , ( "deadline"
+          , Utils.fromMaybeDateTime action.deadline
+                |> Time.posixToMillis
+                |> Json.Encode.int
+          )
+        , ( "usages", Json.Encode.int action.usages )
+        , ( "usages_left", Json.Encode.int action.usagesLeft )
+        , ( "verifications", Json.Encode.int action.verifications )
+        , ( "verification_type"
+          , action.verificationType
+                |> VerificationType.toString
+                |> String.toLower
+                |> Json.Encode.string
+          )
+        , ( "validators_str"
+          , action.validators
+                |> List.map (\v -> Eos.Account.nameToString v.account)
+                |> String.join "-"
+                |> Json.Encode.string
+          )
+        , ( "is_completed", Eos.encodeEosBool (Eos.boolToEosBool action.isCompleted) )
+        , ( "creator", Eos.Account.encodeName action.creator )
+        , ( "has_proof_photo", Eos.encodeEosBool (Eos.boolToEosBool action.hasProofPhoto) )
+        , ( "has_proof_code", Eos.encodeEosBool (Eos.boolToEosBool action.hasProofCode) )
+        , ( "photo_proof_instructions", Markdown.encode (Maybe.withDefault Markdown.empty action.photoProofInstructions) )
+        , ( "image", Json.Encode.string "" )
+        ]
+
+
 
 -- UTILS
 
@@ -983,6 +1054,16 @@ encodeClaimAction c =
 isClaimable : Action -> Bool
 isClaimable action =
     action.verificationType == VerificationType.Claimable
+
+
+isPastDeadline : Action -> Time.Posix -> Bool
+isPastDeadline action now =
+    case action.deadline of
+        Just _ ->
+            Time.posixToMillis now > Time.posixToMillis (Utils.fromMaybeDateTime action.deadline)
+
+        Nothing ->
+            False
 
 
 shareActionButtonId : Int -> String
@@ -1008,6 +1089,11 @@ generateProofCode action claimerAccountUint64 time =
 objectiveIdToInt : ObjectiveId -> Int
 objectiveIdToInt (ObjectiveId id) =
     id
+
+
+objectiveIdFromInt : Int -> ObjectiveId
+objectiveIdFromInt id =
+    ObjectiveId id
 
 
 msgToString : Msg -> List String

@@ -1,6 +1,6 @@
 module Page.Community.Settings.Objectives exposing (Model, Msg, init, msgToString, receiveBroadcast, update, view)
 
-import Action exposing (Action)
+import Action2 as Action exposing (Action)
 import Cambiatus.Enum.VerificationType as VerificationType
 import Community
 import Dict exposing (Dict)

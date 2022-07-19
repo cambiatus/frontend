@@ -1,6 +1,6 @@
 module Main exposing (main)
 
-import Action
+import Action2 as Action
 import Api.Graphql
 import Browser exposing (Document)
 import Browser.Navigation as Nav

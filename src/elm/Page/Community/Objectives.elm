@@ -1,6 +1,6 @@
 module Page.Community.Objectives exposing (Model, Msg, init, jsAddressToMsg, msgToString, receiveBroadcast, update, view)
 
-import Action exposing (Action, Msg(..))
+import Action2 as Action exposing (Action)
 import AssocList exposing (Dict)
 import Browser.Dom
 import Cambiatus.Enum.Permission as Permission
@@ -922,7 +922,7 @@ view loggedIn model =
                                   else
                                     ul [ class "space-y-4 mt-4" ]
                                         (List.map
-                                            (viewObjective loggedIn.shared.translators model)
+                                            (viewObjective loggedIn model)
                                             filteredObjectives
                                         )
                                 , intersectionObserver
@@ -1043,9 +1043,12 @@ view loggedIn model =
     }
 
 
-viewObjective : Translation.Translators -> Model -> Community.Objective -> Html Msg
-viewObjective translators model objective =
+viewObjective : LoggedIn.Model -> Model -> Community.Objective -> Html Msg
+viewObjective loggedIn model objective =
     let
+        { translators } =
+            loggedIn.shared
+
         filteredActions =
             List.filter (\action -> not action.isCompleted)
                 objective.actions
@@ -1232,7 +1235,7 @@ viewObjective translators model objective =
                             ]
                             (List.indexedMap
                                 (\index action ->
-                                    Action.viewCard translators
+                                    Action.viewCard loggedIn
                                         { containerAttrs =
                                             [ class "mb-6 snap-center snap-always animate-fade-in-from-above motion-reduce:animate-none"
                                             , classList [ ( "border border-green ring ring-green ring-opacity-30", isHighlighted ) ]
