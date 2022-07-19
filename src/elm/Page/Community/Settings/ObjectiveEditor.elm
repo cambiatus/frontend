@@ -1,6 +1,6 @@
 module Page.Community.Settings.ObjectiveEditor exposing (Model, Msg, initEdit, initNew, jsAddressToMsg, msgToString, receiveBroadcast, update, view)
 
-import Action2 as Action
+import Action
 import Cambiatus.Object
 import Cambiatus.Object.Objective as Objective
 import Community

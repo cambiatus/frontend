@@ -1,4 +1,4 @@
-module Action2 exposing
+module Action exposing
     ( Action
     , ClaimingStatus
     , ExternalMsg(..)
@@ -311,7 +311,7 @@ updateClaimingAction msg action proof loggedIn =
                     UR.logImpossible (GotClaimingActionMsg msg)
                         "Tried signing eos transaction, but profile wasn't loaded"
                         (Just loggedIn.accountName)
-                        { moduleName = "Action2"
+                        { moduleName = "Action"
                         , function = "updateClaimingAction"
                         }
                         []
@@ -479,7 +479,7 @@ updateClaimingAction msg action proof loggedIn =
                         |> UR.logImpossible (GotClaimingActionMsg msg)
                             "Completed claiming action, but community wasn't loaded"
                             (Just loggedIn.accountName)
-                            { moduleName = "Action2", function = "updateClaimingAction" }
+                            { moduleName = "Action", function = "updateClaimingAction" }
                             []
                         |> UR.addCmd
                             (Eos.Account.nameToString loggedIn.accountName
@@ -495,7 +495,7 @@ updateClaimingAction msg action proof loggedIn =
                 |> UR.logJsonValue (GotClaimingActionMsg msg)
                     (Just loggedIn.accountName)
                     "Got an error when claiming an action"
-                    { moduleName = "Action2", function = "updateClaimingAction" }
+                    { moduleName = "Action", function = "updateClaimingAction" }
                     []
                     val
 

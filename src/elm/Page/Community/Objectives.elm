@@ -1,6 +1,6 @@
 module Page.Community.Objectives exposing (Model, Msg, init, msgToString, receiveBroadcast, update, view)
 
-import Action2 as Action exposing (Action)
+import Action exposing (Action)
 import AssocList exposing (Dict)
 import Browser.Dom
 import Community

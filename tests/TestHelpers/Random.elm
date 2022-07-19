@@ -17,7 +17,7 @@ module TestHelpers.Random exposing
     , updateTokenData
     )
 
-import Action2 as Action
+import Action
 import Avatar
 import Cambiatus.Enum.VerificationType as VerificationType
 import Cambiatus.Scalar

@@ -9,7 +9,7 @@ module Page.Community.Settings.ActionEditor exposing
     , view
     )
 
-import Action2 as Action exposing (Action)
+import Action exposing (Action)
 import Cambiatus.Enum.VerificationType as VerificationType
 import Cambiatus.Scalar exposing (DateTime(..))
 import Community

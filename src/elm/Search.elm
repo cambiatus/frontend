@@ -15,7 +15,7 @@ module Search exposing
     , viewSearchBody
     )
 
-import Action2 exposing (Action)
+import Action exposing (Action)
 import Auth
 import Avatar
 import Browser.Dom as Dom
@@ -139,7 +139,7 @@ searchResultSelectionSet queryString =
             }
         )
         |> with (Cambiatus.Object.SearchResult.products (\_ -> { query = Present queryString }) Shop.productSelectionSet)
-        |> with (Cambiatus.Object.SearchResult.actions (\_ -> { query = Present queryString }) Action2.selectionSet)
+        |> with (Cambiatus.Object.SearchResult.actions (\_ -> { query = Present queryString }) Action.selectionSet)
         |> with
             (Cambiatus.Object.SearchResult.members
                 (\_ ->
@@ -572,7 +572,7 @@ viewSearchBody :
     -> Symbol
     -> Posix
     -> (Msg -> parentMsg)
-    -> (Action2.Msg -> parentMsg)
+    -> (Action.Msg -> parentMsg)
     -> Model
     -> Html parentMsg
 viewSearchBody loggedIn selectedCommunity today searchToMsg actionToMsg searchModel =
@@ -607,7 +607,7 @@ viewSearchBody loggedIn selectedCommunity today searchToMsg actionToMsg searchMo
                                     , role "list"
                                     ]
                                     (List.map
-                                        (Action2.viewCard loggedIn
+                                        (Action.viewCard loggedIn
                                             { containerAttrs = [ class "mb-4 lg:mb-6" ]
                                             , sideIcon = Icons.flag "w-8 text-green fill-current"
                                             , toMsg = actionToMsg

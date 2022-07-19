@@ -30,7 +30,7 @@ module Session.LoggedIn exposing
     , withPrivateKey
     )
 
-import Action2
+import Action
 import Api.Graphql
 import Auth
 import Avatar
@@ -245,7 +245,7 @@ type alias Model =
     , showCommunitySelector : Bool
     , feedback : Feedback.Model
     , searchModel : Search.Model
-    , action2 : Action2.ClaimingStatus
+    , claimingAction : Action.ClaimingStatus
     , authToken : Maybe Api.Graphql.Token
     , hasSeenDashboard : Bool
     , queuedCommunityFields : List Community.Field
@@ -289,7 +289,7 @@ initModel shared lastKnownPin maybePrivateKey_ accountName authToken =
       , unreadCount = 0
       , feedback = Feedback.Hidden
       , searchModel = Search.init
-      , action2 = Action2.notClaiming
+      , claimingAction = Action.notClaiming
       , authToken = authToken
       , hasSeenDashboard = False
       , queuedCommunityFields = []
@@ -437,7 +437,7 @@ viewHelper pageMsg page profile_ ({ shared } as model) content =
                             community.symbol
                             shared.now
                             (GotSearchMsg >> pageMsg)
-                            (GotAction2Msg >> pageMsg)
+                            (GotActionMsg >> pageMsg)
                             model.searchModel
                         ]
 
@@ -492,8 +492,8 @@ viewHelper pageMsg page profile_ ({ shared } as model) content =
                     |> Html.map pageMsg
                , viewCommunityContactsModal model
                     |> Html.map pageMsg
-               , Action2.viewClaimModal model.shared { position = Nothing } model.action2
-                    |> Html.map (GotAction2Msg >> pageMsg)
+               , Action.viewClaimModal model.shared { position = Nothing } model.claimingAction
+                    |> Html.map (GotActionMsg >> pageMsg)
                , viewAuthModal pageMsg model
                , communitySelectorModal model
                     |> Html.map pageMsg
@@ -1322,7 +1322,7 @@ type External msg
     | ShowFeedback Feedback.Status String
     | HideFeedback
     | ShowCodeOfConductModal
-    | ExternalActionMsg Action2.Msg
+    | ExternalActionMsg Action.Msg
 
 
 {-| Perform a GraphQL query. This function is preferred over `Api.Graphql.query`
@@ -1587,8 +1587,8 @@ mapMsg mapFn msg =
         GotSearchMsg subMsg ->
             GotSearchMsg subMsg
 
-        GotAction2Msg subMsg ->
-            GotAction2Msg subMsg
+        GotActionMsg subMsg ->
+            GotActionMsg subMsg
 
         ClickedProfileIcon ->
             ClickedProfileIcon
@@ -1950,7 +1950,7 @@ updateExternal externalMsg ({ shared } as model) =
             { defaultResult | model = { model | codeOfConductModalStatus = CodeOfConductShown } }
 
         ExternalActionMsg subMsg ->
-            { defaultResult | cmd = Utils.spawnMessage (GotAction2Msg subMsg) }
+            { defaultResult | cmd = Utils.spawnMessage (GotActionMsg subMsg) }
 
 
 type alias UpdateResult msg =
@@ -2002,7 +2002,7 @@ type Msg externalMsg
     | SelectedCommunity Profile.CommunityInfo
     | GotFeedbackMsg Feedback.Msg
     | GotSearchMsg Search.Msg
-    | GotAction2Msg Action2.Msg
+    | GotActionMsg Action.Msg
     | ClickedProfileIcon
     | GotTimeInternal Time.Posix
     | CompletedLoadContributionCount (RemoteData (Graphql.Http.Error (Maybe Int)) (Maybe Int))
@@ -2049,23 +2049,23 @@ update msg model =
             UR.init { model | shared = { shared | now = time } }
                 |> UR.addExt (GotTime time |> Broadcast)
 
-        GotAction2Msg subMsg ->
-            Action2.update subMsg model.action2 model
-                |> UR.fromChild (\newAction2 -> { model | action2 = newAction2 })
-                    GotAction2Msg
+        GotActionMsg subMsg ->
+            Action.update subMsg model.claimingAction model
+                |> UR.fromChild (\newClaimingAction -> { model | claimingAction = newClaimingAction })
+                    GotActionMsg
                     (\ext ->
                         case ext of
-                            Action2.SetUpdateTimeEvery interval ->
+                            Action.SetUpdateTimeEvery interval ->
                                 UR.mapModel (\m -> { m | updateTimeEvery = interval })
 
-                            Action2.ShowFeedback feedbackModel ->
+                            Action.ShowFeedback feedbackModel ->
                                 UR.mapModel (\m -> { m | feedback = feedbackModel })
 
-                            Action2.RequiredPrivateKey afterAuthMsg ->
+                            Action.RequiredPrivateKey afterAuthMsg ->
                                 UR.mapModel askedAuthentication
-                                    >> UR.addExt (AddAfterPrivateKeyCallback (GotAction2Msg afterAuthMsg))
+                                    >> UR.addExt (AddAfterPrivateKeyCallback (GotActionMsg afterAuthMsg))
 
-                            Action2.ShowInsufficientPermissionsModal ->
+                            Action.ShowInsufficientPermissionsModal ->
                                 UR.mapModel (\m -> { m | showInsufficientPermissionsModal = True })
                     )
                     model
@@ -3158,9 +3158,9 @@ jsAddressToMsg addr val =
                 |> Result.map ReceivedNewHighlightedNews
                 |> Result.toMaybe
 
-        "GotAction2Msg" :: remainAddress ->
-            Action2.jsAddressToMsg remainAddress val
-                |> Maybe.map GotAction2Msg
+        "GotActionMsg" :: remainAddress ->
+            Action.jsAddressToMsg remainAddress val
+                |> Maybe.map GotActionMsg
 
         "GotAuthTokenPhrase" :: _ ->
             Api.Graphql.decodeSignedPhrasePort SignedAuthTokenPhrase val
@@ -3187,8 +3187,8 @@ msgToString msg =
         GotSearchMsg _ ->
             [ "GotSearchMsg" ]
 
-        GotAction2Msg subMsg ->
-            "GotAction2Msg" :: Action2.msgToString subMsg
+        GotActionMsg subMsg ->
+            "GotActionMsg" :: Action.msgToString subMsg
 
         CompletedLoadTranslation _ r ->
             [ "CompletedLoadTranslation", UR.resultToString r ]
@@ -3354,4 +3354,4 @@ externalMsgToString externalMsg =
             [ "ShowCodeOfConductModal" ]
 
         ExternalActionMsg subMsg ->
-            "ExternalActionMsg" :: Action2.msgToString subMsg
+            "ExternalActionMsg" :: Action.msgToString subMsg

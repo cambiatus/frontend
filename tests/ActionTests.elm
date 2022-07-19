@@ -1,6 +1,6 @@
 module ActionTests exposing (all)
 
-import Action2 as Action
+import Action
 import Expect
 import Test exposing (..)
 import TestHelpers.Fuzz as Fuzz
