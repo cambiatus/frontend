@@ -442,7 +442,7 @@ viewHelper pageMsg page profile_ ({ shared } as model) content =
                 case model.selectedCommunity of
                     RemoteData.Success community ->
                         [ Search.viewSearchBody
-                            shared.translators
+                            model
                             community.symbol
                             shared.now
                             (GotSearchMsg >> pageMsg)
@@ -503,6 +503,8 @@ viewHelper pageMsg page profile_ ({ shared } as model) content =
                     |> Html.map pageMsg
                , Action.viewClaimConfirmation shared.translators model.claimingAction
                     |> Html.map (GotActionMsg >> pageMsg)
+               , Action2.viewClaimModal model.shared { position = Nothing } model.action2
+                    |> Html.map (GotAction2Msg >> pageMsg)
                , viewAuthModal pageMsg model
                , communitySelectorModal model
                     |> Html.map pageMsg

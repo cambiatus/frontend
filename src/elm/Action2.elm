@@ -1,4 +1,4 @@
-module Action2 exposing (Action, ClaimingStatus, ExternalMsg(..), Msg, msgToString, notClaiming, selectionSet, update, viewCard)
+module Action2 exposing (Action, ClaimingStatus, ExternalMsg(..), Msg, msgToString, notClaiming, selectionSet, update, viewCard, viewClaimModal)
 
 import Auth
 import Cambiatus.Enum.Permission as Permission exposing (Permission)
@@ -16,8 +16,8 @@ import Form.Text
 import Graphql.Http
 import Graphql.OptionalArgument as OptionalArgument
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet)
-import Html exposing (Html, button, div, h4, img, li, span, text)
-import Html.Attributes exposing (alt, class, classList, id, src, tabindex)
+import Html exposing (Html, button, div, h4, img, li, p, span, text)
+import Html.Attributes exposing (alt, class, classList, disabled, id, src, tabindex)
 import Html.Attributes.Aria exposing (ariaHidden)
 import Html.Events exposing (onClick)
 import Icons
@@ -33,7 +33,9 @@ import Time.Extra
 import Translation
 import UpdateResult as UR
 import Url
+import Utils
 import View.Feedback
+import View.Modal
 
 
 type alias Action =
@@ -114,7 +116,8 @@ type Msg
 
 
 type ClaimingActionMsg
-    = ConfirmedClaimAction
+    = ClickedCloseClaimModal
+    | ConfirmedClaimAction
     | ConfirmedClaimActionWithPhotoProof { photoProofUrl : String, proofCode : Maybe ProofCode }
     | GotPhotoProofFormMsg (Form.Msg Form.File.SingleModel)
     | GotUint64Name String
@@ -155,6 +158,7 @@ update msg status loggedIn =
         ClickedShareAction action ->
             let
                 sharePort =
+                    -- TODO - Add port listener
                     if loggedIn.shared.canShare then
                         { responseAddress = msg
                         , responseData = Json.Encode.null
@@ -275,7 +279,11 @@ updateClaimingAction msg action proof loggedIn =
                 (\_ -> ur)
     in
     case msg of
+        ClickedCloseClaimModal ->
+            UR.init NotClaiming
+
         ConfirmedClaimAction ->
+            -- TODO - Add port listener
             UR.init status
                 -- TODO - ErrorMsg?
                 --     { successMsg = msg, errorMsg = ClickedCloseClaimModal }
@@ -303,6 +311,7 @@ updateClaimingAction msg action proof loggedIn =
                 |> withPrivateKey [ Permission.Claim ]
 
         ConfirmedClaimActionWithPhotoProof { photoProofUrl, proofCode } ->
+            -- TODO - Add port listener
             let
                 claimPort maybeProofCode =
                     { responseAddress = GotClaimingActionMsg msg
@@ -590,6 +599,272 @@ viewCard loggedIn { containerAttrs, sideIcon, toMsg } action =
           else
             text ""
         ]
+
+
+viewClaimModal : Shared -> { position : Maybe Int } -> ClaimingStatus -> Html Msg
+viewClaimModal shared { position } status =
+    case status of
+        NotClaiming ->
+            text ""
+
+        Claiming { action, proof } ->
+            let
+                { t } =
+                    shared.translators
+
+                ( onClaimClick, isClaimDisabled ) =
+                    case proof of
+                        WithProof formModel _ ->
+                            ( Form.parse (claimWithPhotoForm shared.translators)
+                                formModel
+                                { onError = GotPhotoProofFormMsg
+                                , onSuccess =
+                                    \photoProofUrl ->
+                                        ConfirmedClaimActionWithPhotoProof
+                                            { photoProofUrl = photoProofUrl
+                                            , proofCode =
+                                                case proof of
+                                                    WithProof _ (WithCode proofCode) ->
+                                                        Just proofCode
+
+                                                    _ ->
+                                                        Nothing
+                                            }
+                                }
+                            , Form.hasFieldsLoading formModel
+                            )
+
+                        NoProofNecessary ->
+                            ( ConfirmedClaimAction, False )
+            in
+            View.Modal.initWith
+                { closeMsg = ClickedCloseClaimModal
+                , isVisible = True
+                }
+                |> View.Modal.withBody
+                    [ case action.image of
+                        Nothing ->
+                            text ""
+
+                        Just "" ->
+                            text ""
+
+                        Just image ->
+                            div [ class "mb-4 relative" ]
+                                [ img
+                                    [ src image
+                                    , alt ""
+                                    , class "max-w-full mx-auto object-scale-down rounded"
+                                    ]
+                                    []
+                                , div [ class "bg-gradient-to-t from-[#01003a14] to-[#01003a00] absolute top-0 left-0 w-full h-full rounded" ] []
+                                ]
+                    , div
+                        [ class "flex"
+                        , classList [ ( "md:mb-6", proof == NoProofNecessary ) ]
+                        ]
+                        [ case position of
+                            Nothing ->
+                                -- TODO
+                                text ""
+
+                            Just validPosition ->
+                                span [ class "text-lg text-gray-500 font-bold" ]
+                                    [ text (String.fromInt validPosition ++ ".") ]
+                        , div [ class "ml-5 mt-1 min-w-0 w-full" ]
+                            [ Markdown.view [] action.description
+                            , div [ class "md:flex md:justify-between md:w-full" ]
+                                [ div []
+                                    [ span [ class "font-bold text-sm text-gray-900 uppercase block mt-6" ]
+                                        [ text <| t "community.objectives.reward" ]
+                                    , div [ class "text-green font-bold" ]
+                                        [ span [ class "text-2xl mr-1" ]
+                                            [ text
+                                                (Eos.formatSymbolAmount shared.translators
+                                                    action.objective.community.symbol
+                                                    action.reward
+                                                )
+                                            ]
+                                        , text (Eos.symbolToSymbolCodeString action.objective.community.symbol)
+                                        ]
+                                    ]
+                                , viewClaimCount shared.translators [ class "hidden md:flex md:self-end md:mr-8" ] action
+                                ]
+                            ]
+                        ]
+                    , viewClaimCount shared.translators
+                        [ class "md:hidden"
+                        , classList [ ( "mb-6", proof == NoProofNecessary ) ]
+                        ]
+                        action
+                    , case proof of
+                        WithProof formModel proofCode ->
+                            let
+                                timeLeft =
+                                    case proofCode of
+                                        NoCodeNecessary ->
+                                            Nothing
+
+                                        GeneratingCode ->
+                                            Nothing
+
+                                        WithCode { expiration } ->
+                                            let
+                                                minutes =
+                                                    Time.Extra.diff Time.Extra.Minute
+                                                        shared.timezone
+                                                        shared.now
+                                                        expiration
+
+                                                seconds =
+                                                    Time.Extra.diff Time.Extra.Second
+                                                        shared.timezone
+                                                        shared.now
+                                                        expiration
+                                                        |> modBy 60
+                                            in
+                                            Just { minutes = minutes, seconds = seconds }
+
+                                isTimeOver =
+                                    case timeLeft of
+                                        Nothing ->
+                                            False
+
+                                        Just { minutes } ->
+                                            minutes < 0
+                            in
+                            div []
+                                [ p [ class "text-lg font-bold text-gray-333 mt-6 mb-4 md:text-center" ]
+                                    [ text <| t "community.actions.proof.title" ]
+                                , case action.photoProofInstructions of
+                                    Just instructions ->
+                                        Markdown.view [] instructions
+
+                                    Nothing ->
+                                        p [] [ text <| t "community.actions.proof.upload_hint" ]
+                                , case proofCode of
+                                    NoCodeNecessary ->
+                                        text ""
+
+                                    GeneratingCode ->
+                                        div [ class "p-4 mt-4 bg-gray-100 rounded-sm flex flex-col items-center justify-center md:w-1/2 md:mx-auto" ]
+                                            [ span [ class "uppercase text-gray-333 font-bold text-sm" ]
+                                                [ text <| t "community.actions.form.verification_code" ]
+                                            , span [ class "bg-gray-333 animate-skeleton-loading h-10 w-44 mt-2" ] []
+                                            ]
+
+                                    WithCode { code } ->
+                                        div []
+                                            [ div [ class "p-4 mt-4 bg-gray-100 rounded-sm flex flex-col items-center justify-center md:w-1/2 md:mx-auto" ]
+                                                [ span [ class "uppercase text-gray-333 font-bold text-sm" ]
+                                                    [ text <| t "community.actions.form.verification_code" ]
+                                                , span [ class "font-bold text-xl text-gray-333" ] [ text code ]
+                                                ]
+                                            , p
+                                                [ class "text-purple-500 text-center mt-4"
+                                                , classList [ ( "text-red", isTimeOver ) ]
+                                                ]
+                                                [ text <| t "community.actions.proof.code_period_label"
+                                                , text " "
+                                                , span [ class "font-bold" ]
+                                                    [ case timeLeft of
+                                                        Nothing ->
+                                                            text "30:00"
+
+                                                        Just { minutes, seconds } ->
+                                                            (Utils.padInt 2 minutes ++ ":" ++ Utils.padInt 2 seconds)
+                                                                |> text
+                                                    ]
+                                                ]
+                                            ]
+                                , Form.viewWithoutSubmit [ class "mb-6" ]
+                                    shared.translators
+                                    (\_ -> [])
+                                    (claimWithPhotoForm shared.translators)
+                                    formModel
+                                    { toMsg = GotPhotoProofFormMsg }
+                                ]
+
+                        NoProofNecessary ->
+                            text ""
+                    ]
+                |> View.Modal.withFooter
+                    [ div [ class "w-full grid md:grid-cols-2 gap-4" ]
+                        [ if isClaimable action then
+                            button
+                                [ class "button button-secondary w-full"
+                                , onClick ClickedCloseClaimModal
+                                ]
+                                [ text <| t "menu.cancel" ]
+
+                          else
+                            text ""
+                        , button
+                            [ onClick onClaimClick
+                            , class "button button-primary w-full"
+                            , disabled isClaimDisabled
+                            ]
+                            [ text <| t "dashboard.claim" ]
+                        ]
+                    ]
+                |> View.Modal.withSize View.Modal.FullScreen
+                |> View.Modal.toHtml
+                |> Html.map GotClaimingActionMsg
+
+
+viewClaimCount : Translation.Translators -> List (Html.Attribute msg) -> Action -> Html msg
+viewClaimCount { t, tr } attrs action =
+    div
+        (class "mt-4 p-2 bg-gray-100 flex items-center justify-center text-gray-900 font-semibold text-sm rounded-sm"
+            :: attrs
+        )
+        [ img
+            [ src "/images/doggo_holding_coins.svg"
+            , alt ""
+            , class "w-8 mr-2"
+            ]
+            []
+        , p []
+            [ text <| t "community.objectives.claim_count"
+            , text " "
+            , span [ class "text-base ml-1 font-bold" ]
+                [ if action.claimCount == 1 then
+                    text <| t "community.objectives.claim_count_times_singular"
+
+                  else
+                    text <|
+                        tr "community.objectives.claim_count_times"
+                            [ ( "count", String.fromInt action.claimCount ) ]
+                ]
+            ]
+        ]
+
+
+claimWithPhotoForm : Translation.Translators -> Form.Form msg Form.File.SingleModel String
+claimWithPhotoForm translators =
+    Form.succeed identity
+        |> Form.with
+            (Form.File.init { id = "photo-proof-input" }
+                |> Form.File.withFileTypes [ Form.File.Image, Form.File.Pdf ]
+                |> Form.File.withContainerAttributes [ class "w-full bg-gray-100 grid place-items-center mt-2" ]
+                |> Form.File.withEntryContainerAttributes (\_ -> [ class "h-56 rounded-sm overflow-hidden w-full grid place-items-center" ])
+                |> Form.File.withImageClass "h-56"
+                |> Form.File.withAddImagesView
+                    [ div [ class "w-full h-56 bg-gray-100 rounded-sm flex flex-col justify-center items-center" ]
+                        [ Icons.addPhoto "fill-current text-body-black w-10 mb-2"
+                        , p [ class "px-4 font-bold" ] [ text <| translators.t "community.actions.proof.upload_hint" ]
+                        ]
+                    ]
+                |> Form.File.withAddImagesContainerAttributes [ class "!w-full rounded-sm" ]
+                |> Form.File.withImageCropperAttributes [ class "rounded-sm" ]
+                |> Form.file
+                    { parser = Ok
+                    , translators = translators
+                    , value = identity
+                    , update = \newModel _ -> newModel
+                    , externalError = always Nothing
+                    }
+            )
 
 
 

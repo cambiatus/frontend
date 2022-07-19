@@ -16,6 +16,7 @@ module Search exposing
     )
 
 import Action2 exposing (Action)
+import Auth
 import Avatar
 import Browser.Dom as Dom
 import Cambiatus.Object
@@ -552,15 +553,33 @@ viewForm attrs translators model =
         { toMsg = GotFormMsg }
 
 
+type alias LoggedIn loggedIn community =
+    { loggedIn
+        | accountName : Eos.Account.Name
+        , shared : Shared
+        , selectedCommunity : RemoteData (Graphql.Http.Error (Maybe (Community community))) (Community community)
+        , auth : Auth.Model
+        , profile : RemoteData (Graphql.Http.Error (Maybe Profile.Model)) Profile.Model
+    }
+
+
+type alias Community community =
+    { community | symbol : Eos.Symbol }
+
+
 viewSearchBody :
-    Translators
+    LoggedIn loggedIn community
     -> Symbol
     -> Posix
     -> (Msg -> parentMsg)
     -> (Action2.Msg -> parentMsg)
     -> Model
     -> Html parentMsg
-viewSearchBody translators selectedCommunity today searchToMsg actionToMsg searchModel =
+viewSearchBody loggedIn selectedCommunity today searchToMsg actionToMsg searchModel =
+    let
+        translators =
+            loggedIn.shared.translators
+    in
     div [ class "container mx-auto flex flex-grow" ]
         [ case searchModel.state of
             ResultsShowed (RemoteData.Success results) activeTab ->
@@ -588,7 +607,7 @@ viewSearchBody translators selectedCommunity today searchToMsg actionToMsg searc
                                     , role "list"
                                     ]
                                     (List.map
-                                        (Action2.viewCard (Debug.todo "")
+                                        (Action2.viewCard loggedIn
                                             { containerAttrs = [ class "mb-4 lg:mb-6" ]
                                             , sideIcon = Icons.flag "w-8 text-green fill-current"
                                             , toMsg = actionToMsg
