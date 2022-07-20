@@ -650,7 +650,7 @@ viewCard loggedIn { containerAttrs, position, toMsg } action =
                     [ Icons.share "mr-2 flex-shrink-0"
                     , text <| t "share"
                     ]
-                , if isClaimable action then
+                , if isClaimable action && not (isClosed action loggedIn.shared.now) && not action.isCompleted then
                     button
                         [ class "button button-primary w-full sm:col-span-1"
                         , onClick
