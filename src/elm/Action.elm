@@ -572,6 +572,9 @@ viewCard loggedIn { containerAttrs, position, toMsg } action =
     let
         ({ t, tr } as translators) =
             loggedIn.shared.translators
+
+        canBeClaimed =
+            isClaimable action && not (isClosed action loggedIn.shared.now) && not action.isCompleted
     in
     li (class "bg-white rounded self-start w-full flex-shrink-0" :: containerAttrs)
         [ case action.image of
@@ -590,7 +593,7 @@ viewCard loggedIn { containerAttrs, position, toMsg } action =
             [ div [ class "flex mb-6" ]
                 [ case position of
                     Nothing ->
-                        if isClaimable action && not (isClosed action loggedIn.shared.now) && not action.isCompleted then
+                        if canBeClaimed then
                             Icons.flag "w-8 text-green fill-current"
 
                         else
@@ -645,7 +648,7 @@ viewCard loggedIn { containerAttrs, position, toMsg } action =
                 text ""
             , div
                 [ class "grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2"
-                , classList [ ( "sm:grid-cols-1", not (isClaimable action) ) ]
+                , classList [ ( "sm:grid-cols-1", not canBeClaimed ) ]
                 ]
                 [ button
                     [ class "button button-secondary w-full"
@@ -655,7 +658,7 @@ viewCard loggedIn { containerAttrs, position, toMsg } action =
                     [ Icons.share "mr-2 flex-shrink-0"
                     , text <| t "share"
                     ]
-                , if isClaimable action && not (isClosed action loggedIn.shared.now) && not action.isCompleted then
+                , if canBeClaimed then
                     button
                         [ class "button button-primary w-full sm:col-span-1"
                         , onClick
