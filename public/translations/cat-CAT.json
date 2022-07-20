@@ -583,7 +583,9 @@
       },
       "disabled": {
         "description": "Les reclamacions, les accions i els objectius estan desactivats en aquesta comunitat."
-      }
+      },
+      "action_completed_notice": "Aquesta acció s'ha completat i no està disponible per a reclamacions noves",
+      "action_automatic_notice": "Aquesta acció no es pot reclamar, rebràs la recompensa automàticament un cop feta l'acció"
     },
     "actions": {
       "title": "Acció",

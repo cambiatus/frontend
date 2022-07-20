@@ -579,7 +579,9 @@
       },
       "disabled": {
         "description": "Claims, Actions, and Objectives are disabled in this community."
-      }
+      },
+      "action_completed_notice": "This action was completed and is not available for new claims",
+      "action_automatic_notice": "This action can't be claimed, you'll get the reward automatically once the action is done"
     },
     "actions": {
       "title": "Action",

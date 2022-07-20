@@ -583,7 +583,9 @@
       },
       "disabled": {
         "description": "Las reivindicaciones, las acciones y los objetivos están deshabilitados en esta comunidad."
-      }
+      },
+      "action_completed_notice": "Esta acción se completó y no está disponible para nuevos reclamos",
+      "action_automatic_notice": "Esta acción no se puede reclamar, obtendrás la recompensa automáticamente una vez que se realice la acción"
     },
     "actions": {
       "title": "Acción",

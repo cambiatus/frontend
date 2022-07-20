@@ -582,10 +582,14 @@ viewCard loggedIn { containerAttrs, position, toMsg } action =
                     , div [ class "bg-gradient-to-t from-[#01003a14] to-[#01003a00] absolute top-0 left-0 w-full h-full rounded" ] []
                     ]
         , div [ class "px-4 pt-4 pb-6" ]
-            [ div [ class "flex" ]
+            [ div [ class "flex mb-6" ]
                 [ case position of
                     Nothing ->
-                        Icons.flag "w-8 text-green fill-current"
+                        if isClaimable action && not (isClosed action loggedIn.shared.now) && not action.isCompleted then
+                            Icons.flag "w-8 text-green fill-current"
+
+                        else
+                            Icons.flag "w-8 text-gray-900 fill-current"
 
                     Just validPosition ->
                         span
@@ -626,8 +630,16 @@ viewCard loggedIn { containerAttrs, position, toMsg } action =
                         ]
                     ]
                 ]
+            , if isClosed action loggedIn.shared.now || action.isCompleted then
+                viewNotAbleToClaimNotice (t "community.objectives.action_completed_notice")
+
+              else if not (isClaimable action) then
+                viewNotAbleToClaimNotice (t "community.objectives.action_automatic_notice")
+
+              else
+                text ""
             , div
-                [ class "grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 mt-6"
+                [ class "grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2"
                 , classList [ ( "sm:grid-cols-1", not (isClaimable action) ) ]
                 ]
                 [ button
@@ -701,6 +713,19 @@ viewCard loggedIn { containerAttrs, position, toMsg } action =
 
           else
             text ""
+        ]
+
+
+viewNotAbleToClaimNotice : String -> Html msg
+viewNotAbleToClaimNotice noticeText =
+    div [ class "flex items-center bg-gray-100 rounded-sm p-2 mb-4" ]
+        [ img
+            [ src "/images/transfer-doggo.svg"
+            , alt ""
+            , class "w-8 mr-2"
+            ]
+            []
+        , span [ class "text-sm text-gray-900" ] [ text noticeText ]
         ]
 
 

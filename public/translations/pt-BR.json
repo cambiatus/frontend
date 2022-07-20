@@ -587,7 +587,9 @@
       },
       "disabled": {
         "description": "Reivindicações, ações e objetivos estão desativados nesta comunidade."
-      }
+      },
+      "action_completed_notice": "Essa ação foi completada e não está disponível para novas reivindicações",
+      "action_automatic_notice": "Essa ação não pode ser reivindicada, você receberá a recompensa automaticamente assim que a ação for feita"
     },
     "actions": {
       "title": "Ação",

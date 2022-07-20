@@ -541,7 +541,9 @@
       },
       "disabled": {
         "description": "የማህበረሰቡ ጥያቄ፣ተግባራት እና ዓላማዎች ተከልክለዋል."
-      }
+      },
+      "action_completed_notice": "ይህ እርምጃ የተጠናቀቀ ሲሆን ለአዲስ የይገባኛል ጥያቄዎች አይገኝም",
+      "action_automatic_notice": "ይህ ድርጊት የይገባኛል ጥያቄ ሊነሳ አይችልም፣ እርምጃው ከተፈጸመ በኋላ ሽልማቱን በራስ-ሰር ያገኛሉ"
     },
     "actions": {
       "title": "Action",
