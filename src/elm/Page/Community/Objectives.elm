@@ -8,7 +8,7 @@ import Dict
 import Eos
 import Eos.Account
 import Html exposing (Html, a, b, br, button, details, div, h1, h2, h3, img, li, p, span, summary, text, ul)
-import Html.Attributes exposing (alt, class, classList, id, src, style, title)
+import Html.Attributes exposing (alt, class, classList, id, src, style, tabindex, title)
 import Html.Attributes.Aria exposing (ariaHasPopup, ariaHidden, ariaLabel, role)
 import Html.Events exposing (onClick)
 import Icons
@@ -790,6 +790,7 @@ viewObjective loggedIn model objective =
                             )
                 , class "overflow-y-hidden duration-300 ease-in-out origin-top motion-reduce:transition-none"
                 , classList [ ( "transition-all", Maybe.Extra.isJust visibleActionHeight ) ]
+                , tabindex -1
                 ]
                 [ div
                     [ class "duration-300 ease-in-out origin-top lg:!h-full motion-reduce:transition-none"

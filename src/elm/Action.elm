@@ -353,6 +353,7 @@ updateClaimingAction msg action proof loggedIn =
     case msg of
         ClickedCloseClaimModal ->
             UR.init NotClaiming
+                |> UR.addExt (SetUpdateTimeEvery (60 * 1000))
 
         ConfirmedClaimAction ->
             UR.init status
@@ -634,11 +635,13 @@ viewCard loggedIn { containerAttrs, sideIcon, toMsg } action =
                     , id = shareActionFallbackId action.id
                     }
                     |> Form.Text.withExtraAttrs
-                        [ class "absolute opacity-0 left-[-9999em]"
-                        , tabindex -1
+                        [ tabindex -1
                         , ariaHidden True
                         ]
-                    |> Form.Text.withContainerAttrs [ class "mb-0 overflow-hidden" ]
+                    |> Form.Text.withContainerAttrs
+                        [ class "h-0 absolute opacity-0 left-[-9999em] !mb-0 overflow-hidden"
+                        , ariaHidden True
+                        ]
                     |> Form.Text.withInputElement (Form.Text.TextareaInput { submitOnEnter = False })
                 )
                 { onChange = \_ -> NoOp
