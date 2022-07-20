@@ -537,7 +537,6 @@ viewClaimCard loggedIn profileSummaries claim =
                     || not (isValidator loggedIn.accountName claim)
                     || claim.action.isCompleted
                     || Action.isClosed claim.action loggedIn.shared.now
-                    || Action.isPastDeadline claim.action loggedIn.shared.now
               then
                 button
                     [ class "button button-secondary w-full font-semibold mb-2"
