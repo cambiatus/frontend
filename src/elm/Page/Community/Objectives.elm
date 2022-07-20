@@ -6,7 +6,6 @@ import Browser.Dom
 import Community
 import Dict
 import Eos
-import Eos.Account
 import Html exposing (Html, a, b, br, button, details, div, h1, h2, h3, img, li, p, span, summary, text, ul)
 import Html.Attributes exposing (alt, class, classList, id, src, style, tabindex, title)
 import Html.Attributes.Aria exposing (ariaHasPopup, ariaHidden, ariaLabel, role)
@@ -44,19 +43,7 @@ type alias Model =
             , isClosing : Bool
             }
     , highlightedAction : Maybe { objectiveId : Action.ObjectiveId, actionId : Maybe Action.Id }
-    , sharingAction : Maybe Action
-    , claimingStatus : ClaimingStatus
     }
-
-
-type ClaimingStatus
-    = NotClaiming
-    | Claiming { position : Int, action : Action, proof : Proof }
-
-
-type Proof
-    = NoProofNecessary
-    | WithProof
 
 
 init : Route.SelectedObjective -> LoggedIn.Model -> UpdateResult
@@ -90,8 +77,6 @@ init selectedObjective _ =
                             }
                           )
                         ]
-        , sharingAction = Nothing
-        , claimingStatus = NotClaiming
         }
         |> UR.addExt (LoggedIn.RequestedReloadCommunityField Community.ObjectivesField)
         |> UR.addCmd (Browser.Dom.setViewport 0 0 |> Task.attempt (\_ -> NoOp))
@@ -156,6 +141,8 @@ update msg model loggedIn =
 
                                         Nothing ->
                                             identity
+
+                                -- TODO - Open action modal
                             in
                             case maybeAction of
                                 Nothing ->
@@ -189,67 +176,10 @@ update msg model loggedIn =
                                                 ]
                                         }
                                         >> getHighlightedObjectiveSummaryHeight
-
-                claimingStatus =
-                    case model.highlightedAction of
-                        Nothing ->
-                            NotClaiming
-
-                        Just { objectiveId, actionId } ->
-                            objectives
-                                |> List.Extra.find (\objective -> objective.id == objectiveId)
-                                |> Maybe.andThen
-                                    (\objective ->
-                                        let
-                                            maybePosition =
-                                                List.Extra.findIndex (\action -> Just action.id == actionId) objective.actions
-
-                                            maybeAction =
-                                                List.Extra.find (\action -> Just action.id == actionId) objective.actions
-                                        in
-                                        Maybe.map2
-                                            (\position action ->
-                                                Claiming
-                                                    { position = position + 1
-                                                    , action = action
-                                                    , proof =
-                                                        if action.hasProofPhoto then
-                                                            WithProof
-
-                                                        else
-                                                            NoProofNecessary
-                                                    }
-                                            )
-                                            maybePosition
-                                            maybeAction
-                                    )
-                                |> Maybe.withDefault NotClaiming
-
-                generateProofCodePort =
-                    case claimingStatus of
-                        Claiming { proof } ->
-                            case proof of
-                                WithProof ->
-                                    UR.addPort
-                                        { responseAddress = msg
-                                        , responseData = Encode.null
-                                        , data =
-                                            Encode.object
-                                                [ ( "name", Encode.string "accountNameToUint64" )
-                                                , ( "accountName", Eos.Account.encodeName loggedIn.accountName )
-                                                ]
-                                        }
-
-                                NoProofNecessary ->
-                                    identity
-
-                        _ ->
-                            identity
             in
-            { model | claimingStatus = claimingStatus }
+            model
                 |> UR.init
                 |> scrollActionIntoView
-                |> generateProofCodePort
 
         ClickedToggleObjectiveVisibility objective ->
             { model
@@ -668,13 +598,21 @@ viewObjective loggedIn model objective =
                 |> Maybe.map (\{ isClosing } -> not isClosing)
                 |> Maybe.withDefault False
 
-        isHighlighted =
+        isObjectiveHighlighted =
             case model.highlightedAction of
                 Nothing ->
                     False
 
                 Just { objectiveId, actionId } ->
                     objectiveId == objective.id && Maybe.Extra.isNothing actionId
+
+        isActionHighlighted action =
+            case model.highlightedAction of
+                Nothing ->
+                    False
+
+                Just { objectiveId, actionId } ->
+                    objectiveId == objective.id && actionId == Just action.id
 
         maybeShownObjectivesInfo =
             AssocList.get objective.id model.shownObjectives
@@ -748,7 +686,7 @@ viewObjective loggedIn model objective =
             [ summary
                 [ id (objectiveSummaryId objective)
                 , class "marker-hidden lg:w-2/3 lg:mx-auto focus-ring rounded"
-                , classList [ ( "border border-green ring ring-green ring-opacity-30", isHighlighted ) ]
+                , classList [ ( "border border-green ring ring-green ring-opacity-30", isObjectiveHighlighted ) ]
                 , role "button"
                 , ariaHasPopup "true"
                 , onClick (ClickedToggleObjectiveVisibility objective)
@@ -849,7 +787,7 @@ viewObjective loggedIn model objective =
                                     Action.viewCard loggedIn
                                         { containerAttrs =
                                             [ class "mb-6 snap-center snap-always animate-fade-in-from-above motion-reduce:animate-none"
-                                            , classList [ ( "border border-green ring ring-green ring-opacity-30", isHighlighted ) ]
+                                            , classList [ ( "border border-green ring ring-green ring-opacity-30", isActionHighlighted action ) ]
                                             , style "animation-delay" ("calc(75ms * " ++ String.fromInt index ++ ")")
                                             , id (actionCardId action)
                                             , Html.Events.on "animationend" (Decode.succeed (FinishedOpeningActions objective))
