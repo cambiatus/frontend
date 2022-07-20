@@ -854,15 +854,7 @@ viewObjective loggedIn model objective =
                                             , id (actionCardId action)
                                             , Html.Events.on "animationend" (Decode.succeed (FinishedOpeningActions objective))
                                             ]
-                                        , sideIcon =
-                                            span
-                                                [ class "text-lg text-gray-500 font-bold"
-                                                , ariaHidden True
-                                                ]
-                                                [ text (String.fromInt (index + 1)), text "." ]
-
-                                        -- , onShare = ClickedShareAction action
-                                        -- , onClaim = ClickedClaimAction { position = index + 1, action = action }
+                                        , position = Just (index + 1)
                                         , toMsg = GotActionMsg
                                         }
                                         action

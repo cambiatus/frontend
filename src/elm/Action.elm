@@ -140,7 +140,11 @@ type ObjectiveId
 
 type ClaimingStatus
     = NotClaiming
-    | Claiming { action : Action, proof : Proof }
+    | Claiming
+        { action : Action
+        , proof : Proof
+        , position : Maybe Int
+        }
 
 
 notClaiming : ClaimingStatus
@@ -168,7 +172,7 @@ type alias ProofCode =
 
 type Msg
     = NoOp
-    | ClickedClaimAction Action
+    | ClickedClaimAction { position : Maybe Int } Action
     | ClickedShareAction Action
     | CopiedShareLinkToClipboard Id
     | GotClaimingActionMsg ClaimingActionMsg
@@ -265,7 +269,7 @@ update msg status loggedIn =
                         |> Task.attempt (\_ -> NoOp)
                     )
 
-        ClickedClaimAction action ->
+        ClickedClaimAction { position } action ->
             let
                 form =
                     { fileUrl = Nothing
@@ -303,7 +307,11 @@ update msg status loggedIn =
                     else
                         identity
             in
-            Claiming { action = action, proof = proof }
+            { action = action
+            , proof = proof
+            , position = position
+            }
+                |> Claiming
                 |> UR.init
                 |> UR.addExt (SetUpdateTimeEvery 1000)
                 |> generateProofCodePort
@@ -317,19 +325,19 @@ update msg status loggedIn =
                             { moduleName = "Action", function = "update" }
                             []
 
-                Claiming { action, proof } ->
-                    updateClaimingAction subMsg action proof loggedIn
+                Claiming { action, proof, position } ->
+                    updateClaimingAction subMsg action proof { position = position } loggedIn
 
 
 
 -- CLAIMING ACTIONS
 
 
-updateClaimingAction : ClaimingActionMsg -> Action -> Proof -> LoggedIn loggedIn community -> UpdateResult
-updateClaimingAction msg action proof loggedIn =
+updateClaimingAction : ClaimingActionMsg -> Action -> Proof -> { position : Maybe Int } -> LoggedIn loggedIn community -> UpdateResult
+updateClaimingAction msg action proof { position } loggedIn =
     let
         status =
-            Claiming { action = action, proof = proof }
+            { action = action, proof = proof, position = position }
 
         withPrivateKey : List Permission -> UpdateResult -> UpdateResult
         withPrivateKey requiredPermissions ur =
@@ -349,7 +357,7 @@ updateClaimingAction msg action proof loggedIn =
                         , function = "updateClaimingAction"
                         }
                         []
-                , defaultModel = Claiming { action = action, proof = proof }
+                , defaultModel = Claiming status
                 }
                 (\_ -> ur)
     in
@@ -359,7 +367,8 @@ updateClaimingAction msg action proof loggedIn =
                 |> UR.addExt (SetUpdateTimeEvery (60 * 1000))
 
         ConfirmedClaimAction ->
-            UR.init status
+            Claiming status
+                |> UR.init
                 |> UR.addPort
                     { responseAddress = GotClaimingActionMsg msg
                     , responseData = Json.Encode.null
@@ -414,7 +423,8 @@ updateClaimingAction msg action proof loggedIn =
             case proofCode of
                 Nothing ->
                     if action.hasProofCode then
-                        UR.init status
+                        Claiming status
+                            |> UR.init
                             |> UR.logImpossible (GotClaimingActionMsg msg)
                                 "Claimed action that requires proof code, but no proof code was provided"
                                 (Just loggedIn.accountName)
@@ -424,12 +434,14 @@ updateClaimingAction msg action proof loggedIn =
                                 []
 
                     else
-                        UR.init status
+                        Claiming status
+                            |> UR.init
                             |> UR.addPort (claimPort Nothing)
                             |> withPrivateKey [ Permission.Claim ]
 
                 Just code ->
-                    UR.init status
+                    Claiming status
+                        |> UR.init
                         |> UR.addPort
                             (claimPort
                                 (Just
@@ -443,22 +455,24 @@ updateClaimingAction msg action proof loggedIn =
         GotPhotoProofFormMsg subMsg ->
             case proof of
                 NoProofNecessary ->
-                    UR.init status
+                    Claiming status
+                        |> UR.init
 
                 WithProof photoProofForm proofCodeStatus ->
                     Form.update loggedIn.shared subMsg photoProofForm
                         |> UR.fromChild
                             (\newForm ->
-                                Claiming { action = action, proof = WithProof newForm proofCodeStatus }
+                                Claiming { status | proof = WithProof newForm proofCodeStatus }
                             )
                             (GotClaimingActionMsg << GotPhotoProofFormMsg)
                             (\ext -> UR.addExt (ShowFeedback ext))
-                            status
+                            (Claiming status)
 
         GotUint64Name uint64Name ->
             case proof of
                 NoProofNecessary ->
-                    UR.init status
+                    Claiming status
+                        |> UR.init
 
                 WithProof formModel _ ->
                     let
@@ -484,10 +498,7 @@ updateClaimingAction msg action proof loggedIn =
                             else
                                 NoCodeNecessary
                     in
-                    Claiming
-                        { action = action
-                        , proof = WithProof formModel proofCodeStatus
-                        }
+                    Claiming { status | proof = WithProof formModel proofCodeStatus }
                         |> UR.init
 
         CompletedClaimingAction (Ok ()) ->
@@ -547,12 +558,12 @@ viewCard :
     LoggedIn loggedIn community
     ->
         { containerAttrs : List (Html.Attribute msg)
-        , sideIcon : Html msg
+        , position : Maybe Int
         , toMsg : Msg -> msg
         }
     -> Action
     -> Html msg
-viewCard loggedIn { containerAttrs, sideIcon, toMsg } action =
+viewCard loggedIn { containerAttrs, position, toMsg } action =
     let
         ({ t, tr } as translators) =
             loggedIn.shared.translators
@@ -572,7 +583,16 @@ viewCard loggedIn { containerAttrs, sideIcon, toMsg } action =
                     ]
         , div [ class "px-4 pt-4 pb-6" ]
             [ div [ class "flex" ]
-                [ sideIcon
+                [ case position of
+                    Nothing ->
+                        Icons.flag "w-8 text-green fill-current"
+
+                    Just validPosition ->
+                        span
+                            [ class "text-lg text-gray-500 font-bold"
+                            , ariaHidden True
+                            ]
+                            [ text (String.fromInt validPosition ++ ".") ]
                 , div [ class "ml-5 mt-1 min-w-0 w-full" ]
                     [ h4 [ Html.Attributes.title (Markdown.toRawString action.description) ]
                         [ Markdown.view [ class "line-clamp-3 hide-children-from-2" ] action.description ]
@@ -621,7 +641,10 @@ viewCard loggedIn { containerAttrs, sideIcon, toMsg } action =
                 , if isClaimable action then
                     button
                         [ class "button button-primary w-full sm:col-span-1"
-                        , onClick (ClickedClaimAction action |> toMsg)
+                        , onClick
+                            (ClickedClaimAction { position = position } action
+                                |> toMsg
+                            )
                         ]
                         [ if action.hasProofPhoto then
                             Icons.camera "w-4 mr-2 flex-shrink-0"
@@ -681,13 +704,13 @@ viewCard loggedIn { containerAttrs, sideIcon, toMsg } action =
         ]
 
 
-viewClaimModal : Shared -> { position : Maybe Int } -> ClaimingStatus -> Html Msg
-viewClaimModal shared { position } status =
+viewClaimModal : Shared -> ClaimingStatus -> Html Msg
+viewClaimModal shared status =
     case status of
         NotClaiming ->
             text ""
 
-        Claiming { action, proof } ->
+        Claiming { action, proof, position } ->
             let
                 { t } =
                     shared.translators
@@ -748,7 +771,10 @@ viewClaimModal shared { position } status =
                                 Icons.flag "w-8 text-green fill-current"
 
                             Just validPosition ->
-                                span [ class "text-lg text-gray-500 font-bold" ]
+                                span
+                                    [ class "text-lg text-gray-500 font-bold"
+                                    , ariaHidden True
+                                    ]
                                     [ text (String.fromInt validPosition ++ ".") ]
                         , div [ class "ml-5 mt-1 min-w-0 w-full" ]
                             [ Markdown.view [] action.description
@@ -1273,7 +1299,7 @@ msgToString msg =
         NoOp ->
             [ "NoOp" ]
 
-        ClickedClaimAction _ ->
+        ClickedClaimAction _ _ ->
             [ "ClickedClaimAction" ]
 
         ClickedShareAction _ ->

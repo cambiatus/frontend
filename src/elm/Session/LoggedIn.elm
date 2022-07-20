@@ -472,7 +472,7 @@ viewHelper pageMsg page profile_ ({ shared } as model) content =
                     |> Html.map pageMsg
                , viewCommunityContactsModal model
                     |> Html.map pageMsg
-               , Action.viewClaimModal model.shared { position = Nothing } model.claimingAction
+               , Action.viewClaimModal model.shared model.claimingAction
                     |> Html.map (GotActionMsg >> pageMsg)
                , viewAuthModal pageMsg model
                , communitySelectorModal model

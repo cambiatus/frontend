@@ -609,7 +609,7 @@ viewSearchBody loggedIn selectedCommunity today searchToMsg actionToMsg searchMo
                                     (List.map
                                         (Action.viewCard loggedIn
                                             { containerAttrs = [ class "mb-4 lg:mb-6" ]
-                                            , sideIcon = Icons.flag "w-8 text-green fill-current"
+                                            , position = Nothing
                                             , toMsg = actionToMsg
                                             }
                                         )
