@@ -768,6 +768,7 @@ viewHeader page ({ shared } as model) profile_ =
                 [ class "relative rounded-sm group focus-ring focus-visible:ring-orange-300 focus-visible:ring-opacity-50"
                 , Route.href Route.Notification
                 , classList [ ( "mr-4", model.unreadCount > 0 ) ]
+                , onClick ClosedSearch
                 ]
                 [ Icons.notification "fill-current text-gray-900 h-6 md:h-7 group-hover:text-orange-300"
                 , if model.unreadCount > 0 then
@@ -781,6 +782,7 @@ viewHeader page ({ shared } as model) profile_ =
                 a
                     [ class "rounded-sm group focus-ring focus:ring-orange-300 focus:ring-opacity-50 focus:ring-offset-4"
                     , Route.href Route.CommunitySettings
+                    , onClick ClosedSearch
                     ]
                     [ Icons.settings "fill-current h-6 text-gray-900 md:h-7 group-hover:text-orange-300" ]
 
@@ -1573,6 +1575,9 @@ mapMsg mapFn msg =
         ClickedProfileIcon ->
             ClickedProfileIcon
 
+        ClosedSearch ->
+            ClosedSearch
+
         GotTimeInternal time ->
             GotTimeInternal time
 
@@ -1984,6 +1989,7 @@ type Msg externalMsg
     | GotSearchMsg Search.Msg
     | GotActionMsg Action.Msg
     | ClickedProfileIcon
+    | ClosedSearch
     | GotTimeInternal Time.Posix
     | CompletedLoadContributionCount (RemoteData (Graphql.Http.Error (Maybe Int)) (Maybe Int))
     | ClickedReadHighlightedNews
@@ -2052,6 +2058,10 @@ update msg model =
 
         ClickedProfileIcon ->
             { closeAllModals | searchModel = Search.closeSearch model.searchModel }
+                |> UR.init
+
+        ClosedSearch ->
+            { model | searchModel = Search.closeSearch model.searchModel }
                 |> UR.init
 
         GotSearchMsg searchMsg ->
@@ -3163,6 +3173,9 @@ msgToString msg =
 
         ClickedProfileIcon ->
             [ "ClickedProfileIcon" ]
+
+        ClosedSearch ->
+            [ "ClosedSearch" ]
 
         GotSearchMsg _ ->
             [ "GotSearchMsg" ]
