@@ -311,8 +311,11 @@ update msg status loggedIn =
         GotClaimingActionMsg subMsg ->
             case status of
                 NotClaiming ->
-                    -- TODO - Error
                     UR.init status
+                        |> UR.logIncompatibleMsg msg
+                            (Just loggedIn.accountName)
+                            { moduleName = "Action", function = "update" }
+                            []
 
                 Claiming { action, proof } ->
                     updateClaimingAction subMsg action proof loggedIn
@@ -357,8 +360,6 @@ updateClaimingAction msg action proof loggedIn =
 
         ConfirmedClaimAction ->
             UR.init status
-                -- TODO - ErrorMsg?
-                --     { successMsg = msg, errorMsg = ClickedCloseClaimModal }
                 |> UR.addPort
                     { responseAddress = GotClaimingActionMsg msg
                     , responseData = Json.Encode.null
@@ -413,8 +414,14 @@ updateClaimingAction msg action proof loggedIn =
             case proofCode of
                 Nothing ->
                     if action.hasProofCode then
-                        -- TODO - Error
                         UR.init status
+                            |> UR.logImpossible (GotClaimingActionMsg msg)
+                                "Claimed action that requires proof code, but no proof code was provided"
+                                (Just loggedIn.accountName)
+                                { moduleName = "Action"
+                                , function = "updateClaimingAction"
+                                }
+                                []
 
                     else
                         UR.init status
