@@ -534,6 +534,7 @@
     },
     "objectives": {
       "title": "Objetivos",
+      "not_found_description": "Os objetivos da habilidade estão desabilitados",
       "earn": "Ganhe",
       "complete_actions": "Complete ações que a comunidade traçou e ganhe",
       "objectives_and": "Objetivos e",
@@ -668,6 +669,7 @@
         "verification_instructions": "Escreva aqui instruções para os usuários",
         "usages_left_label": "Usos restantes",
         "mark_completed": "Finalizar ação",
+        "mark_not_completed": "Reabrir ação",
         "errors": {
           "description": "A descrição não pode estar vazia",
           "reward": "A recompensa precisa ser maior que 0",

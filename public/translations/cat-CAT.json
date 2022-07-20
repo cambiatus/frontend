@@ -530,6 +530,7 @@
     },
     "objectives": {
       "title": "Objectius",
+      "disabled_objectives_description": "Els objectius comunitaris estan desactivats",
       "earn": "Guanyar",
       "complete_actions": "Completa les accions que la comunitat ha traçat i guanya",
       "objectives_and": "Objectius i",
@@ -664,6 +665,7 @@
         "verification_instructions": "Escriviu aquí instruccions per als usuaris",
         "usages_left_label": "Usos restants",
         "mark_completed": "Marca com a completat",
+        "mark_not_completed": "Reobrir l'acció",
         "errors": {
           "description": "La descripció no pot estar buida",
           "reward": "La recompensa ha de ser superior a 0",

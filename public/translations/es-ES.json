@@ -530,6 +530,7 @@
     },
     "objectives": {
       "title": "Objetivos",
+      "disabled_objectives_description": "Los objetivos de la comunidad están deshabilitados",
       "earn": "Ganar",
       "complete_actions": "Complete las acciones que la comunidad ha rastreado y gane",
       "objectives_and": "Objetivos y",
@@ -664,6 +665,7 @@
         "verification_instructions": "Escriba aquí las instrucciones para los usuarios",
         "usages_left_label": "Usos restantes",
         "mark_completed": "Marcar como completado",
+        "mark_not_completed": "Reabrir acción",
         "errors": {
           "description": "La descripción no puede estar vacía",
           "reward": "La recompensa debe ser más de 0",

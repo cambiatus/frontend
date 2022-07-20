@@ -488,6 +488,7 @@
     },
     "objectives": {
       "title": "ግቦች",
+      "disabled_objectives_description": "የማህበረሰቡ አላማዎች ተሰናክለዋል",
       "earn": "ያሸንፉ",
       "complete_actions": "ማህበረሰቡ ተከታትሎ ያገኛቸው የተሟሉ ተግባራት",
       "objectives_and": "ዓላማዎች እና",
@@ -622,6 +623,7 @@
         "verification_instructions": "ለተጠቃሚዉ እዚህ ጋ መመሪያ ፃፍ",
         "usages_left_label": "የቀሩ አጠቃቀሞች",
         "mark_completed": "እንደተጠናቀቀ ምልክት አኑር",
+        "mark_not_completed": "እርምጃን እንደገና ክፈት",
         "errors": {
           "description": "ማብራረያ ባዶ መሆን የለበትም",
           "reward": "ሽልማቱ 0 መብለጥ አለበት",

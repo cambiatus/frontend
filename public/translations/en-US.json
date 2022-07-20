@@ -526,6 +526,7 @@
     },
     "objectives": {
       "title": "Objectives",
+      "disabled_objectives_description": "The community objectives are disabled",
       "earn": "Earn",
       "complete_actions": "Complete actions the community has traced and earn",
       "objectives_and": "Objectives and",
@@ -660,6 +661,7 @@
         "verification_instructions": "Write here instructions for the users",
         "usages_left_label": "Usages left",
         "mark_completed": "Mark as completed",
+        "mark_not_completed": "Reopen action",
         "errors": {
           "description": "Description cannot be empty",
           "reward": "The reward needs to be more than 0",
