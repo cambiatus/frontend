@@ -745,8 +745,7 @@ viewClaimModal shared { position } status =
                         ]
                         [ case position of
                             Nothing ->
-                                -- TODO
-                                text ""
+                                Icons.flag "w-8 text-green fill-current"
 
                             Just validPosition ->
                                 span [ class "text-lg text-gray-500 font-bold" ]
