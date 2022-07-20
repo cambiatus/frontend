@@ -141,8 +141,6 @@ update msg model loggedIn =
 
                                         Nothing ->
                                             identity
-
-                                -- TODO - Open action modal
                             in
                             case maybeAction of
                                 Nothing ->
@@ -176,10 +174,39 @@ update msg model loggedIn =
                                                 ]
                                         }
                                         >> getHighlightedObjectiveSummaryHeight
+
+                startClaimingAction =
+                    case model.highlightedAction of
+                        Nothing ->
+                            identity
+
+                        Just { objectiveId, actionId } ->
+                            let
+                                maybeActionAndPosition : Maybe ( Action, Int )
+                                maybeActionAndPosition =
+                                    List.Extra.find (\objective -> objective.id == objectiveId) objectives
+                                        |> Maybe.andThen
+                                            (\foundObjective ->
+                                                Maybe.map2 Tuple.pair
+                                                    (List.Extra.find (\action -> Just action.id == actionId) foundObjective.actions)
+                                                    (List.Extra.findIndex (\action -> Just action.id == actionId) foundObjective.actions
+                                                        |> Maybe.map ((+) 1)
+                                                    )
+                                            )
+                            in
+                            case maybeActionAndPosition of
+                                Nothing ->
+                                    identity
+
+                                Just ( action, position ) ->
+                                    Action.startClaiming { position = Just position } action
+                                        |> LoggedIn.ExternalActionMsg
+                                        |> UR.addExt
             in
             model
                 |> UR.init
                 |> scrollActionIntoView
+                |> startClaimingAction
 
         ClickedToggleObjectiveVisibility objective ->
             { model

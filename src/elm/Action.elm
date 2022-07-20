@@ -4,7 +4,7 @@ module Action exposing
     , ObjectiveId, encodeObjectiveId, objectiveIdSelectionSet, objectiveIdFromInt, objectiveIdToInt
     , isClosed, isPastDeadline
     , selectionSet, completeObjectiveSelectionSet, updateAction
-    , ClaimingStatus, notClaiming, Msg, update, ExternalMsg(..), msgToString, jsAddressToMsg
+    , ClaimingStatus, notClaiming, startClaiming, Msg, update, ExternalMsg(..), msgToString, jsAddressToMsg
     , viewCard, viewClaimModal
     )
 
@@ -41,7 +41,7 @@ module Action exposing
 
 ## Claiming actions
 
-@docs ClaimingStatus, notClaiming, Msg, update, ExternalMsg, msgToString, jsAddressToMsg
+@docs ClaimingStatus, notClaiming, startClaiming, Msg, update, ExternalMsg, msgToString, jsAddressToMsg
 
 
 ### Views
@@ -150,6 +150,11 @@ type ClaimingStatus
 notClaiming : ClaimingStatus
 notClaiming =
     NotClaiming
+
+
+startClaiming : { position : Maybe Int } -> Action -> Msg
+startClaiming position action =
+    ClickedClaimAction position action
 
 
 type Proof
