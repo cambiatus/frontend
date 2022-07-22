@@ -1,5 +1,7 @@
 # Cambiatus frontend
 
+[![Elm-book deploy status](https://api.netlify.com/api/v1/badges/b6672baa-f08f-4a9b-8318-bb2f45c780ea/deploy-status)](https://app.netlify.com/sites/cambiatus-elm-book/deploys)
+
 This project is bootstrapped with [Create Elm App](https://github.com/halfzebra/create-elm-app).
 
 
