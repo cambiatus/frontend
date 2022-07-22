@@ -593,7 +593,7 @@ viewCard loggedIn { containerAttrs, position, toMsg } action =
             [ div [ class "flex mb-6" ]
                 [ case position of
                     Nothing ->
-                        if canBeClaimed then
+                        if canBeClaimed || not (isClaimable action) then
                             Icons.flag "w-8 text-green fill-current"
 
                         else
