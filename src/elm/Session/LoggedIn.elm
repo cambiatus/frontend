@@ -203,7 +203,6 @@ subscriptions : Model -> Sub (Msg externalMsg)
 subscriptions model =
     Sub.batch
         [ Sub.map GotSearchMsg Search.subscriptions
-        , Sub.map GotActionMsg (Action.subscriptions model.claimingAction)
         , Time.every model.updateTimeEvery GotTimeInternal
         , if model.showUserNav then
             Utils.escSubscription (ShowUserNav False)
@@ -246,7 +245,7 @@ type alias Model =
     , showCommunitySelector : Bool
     , feedback : Feedback.Model
     , searchModel : Search.Model
-    , claimingAction : Action.Model
+    , claimingAction : Action.ClaimingStatus
     , authToken : Maybe Api.Graphql.Token
     , hasSeenDashboard : Bool
     , queuedCommunityFields : List Community.Field
@@ -290,7 +289,7 @@ initModel shared lastKnownPin maybePrivateKey_ accountName authToken =
       , unreadCount = 0
       , feedback = Feedback.Hidden
       , searchModel = Search.init
-      , claimingAction = { status = Action.NotAsked, feedback = Nothing, needsPinConfirmation = False }
+      , claimingAction = Action.notClaiming
       , authToken = authToken
       , hasSeenDashboard = False
       , queuedCommunityFields = []
@@ -300,11 +299,6 @@ initModel shared lastKnownPin maybePrivateKey_ accountName authToken =
       }
     , Cmd.map GotAuthMsg authCmd
     )
-
-
-hasPrivateKey : Model -> Bool
-hasPrivateKey model =
-    Auth.hasPrivateKey model.auth
 
 
 maybePrivateKey : Model -> Maybe Eos.PrivateKey
@@ -414,36 +408,24 @@ hideCommunityAndSearch currentPage model =
 viewHelper : (Msg pageMsg -> pageMsg) -> Page -> Profile.Model -> Model -> Html pageMsg -> Html pageMsg
 viewHelper pageMsg page profile_ ({ shared } as model) content =
     let
-        viewClaimWithProofs action proof isLoading =
-            [ Action.viewClaimWithProofs proof shared.translators isLoading action
-                |> Html.map (GotActionMsg >> pageMsg)
-            ]
-
         mainView =
-            case ( Search.isActive model.searchModel, model.claimingAction.status ) of
-                ( True, _ ) ->
-                    case model.selectedCommunity of
-                        RemoteData.Success community ->
-                            [ Search.viewSearchBody
-                                shared.translators
-                                community.symbol
-                                shared.now
-                                (GotSearchMsg >> pageMsg)
-                                (GotActionMsg >> pageMsg)
-                                model.searchModel
-                            ]
+            if Search.isActive model.searchModel then
+                case model.selectedCommunity of
+                    RemoteData.Success community ->
+                        [ Search.viewSearchBody
+                            model
+                            community.symbol
+                            shared.now
+                            (GotSearchMsg >> pageMsg)
+                            (GotActionMsg >> pageMsg)
+                            model.searchModel
+                        ]
 
-                        _ ->
-                            []
+                    _ ->
+                        []
 
-                ( False, Action.PhotoUploaderShowed action p ) ->
-                    viewClaimWithProofs action p False
-
-                ( False, Action.ClaimInProgress action (Just p) ) ->
-                    viewClaimWithProofs action p.proof True
-
-                _ ->
-                    viewPageBody model profile_ page content
+            else
+                viewPageBody model profile_ page content
     in
     div
         [ class "min-h-screen flex flex-col" ]
@@ -490,7 +472,7 @@ viewHelper pageMsg page profile_ ({ shared } as model) content =
                     |> Html.map pageMsg
                , viewCommunityContactsModal model
                     |> Html.map pageMsg
-               , Action.viewClaimConfirmation shared.translators model.claimingAction
+               , Action.viewClaimModal model.shared model.claimingAction
                     |> Html.map (GotActionMsg >> pageMsg)
                , viewAuthModal pageMsg model
                , communitySelectorModal model
@@ -786,6 +768,7 @@ viewHeader page ({ shared } as model) profile_ =
                 [ class "relative rounded-sm group focus-ring focus-visible:ring-orange-300 focus-visible:ring-opacity-50"
                 , Route.href Route.Notification
                 , classList [ ( "mr-4", model.unreadCount > 0 ) ]
+                , onClick ClosedSearch
                 ]
                 [ Icons.notification "fill-current text-gray-900 h-6 md:h-7 group-hover:text-orange-300"
                 , if model.unreadCount > 0 then
@@ -799,6 +782,7 @@ viewHeader page ({ shared } as model) profile_ =
                 a
                     [ class "rounded-sm group focus-ring focus:ring-orange-300 focus:ring-opacity-50 focus:ring-offset-4"
                     , Route.href Route.CommunitySettings
+                    , onClick ClosedSearch
                     ]
                     [ Icons.settings "fill-current h-6 text-gray-900 md:h-7 group-hover:text-orange-300" ]
 
@@ -1099,9 +1083,6 @@ codeOfConductModal model =
 viewMainMenu : Page -> Model -> Html (Msg externalMsg)
 viewMainMenu page model =
     let
-        closeClaimWithPhoto =
-            GotActionMsg Action.ClaimConfirmationClosed
-
         menuItem title route =
             a
                 [ class "text-center uppercase py-2 hover:text-orange-300 focus-ring focus-visible:ring-orange-300 focus-visible:ring-opacity-50 rounded-sm"
@@ -1110,7 +1091,6 @@ viewMainMenu page model =
                     , ( "text-gray-900", not (isActive page route) )
                     ]
                 , Route.href route
-                , onClick closeClaimWithPhoto
                 ]
                 [ text (model.shared.translators.t title) ]
 
@@ -1311,7 +1291,6 @@ codeOfConductUrl language =
 type External msg
     = UpdatedLoggedIn Model
     | DropFromRouteHistoryWhile (Route -> Bool)
-    | SetUpdateTimeEvery Float
     | ShowInsufficientPermissionsModal
     | AddedCommunity Profile.CommunityInfo
     | ExternalBroadcast BroadcastMsg
@@ -1325,6 +1304,7 @@ type External msg
     | ShowFeedback Feedback.Status String
     | HideFeedback
     | ShowCodeOfConductModal
+    | ExternalActionMsg Action.Msg
 
 
 {-| Perform a GraphQL query. This function is preferred over `Api.Graphql.query`
@@ -1439,7 +1419,7 @@ internalQuery :
     -> (RemoteData (Graphql.Http.Error result) result -> Msg externalMsg)
     -> Cmd (Msg externalMsg)
 internalQuery model selectionSet toMsg =
-    internalGraphqlOperation Api.Graphql.query model selectionSet toMsg
+    internalGraphqlOperation Api.Graphql.loggedInQuery model selectionSet toMsg
 
 
 internalMutation :
@@ -1448,11 +1428,11 @@ internalMutation :
     -> (RemoteData (Graphql.Http.Error result) result -> Msg externalMsg)
     -> Cmd (Msg externalMsg)
 internalMutation model selectionSet toMsg =
-    internalGraphqlOperation Api.Graphql.mutation model selectionSet toMsg
+    internalGraphqlOperation Api.Graphql.loggedInMutation model selectionSet toMsg
 
 
 internalGraphqlOperation :
-    (Shared
+    (Model
      -> Maybe Api.Graphql.Token
      -> SelectionSet result typeLock
      -> (rawOperationResult -> rawOperationResult)
@@ -1466,7 +1446,7 @@ internalGraphqlOperation operation model selectionSet toMsg =
     let
         operationCmd : Api.Graphql.Token -> Cmd (RemoteData (Graphql.Http.Error result) result)
         operationCmd authToken =
-            operation model.shared
+            operation model
                 (Just authToken)
                 selectionSet
                 identity
@@ -1592,11 +1572,11 @@ mapMsg mapFn msg =
         GotActionMsg subMsg ->
             GotActionMsg subMsg
 
-        SearchClosed ->
-            SearchClosed
-
         ClickedProfileIcon ->
             ClickedProfileIcon
+
+        ClosedSearch ->
+            ClosedSearch
 
         GotTimeInternal time ->
             GotTimeInternal time
@@ -1685,9 +1665,6 @@ mapExternal mapFn msg =
         DropFromRouteHistoryWhile dropFn ->
             DropFromRouteHistoryWhile dropFn
 
-        SetUpdateTimeEvery n ->
-            SetUpdateTimeEvery n
-
         ShowInsufficientPermissionsModal ->
             ShowInsufficientPermissionsModal
 
@@ -1743,6 +1720,9 @@ mapExternal mapFn msg =
         ShowCodeOfConductModal ->
             ShowCodeOfConductModal
 
+        ExternalActionMsg subMsg ->
+            ExternalActionMsg subMsg
+
 
 type Resource
     = CommunityResource
@@ -1774,9 +1754,6 @@ updateExternal externalMsg ({ shared } as model) =
 
         DropFromRouteHistoryWhile dropFn ->
             { defaultResult | model = { model | routeHistory = List.dropWhile dropFn model.routeHistory } }
-
-        SetUpdateTimeEvery n ->
-            { defaultResult | model = { model | updateTimeEvery = n } }
 
         ShowInsufficientPermissionsModal ->
             { defaultResult | model = { model | showInsufficientPermissionsModal = True } }
@@ -1957,6 +1934,9 @@ updateExternal externalMsg ({ shared } as model) =
         ShowCodeOfConductModal ->
             { defaultResult | model = { model | codeOfConductModalStatus = CodeOfConductShown } }
 
+        ExternalActionMsg subMsg ->
+            { defaultResult | cmd = Utils.spawnMessage (GotActionMsg subMsg) }
+
 
 type alias UpdateResult msg =
     UR.UpdateResult Model (Msg msg) (ExternalMsg msg)
@@ -2008,8 +1988,8 @@ type Msg externalMsg
     | GotFeedbackMsg Feedback.Msg
     | GotSearchMsg Search.Msg
     | GotActionMsg Action.Msg
-    | SearchClosed
     | ClickedProfileIcon
+    | ClosedSearch
     | GotTimeInternal Time.Posix
     | CompletedLoadContributionCount (RemoteData (Graphql.Http.Error (Maybe Int)) (Maybe Int))
     | ClickedReadHighlightedNews
@@ -2055,15 +2035,33 @@ update msg model =
             UR.init { model | shared = { shared | now = time } }
                 |> UR.addExt (GotTime time |> Broadcast)
 
-        GotActionMsg actionMsg ->
-            handleActionMsg model actionMsg
+        GotActionMsg subMsg ->
+            Action.update subMsg model.claimingAction model
+                |> UR.fromChild (\newClaimingAction -> { model | claimingAction = newClaimingAction })
+                    GotActionMsg
+                    (\ext ->
+                        case ext of
+                            Action.SetUpdateTimeEvery interval ->
+                                UR.mapModel (\m -> { m | updateTimeEvery = interval })
 
-        SearchClosed ->
-            { model | searchModel = Search.closeSearch model.searchModel }
-                |> UR.init
+                            Action.ShowFeedback feedbackModel ->
+                                UR.mapModel (\m -> { m | feedback = feedbackModel })
+
+                            Action.RequiredPrivateKey afterAuthMsg ->
+                                UR.mapModel askedAuthentication
+                                    >> UR.addExt (AddAfterPrivateKeyCallback (GotActionMsg afterAuthMsg))
+
+                            Action.ShowInsufficientPermissionsModal ->
+                                UR.mapModel (\m -> { m | showInsufficientPermissionsModal = True })
+                    )
+                    model
 
         ClickedProfileIcon ->
             { closeAllModals | searchModel = Search.closeSearch model.searchModel }
+                |> UR.init
+
+        ClosedSearch ->
+            { model | searchModel = Search.closeSearch model.searchModel }
                 |> UR.init
 
         GotSearchMsg searchMsg ->
@@ -2436,23 +2434,9 @@ update msg model =
                     (\extMsg uResult ->
                         case extMsg of
                             Auth.CompletedAuth accountName auth ->
-                                let
-                                    cmd =
-                                        case model.claimingAction.status of
-                                            Action.ClaimInProgress action maybeProof ->
-                                                -- If action claim is in progress,
-                                                -- send a message to finish the claiming process
-                                                -- when the user confirms the PIN.
-                                                Task.succeed (GotActionMsg (Action.ActionClaimed action maybeProof))
-                                                    |> Task.perform identity
-
-                                            _ ->
-                                                Cmd.none
-                                in
                                 closeModal uResult
                                     |> UR.mapModel (\m -> { m | auth = auth })
                                     |> UR.addExt AuthenticationSucceed
-                                    |> UR.addCmd cmd
                                     |> UR.addExt RunAfterPrivateKeyCallbacks
                                     |> UR.addBreadcrumb
                                         { type_ = Log.DefaultBreadcrumb
@@ -2848,71 +2832,6 @@ update msg model =
                 |> UR.init
 
 
-handleActionMsg : Model -> Action.Msg -> UpdateResult msg
-handleActionMsg ({ shared } as model) actionMsg =
-    case model.selectedCommunity of
-        RemoteData.Success community ->
-            let
-                actionModelToLoggedIn : Action.Model -> Model
-                actionModelToLoggedIn a =
-                    { model
-                        | claimingAction = a
-                        , feedback =
-                            case ( a.feedback, actionMsg ) of
-                                ( _, Action.Tick _ ) ->
-                                    -- Don't change feedback each second
-                                    model.feedback
-
-                                ( Just (Action.Failure s), _ ) ->
-                                    Feedback.Visible Feedback.Failure s
-
-                                ( Just (Action.Success s), _ ) ->
-                                    Feedback.Visible Feedback.Success s
-
-                                ( Nothing, _ ) ->
-                                    model.feedback
-                    }
-                        |> (if a.needsPinConfirmation then
-                                askedAuthentication
-
-                            else
-                                identity
-                           )
-            in
-            Action.update (hasPrivateKey model)
-                (model.profile
-                    |> RemoteData.map (.roles >> List.concatMap .permissions)
-                    |> RemoteData.withDefault []
-                )
-                shared
-                community.symbol
-                model.accountName
-                actionMsg
-                model.claimingAction
-                |> UR.map
-                    actionModelToLoggedIn
-                    GotActionMsg
-                    (\ext ->
-                        case ext of
-                            Action.SentFeedback feedback ->
-                                UR.mapModel (\prevModel -> { prevModel | feedback = feedback })
-
-                            Action.ShowInsufficientPermissions ->
-                                UR.mapModel (\prevModel -> { prevModel | showInsufficientPermissionsModal = True })
-                    )
-                |> UR.addCmd
-                    (case actionMsg of
-                        Action.AgreedToClaimWithProof _ ->
-                            Task.perform identity (Task.succeed SearchClosed)
-
-                        _ ->
-                            Cmd.none
-                    )
-
-        _ ->
-            UR.init model
-
-
 {-| Checks if we already have the user's private key loaded. If it does, returns
 `successfulUR`. If it doesn't, requires authentication and fires the `subMsg`
 again. Necessary to perform EOS transactions
@@ -2924,38 +2843,26 @@ withPrivateKey :
     -> { successMsg : subMsg, errorMsg : subMsg }
     -> UR.UpdateResult subModel subMsg (External subMsg)
     -> UR.UpdateResult subModel subMsg (External subMsg)
-withPrivateKey loggedIn necessaryPermissions subModel subMsg successfulUR =
-    let
-        actWithPrivateKey =
-            if hasPrivateKey loggedIn then
-                successfulUR
-
-            else
-                UR.init subModel
-                    |> UR.addExt (RequiredPrivateKey subMsg)
-    in
-    if List.isEmpty necessaryPermissions then
-        actWithPrivateKey
-
-    else
-        case profile loggedIn of
-            Just validProfile ->
-                if hasPermissions validProfile necessaryPermissions then
-                    actWithPrivateKey
-
-                else
-                    UR.init subModel
-                        |> UR.addExt ShowInsufficientPermissionsModal
-
-            Nothing ->
-                UR.init subModel
-                    |> UR.logImpossible subMsg.successMsg
-                        "Tried signing eos transaction, but profile wasn't loaded"
-                        (Just loggedIn.accountName)
-                        { moduleName = "Session.LoggedIn"
-                        , function = "withPrivateKey"
-                        }
-                        []
+withPrivateKey model requiredPermissions subModel subMsg successfulUR =
+    Auth.withPrivateKey model.auth
+        { requiredPermissions = requiredPermissions
+        , currentPermissions =
+            profile model
+                |> Maybe.map (.roles >> List.concatMap .permissions)
+        }
+        { onAskedPrivateKey = UR.addExt (RequiredPrivateKey subMsg)
+        , onInsufficientPermissions = UR.addExt ShowInsufficientPermissionsModal
+        , onAbsentPermissions =
+            UR.logImpossible subMsg.successMsg
+                "Tried signing eos transaction, but profile wasn't loaded"
+                (Just model.accountName)
+                { moduleName = "Session.LoggedIn"
+                , function = "withPrivateKey"
+                }
+                []
+        , defaultModel = subModel
+        }
+        (\_ -> successfulUR)
 
 
 {-| Determines if a profile has a set of permissions
@@ -2971,41 +2878,28 @@ hasPermissions profile_ permissions =
 
 
 withPrivateKeyInternal : Msg msg -> Model -> List Permission -> (Eos.PrivateKey -> UpdateResult msg) -> UpdateResult msg
-withPrivateKeyInternal msg loggedIn necessaryPermissions successfulUR =
-    let
-        actWithPrivateKey =
-            case maybePrivateKey loggedIn of
-                Just privateKey ->
-                    successfulUR privateKey
-
-                Nothing ->
-                    askedAuthentication loggedIn
-                        |> UR.init
-                        |> UR.addExt (AddAfterPrivateKeyCallback msg)
-    in
-    if List.isEmpty necessaryPermissions then
-        actWithPrivateKey
-
-    else
-        case profile loggedIn of
-            Just validProfile ->
-                if hasPermissions validProfile necessaryPermissions then
-                    actWithPrivateKey
-
-                else
-                    { loggedIn | showInsufficientPermissionsModal = True }
-                        |> UR.init
-
-            _ ->
-                loggedIn
-                    |> UR.init
-                    |> UR.logImpossible msg
-                        "Tried signing eos transaction internally, but profile wasn't loaded"
-                        (Just loggedIn.accountName)
-                        { moduleName = "Session.LoggedIn"
-                        , function = "withPrivateKeyInternal"
-                        }
-                        []
+withPrivateKeyInternal msg model requiredPermissions successfulUR =
+    Auth.withPrivateKey model.auth
+        { requiredPermissions = requiredPermissions
+        , currentPermissions =
+            profile model
+                |> Maybe.map (.roles >> List.concatMap .permissions)
+        }
+        { onAskedPrivateKey =
+            UR.mapModel askedAuthentication
+                >> UR.addExt (AddAfterPrivateKeyCallback msg)
+        , onInsufficientPermissions = UR.mapModel (\m -> { m | showInsufficientPermissionsModal = True })
+        , onAbsentPermissions =
+            UR.logImpossible msg
+                "Tried signing eos transaction internally, but profile wasn't loaded"
+                (Just model.accountName)
+                { moduleName = "Session.LoggedIn"
+                , function = "withPrivateKeyInternal"
+                }
+                []
+        , defaultModel = model
+        }
+        successfulUR
 
 
 isCommunityMember : Model -> Bool
@@ -3277,17 +3171,17 @@ msgToString msg =
         GotTimeInternal _ ->
             [ "GotTimeInternal" ]
 
-        SearchClosed ->
-            [ "SearchClosed" ]
-
         ClickedProfileIcon ->
             [ "ClickedProfileIcon" ]
+
+        ClosedSearch ->
+            [ "ClosedSearch" ]
 
         GotSearchMsg _ ->
             [ "GotSearchMsg" ]
 
-        GotActionMsg actionMsg ->
-            "GotActionMsg" :: Action.msgToString actionMsg
+        GotActionMsg subMsg ->
+            "GotActionMsg" :: Action.msgToString subMsg
 
         CompletedLoadTranslation _ r ->
             [ "CompletedLoadTranslation", UR.resultToString r ]
@@ -3413,9 +3307,6 @@ externalMsgToString externalMsg =
         DropFromRouteHistoryWhile _ ->
             [ "PopFromRouteHistory" ]
 
-        SetUpdateTimeEvery _ ->
-            [ "SetUpdateTimeEvery" ]
-
         ShowInsufficientPermissionsModal ->
             [ "ShowInsufficientPermissionsModal" ]
 
@@ -3454,3 +3345,6 @@ externalMsgToString externalMsg =
 
         ShowCodeOfConductModal ->
             [ "ShowCodeOfConductModal" ]
+
+        ExternalActionMsg subMsg ->
+            "ExternalActionMsg" :: Action.msgToString subMsg

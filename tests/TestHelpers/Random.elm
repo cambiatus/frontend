@@ -274,14 +274,24 @@ actionObjective =
     Random.constant Action.Objective
         |> with (Random.int 0 Random.maxInt |> Random.map Action.objectiveIdFromInt)
         |> with (Markdown.generator string)
-        |> with (symbol |> Random.map (\symbol_ -> { symbol = symbol_ }))
+        |> with
+            (Random.map2 (\symbol_ name_ -> { symbol = symbol_, name = name_ })
+                symbol
+                string
+            )
         |> with Random.Extra.bool
+
+
+actionId : Random.Generator Action.Id
+actionId =
+    Random.int 0 Random.maxInt
+        |> Random.map Action.idFromInt
 
 
 action : Random.Generator Action.Action
 action =
     Random.constant Action.Action
-        |> with (Random.int 0 Random.maxInt)
+        |> with actionId
         |> with (Markdown.generator string)
         |> with (Random.constant Nothing)
         |> with actionObjective

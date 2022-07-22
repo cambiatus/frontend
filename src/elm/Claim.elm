@@ -537,7 +537,6 @@ viewClaimCard loggedIn profileSummaries claim =
                     || not (isValidator loggedIn.accountName claim)
                     || claim.action.isCompleted
                     || Action.isClosed claim.action loggedIn.shared.now
-                    || Action.isPastDeadline claim.action loggedIn.shared.now
               then
                 button
                     [ class "button button-secondary w-full font-semibold mb-2"
@@ -1008,7 +1007,7 @@ viewClaimModal ({ shared, accountName } as loggedIn) profileSummaries claim =
         claimRoute =
             Route.Claim
                 (Action.objectiveIdToInt claim.action.objective.id)
-                claim.action.id
+                (Action.idToInt claim.action.id)
                 claim.id
 
         claimDetailsButton =

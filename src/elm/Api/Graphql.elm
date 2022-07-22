@@ -3,7 +3,7 @@ module Api.Graphql exposing
     , signPhrasePort, decodeSignedPhrasePort, Password
     , signIn, Token, SignInResponse, signUp, SignUpResponse
     , storeToken, createAbsintheSocket, tokenDecoder
-    , mutation, query, loggedInMutation, loggedInQuery
+    , query, loggedInMutation, loggedInQuery
     , errorToString, isNonExistingCommunityError, isNewsNotFoundError, isAuthError
     )
 
@@ -43,7 +43,7 @@ give back an auth token so we can perform further requests
 
 # Operations
 
-@docs mutation, query, loggedInMutation, loggedInQuery
+@docs query, loggedInMutation, loggedInQuery
 
 
 # Error helpers

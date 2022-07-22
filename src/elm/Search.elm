@@ -16,6 +16,7 @@ module Search exposing
     )
 
 import Action exposing (Action)
+import Auth
 import Avatar
 import Browser.Dom as Dom
 import Cambiatus.Object
@@ -32,6 +33,7 @@ import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Html exposing (Html, a, br, button, div, h3, img, li, p, span, strong, text, ul)
 import Html.Attributes exposing (alt, autocomplete, class, classList, disabled, minlength, src, tabindex, type_)
+import Html.Attributes.Aria exposing (role)
 import Html.Events exposing (onClick, onFocus)
 import Icons
 import Json.Decode as Decode exposing (list, string)
@@ -551,15 +553,33 @@ viewForm attrs translators model =
         { toMsg = GotFormMsg }
 
 
+type alias LoggedIn loggedIn community =
+    { loggedIn
+        | accountName : Eos.Account.Name
+        , shared : Shared
+        , selectedCommunity : RemoteData (Graphql.Http.Error (Maybe (Community community))) (Community community)
+        , auth : Auth.Model
+        , profile : RemoteData (Graphql.Http.Error (Maybe Profile.Model)) Profile.Model
+    }
+
+
+type alias Community community =
+    { community | symbol : Symbol }
+
+
 viewSearchBody :
-    Translators
+    LoggedIn loggedIn community
     -> Symbol
     -> Posix
     -> (Msg -> parentMsg)
     -> (Action.Msg -> parentMsg)
     -> Model
     -> Html parentMsg
-viewSearchBody translators selectedCommunity today searchToMsg actionToMsg searchModel =
+viewSearchBody loggedIn selectedCommunity today searchToMsg actionToMsg searchModel =
+    let
+        translators =
+            loggedIn.shared.translators
+    in
     div [ class "container mx-auto flex flex-grow" ]
         [ case searchModel.state of
             ResultsShowed (RemoteData.Success results) activeTab ->
@@ -580,8 +600,21 @@ viewSearchBody translators selectedCommunity today searchToMsg actionToMsg searc
                             div [ class "w-full" ]
                                 [ viewTabs translators results ActionsTab
                                     |> Html.map searchToMsg
-                                , Action.viewSearchActions translators today results.actions
-                                    |> Html.map actionToMsg
+                                , View.Components.masonryLayout
+                                    [ View.Components.Sm ]
+                                    { transitionWithParent = False }
+                                    [ class "grid mt-4 lg:mt-6 marker-hidden gap-4 lg:gap-x-6 sm:grid-cols-2 lg:grid-cols-3"
+                                    , role "list"
+                                    ]
+                                    (List.map
+                                        (Action.viewCard loggedIn
+                                            { containerAttrs = [ class "mb-4 lg:mb-6" ]
+                                            , position = Nothing
+                                            , toMsg = actionToMsg
+                                            }
+                                        )
+                                        results.actions
+                                    )
                                 ]
 
                         Just MembersTab ->
