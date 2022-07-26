@@ -463,7 +463,14 @@ upsertAction msg maybeAction loggedIn model formOutput =
                                 Just action ->
                                     encodeBool action.isCompleted
                           )
-                        , ( "image", Encode.string "" )
+                        , ( "image"
+                          , case formOutput.image of
+                                Nothing ->
+                                    Encode.string ""
+
+                                Just image ->
+                                    Encode.string image
+                          )
                         ]
               }
             ]
