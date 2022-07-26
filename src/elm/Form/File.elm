@@ -4,6 +4,7 @@ module Form.File exposing
     , withLabel, withEditIconOverlay, withAddImagesView, defaultAddImagesView, withImageSiblingElement
     , withContainerAttributes, withDisabled, withEntryContainerAttributes, withImageClass, withImageCropperAttributes, withAddImagesContainerAttributes
     , withFileTypes, FileType(..), withEntryActions, EntryAction(..)
+    , withGrayBoxVariant
     , update, view, Msg, ExtMsg(..), msgToString
     , fromSingleModel, toSingleModel, fromMultipleModel, toMultipleModel
     , parser, parserMultiple, getId, isEmpty, FileTypeStatus
@@ -66,6 +67,11 @@ the input.
 ## Customizing behavior
 
 @docs withFileTypes, FileType, withEntryActions, EntryAction
+
+
+## Variants
+
+@docs withGrayBoxVariant
 
 
 # The elm architecture
@@ -420,6 +426,20 @@ withAddImagesView newView (Options options) =
 withAddImagesContainerAttributes : List (Html.Attribute Never) -> Options msg -> Options msg
 withAddImagesContainerAttributes attributes (Options options) =
     Options { options | addImagesContainerAttributes = options.addImagesContainerAttributes ++ attributes }
+
+
+{-| -}
+withGrayBoxVariant : Translation.Translators -> Options msg -> Options msg
+withGrayBoxVariant translators =
+    withEntryContainerAttributes (\_ -> [ class "bg-gray-100 rounded-sm overflow-hidden grid place-items-center" ])
+        >> withAddImagesView
+            [ div [ class "h-full w-full bg-gray-100 rounded-sm flex flex-col justify-center items-center" ]
+                [ Icons.addPhoto "fill-current text-body-black w-10 mb-2"
+                , p [ class "px-4 font-bold" ] [ text <| translators.t "community.actions.proof.upload_hint" ]
+                ]
+            ]
+        >> withAddImagesContainerAttributes [ class "!w-full rounded-sm" ]
+        >> withImageCropperAttributes [ class "rounded-sm" ]
 
 
 {-| -}
