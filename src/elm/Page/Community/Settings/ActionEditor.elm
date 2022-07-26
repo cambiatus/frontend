@@ -20,6 +20,7 @@ import Eos.Account as Eos
 import Form
 import Form.Checkbox
 import Form.DatePicker
+import Form.File
 import Form.Radio
 import Form.RichText
 import Form.Text
@@ -84,6 +85,7 @@ type Status
 
 type alias FormInput =
     { description : Form.RichText.Model
+    , image : Form.File.SingleModel
     , reward : String
     , useDateValidation : Bool
     , expirationDate : Form.DatePicker.Model
@@ -109,6 +111,11 @@ initFormInput shared maybeAction =
             maybeAction
                 |> Maybe.map .description
                 |> Form.RichText.initModel "description-editor"
+        , image =
+            Form.File.initSingle
+                { fileUrl = Maybe.andThen .image maybeAction
+                , aspectRatio = Nothing
+                }
         , reward =
             maybeAction
                 |> Maybe.map
@@ -469,6 +476,7 @@ upsertAction msg maybeAction loggedIn model formOutput =
 
 type alias FormOutput =
     { description : Markdown
+    , image : Maybe String
     , reward : Eos.Asset
     , expirationDate : Maybe Date.Date
     , maxUsages : Maybe Int
@@ -522,8 +530,9 @@ form loggedIn community =
             loggedIn.shared.translators
     in
     Form.succeed
-        (\description reward useDateValidation expirationDate useMaxUsages maxUsages usagesLeft verification ->
+        (\description image reward useDateValidation expirationDate useMaxUsages maxUsages usagesLeft verification ->
             { description = description
+            , image = image
             , reward = { amount = reward, symbol = community.symbol }
             , expirationDate =
                 if useDateValidation then
@@ -558,6 +567,23 @@ form loggedIn community =
                     , update = \description input -> { input | description = description }
                     , externalError = always Nothing
                     }
+            )
+        |> Form.with
+            (Form.File.init { id = "action-image-input " }
+                |> Form.File.withLabel (loggedIn.shared.translators.t "community.actions.form.image_label")
+                |> Form.File.withGrayBoxVariant loggedIn.shared.translators
+                |> Form.File.withEditIconOverlay
+                |> Form.File.withContainerAttributes [ class "sm:w-2/5 mb-10" ]
+                |> Form.File.withEntryContainerAttributes (\_ -> [ class "h-44" ])
+                |> Form.File.withAddImagesContainerAttributes [ class "h-44" ]
+                |> Form.file
+                    { parser = Ok
+                    , translators = loggedIn.shared.translators
+                    , value = .image
+                    , update = \image input -> { input | image = image }
+                    , externalError = always Nothing
+                    }
+                |> Form.optional
             )
         |> Form.with
             (Form.Text.init

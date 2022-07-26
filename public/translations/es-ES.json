@@ -630,6 +630,7 @@
       "form": {
         "not_found": "Acción no encontrada",
         "description_label": "Descripción",
+        "image_label": "Imagen (opcional)",
         "reward_label": "Recompensa",
         "validity_label": "Tipo de validez",
         "validation_on": "Caducidad activada,",

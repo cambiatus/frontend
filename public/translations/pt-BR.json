@@ -634,6 +634,7 @@
       "form": {
         "not_found": "Ação não encontrada",
         "description_label": "Descrição",
+        "image_label": "Imagem (opcional)",
         "reward_label": "Recompensa",
         "validity_label": "Tipo de validade",
         "validation_on": "Expiração ativada,",

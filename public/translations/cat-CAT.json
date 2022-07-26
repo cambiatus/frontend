@@ -630,6 +630,7 @@
       "form": {
         "not_found": "Acció no trobada",
         "description_label": "Descripció",
+        "image_label": "Imatge (opcional)",
         "reward_label": "Recompensa",
         "validity_label": "Tipus de validesa",
         "validation_on": "La caducitat s'ha activat,",

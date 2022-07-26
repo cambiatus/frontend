@@ -588,6 +588,7 @@
       "form": {
         "not_found": "ተግባር አልተገኘም",
         "description_label": "ማብራሪያ",
+        "image_label": "ምስል (አማራጭ)",
         "reward_label": "የጠያቅዎች ሽልማት",
         "validity_label": "የማረጋገጫ አይነት",
         "validation_on": "መጨሻዉ ጀመረ,",

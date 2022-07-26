@@ -626,6 +626,7 @@
       "form": {
         "not_found": "Action not found",
         "description_label": "Description",
+        "image_label": "Image (optional)",
         "reward_label": "Claimants Reward",
         "validity_label": "Validity type",
         "validation_on": "Expiration on,",
