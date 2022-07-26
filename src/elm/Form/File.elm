@@ -435,7 +435,7 @@ withGrayBoxVariant translators =
         >> withAddImagesView
             [ div [ class "h-full w-full bg-gray-100 rounded-sm flex flex-col justify-center items-center" ]
                 [ Icons.addPhoto "fill-current text-body-black w-10 mb-2"
-                , p [ class "px-4 font-bold" ] [ text <| translators.t "community.actions.proof.upload_hint" ]
+                , p [ class "px-4 font-bold text-center" ] [ text <| translators.t "community.actions.proof.upload_hint" ]
                 ]
             ]
         >> withAddImagesContainerAttributes [ class "!w-full rounded-sm" ]
