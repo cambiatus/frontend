@@ -94,6 +94,7 @@ type Msg
     | FinishedClosingObjective Community.Objective
     | GotObjectiveDetailsHeight Community.Objective (Result Browser.Dom.Error Browser.Dom.Element)
     | GotObjectiveSummaryHeight Community.Objective (Result Browser.Dom.Error Browser.Dom.Element)
+    | LoadedActionImage { objectiveId : Action.ObjectiveId, actionId : Action.Id }
     | GotVisibleActionViewport { objectiveId : Action.ObjectiveId, actionId : Action.Id } (Result Browser.Dom.Error Browser.Dom.Viewport)
     | ClickedScrollToAction Action
     | GotActionMsg Action.Msg
@@ -170,7 +171,7 @@ update msg model loggedIn =
                                         , data =
                                             Encode.object
                                                 [ ( "name", Encode.string "scrollIntoView" )
-                                                , ( "id", Encode.string (actionCardId highlightedAction) )
+                                                , ( "id", Encode.string (actionCardId highlightedAction.id) )
                                                 ]
                                         }
                                         >> getHighlightedObjectiveSummaryHeight
@@ -299,6 +300,14 @@ update msg model loggedIn =
                       }
                     ]
 
+        LoadedActionImage { objectiveId, actionId } ->
+            UR.init model
+                |> UR.addCmd
+                    (Browser.Dom.getViewportOf (actionCardId actionId)
+                        |> Task.attempt
+                            (GotVisibleActionViewport { objectiveId = objectiveId, actionId = actionId })
+                    )
+
         GotVisibleActionViewport { objectiveId, actionId } (Ok { viewport }) ->
             { model
                 | shownObjectives =
@@ -337,7 +346,7 @@ update msg model loggedIn =
                         Encode.object
                             [ ( "name", Encode.string "smoothHorizontalScroll" )
                             , ( "containerId", Encode.string (objectiveContainerId action.objective) )
-                            , ( "targetId", Encode.string (actionCardId action) )
+                            , ( "targetId", Encode.string (actionCardId action.id) )
                             ]
                     }
 
@@ -559,7 +568,7 @@ viewPage loggedIn community model =
                                             Nothing
 
                                         else
-                                            Just ("#" ++ actionCardId action)
+                                            Just ("#" ++ actionCardId action.id)
                                     )
                         , threshold = 0.01
                         , breakpointToExclude = Just View.Components.Lg
@@ -816,10 +825,21 @@ viewObjective loggedIn model objective =
                                             [ class "mb-6 snap-center snap-always animate-fade-in-from-above motion-reduce:animate-none"
                                             , classList [ ( "border border-green ring ring-green ring-opacity-30", isActionHighlighted action ) ]
                                             , style "animation-delay" ("calc(75ms * " ++ String.fromInt index ++ ")")
-                                            , id (actionCardId action)
+                                            , id (actionCardId action.id)
                                             , Html.Events.on "animationend" (Decode.succeed (FinishedOpeningActions objective))
                                             ]
                                         , position = Just (index + 1)
+                                        , onImageLoad =
+                                            if visibleActionId == Just action.id then
+                                                Just
+                                                    (LoadedActionImage
+                                                        { objectiveId = objective.id
+                                                        , actionId = action.id
+                                                        }
+                                                    )
+
+                                            else
+                                                Nothing
                                         , toMsg = GotActionMsg
                                         }
                                         action
@@ -874,9 +894,9 @@ objectiveContainerId objective =
     "objective-container-" ++ String.fromInt (Action.objectiveIdToInt objective.id)
 
 
-actionCardId : Action -> String
-actionCardId action =
-    "action-card-" ++ Action.idToString action.id
+actionCardId : Action.Id -> String
+actionCardId actionId =
+    "action-card-" ++ Action.idToString actionId
 
 
 idFromActionCardId : String -> Maybe Action.Id
@@ -919,6 +939,9 @@ msgToString msg =
 
         GotObjectiveSummaryHeight _ _ ->
             [ "GotObjectiveSummaryHeight" ]
+
+        LoadedActionImage _ ->
+            [ "LoadedActionImage" ]
 
         GotVisibleActionViewport _ _ ->
             [ "GotVisibleActionViewport" ]

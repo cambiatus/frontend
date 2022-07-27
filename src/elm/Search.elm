@@ -610,6 +610,7 @@ viewSearchBody loggedIn selectedCommunity today searchToMsg actionToMsg searchMo
                                         (Action.viewCard loggedIn
                                             { containerAttrs = [ class "mb-4 lg:mb-6" ]
                                             , position = Nothing
+                                            , onImageLoad = Nothing
                                             , toMsg = actionToMsg
                                             }
                                         )

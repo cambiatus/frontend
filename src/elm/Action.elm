@@ -564,11 +564,12 @@ viewCard :
     ->
         { containerAttrs : List (Html.Attribute msg)
         , position : Maybe Int
+        , onImageLoad : Maybe msg
         , toMsg : Msg -> msg
         }
     -> Action
     -> Html msg
-viewCard loggedIn { containerAttrs, position, toMsg } action =
+viewCard loggedIn { containerAttrs, position, onImageLoad, toMsg } action =
     let
         ({ t, tr } as translators) =
             loggedIn.shared.translators
@@ -586,7 +587,18 @@ viewCard loggedIn { containerAttrs, position, toMsg } action =
 
             Just image ->
                 div [ class "mt-2 mx-2 relative max-h-36 flex" ]
-                    [ img [ src image, alt "", class "rounded object-cover mx-auto" ] []
+                    [ img
+                        [ src image
+                        , alt ""
+                        , class "rounded object-cover mx-auto"
+                        , case onImageLoad of
+                            Nothing ->
+                                class ""
+
+                            Just listener ->
+                                Html.Events.on "load" (Json.Decode.succeed listener)
+                        ]
+                        []
                     , div [ class "bg-gradient-to-t from-[#01003a14] to-[#01003a00] absolute top-0 left-0 w-full h-full rounded" ] []
                     ]
         , div [ class "px-4 pt-4 pb-6" ]
