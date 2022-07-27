@@ -10,6 +10,7 @@ module Page.Community.Settings.ActionEditor exposing
     )
 
 import Action exposing (Action)
+import Browser.Dom
 import Cambiatus.Enum.VerificationType as VerificationType
 import Cambiatus.Scalar exposing (DateTime(..))
 import Community
@@ -43,6 +44,7 @@ import RemoteData
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..))
 import Session.Shared as Shared exposing (Shared)
+import Task
 import Time
 import Time.Extra
 import UpdateResult as UR
@@ -63,6 +65,10 @@ init _ objectiveId actionId =
     }
         |> UR.init
         |> UR.addExt (LoggedIn.RequestedCommunityField Community.ObjectivesField)
+        |> UR.addCmd
+            (Browser.Dom.setViewport 0 0
+                |> Task.perform (\_ -> NoOp)
+            )
 
 
 
@@ -208,7 +214,8 @@ type alias UpdateResult =
 
 
 type Msg
-    = CompletedLoadObjectives Community.Model (List Community.Objective)
+    = NoOp
+    | CompletedLoadObjectives Community.Model (List Community.Objective)
     | ClosedAuthModal
     | GotFormMsg (Form.Msg FormInput)
     | SubmittedForm (Maybe Action) FormOutput
@@ -232,6 +239,9 @@ update msg model ({ shared } as loggedIn) =
                     status
     in
     case msg of
+        NoOp ->
+            UR.init model
+
         CompletedLoadObjectives community objectives ->
             if community.creator == loggedIn.accountName then
                 let
@@ -1204,6 +1214,9 @@ jsAddressToMsg addr val =
 msgToString : Msg -> List String
 msgToString msg =
     case msg of
+        NoOp ->
+            [ "NoOp" ]
+
         CompletedLoadObjectives _ _ ->
             [ "CompletedLoadObjectives" ]
 
