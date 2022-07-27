@@ -94,7 +94,6 @@ type Msg
     | FinishedClosingObjective Community.Objective
     | GotObjectiveDetailsHeight Community.Objective (Result Browser.Dom.Error Browser.Dom.Element)
     | GotObjectiveSummaryHeight Community.Objective (Result Browser.Dom.Error Browser.Dom.Element)
-    | LoadedActionImage { objectiveId : Action.ObjectiveId, actionId : Action.Id }
     | GotVisibleActionViewport { objectiveId : Action.ObjectiveId, actionId : Action.Id } (Result Browser.Dom.Error Browser.Dom.Viewport)
     | ClickedScrollToAction Action
     | GotActionMsg Action.Msg
@@ -299,14 +298,6 @@ update msg model loggedIn =
                                 ]
                       }
                     ]
-
-        LoadedActionImage { objectiveId, actionId } ->
-            UR.init model
-                |> UR.addCmd
-                    (Browser.Dom.getViewportOf (actionCardId actionId)
-                        |> Task.attempt
-                            (GotVisibleActionViewport { objectiveId = objectiveId, actionId = actionId })
-                    )
 
         GotVisibleActionViewport { objectiveId, actionId } (Ok { viewport }) ->
             { model
@@ -829,17 +820,6 @@ viewObjective loggedIn model objective =
                                             , Html.Events.on "animationend" (Decode.succeed (FinishedOpeningActions objective))
                                             ]
                                         , position = Just (index + 1)
-                                        , onImageLoad =
-                                            if visibleActionId == Just action.id then
-                                                Just
-                                                    (LoadedActionImage
-                                                        { objectiveId = objective.id
-                                                        , actionId = action.id
-                                                        }
-                                                    )
-
-                                            else
-                                                Nothing
                                         , toMsg = GotActionMsg
                                         }
                                         action
@@ -939,9 +919,6 @@ msgToString msg =
 
         GotObjectiveSummaryHeight _ _ ->
             [ "GotObjectiveSummaryHeight" ]
-
-        LoadedActionImage _ ->
-            [ "LoadedActionImage" ]
 
         GotVisibleActionViewport _ _ ->
             [ "GotVisibleActionViewport" ]
