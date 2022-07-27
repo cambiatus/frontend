@@ -585,8 +585,8 @@ viewCard loggedIn { containerAttrs, position, toMsg } action =
                 text ""
 
             Just image ->
-                div [ class "mt-2 mx-2 relative" ]
-                    [ img [ src image, alt "", class "rounded" ] []
+                div [ class "mt-2 mx-2 relative max-h-36 flex" ]
+                    [ img [ src image, alt "", class "rounded object-cover mx-auto" ] []
                     , div [ class "bg-gradient-to-t from-[#01003a14] to-[#01003a00] absolute top-0 left-0 w-full h-full rounded" ] []
                     ]
         , div [ class "px-4 pt-4 pb-6" ]
