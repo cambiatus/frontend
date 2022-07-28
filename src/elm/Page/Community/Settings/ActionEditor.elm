@@ -120,7 +120,7 @@ initFormInput shared maybeAction =
         , image =
             Form.File.initSingle
                 { fileUrl = Maybe.andThen .image maybeAction
-                , aspectRatio = Nothing
+                , aspectRatio = Just (388 / 144)
                 }
         , reward =
             maybeAction
