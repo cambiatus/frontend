@@ -198,7 +198,7 @@ view loggedIn model =
                             defaultCoverPhoto
                     , div [ class "container mx-auto px-4 py-10" ]
                         [ div
-                            [ class "grid lg:grid-cols-3 gap-6"
+                            [ class "grid grid-cols-1 lg:grid-cols-3 gap-6"
                             , classList [ ( "lg:grid-cols-6", not (showSupportersCard community) && not (showNewsCard community) ) ]
                             ]
                             [ viewCommunityCard loggedIn.shared community

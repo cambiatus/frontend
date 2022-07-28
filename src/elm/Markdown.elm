@@ -643,7 +643,7 @@ view attributes (Markdown content) =
             in
             case Markdown.Renderer.render renderer blocks of
                 Ok asHtml ->
-                    Html.div (Html.Attributes.class "markdown-viewer break-all sm:break-normal sm:break-words" :: attributes) asHtml
+                    Html.div (Html.Attributes.class "markdown-viewer break-words" :: attributes) asHtml
 
                 Err _ ->
                     Html.text ""

@@ -358,6 +358,10 @@ https://tailwindcss.com/docs/adding-new-utilities */
     flex-basis: 0;
   }
 
+  .max-w-screen {
+    max-width: 100vw;
+  }
+
   .fill-mode-none {
     animation-fill-mode: none;
   }

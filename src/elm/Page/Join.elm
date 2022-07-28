@@ -217,7 +217,7 @@ view_ isGuest ({ translators } as shared) community model =
         [ class "bg-purple-500 flex-grow flex flex-col md:justify-center items-center p-4 lg:p-0"
         , classList [ ( "w-1/2", not isGuest ) ]
         ]
-        [ div [ class "bg-white rounded-b md:rounded lg:w-4/5 xl:w-7/12" ]
+        [ div [ class "bg-white rounded-b md:rounded w-full lg:w-4/5 xl:w-7/12" ]
             [ Community.communityPreviewImage False shared community
             , div [ class "p-4" ]
                 (Markdown.view [ class "text-gray-333 block mb-7" ] community.description

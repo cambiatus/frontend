@@ -722,7 +722,7 @@ viewObjective loggedIn model objective =
                     [ class "flex marker-hidden items-center bg-white rounded px-4 py-6 cursor-pointer"
                     ]
                     [ Icons.cambiatusCoin "text-blue fill-current flex-shrink-0 self-start mt-1"
-                    , h3 [ title (Markdown.toRawString objective.description) ]
+                    , h3 [ title (Markdown.toRawString objective.description), class "max-w-[calc(100%-64px)]" ]
                         [ Markdown.view [ class "font-bold px-4 line-clamp-4 self-start mt-1" ] objective.description ]
                     , span
                         [ class "ml-auto flex-shrink-0 transition-transform duration-150 motion-reduce:transition-none"
