@@ -26,6 +26,7 @@ import Html.Events exposing (onClick)
 import Icons
 import Markdown exposing (Markdown)
 import Page
+import Profile.EditKycForm exposing (Msg(..))
 import RemoteData exposing (RemoteData)
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..))
@@ -81,6 +82,7 @@ type
 type alias FormData =
     { mainInformation : Form.Model MainInformationFormInput
     , images : Form.Model ImagesFormInput
+    , categories : Form.Model CategoriesFormInput
     , priceAndInventory : Form.Model PriceAndInventoryFormInput
     , currentStep : Step
     }
@@ -89,7 +91,8 @@ type alias FormData =
 type Step
     = MainInformation
     | Images MainInformationFormOutput
-    | PriceAndInventory MainInformationFormOutput ImagesFormOutput
+    | Categories MainInformationFormOutput ImagesFormOutput
+    | PriceAndInventory MainInformationFormOutput ImagesFormOutput CategoriesFormOutput
 
 
 type alias MainInformationFormInput =
@@ -169,6 +172,19 @@ imagesForm translators =
                     , externalError = always Nothing
                     }
             )
+
+
+type alias CategoriesFormInput =
+    {}
+
+
+type alias CategoriesFormOutput =
+    {}
+
+
+categoriesForm : Form.Form msg CategoriesFormInput CategoriesFormOutput
+categoriesForm =
+    Debug.todo ""
 
 
 type alias PriceAndInventoryFormInput =
@@ -304,6 +320,7 @@ initFormData =
             , description = Form.RichText.initModel "product-description-editor" Nothing
             }
     , images = Form.init (Form.File.initMultiple { fileUrls = [], aspectRatio = Nothing })
+    , categories = Form.init {}
     , priceAndInventory =
         Form.init
             { price = "0"
@@ -324,6 +341,7 @@ initEditingFormData translators product step =
     , images =
         Form.File.initMultiple { fileUrls = product.images, aspectRatio = Nothing }
             |> Form.init
+    , categories = Form.init {}
     , priceAndInventory =
         Form.init
             { price = Eos.formatSymbolAmount translators product.symbol product.price
@@ -344,10 +362,15 @@ initEditingFormData translators product step =
             Route.SaleImages ->
                 Images { title = product.title, description = product.description }
 
+            Route.SaleCategories ->
+                Categories { title = product.title, description = product.description }
+                    product.images
+
             Route.SalePriceAndInventory ->
                 PriceAndInventory
                     { title = product.title, description = product.description }
                     product.images
+                    {}
     }
 
 
@@ -488,8 +511,11 @@ viewForm ({ shared } as loggedIn) { isEdit, isDisabled } model formData =
                 Images _ ->
                     ( 2, t "shop.steps.images.title" )
 
-                PriceAndInventory _ _ ->
-                    ( 3, t "shop.steps.price_and_inventory.title" )
+                Categories _ _ ->
+                    ( 3, Debug.todo "" )
+
+                PriceAndInventory _ _ _ ->
+                    ( 4, t "shop.steps.price_and_inventory.title" )
 
         isStepCompleted : Route.EditSaleStep -> Bool
         isStepCompleted step =
@@ -497,10 +523,19 @@ viewForm ({ shared } as loggedIn) { isEdit, isDisabled } model formData =
                 ( Route.SaleMainInformation, Images _ ) ->
                     True
 
-                ( Route.SaleMainInformation, PriceAndInventory _ _ ) ->
+                ( Route.SaleMainInformation, Categories _ _ ) ->
                     True
 
-                ( Route.SaleImages, PriceAndInventory _ _ ) ->
+                ( Route.SaleMainInformation, PriceAndInventory _ _ _ ) ->
+                    True
+
+                ( Route.SaleImages, Categories _ _ ) ->
+                    True
+
+                ( Route.SaleImages, PriceAndInventory _ _ _ ) ->
+                    True
+
+                ( Route.SaleCategories, PriceAndInventory _ _ _ ) ->
                     True
 
                 _ ->
@@ -517,7 +552,10 @@ viewForm ({ shared } as loggedIn) { isEdit, isDisabled } model formData =
                         Images _ ->
                             step == Route.SaleImages
 
-                        PriceAndInventory _ _ ->
+                        Categories _ _ ->
+                            step == Route.SaleCategories
+
+                        PriceAndInventory _ _ _ ->
                             step == Route.SalePriceAndInventory
 
                 maybeNewRoute =
@@ -531,8 +569,11 @@ viewForm ({ shared } as loggedIn) { isEdit, isDisabled } model formData =
                         Route.SaleImages ->
                             ( 2, t "shop.steps.images.title" )
 
+                        Route.SaleCategories ->
+                            ( 3, Debug.todo "" )
+
                         Route.SalePriceAndInventory ->
-                            ( 3, t "shop.steps.price_and_inventory.title" )
+                            ( 4, t "shop.steps.price_and_inventory.title" )
             in
             a
                 [ class "w-6 h-6 rounded-full flex-shrink-0 flex items-center justify-center transition-colors duration-300"
@@ -609,7 +650,14 @@ viewForm ({ shared } as loggedIn) { isEdit, isDisabled } model formData =
                             ImagesMsg
                             SubmittedImages
 
-                    PriceAndInventory _ _ ->
+                    Categories _ _ ->
+                        viewForm_ categoriesForm
+                            formData.categories
+                            { submitText = t "shop.steps.continue" }
+                            CategoriesMsg
+                            SubmittedCategories
+
+                    PriceAndInventory _ _ _ ->
                         case loggedIn.selectedCommunity of
                             RemoteData.Success community ->
                                 viewForm_ (priceAndInventoryForm shared.translators { isDisabled = isDisabled } community.symbol)
@@ -642,6 +690,7 @@ type Msg
     | GotFormMsg FormMsg
     | SubmittedMainInformation MainInformationTarget MainInformationFormOutput
     | SubmittedImages ImagesFormOutput
+    | SubmittedCategories CategoriesFormOutput
     | SubmittedPriceAndInventory PriceAndInventoryFormOutput
     | GotSaveResponse (RemoteData (Graphql.Http.Error (Maybe Shop.Id)) (Maybe Shop.Id))
     | ClickedDecrementStockUnits
@@ -656,6 +705,7 @@ type MainInformationTarget
 type FormMsg
     = MainInformationMsg (Form.Msg MainInformationFormInput)
     | ImagesMsg (Form.Msg ImagesFormInput)
+    | CategoriesMsg (Form.Msg CategoriesFormInput)
     | PriceAndInventoryMsg (Form.Msg PriceAndInventoryFormInput)
 
 
@@ -821,7 +871,9 @@ update msg model loggedIn =
             case maybeCurrentStep of
                 Just (Images mainInformation) ->
                     model
-                        |> setCurrentStep (PriceAndInventory mainInformation formOutput)
+                        -- TODO
+                        -- |> setCurrentStep (PriceAndInventory mainInformation formOutput)
+                        |> setCurrentStep (Categories mainInformation formOutput)
                         |> UR.init
                         |> UR.addCmd (setCurrentStepInUrl loggedIn.shared model Route.SalePriceAndInventory)
 
@@ -833,6 +885,9 @@ update msg model loggedIn =
                             { moduleName = "Page.Shop.Editor", function = "update" }
                             []
 
+        SubmittedCategories _ ->
+            Debug.todo ""
+
         SubmittedPriceAndInventory priceAndInventory ->
             let
                 maybeCurrentStep =
@@ -840,7 +895,7 @@ update msg model loggedIn =
                         |> Maybe.map .currentStep
             in
             case maybeCurrentStep of
-                Just (PriceAndInventory mainInformation images) ->
+                Just (PriceAndInventory mainInformation images categories) ->
                     case model of
                         EditingCreate formData ->
                             Creating formData
@@ -1017,6 +1072,9 @@ maybeSetStep translators step model =
                                             |> Utils.spawnMessage
                                         )
 
+                                    Route.SaleCategories ->
+                                        Debug.todo ""
+
                                     Route.SalePriceAndInventory ->
                                         ( model
                                         , Form.parse (mainInformationForm translators)
@@ -1035,6 +1093,9 @@ maybeSetStep translators step model =
                                     Route.SaleImages ->
                                         ( model, Cmd.none )
 
+                                    Route.SaleCategories ->
+                                        Debug.todo ""
+
                                     Route.SalePriceAndInventory ->
                                         ( model
                                         , Form.parse (imagesForm translators)
@@ -1045,13 +1106,19 @@ maybeSetStep translators step model =
                                             |> Utils.spawnMessage
                                         )
 
-                            PriceAndInventory mainInformationOutput _ ->
+                            Categories _ _ ->
+                                Debug.todo ""
+
+                            PriceAndInventory mainInformationOutput _ _ ->
                                 case step of
                                     Route.SaleMainInformation ->
                                         ( setCurrentStep MainInformation model, Cmd.none )
 
                                     Route.SaleImages ->
                                         ( setCurrentStep (Images mainInformationOutput) model, Cmd.none )
+
+                                    Route.SaleCategories ->
+                                        Debug.todo ""
 
                                     Route.SalePriceAndInventory ->
                                         ( model, Cmd.none )
@@ -1138,6 +1205,13 @@ updateForm shared formMsg model =
                             LoggedIn.addFeedback
                             model
 
+                CategoriesMsg subMsg ->
+                    Form.update shared subMsg formData.categories
+                        |> UR.fromChild (\newCategoriesForm -> updateModel { formData | categories = newCategoriesForm })
+                            (GotFormMsg << CategoriesMsg)
+                            LoggedIn.addFeedback
+                            model
+
                 PriceAndInventoryMsg subMsg ->
                     Form.update shared subMsg formData.priceAndInventory
                         |> UR.fromChild (\newPriceAndInventory -> updateModel { formData | priceAndInventory = newPriceAndInventory })
@@ -1167,6 +1241,9 @@ msgToString msg =
         SubmittedImages _ ->
             [ "SubmittedImages" ]
 
+        SubmittedCategories _ ->
+            [ "SubmittedCategories" ]
+
         SubmittedPriceAndInventory _ ->
             [ "SubmittedPriceAndInventory" ]
 
@@ -1185,6 +1262,9 @@ formMsgToString msg =
 
         ImagesMsg subMsg ->
             "ImagesMsg" :: Form.msgToString subMsg
+
+        CategoriesMsg subMsg ->
+            "CategoriesMsg" :: Form.msgToString subMsg
 
         PriceAndInventoryMsg subMsg ->
             "PriceAndInventoryMsg" :: Form.msgToString subMsg
@@ -1221,5 +1301,8 @@ getCurrentStepFromFormData formData =
         Images _ ->
             Route.SaleImages
 
-        PriceAndInventory _ _ ->
+        Categories _ _ ->
+            Route.SaleCategories
+
+        PriceAndInventory _ _ _ ->
             Route.SalePriceAndInventory

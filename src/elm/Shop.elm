@@ -260,6 +260,10 @@ createProduct :
     -> SelectionSet decodesTo Cambiatus.Object.Product
     -> SelectionSet (Maybe decodesTo) RootMutation
 createProduct options selectionSet =
+    let
+        acceptCategories =
+            Debug.todo "Accept categories"
+    in
     upsert
         { id = Nothing
         , title = options.title
@@ -285,6 +289,10 @@ updateProduct :
     -> SelectionSet decodesTo Cambiatus.Object.Product
     -> SelectionSet (Maybe decodesTo) RootMutation
 updateProduct options selectionSet =
+    let
+        acceptCategories =
+            Debug.todo "Accept categories"
+    in
     upsert
         { id = Just options.id
         , title = options.title
