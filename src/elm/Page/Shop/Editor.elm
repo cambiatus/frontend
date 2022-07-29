@@ -839,7 +839,7 @@ update msg model loggedIn =
                 targetCmd =
                     case target of
                         ImagesMainInformationTarget ->
-                            Cmd.none
+                            setCurrentStepInUrl loggedIn.shared model Route.SaleImages
 
                         CategoriesMainInformationTarget ->
                             case getFormData model of
@@ -872,7 +872,6 @@ update msg model loggedIn =
                     model
                         |> setCurrentStep (Images formOutput)
                         |> UR.init
-                        |> UR.addCmd (setCurrentStepInUrl loggedIn.shared model Route.SaleImages)
                         |> UR.addCmd targetCmd
 
                 _ ->
@@ -892,7 +891,7 @@ update msg model loggedIn =
                 targetCmd =
                     case target of
                         CategoriesImageTarget ->
-                            Cmd.none
+                            setCurrentStepInUrl loggedIn.shared model Route.SaleCategories
 
                         PriceAndInventoryImageTarget ->
                             case getFormData model of
@@ -912,7 +911,6 @@ update msg model loggedIn =
                     model
                         |> setCurrentStep (Categories mainInformation formOutput)
                         |> UR.init
-                        |> UR.addCmd (setCurrentStepInUrl loggedIn.shared model Route.SaleCategories)
                         |> UR.addCmd targetCmd
 
                 _ ->
