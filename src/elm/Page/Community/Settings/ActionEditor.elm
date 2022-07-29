@@ -588,12 +588,12 @@ form loggedIn community =
         |> Form.with
             (Form.File.init { id = "action-image-input " }
                 |> Form.File.withLabel (loggedIn.shared.translators.t "community.actions.form.image_label")
-                |> Form.File.withAddImagesContainerAttributes [ class "aspect-w-[388] aspect-h-[144] !w-full" ]
-                |> Form.File.withAddImagesView (Form.File.defaultAddImagesView [ class "!w-full !h-full rounded" ])
-                |> Form.File.withEntryContainerAttributes (\_ -> [ class "aspect-w-[388] aspect-h-[144] !w-full rounded" ])
-                |> Form.File.withImageClass "w-full aspect-w-[388] aspect-h-[144] rounded"
+                |> Form.File.withGrayBoxVariant loggedIn.shared.translators
+                |> Form.File.withAddImagesContainerAttributes [ class "w-full min-h-36 max-h-40 rounded overflow-hidden" ]
+                |> Form.File.withEntryContainerAttributes (\_ -> [ class "w-full min-h-36 max-h-40 rounded" ])
+                |> Form.File.withImageClass "w-full rounded"
+                |> Form.File.withContainerAttributes [ class "w-full sm:w-2/5 mb-2" ]
                 |> Form.File.withImageCropperAttributes [ class "rounded" ]
-                |> Form.File.withContainerAttributes [ class "sm:w-2/5 mb-2" ]
                 |> Form.File.withEditIconOverlay
                 |> Form.file
                     { parser = Ok

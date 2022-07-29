@@ -254,7 +254,6 @@ module.exports = {
     }),
     require('@tailwindcss/forms'),
     require('@tailwindcss/line-clamp'),
-    require('@tailwindcss/aspect-ratio'),
     // class support for rotation
     function ({ addUtilities, config }) {
       const rotateUtilities = _.map(config('theme.rotate'), (value, key) => {
