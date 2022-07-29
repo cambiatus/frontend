@@ -10,6 +10,7 @@ module Page.Community.Settings.ActionEditor exposing
     )
 
 import Action exposing (Action)
+import Browser.Dom
 import Cambiatus.Enum.VerificationType as VerificationType
 import Cambiatus.Scalar exposing (DateTime(..))
 import Community
@@ -20,6 +21,7 @@ import Eos.Account as Eos
 import Form
 import Form.Checkbox
 import Form.DatePicker
+import Form.File
 import Form.Radio
 import Form.RichText
 import Form.Text
@@ -42,6 +44,7 @@ import RemoteData
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..))
 import Session.Shared as Shared exposing (Shared)
+import Task
 import Time
 import Time.Extra
 import UpdateResult as UR
@@ -62,6 +65,10 @@ init _ objectiveId actionId =
     }
         |> UR.init
         |> UR.addExt (LoggedIn.RequestedCommunityField Community.ObjectivesField)
+        |> UR.addCmd
+            (Browser.Dom.setViewport 0 0
+                |> Task.perform (\_ -> NoOp)
+            )
 
 
 
@@ -84,6 +91,7 @@ type Status
 
 type alias FormInput =
     { description : Form.RichText.Model
+    , image : Form.File.SingleModel
     , reward : String
     , useDateValidation : Bool
     , expirationDate : Form.DatePicker.Model
@@ -109,6 +117,11 @@ initFormInput shared maybeAction =
             maybeAction
                 |> Maybe.map .description
                 |> Form.RichText.initModel "description-editor"
+        , image =
+            Form.File.initSingle
+                { fileUrl = Maybe.andThen .image maybeAction
+                , aspectRatio = Just (388 / 144)
+                }
         , reward =
             maybeAction
                 |> Maybe.map
@@ -201,7 +214,8 @@ type alias UpdateResult =
 
 
 type Msg
-    = CompletedLoadObjectives Community.Model (List Community.Objective)
+    = NoOp
+    | CompletedLoadObjectives Community.Model (List Community.Objective)
     | ClosedAuthModal
     | GotFormMsg (Form.Msg FormInput)
     | SubmittedForm (Maybe Action) FormOutput
@@ -225,6 +239,9 @@ update msg model ({ shared } as loggedIn) =
                     status
     in
     case msg of
+        NoOp ->
+            UR.init model
+
         CompletedLoadObjectives community objectives ->
             if community.creator == loggedIn.accountName then
                 let
@@ -456,7 +473,14 @@ upsertAction msg maybeAction loggedIn model formOutput =
                                 Just action ->
                                     encodeBool action.isCompleted
                           )
-                        , ( "image", Encode.string "" )
+                        , ( "image"
+                          , case formOutput.image of
+                                Nothing ->
+                                    Encode.string ""
+
+                                Just image ->
+                                    Encode.string image
+                          )
                         ]
               }
             ]
@@ -469,6 +493,7 @@ upsertAction msg maybeAction loggedIn model formOutput =
 
 type alias FormOutput =
     { description : Markdown
+    , image : Maybe String
     , reward : Eos.Asset
     , expirationDate : Maybe Date.Date
     , maxUsages : Maybe Int
@@ -522,8 +547,9 @@ form loggedIn community =
             loggedIn.shared.translators
     in
     Form.succeed
-        (\description reward useDateValidation expirationDate useMaxUsages maxUsages usagesLeft verification ->
+        (\description image reward useDateValidation expirationDate useMaxUsages maxUsages usagesLeft verification ->
             { description = description
+            , image = image
             , reward = { amount = reward, symbol = community.symbol }
             , expirationDate =
                 if useDateValidation then
@@ -558,6 +584,31 @@ form loggedIn community =
                     , update = \description input -> { input | description = description }
                     , externalError = always Nothing
                     }
+            )
+        |> Form.with
+            (Form.File.init { id = "action-image-input " }
+                |> Form.File.withLabel (loggedIn.shared.translators.t "community.actions.form.image_label")
+                |> Form.File.withGrayBoxVariant loggedIn.shared.translators
+                |> Form.File.withAddImagesContainerAttributes [ class "w-full min-h-36 max-h-40 rounded overflow-hidden" ]
+                |> Form.File.withEntryContainerAttributes (\_ -> [ class "w-full min-h-36 max-h-40 rounded" ])
+                |> Form.File.withImageClass "w-full rounded"
+                |> Form.File.withContainerAttributes [ class "w-full sm:w-2/5 mb-2" ]
+                |> Form.File.withImageCropperAttributes [ class "rounded" ]
+                |> Form.File.withEditIconOverlay
+                |> Form.file
+                    { parser = Ok
+                    , translators = loggedIn.shared.translators
+                    , value = .image
+                    , update = \image input -> { input | image = image }
+                    , externalError = always Nothing
+                    }
+                |> Form.optional
+            )
+        |> Form.withNoOutput
+            (Form.arbitrary
+                (p [ class "sm:w-2/5 mb-10 text-gray-600" ]
+                    [ text <| loggedIn.shared.translators.t "community.actions.form.image_guidance" ]
+                )
             )
         |> Form.with
             (Form.Text.init
@@ -1171,6 +1222,9 @@ jsAddressToMsg addr val =
 msgToString : Msg -> List String
 msgToString msg =
     case msg of
+        NoOp ->
+            [ "NoOp" ]
+
         CompletedLoadObjectives _ _ ->
             [ "CompletedLoadObjectives" ]
 

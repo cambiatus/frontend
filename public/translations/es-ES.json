@@ -5,6 +5,7 @@
   "thousands_separator": ".",
   "copied_to_clipboard": "Copiado al portapapeles",
   "share": "Compartir",
+  "upload_image": "Toque para tomar o seleccionar una foto",
   "dates": {
     "today": "Hoy",
     "yesterday": "Ayer",
@@ -630,6 +631,8 @@
       "form": {
         "not_found": "Acción no encontrada",
         "description_label": "Descripción",
+        "image_label": "Imagen (opcional)",
+        "image_guidance": "Su imagen debe estar en formato horizontal, al menos 400px de ancho y 150px de alto para una mejor vista",
         "reward_label": "Recompensa",
         "validity_label": "Tipo de validez",
         "validation_on": "Caducidad activada,",

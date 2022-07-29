@@ -5,6 +5,7 @@
   "thousands_separator": ",",
   "copied_to_clipboard": "ወደ ቅንጥብ ሰሌዳው ተቀድቷል",
   "share": "መካፈል",
+  "upload_image": "ፎቶ ለማንሳት ወይም ለመምረጥ ነካ ያድርጉ",
   "dates": {
     "today": "ዛሬ",
     "yesterday": "ትናንት",
@@ -588,6 +589,8 @@
       "form": {
         "not_found": "ተግባር አልተገኘም",
         "description_label": "ማብራሪያ",
+        "image_label": "ምስል (አማራጭ)",
+        "image_guidance": "ለተሻለ እይታ ምስልዎ በወርድ አቀማመጥ ቢያንስ 400 ፒክስል ስፋት እና 150 ፒክስል መሆን አለበት።",
         "reward_label": "የጠያቅዎች ሽልማት",
         "validity_label": "የማረጋገጫ አይነት",
         "validation_on": "መጨሻዉ ጀመረ,",

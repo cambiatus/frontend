@@ -5,6 +5,7 @@
   "thousands_separator": ".",
   "copied_to_clipboard": "S'ha copiat al porta-retalls",
   "share": "Compartir",
+  "upload_image": "Toca per fer o seleccionar una foto",
   "dates": {
     "today": "Avui",
     "yesterday": "Ahir",
@@ -630,6 +631,8 @@
       "form": {
         "not_found": "Acció no trobada",
         "description_label": "Descripció",
+        "image_label": "Imatge (opcional)",
+        "image_guidance": "La vostra imatge ha de ser en format horitzontal, com a mínim 400px d'ample i 150px d'alçada per a una millor visualització",
         "reward_label": "Recompensa",
         "validity_label": "Tipus de validesa",
         "validation_on": "La caducitat s'ha activat,",

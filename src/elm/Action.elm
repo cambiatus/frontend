@@ -585,8 +585,13 @@ viewCard loggedIn { containerAttrs, position, toMsg } action =
                 text ""
 
             Just image ->
-                div [ class "mt-2 mx-2 relative" ]
-                    [ img [ src image, alt "", class "rounded" ] []
+                div [ class "mt-2 mx-2 relative h-36 flex" ]
+                    [ img
+                        [ src image
+                        , alt ""
+                        , class "rounded object-cover mx-auto"
+                        ]
+                        []
                     , div [ class "bg-gradient-to-t from-[#01003a14] to-[#01003a00] absolute top-0 left-0 w-full h-full rounded" ] []
                     ]
         , div [ class "px-4 pt-4 pb-6" ]
@@ -984,17 +989,11 @@ claimWithPhotoForm translators =
         |> Form.with
             (Form.File.init { id = "photo-proof-input" }
                 |> Form.File.withFileTypes [ Form.File.Image, Form.File.Pdf ]
-                |> Form.File.withContainerAttributes [ class "w-full bg-gray-100 grid place-items-center mt-2" ]
-                |> Form.File.withEntryContainerAttributes (\_ -> [ class "h-56 rounded-sm overflow-hidden w-full grid place-items-center" ])
+                |> Form.File.withGrayBoxVariant translators
+                |> Form.File.withContainerAttributes [ class "w-full mt-2" ]
+                |> Form.File.withEntryContainerAttributes (\_ -> [ class "h-56 w-full" ])
                 |> Form.File.withImageClass "h-56"
-                |> Form.File.withAddImagesView
-                    [ div [ class "w-full h-56 bg-gray-100 rounded-sm flex flex-col justify-center items-center" ]
-                        [ Icons.addPhoto "fill-current text-body-black w-10 mb-2"
-                        , p [ class "px-4 font-bold" ] [ text <| translators.t "community.actions.proof.upload_hint" ]
-                        ]
-                    ]
-                |> Form.File.withAddImagesContainerAttributes [ class "!w-full rounded-sm" ]
-                |> Form.File.withImageCropperAttributes [ class "rounded-sm" ]
+                |> Form.File.withAddImagesContainerAttributes [ class "h-56 rounded-sm" ]
                 |> Form.file
                     { parser = Ok
                     , translators = translators
@@ -1014,7 +1013,7 @@ selectionSet =
     SelectionSet.succeed Action
         |> SelectionSet.with idSelectionSet
         |> SelectionSet.with (Markdown.selectionSet Cambiatus.Object.Action.description)
-        |> SelectionSet.with Cambiatus.Object.Action.image
+        |> SelectionSet.with (SelectionSet.map emptyStringToNothing Cambiatus.Object.Action.image)
         |> SelectionSet.with
             (SelectionSet.map
                 (\o ->
@@ -1041,6 +1040,19 @@ selectionSet =
         |> SelectionSet.with (Markdown.maybeSelectionSet Cambiatus.Object.Action.photoProofInstructions)
         |> SelectionSet.with Cambiatus.Object.Action.position
         |> SelectionSet.with (Cambiatus.Object.Action.claimCount (\optionals -> { optionals | status = OptionalArgument.Absent }))
+
+
+emptyStringToNothing : Maybe String -> Maybe String
+emptyStringToNothing maybeString =
+    case maybeString of
+        Nothing ->
+            Nothing
+
+        Just "" ->
+            Nothing
+
+        Just nonEmptyString ->
+            Just nonEmptyString
 
 
 objectiveSelectionSet : SelectionSet Objective Cambiatus.Object.Objective
