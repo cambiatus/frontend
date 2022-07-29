@@ -631,6 +631,7 @@
         "not_found": "Acción no encontrada",
         "description_label": "Descripción",
         "image_label": "Imagen (opcional)",
+        "image_guidance": "Su imagen debe estar en formato horizontal, al menos 400px de ancho y 150px de alto para una mejor vista",
         "reward_label": "Recompensa",
         "validity_label": "Tipo de validez",
         "validation_on": "Caducidad activada,",

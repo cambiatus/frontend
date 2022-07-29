@@ -627,6 +627,7 @@
         "not_found": "Action not found",
         "description_label": "Description",
         "image_label": "Image (optional)",
+        "image_guidance": "Your image should be in landscape mode, and be at least 400px wide and 150px high for a better visualization",
         "reward_label": "Claimants Reward",
         "validity_label": "Validity type",
         "validation_on": "Expiration on,",

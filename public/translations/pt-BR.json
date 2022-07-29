@@ -635,6 +635,7 @@
         "not_found": "Ação não encontrada",
         "description_label": "Descrição",
         "image_label": "Imagem (opcional)",
+        "image_guidance": "Sua imagem deve estar no formato paisagem, com pelo menos 400px de largura e 150px de altura para ter uma melhor visualização",
         "reward_label": "Recompensa",
         "validity_label": "Tipo de validade",
         "validation_on": "Expiração ativada,",
