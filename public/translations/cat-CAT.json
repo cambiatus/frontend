@@ -874,6 +874,9 @@
         "title": "Imatges",
         "guidance": "Afegeix imatges del producte. Podeu afegir més imatges més endavant"
       },
+      "categories": {
+        "title": "Categories"
+      },
       "price_and_inventory": {
         "title": "Preu i Inventari",
         "price_label": "Preu",

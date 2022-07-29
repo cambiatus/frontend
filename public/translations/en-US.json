@@ -871,6 +871,9 @@
         "title": "Images",
         "guidance": "Set the product images. You can add more later"
       },
+      "categories": {
+        "title": "Categories"
+      },
       "price_and_inventory": {
         "title": "Price and Inventory",
         "price_label": "Price",

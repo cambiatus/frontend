@@ -832,6 +832,9 @@
         "title": "ምስሎች",
         "guidance": "የምርት ምስሎችን ያክሉ። በኋላ ላይ ተጨማሪ ምስሎችን ማከል ትችላለህ"
       },
+      "categories": {
+        "title": "ምድቦች"
+      },
       "price_and_inventory": {
         "title": "ዋጋ እና ክምችት",
         "price_label": "ዋጋ",

@@ -878,6 +878,9 @@
         "title": "Imagens",
         "guidance": "Adicione imagens do produto. Você pode adicionar mais imagens mais tarde"
       },
+      "categories": {
+        "title": "Categorias"
+      },
       "price_and_inventory": {
         "title": "Preço e Inventário",
         "price_label": "Preço",

@@ -184,7 +184,7 @@ type alias CategoriesFormOutput =
 
 categoriesForm : Form.Form msg CategoriesFormInput CategoriesFormOutput
 categoriesForm =
-    Debug.todo ""
+    Form.succeed {}
 
 
 type alias PriceAndInventoryFormInput =
@@ -512,7 +512,7 @@ viewForm ({ shared } as loggedIn) { isEdit, isDisabled } model formData =
                     ( 2, t "shop.steps.images.title" )
 
                 Categories _ _ ->
-                    ( 3, Debug.todo "" )
+                    ( 3, t "shop.steps.categories.title" )
 
                 PriceAndInventory _ _ _ ->
                     ( 4, t "shop.steps.price_and_inventory.title" )
@@ -570,7 +570,7 @@ viewForm ({ shared } as loggedIn) { isEdit, isDisabled } model formData =
                             ( 2, t "shop.steps.images.title" )
 
                         Route.SaleCategories ->
-                            ( 3, Debug.todo "" )
+                            ( 3, t "shop.steps.categories.title" )
 
                         Route.SalePriceAndInventory ->
                             ( 4, t "shop.steps.price_and_inventory.title" )
@@ -623,6 +623,8 @@ viewForm ({ shared } as loggedIn) { isEdit, isDisabled } model formData =
                         , stepLine Route.SaleMainInformation
                         , stepBall Route.SaleImages
                         , stepLine Route.SaleImages
+                        , stepBall Route.SaleCategories
+                        , stepLine Route.SaleCategories
                         , stepBall Route.SalePriceAndInventory
                         ]
                     , h2 [ class "font-bold text-black mb-2" ]
