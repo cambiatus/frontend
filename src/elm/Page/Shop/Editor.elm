@@ -650,7 +650,7 @@ viewForm ({ shared } as loggedIn) { isEdit, isDisabled } model formData =
                             formData.images
                             { submitText = t "shop.steps.continue" }
                             ImagesMsg
-                            SubmittedImages
+                            (SubmittedImages CategoriesImageTarget)
 
                     Categories _ _ ->
                         viewForm_ categoriesForm
@@ -691,7 +691,7 @@ type Msg
     | CompletedSaleLoad (RemoteData (Graphql.Http.Error (Maybe Product)) (Maybe Product))
     | GotFormMsg FormMsg
     | SubmittedMainInformation MainInformationTarget MainInformationFormOutput
-    | SubmittedImages ImagesFormOutput
+    | SubmittedImages ImagesTarget ImagesFormOutput
     | SubmittedCategories CategoriesFormOutput
     | SubmittedPriceAndInventory PriceAndInventoryFormOutput
     | GotSaveResponse (RemoteData (Graphql.Http.Error (Maybe Shop.Id)) (Maybe Shop.Id))
@@ -701,7 +701,13 @@ type Msg
 
 type MainInformationTarget
     = ImagesMainInformationTarget
+    | CategoriesMainInformationTarget
     | PriceAndInventoryMainInformationTarget
+
+
+type ImagesTarget
+    = CategoriesImageTarget
+    | PriceAndInventoryImageTarget
 
 
 type FormMsg
@@ -830,10 +836,23 @@ update msg model loggedIn =
                     getFormData model
                         |> Maybe.map .currentStep
 
-                submitImagesCmd =
+                targetCmd =
                     case target of
                         ImagesMainInformationTarget ->
                             Cmd.none
+
+                        CategoriesMainInformationTarget ->
+                            case getFormData model of
+                                Nothing ->
+                                    Cmd.none
+
+                                Just formData ->
+                                    Form.parse (imagesForm loggedIn.shared.translators)
+                                        formData.images
+                                        { onError = GotFormMsg << ImagesMsg
+                                        , onSuccess = SubmittedImages CategoriesImageTarget
+                                        }
+                                        |> Utils.spawnMessage
 
                         PriceAndInventoryMainInformationTarget ->
                             case getFormData model of
@@ -844,7 +863,7 @@ update msg model loggedIn =
                                     Form.parse (imagesForm loggedIn.shared.translators)
                                         formData.images
                                         { onError = GotFormMsg << ImagesMsg
-                                        , onSuccess = SubmittedImages
+                                        , onSuccess = SubmittedImages PriceAndInventoryImageTarget
                                         }
                                         |> Utils.spawnMessage
             in
@@ -854,7 +873,7 @@ update msg model loggedIn =
                         |> setCurrentStep (Images formOutput)
                         |> UR.init
                         |> UR.addCmd (setCurrentStepInUrl loggedIn.shared model Route.SaleImages)
-                        |> UR.addCmd submitImagesCmd
+                        |> UR.addCmd targetCmd
 
                 _ ->
                     UR.init model
@@ -864,20 +883,37 @@ update msg model loggedIn =
                             { moduleName = "Page.Shop.Editor", function = "update" }
                             []
 
-        SubmittedImages formOutput ->
+        SubmittedImages target formOutput ->
             let
                 maybeCurrentStep =
                     getFormData model
                         |> Maybe.map .currentStep
+
+                targetCmd =
+                    case target of
+                        CategoriesImageTarget ->
+                            Cmd.none
+
+                        PriceAndInventoryImageTarget ->
+                            case getFormData model of
+                                Nothing ->
+                                    Cmd.none
+
+                                Just formData ->
+                                    Form.parse categoriesForm
+                                        formData.categories
+                                        { onError = GotFormMsg << CategoriesMsg
+                                        , onSuccess = SubmittedCategories
+                                        }
+                                        |> Utils.spawnMessage
             in
             case maybeCurrentStep of
                 Just (Images mainInformation) ->
                     model
-                        -- TODO
-                        -- |> setCurrentStep (PriceAndInventory mainInformation formOutput)
                         |> setCurrentStep (Categories mainInformation formOutput)
                         |> UR.init
                         |> UR.addCmd (setCurrentStepInUrl loggedIn.shared model Route.SalePriceAndInventory)
+                        |> UR.addCmd targetCmd
 
                 _ ->
                     UR.init model
@@ -1075,7 +1111,14 @@ maybeSetStep translators step model =
                                         )
 
                                     Route.SaleCategories ->
-                                        Debug.todo ""
+                                        ( model
+                                        , Form.parse (mainInformationForm translators)
+                                            formData.mainInformation
+                                            { onError = GotFormMsg << MainInformationMsg
+                                            , onSuccess = SubmittedMainInformation CategoriesMainInformationTarget
+                                            }
+                                            |> Utils.spawnMessage
+                                        )
 
                                     Route.SalePriceAndInventory ->
                                         ( model
@@ -1096,22 +1139,26 @@ maybeSetStep translators step model =
                                         ( model, Cmd.none )
 
                                     Route.SaleCategories ->
-                                        Debug.todo ""
+                                        ( model
+                                        , Form.parse (imagesForm translators)
+                                            formData.images
+                                            { onError = GotFormMsg << ImagesMsg
+                                            , onSuccess = SubmittedImages CategoriesImageTarget
+                                            }
+                                            |> Utils.spawnMessage
+                                        )
 
                                     Route.SalePriceAndInventory ->
                                         ( model
                                         , Form.parse (imagesForm translators)
                                             formData.images
                                             { onError = GotFormMsg << ImagesMsg
-                                            , onSuccess = SubmittedImages
+                                            , onSuccess = SubmittedImages PriceAndInventoryImageTarget
                                             }
                                             |> Utils.spawnMessage
                                         )
 
-                            Categories _ _ ->
-                                Debug.todo ""
-
-                            PriceAndInventory mainInformationOutput _ _ ->
+                            Categories mainInformationOutput _ ->
                                 case step of
                                     Route.SaleMainInformation ->
                                         ( setCurrentStep MainInformation model, Cmd.none )
@@ -1120,7 +1167,28 @@ maybeSetStep translators step model =
                                         ( setCurrentStep (Images mainInformationOutput) model, Cmd.none )
 
                                     Route.SaleCategories ->
-                                        Debug.todo ""
+                                        ( model, Cmd.none )
+
+                                    Route.SalePriceAndInventory ->
+                                        ( model
+                                        , Form.parse categoriesForm
+                                            formData.categories
+                                            { onError = GotFormMsg << CategoriesMsg
+                                            , onSuccess = SubmittedCategories
+                                            }
+                                            |> Utils.spawnMessage
+                                        )
+
+                            PriceAndInventory mainInformationOutput imagesOutput _ ->
+                                case step of
+                                    Route.SaleMainInformation ->
+                                        ( setCurrentStep MainInformation model, Cmd.none )
+
+                                    Route.SaleImages ->
+                                        ( setCurrentStep (Images mainInformationOutput) model, Cmd.none )
+
+                                    Route.SaleCategories ->
+                                        ( setCurrentStep (Categories mainInformationOutput imagesOutput) model, Cmd.none )
 
                                     Route.SalePriceAndInventory ->
                                         ( model, Cmd.none )
@@ -1240,7 +1308,7 @@ msgToString msg =
         SubmittedMainInformation _ _ ->
             [ "SubmittedMainInformation" ]
 
-        SubmittedImages _ ->
+        SubmittedImages _ _ ->
             [ "SubmittedImages" ]
 
         SubmittedCategories _ ->
