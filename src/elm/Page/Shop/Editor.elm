@@ -631,7 +631,7 @@ viewForm ({ shared } as loggedIn) { isEdit, isDisabled } model formData =
                         [ text <|
                             tr "shop.steps.index"
                                 [ ( "current", String.fromInt stepNumber )
-                                , ( "total", String.fromInt 3 )
+                                , ( "total", String.fromInt 4 )
                                 ]
                         ]
                     , text stepName
@@ -912,7 +912,7 @@ update msg model loggedIn =
                     model
                         |> setCurrentStep (Categories mainInformation formOutput)
                         |> UR.init
-                        |> UR.addCmd (setCurrentStepInUrl loggedIn.shared model Route.SalePriceAndInventory)
+                        |> UR.addCmd (setCurrentStepInUrl loggedIn.shared model Route.SaleCategories)
                         |> UR.addCmd targetCmd
 
                 _ ->
@@ -923,8 +923,26 @@ update msg model loggedIn =
                             { moduleName = "Page.Shop.Editor", function = "update" }
                             []
 
-        SubmittedCategories _ ->
-            Debug.todo ""
+        SubmittedCategories formOutput ->
+            let
+                maybeCurrentStep =
+                    getFormData model
+                        |> Maybe.map .currentStep
+            in
+            case maybeCurrentStep of
+                Just (Categories mainInformation images) ->
+                    model
+                        |> setCurrentStep (PriceAndInventory mainInformation images formOutput)
+                        |> UR.init
+                        |> UR.addCmd (setCurrentStepInUrl loggedIn.shared model Route.SalePriceAndInventory)
+
+                _ ->
+                    UR.init model
+                        |> UR.logImpossible msg
+                            "Submitted categories, but was in another step"
+                            (Just loggedIn.accountName)
+                            { moduleName = "Page.Shop.Editor", function = "update" }
+                            []
 
         SubmittedPriceAndInventory priceAndInventory ->
             let
