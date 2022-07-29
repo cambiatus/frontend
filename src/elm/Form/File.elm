@@ -430,16 +430,23 @@ withAddImagesContainerAttributes attributes (Options options) =
 
 {-| -}
 withGrayBoxVariant : Translation.Translators -> Options msg -> Options msg
-withGrayBoxVariant translators =
-    withEntryContainerAttributes (\_ -> [ class "bg-gray-100 rounded-sm overflow-hidden grid place-items-center" ])
-        >> withAddImagesView
+withGrayBoxVariant translators (Options options) =
+    Options options
+        |> withEntryContainerAttributes (\_ -> [ class "bg-gray-100 rounded-sm overflow-hidden grid place-items-center" ])
+        |> withAddImagesView
             [ div [ class "w-full bg-gray-100 rounded-sm flex flex-col justify-center items-center hover:bg-gray-200" ]
                 [ Icons.addPhoto "fill-current text-body-black w-10 mb-2"
-                , p [ class "px-4 font-bold text-center" ] [ text <| translators.t "community.actions.proof.upload_hint" ]
+                , p [ class "px-4 font-bold text-center" ]
+                    [ if not (List.member Pdf options.fileTypes) && List.member Image options.fileTypes then
+                        text <| translators.t "upload_image"
+
+                      else
+                        text <| translators.t "community.actions.proof.upload_hint"
+                    ]
                 ]
             ]
-        >> withAddImagesContainerAttributes [ class "!w-full rounded-sm" ]
-        >> withImageCropperAttributes [ class "rounded-sm" ]
+        |> withAddImagesContainerAttributes [ class "!w-full rounded-sm" ]
+        |> withImageCropperAttributes [ class "rounded-sm" ]
 
 
 {-| -}
