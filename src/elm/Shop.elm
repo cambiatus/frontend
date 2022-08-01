@@ -42,6 +42,7 @@ import Icons
 import Json.Encode as Encode exposing (Value)
 import Markdown exposing (Markdown)
 import Profile
+import Shop.Category
 import Translation
 import Url.Parser
 import Utils exposing (onClickPreventAll)
@@ -254,21 +255,19 @@ createProduct :
     { title : String
     , description : Markdown
     , images : List String
+    , categories : List Shop.Category.Id
     , price : Float
     , stockTracking : StockTracking
     }
     -> SelectionSet decodesTo Cambiatus.Object.Product
     -> SelectionSet (Maybe decodesTo) RootMutation
 createProduct options selectionSet =
-    let
-        acceptCategories =
-            Debug.todo "Accept categories"
-    in
     upsert
         { id = Nothing
         , title = options.title
         , description = options.description
         , images = options.images
+        , categories = options.categories
         , price = options.price
         , stockTracking = options.stockTracking
         }
@@ -283,21 +282,19 @@ updateProduct :
     , title : String
     , description : Markdown
     , images : List String
+    , categories : List Shop.Category.Id
     , price : Float
     , stockTracking : StockTracking
     }
     -> SelectionSet decodesTo Cambiatus.Object.Product
     -> SelectionSet (Maybe decodesTo) RootMutation
 updateProduct options selectionSet =
-    let
-        acceptCategories =
-            Debug.todo "Accept categories"
-    in
     upsert
         { id = Just options.id
         , title = options.title
         , description = options.description
         , images = options.images
+        , categories = options.categories
         , price = options.price
         , stockTracking = options.stockTracking
         }
@@ -309,12 +306,13 @@ upsert :
     , title : String
     , description : Markdown
     , images : List String
+    , categories : List Shop.Category.Id
     , price : Float
     , stockTracking : StockTracking
     }
     -> SelectionSet decodesTo Cambiatus.Object.Product
     -> SelectionSet (Maybe decodesTo) RootMutation
-upsert { id, title, description, images, price, stockTracking } =
+upsert { id, title, description, images, categories, price, stockTracking } =
     Mutation.product
         (\_ ->
             { id =
@@ -324,7 +322,10 @@ upsert { id, title, description, images, price, stockTracking } =
 
                     Just (Id unwrappedId) ->
                         Present unwrappedId
-            , categories = Absent
+            , categories =
+                categories
+                    |> List.map Shop.Category.idToInt
+                    |> Present
             , title = Present title
             , description = Present (Markdown.toRawString description)
             , images = Present images

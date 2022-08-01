@@ -32,6 +32,7 @@ import Route
 import Session.LoggedIn as LoggedIn exposing (External(..))
 import Session.Shared exposing (Shared)
 import Shop exposing (Product)
+import Shop.Category
 import Translation
 import UpdateResult as UR
 import Utils
@@ -179,12 +180,16 @@ type alias CategoriesFormInput =
 
 
 type alias CategoriesFormOutput =
-    {}
+    List Shop.Category.Id
 
 
 categoriesForm : Form.Form msg CategoriesFormInput CategoriesFormOutput
 categoriesForm =
-    Form.succeed {}
+    let
+        _ =
+            Debug.todo "Create form"
+    in
+    Form.succeed []
 
 
 type alias PriceAndInventoryFormInput =
@@ -370,7 +375,7 @@ initEditingFormData translators product step =
                 PriceAndInventory
                     { title = product.title, description = product.description }
                     product.images
-                    {}
+                    (Debug.todo "Initialize with product's categories")
     }
 
 
@@ -961,6 +966,7 @@ update msg model loggedIn =
                                             { title = mainInformation.title
                                             , description = mainInformation.description
                                             , images = images
+                                            , categories = categories
                                             , price = priceAndInventory.price.amount
                                             , stockTracking = priceAndInventory.unitTracking
                                             }
@@ -984,6 +990,7 @@ update msg model loggedIn =
                                             , title = mainInformation.title
                                             , description = mainInformation.description
                                             , images = images
+                                            , categories = categories
                                             , price = priceAndInventory.price.amount
                                             , stockTracking = priceAndInventory.unitTracking
                                             }
