@@ -999,6 +999,16 @@ createForm ({ t, tr } as translators) product maybeBalance { isDisabled } toForm
 
 viewEditSaleModal : Translation.Translators -> LoggedInModel -> Product -> Html LoggedInMsg
 viewEditSaleModal { t } model product =
+    let
+        item step name =
+            a
+                [ class "py-4 flex items-center hover:opacity-70 focus-ring rounded-sm"
+                , Route.href (Route.EditSale product.id step)
+                ]
+                [ text name
+                , Icons.arrowDown "-rotate-90 ml-auto"
+                ]
+    in
     View.Modal.initWith
         { closeMsg = ClosedEditSaleModal
         , isVisible = model.isEditModalVisible
@@ -1006,27 +1016,10 @@ viewEditSaleModal { t } model product =
         |> View.Modal.withHeader (t "shop.edit_offer")
         |> View.Modal.withBody
             [ div [ class "flex flex-col divide-y divide-gray-500 mt-1" ]
-                [ a
-                    [ class "py-4 flex items-center hover:opacity-70 focus-ring rounded-sm"
-                    , Route.href (Route.EditSale product.id Route.SaleMainInformation)
-                    ]
-                    [ text <| t "shop.steps.main_information.title"
-                    , Icons.arrowDown "-rotate-90 ml-auto"
-                    ]
-                , a
-                    [ class "py-4 flex items-center hover:opacity-70 focus-ring rounded-sm"
-                    , Route.href (Route.EditSale product.id Route.SaleImages)
-                    ]
-                    [ text <| t "shop.steps.images.title"
-                    , Icons.arrowDown "-rotate-90 ml-auto"
-                    ]
-                , a
-                    [ class "py-4 flex items-center hover:opacity-70 focus-ring rounded-sm"
-                    , Route.href (Route.EditSale product.id Route.SalePriceAndInventory)
-                    ]
-                    [ text <| t "shop.steps.price_and_inventory.title"
-                    , Icons.arrowDown "-rotate-90 ml-auto"
-                    ]
+                [ item Route.SaleMainInformation (t "shop.steps.main_information.title")
+                , item Route.SaleImages (t "shop.steps.images.title")
+                , item Route.SaleCategories (t "shop.steps.categories.title")
+                , item Route.SalePriceAndInventory (t "shop.steps.price_and_inventory.title")
                 , button
                     [ class "text-red py-4 flex items-center hover:opacity-60 focus-ring rounded-sm"
                     , onClick ClickedDelete
