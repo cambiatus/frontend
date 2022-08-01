@@ -243,7 +243,7 @@ viewAction ({ shared } as loggedIn) model objectiveId action =
     div [ class "flex flex-wrap sm:flex-nowrap mt-8 mb-4 relative bg-purple-500 rounded-lg px-4 py-5" ]
         [ div [ class "absolute top-0 left-0 right-0 -mt-6" ] [ Icons.flag "w-full fill-current text-green" ]
         , div [ class "w-full" ]
-            [ Markdown.view [ class "text-white truncate" ] action.description
+            [ Markdown.view [ class "text-white" ] action.description
             , div [ class "flex flex-wrap gap-y-4 gap-x-6 my-6 items-center" ]
                 [ div [ class "text-white" ]
                     [ p [ class "label text-green" ]
