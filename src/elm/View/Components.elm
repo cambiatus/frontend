@@ -514,10 +514,10 @@ keyListener { acceptedKeys, toMsg, stopPropagation, preventDefault } =
         []
 
 
-focusTrap : { firstFocusContainer : Maybe String } -> List (Html.Attribute msg) -> List (Html msg) -> Html msg
-focusTrap { firstFocusContainer } attrs children =
+focusTrap : { initialFocusId : Maybe String } -> List (Html.Attribute msg) -> List (Html msg) -> Html msg
+focusTrap { initialFocusId } attrs children =
     node "focus-trap"
-        (optionalAttr "first-focus-container" firstFocusContainer :: attrs)
+        (optionalAttr "initial-focus-id" initialFocusId :: attrs)
         children
 
 
