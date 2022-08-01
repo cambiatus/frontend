@@ -723,7 +723,12 @@ viewObjective loggedIn model objective =
                     ]
                     [ Icons.cambiatusCoin "text-blue fill-current flex-shrink-0 self-start mt-1"
                     , h3 [ title (Markdown.toRawString objective.description), class "max-w-[calc(100%-64px)]" ]
-                        [ Markdown.view [ class "font-bold px-4 line-clamp-4 self-start mt-1" ] objective.description ]
+                        [ Markdown.view
+                            [ class "font-bold px-4 self-start mt-1"
+                            , classList [ ( "line-clamp-4 hide-children-from-2", not isOpen ) ]
+                            ]
+                            objective.description
+                        ]
                     , span
                         [ class "ml-auto flex-shrink-0 transition-transform duration-150 motion-reduce:transition-none"
                         , classList
