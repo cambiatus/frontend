@@ -94,8 +94,8 @@ type alias FormInput =
     }
 
 
-initFormInput : Shared -> Maybe Action -> Form.Model FormInput
-initFormInput shared maybeAction =
+initFormInput : Shared -> Community.Model -> Maybe Action -> Form.Model FormInput
+initFormInput shared community maybeAction =
     let
         afterNow posix =
             if Time.posixToMillis posix >= Time.posixToMillis shared.now then
@@ -111,13 +111,9 @@ initFormInput shared maybeAction =
                 |> Form.RichText.initModel "description-editor"
         , reward =
             maybeAction
-                |> Maybe.map
-                    (\action ->
-                        Eos.formatSymbolAmount shared.translators
-                            action.objective.community.symbol
-                            action.reward
-                    )
-                |> Maybe.withDefault ""
+                |> Maybe.map .reward
+                |> Maybe.withDefault 0
+                |> Eos.formatSymbolAmount shared.translators community.symbol
         , useDateValidation =
             maybeAction
                 |> Maybe.map (.deadline >> Maybe.Extra.isJust)
@@ -139,8 +135,9 @@ initFormInput shared maybeAction =
                 |> (\usages -> usages > 0)
         , maxUsages =
             maybeAction
-                |> Maybe.map (.usages >> String.fromInt)
-                |> Maybe.withDefault ""
+                |> Maybe.map .usages
+                |> Maybe.withDefault 0
+                |> String.fromInt
         , usagesLeft =
             maybeAction
                 |> Maybe.andThen
@@ -170,13 +167,9 @@ initFormInput shared maybeAction =
                     }
             , verifierReward =
                 maybeAction
-                    |> Maybe.map
-                        (\action ->
-                            Eos.formatSymbolAmount shared.translators
-                                action.objective.community.symbol
-                                action.verifierReward
-                        )
-                    |> Maybe.withDefault ""
+                    |> Maybe.map .verifierReward
+                    |> Maybe.withDefault 0
+                    |> Eos.formatSymbolAmount shared.translators community.symbol
             , fileValidation =
                 { useFileValidation =
                     maybeAction
@@ -239,7 +232,7 @@ update msg model ({ shared } as loggedIn) =
                         in
                         case maybeAction of
                             Just action ->
-                                { model | status = Authorized (initFormInput shared (Just action)) (Just action) }
+                                { model | status = Authorized (initFormInput shared community (Just action)) (Just action) }
                                     |> UR.init
 
                             Nothing ->
@@ -247,7 +240,7 @@ update msg model ({ shared } as loggedIn) =
                                     |> UR.init
 
                     ( Just _, Nothing ) ->
-                        { model | status = Authorized (initFormInput shared Nothing) Nothing }
+                        { model | status = Authorized (initFormInput shared community Nothing) Nothing }
                             |> UR.init
 
                     ( Nothing, _ ) ->
