@@ -259,8 +259,6 @@ body > * {
 }
 
 .modal-content-full {
-  @apply overflow-auto;
-
   max-height: 95%;
 }
 
