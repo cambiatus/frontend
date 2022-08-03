@@ -830,7 +830,7 @@ viewHeader page ({ shared } as model) profile_ =
                   else
                     text ""
                 , if model.showUserNav then
-                    View.Components.focusTrap { firstFocusContainer = Nothing }
+                    View.Components.focusTrap { initialFocusId = Nothing }
                         []
                         [ nav
                             [ class "absolute right-0 lg:w-full py-2 px-4 shadow-lg bg-white rounded-t-lg rounded-b-lg lg:rounded-t-none z-50" ]

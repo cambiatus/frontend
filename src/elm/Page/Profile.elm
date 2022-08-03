@@ -926,8 +926,8 @@ viewProfile loggedIn profile =
                 ]
                 [ text_ "block_explorer.see" ]
     in
-    div [ class "p-4 bg-white border-white border-r w-full flex md:border-gray-500" ]
-        [ div [ class "w-full container mx-auto self-center md:max-w-lg" ]
+    div [ class "bg-white border-white border-r w-full flex md:border-gray-500" ]
+        [ div [ class "w-full p-4 max-w-screen container mx-auto self-center md:max-w-lg" ]
             (div [ class "pb-4 w-full" ]
                 [ div [ class "flex flex-wrap items-center justify-center mb-4" ]
                     [ Avatar.view profile.avatar "w-20 h-20 mr-6 xs-max:w-16 xs-max:h-16 xs-max:mr-3"

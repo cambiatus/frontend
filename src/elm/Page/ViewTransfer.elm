@@ -100,7 +100,7 @@ view loggedIn model =
                                     [ div [ class "bg-purple-500 absolute top-0 bottom-0 left-0 right-1/2 hidden lg:block" ] []
                                     , div [ class "bg-white absolute top-0 bottom-0 left-1/2 right-0 hidden lg:block" ] []
                                     , div
-                                        [ class "relative flex-grow grid mb-10 lg:container lg:mx-auto lg:px-4 lg:grid-cols-2 lg:py-10 lg:mb-0"
+                                        [ class "relative flex-grow grid grid-cols-1 mb-10 lg:container lg:mx-auto lg:px-4 lg:grid-cols-2 lg:py-10 lg:mb-0"
                                         , Html.Attributes.id "content-container"
                                         ]
                                         [ viewTransfer loggedIn transfer direction

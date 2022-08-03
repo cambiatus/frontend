@@ -259,8 +259,6 @@ body > * {
 }
 
 .modal-content-full {
-  @apply overflow-auto;
-
   max-height: 95%;
 }
 
@@ -356,6 +354,10 @@ https://tailwindcss.com/docs/adding-new-utilities */
 @layer utilities {
   .flex-basis-0 {
     flex-basis: 0;
+  }
+
+  .max-w-screen {
+    max-width: 100vw;
   }
 
   .fill-mode-none {

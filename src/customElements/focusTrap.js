@@ -30,13 +30,9 @@ export default () => (
 
     connectedCallback () {
       let elementToFocus = this.focusables(this)[0]
-      const firstFocusableContainers = this.querySelectorAll(this.getAttribute('first-focus-container'))
-      for (const container of firstFocusableContainers) {
-        const focusables = this.focusables(container)
-        if (focusables.length > 0) {
-          elementToFocus = focusables[0]
-          break
-        }
+      const initialFocusId = this.getAttribute('initial-focus-id')
+      if (initialFocusId) {
+        elementToFocus = this.querySelector(`#${initialFocusId}`)
       }
 
       if (elementToFocus) {

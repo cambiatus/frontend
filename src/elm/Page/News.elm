@@ -467,7 +467,7 @@ viewReactionPicker { t } model news =
             [ Icons.smilingFace "fill-current text-gray-900 w-6 h-6"
             ]
         , View.Components.focusTrap
-            { firstFocusContainer = Nothing }
+            { initialFocusId = Nothing }
             []
             [ ul
                 [ class "absolute shadow grid gap-1 p-2 rounded-sm bg-white"
