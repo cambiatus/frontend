@@ -1583,7 +1583,7 @@ changeRouteTo maybeRoute model =
                             ShopEditor.initCreate l
             in
             newModelCmd
-                >> updateStatusWith (ShopEditor Nothing) GotShopEditorMsg model
+                >> updateLoggedInUResult (ShopEditor Nothing) GotShopEditorMsg model
                 |> withLoggedIn (Route.NewSale step)
 
         Just (Route.EditSale saleId saleStep) ->
@@ -1591,15 +1591,9 @@ changeRouteTo maybeRoute model =
                 newUpdateResult l =
                     case model.status of
                         ShopEditor _ shopEditorModel ->
-                            let
-                                ( newModel, newCmd ) =
-                                    ShopEditor.maybeSetStep l.shared.translators
-                                        saleStep
-                                        shopEditorModel
-                            in
-                            newModel
-                                |> UR.init
-                                |> UR.addCmd newCmd
+                            ShopEditor.maybeSetStep l.shared.translators
+                                saleStep
+                                shopEditorModel
 
                         _ ->
                             ShopEditor.initUpdate saleId saleStep l
