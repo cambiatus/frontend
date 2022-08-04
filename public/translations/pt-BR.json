@@ -879,7 +879,8 @@
         "guidance": "Adicione imagens do produto. Você pode adicionar mais imagens mais tarde"
       },
       "categories": {
-        "title": "Categorias"
+        "title": "Categorias",
+        "guidance": "Você pode selecionar uma ou mais categorias para ajudar usuários a achar o seu produto"
       },
       "price_and_inventory": {
         "title": "Preço e Inventário",

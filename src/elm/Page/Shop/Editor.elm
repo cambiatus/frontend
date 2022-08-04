@@ -192,8 +192,8 @@ type alias CategoriesFormOutput =
     List Shop.Category.Id
 
 
-categoriesForm : List Shop.Category.Tree -> Form.Form msg CategoriesFormInput CategoriesFormOutput
-categoriesForm allCategories =
+categoriesForm : Translation.Translators -> List Shop.Category.Tree -> Form.Form msg CategoriesFormInput CategoriesFormOutput
+categoriesForm translators allCategories =
     let
         checkbox : Shop.Category.Model -> Form.Form msg CategoriesFormInput (Maybe Shop.Category.Id)
         checkbox category =
@@ -264,10 +264,19 @@ categoriesForm allCategories =
                             |> Form.mapOutput (List.filterMap identity)
                     )
     in
-    allCategories
-        |> List.map treeToForm
-        |> Form.list [ class "flex flex-col gap-y-6" ]
-        |> Form.mapOutput List.concat
+    Form.succeed identity
+        |> Form.withNoOutput
+            (Form.arbitrary
+                (p [ class "mb-4" ]
+                    [ text <| translators.t "shop.steps.categories.guidance" ]
+                )
+            )
+        |> Form.with
+            (allCategories
+                |> List.map treeToForm
+                |> Form.list [ class "flex flex-col gap-y-6" ]
+                |> Form.mapOutput List.concat
+            )
 
 
 type alias PriceAndInventoryFormInput =
@@ -738,7 +747,7 @@ viewForm ({ shared } as loggedIn) { isEdit, isDisabled } model formData =
                     Categories _ _ ->
                         case Community.getField loggedIn.selectedCommunity .shopCategories of
                             RemoteData.Success ( community, shopCategories ) ->
-                                viewForm_ (categoriesForm shopCategories)
+                                viewForm_ (categoriesForm shared.translators shopCategories)
                                     formData.categories
                                     { submitText = t "shop.steps.continue" }
                                     CategoriesMsg
@@ -995,7 +1004,7 @@ update msg model loggedIn =
                                     Cmd.none
 
                                 Just formData ->
-                                    Form.parse (categoriesForm (Debug.todo "Use categories from community"))
+                                    Form.parse (categoriesForm loggedIn.shared.translators (Debug.todo "Use categories from community"))
                                         formData.categories
                                         { onError = GotFormMsg << CategoriesMsg
                                         , onSuccess = SubmittedCategories
@@ -1289,7 +1298,7 @@ maybeSetStep translators step model =
                                     Route.SalePriceAndInventory ->
                                         UR.init model
                                             |> UR.addMsg
-                                                (Form.parse (categoriesForm (Debug.todo ""))
+                                                (Form.parse (categoriesForm translators (Debug.todo ""))
                                                     formData.categories
                                                     { onError = GotFormMsg << CategoriesMsg
                                                     , onSuccess = SubmittedCategories

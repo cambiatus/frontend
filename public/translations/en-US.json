@@ -872,7 +872,8 @@
         "guidance": "Set the product images. You can add more later"
       },
       "categories": {
-        "title": "Categories"
+        "title": "Categories",
+        "guidance": "You can select one or more categories to help users find your product"
       },
       "price_and_inventory": {
         "title": "Price and Inventory",

@@ -875,7 +875,8 @@
         "guidance": "Afegeix imatges del producte. Podeu afegir més imatges més endavant"
       },
       "categories": {
-        "title": "Categories"
+        "title": "Categories",
+        "guidance": "Podeu seleccionar una o més categories per ajudar els usuaris a trobar el vostre producte"
       },
       "price_and_inventory": {
         "title": "Preu i Inventari",
