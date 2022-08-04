@@ -6,6 +6,7 @@ module Page.Shop.Editor exposing
     , initUpdate
     , maybeSetStep
     , msgToString
+    , receiveBroadcast
     , update
     , view
     )
@@ -51,14 +52,18 @@ import View.Feedback as Feedback
 
 initCreate : LoggedIn.Model -> UpdateResult
 initCreate _ =
-    EditingCreate initFormData
+    { status = EditingCreate initFormData
+    , isWaitingForCategoriesToLoad = False
+    }
         |> UR.init
         |> UR.addExt (LoggedIn.RequestedReloadCommunityField Community.ShopCategoriesField)
 
 
 initUpdate : Shop.Id -> Route.EditSaleStep -> LoggedIn.Model -> UpdateResult
 initUpdate productId step loggedIn =
-    LoadingSaleUpdate step
+    { status = LoadingSaleUpdate step
+    , isWaitingForCategoriesToLoad = False
+    }
         |> UR.init
         |> UR.addExt
             (LoggedIn.query loggedIn
@@ -73,7 +78,9 @@ initUpdate productId step loggedIn =
 
 
 type alias Model =
-    Status
+    { status : Status
+    , isWaitingForCategoriesToLoad : Bool
+    }
 
 
 type
@@ -483,7 +490,7 @@ view loggedIn model =
             shared.translators.t
 
         isEdit =
-            case model of
+            case model.status of
                 EditingUpdate _ _ ->
                     True
 
@@ -501,7 +508,7 @@ view loggedIn model =
                 t "shop.create_offer"
 
         content =
-            case model of
+            case model.status of
                 LoadingSaleUpdate _ ->
                     Page.fullPageLoading shared
 
@@ -836,10 +843,13 @@ update msg model loggedIn =
             UR.init model
 
         CompletedSaleLoad (RemoteData.Success maybeSale) ->
-            case ( model, maybeSale ) of
+            case ( model.status, maybeSale ) of
                 ( LoadingSaleUpdate step, Just sale ) ->
-                    initEditingFormData loggedIn.shared.translators sale step
-                        |> EditingUpdate sale
+                    { model
+                        | status =
+                            initEditingFormData loggedIn.shared.translators sale step
+                                |> EditingUpdate sale
+                    }
                         |> UR.init
 
                 ( _, _ ) ->
@@ -852,7 +862,7 @@ update msg model loggedIn =
                             []
 
         CompletedSaleLoad (RemoteData.Failure error) ->
-            LoadSaleFailed error
+            { model | status = LoadSaleFailed error }
                 |> UR.init
                 |> UR.logGraphqlError msg
                     (Just loggedIn.accountName)
@@ -900,9 +910,9 @@ update msg model loggedIn =
                 internalError =
                     loggedIn.shared.translators.t "error.unknown"
             in
-            case model of
+            case model.status of
                 Creating form ->
-                    EditingCreate form
+                    { model | status = EditingCreate form }
                         |> UR.init
                         |> UR.addExt (LoggedIn.ShowFeedback Feedback.Failure internalError)
                         |> UR.logGraphqlError msg
@@ -913,7 +923,7 @@ update msg model loggedIn =
                             error
 
                 Saving sale form ->
-                    EditingUpdate sale form
+                    { model | status = EditingUpdate sale form }
                         |> UR.init
                         |> UR.addExt (LoggedIn.ShowFeedback Feedback.Failure internalError)
                         |> UR.logGraphqlError msg
@@ -996,15 +1006,15 @@ update msg model loggedIn =
                     getFormData model
                         |> Maybe.map .currentStep
 
-                targetCmd =
+                targetTransformation =
                     case target of
                         CategoriesImageTarget ->
-                            setCurrentStepInUrl loggedIn.shared model Route.SaleCategories
+                            UR.addCmd (setCurrentStepInUrl loggedIn.shared model Route.SaleCategories)
 
                         PriceAndInventoryImageTarget ->
                             case getFormData model of
                                 Nothing ->
-                                    Cmd.none
+                                    identity
 
                                 Just formData ->
                                     case Community.getField loggedIn.selectedCommunity .shopCategories of
@@ -1014,17 +1024,17 @@ update msg model loggedIn =
                                                 { onError = GotFormMsg << CategoriesMsg
                                                 , onSuccess = SubmittedCategories
                                                 }
-                                                |> Utils.spawnMessage
+                                                |> UR.addMsg
 
                                         _ ->
-                                            Debug.todo ""
+                                            UR.mapModel (\m -> { m | isWaitingForCategoriesToLoad = True })
             in
             case maybeCurrentStep of
                 Just (Images mainInformation) ->
                     model
                         |> setCurrentStep (Categories mainInformation formOutput)
                         |> UR.init
-                        |> UR.addCmd targetCmd
+                        |> targetTransformation
 
                 _ ->
                     UR.init model
@@ -1063,9 +1073,9 @@ update msg model loggedIn =
             in
             case maybeCurrentStep of
                 Just (PriceAndInventory mainInformation images categories) ->
-                    case model of
+                    case model.status of
                         EditingCreate formData ->
-                            Creating formData
+                            { model | status = Creating formData }
                                 |> UR.init
                                 |> UR.addExt
                                     (LoggedIn.mutation
@@ -1088,7 +1098,7 @@ update msg model loggedIn =
                                     { successMsg = msg, errorMsg = NoOp }
 
                         EditingUpdate sale formData ->
-                            Saving sale formData
+                            { model | status = Saving sale formData }
                                 |> UR.init
                                 |> UR.addExt
                                     (LoggedIn.mutation
@@ -1139,7 +1149,7 @@ updateFormStockUnits : (Int -> Int) -> Model -> UpdateResult
 updateFormStockUnits updateFn model =
     let
         maybeFormInfo =
-            case model of
+            case model.status of
                 EditingCreate form ->
                     Just ( form, EditingCreate )
 
@@ -1159,7 +1169,7 @@ updateFormStockUnits updateFn model =
         Nothing ->
             UR.init model
 
-        Just ( formData, updateModel ) ->
+        Just ( formData, updateStatus ) ->
             Form.updateValues
                 (\values ->
                     case String.toInt values.unitsInStock of
@@ -1176,13 +1186,13 @@ updateFormStockUnits updateFn model =
                 )
                 formData.priceAndInventory
                 |> (\priceAndInventory -> { formData | priceAndInventory = priceAndInventory })
-                |> updateModel
+                |> (\newFormData -> { model | status = updateStatus newFormData })
                 |> UR.init
 
 
 getFormData : Model -> Maybe FormData
 getFormData model =
-    case model of
+    case model.status of
         EditingCreate formData ->
             Just formData
 
@@ -1201,18 +1211,18 @@ getFormData model =
 
 setCurrentStep : Step -> Model -> Model
 setCurrentStep newStep model =
-    case model of
+    case model.status of
         EditingCreate formData ->
-            EditingCreate { formData | currentStep = newStep }
+            { model | status = EditingCreate { formData | currentStep = newStep } }
 
         Creating formData ->
-            Creating { formData | currentStep = newStep }
+            { model | status = Creating { formData | currentStep = newStep } }
 
         EditingUpdate product formData ->
-            EditingUpdate product { formData | currentStep = newStep }
+            { model | status = EditingUpdate product { formData | currentStep = newStep } }
 
         Saving product formData ->
-            Saving product { formData | currentStep = newStep }
+            { model | status = Saving product { formData | currentStep = newStep } }
 
         _ ->
             model
@@ -1319,7 +1329,8 @@ maybeSetStep loggedIn step model =
                                                         )
 
                                             _ ->
-                                                Debug.todo ""
+                                                { model | isWaitingForCategoriesToLoad = True }
+                                                    |> UR.init
 
                             PriceAndInventory mainInformationOutput imagesOutput _ ->
                                 case step of
@@ -1346,7 +1357,7 @@ maybeSetStep loggedIn step model =
 
 setCurrentStepInRoute : Model -> Route.EditSaleStep -> Maybe Route.Route
 setCurrentStepInRoute model step =
-    case model of
+    case model.status of
         EditingCreate _ ->
             Just (Route.NewSale step)
 
@@ -1380,7 +1391,7 @@ updateForm : Shared -> FormMsg -> Model -> UpdateResult
 updateForm shared formMsg model =
     let
         maybeFormInfo =
-            case model of
+            case model.status of
                 EditingCreate form ->
                     Just ( form, EditingCreate )
 
@@ -1400,36 +1411,63 @@ updateForm shared formMsg model =
         Nothing ->
             UR.init model
 
-        Just ( formData, updateModel ) ->
+        Just ( formData, updateStatus ) ->
             case formMsg of
                 MainInformationMsg subMsg ->
                     Form.update shared subMsg formData.mainInformation
                         |> UR.fromChild
-                            (\newMainInformation -> updateModel { formData | mainInformation = newMainInformation })
+                            (\newMainInformation -> { model | status = updateStatus { formData | mainInformation = newMainInformation } })
                             (GotFormMsg << MainInformationMsg)
                             LoggedIn.addFeedback
                             model
 
                 ImagesMsg subMsg ->
                     Form.update shared subMsg formData.images
-                        |> UR.fromChild (\newImagesForm -> updateModel { formData | images = newImagesForm })
+                        |> UR.fromChild
+                            (\newImagesForm -> { model | status = updateStatus { formData | images = newImagesForm } })
                             (GotFormMsg << ImagesMsg)
                             LoggedIn.addFeedback
                             model
 
                 CategoriesMsg subMsg ->
                     Form.update shared subMsg formData.categories
-                        |> UR.fromChild (\newCategoriesForm -> updateModel { formData | categories = newCategoriesForm })
+                        |> UR.fromChild
+                            (\newCategoriesForm -> { model | status = updateStatus { formData | categories = newCategoriesForm } })
                             (GotFormMsg << CategoriesMsg)
                             LoggedIn.addFeedback
                             model
 
                 PriceAndInventoryMsg subMsg ->
                     Form.update shared subMsg formData.priceAndInventory
-                        |> UR.fromChild (\newPriceAndInventory -> updateModel { formData | priceAndInventory = newPriceAndInventory })
+                        |> UR.fromChild
+                            (\newPriceAndInventory -> { model | status = updateStatus { formData | priceAndInventory = newPriceAndInventory } })
                             (GotFormMsg << PriceAndInventoryMsg)
                             LoggedIn.addFeedback
                             model
+
+
+receiveBroadcast : Translation.Translators -> LoggedIn.BroadcastMsg -> Model -> Maybe Msg
+receiveBroadcast translators broadcastMsg model =
+    case broadcastMsg of
+        LoggedIn.CommunityFieldLoaded community (Community.ShopCategories categories) ->
+            if model.isWaitingForCategoriesToLoad then
+                case getFormData model of
+                    Nothing ->
+                        Nothing
+
+                    Just formData ->
+                        Form.parse (categoriesForm translators categories)
+                            formData.categories
+                            { onError = GotFormMsg << CategoriesMsg
+                            , onSuccess = SubmittedCategories
+                            }
+                            |> Just
+
+            else
+                Nothing
+
+        _ ->
+            Nothing
 
 
 msgToString : Msg -> List String
@@ -1484,7 +1522,7 @@ formMsgToString msg =
 
 getCurrentStep : Model -> Route.EditSaleStep
 getCurrentStep model =
-    case model of
+    case model.status of
         EditingCreate formData ->
             getCurrentStepFromFormData formData
 
