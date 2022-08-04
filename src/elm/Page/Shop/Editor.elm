@@ -412,7 +412,7 @@ initEditingFormData translators product step =
                 PriceAndInventory
                     { title = product.title, description = product.description }
                     product.images
-                    (Debug.todo "Initialize with product's categories")
+                    product.categories
     }
 
 
