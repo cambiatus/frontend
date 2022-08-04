@@ -38,8 +38,10 @@ import Shop exposing (Product)
 import Shop.Category
 import Translation
 import Tree
+import Tree.Zipper
 import UpdateResult as UR
 import Utils
+import Utils.Tree
 import View.Feedback as Feedback
 
 
@@ -218,9 +220,24 @@ categoriesForm allCategories =
                             else
                                 Ok Nothing
                     , value = \input -> Dict.get category input |> Maybe.withDefault False
+                    , update =
+                        \input values ->
+                            let
+                                ancestors =
+                                    allCategories
+                                        |> Utils.Tree.fromFlatForest
+                                        |> Maybe.andThen (Tree.Zipper.findFromRoot (\zipperCategory -> zipperCategory.id == category.id))
+                                        |> Maybe.map Utils.Tree.getAllAncestors
+                                        |> Maybe.withDefault []
+                                        |> List.map Tree.Zipper.label
+                            in
+                            if input then
+                                ancestors
+                                    |> List.foldl (\ancestor -> Dict.insert ancestor True) values
+                                    |> Dict.insert category input
 
-                    -- TODO - Update all of its parents
-                    , update = \input -> Dict.insert category input
+                            else
+                                Dict.insert category input values
                     , externalError = always Nothing
                     }
 
