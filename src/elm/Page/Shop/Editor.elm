@@ -1007,12 +1007,17 @@ update msg model loggedIn =
                                     Cmd.none
 
                                 Just formData ->
-                                    Form.parse (categoriesForm loggedIn.shared.translators (Debug.todo "Use categories from community"))
-                                        formData.categories
-                                        { onError = GotFormMsg << CategoriesMsg
-                                        , onSuccess = SubmittedCategories
-                                        }
-                                        |> Utils.spawnMessage
+                                    case Community.getField loggedIn.selectedCommunity .shopCategories of
+                                        RemoteData.Success ( _, categories ) ->
+                                            Form.parse (categoriesForm loggedIn.shared.translators categories)
+                                                formData.categories
+                                                { onError = GotFormMsg << CategoriesMsg
+                                                , onSuccess = SubmittedCategories
+                                                }
+                                                |> Utils.spawnMessage
+
+                                        _ ->
+                                            Debug.todo ""
             in
             case maybeCurrentStep of
                 Just (Images mainInformation) ->
@@ -1213,9 +1218,12 @@ setCurrentStep newStep model =
             model
 
 
-maybeSetStep : Translation.Translators -> Route.EditSaleStep -> Model -> UpdateResult
-maybeSetStep translators step model =
+maybeSetStep : LoggedIn.Model -> Route.EditSaleStep -> Model -> UpdateResult
+maybeSetStep loggedIn step model =
     let
+        translators =
+            loggedIn.shared.translators
+
         maybeModelCmd =
             getFormData model
                 |> Maybe.map
@@ -1299,14 +1307,19 @@ maybeSetStep translators step model =
                                         UR.init model
 
                                     Route.SalePriceAndInventory ->
-                                        UR.init model
-                                            |> UR.addMsg
-                                                (Form.parse (categoriesForm translators (Debug.todo ""))
-                                                    formData.categories
-                                                    { onError = GotFormMsg << CategoriesMsg
-                                                    , onSuccess = SubmittedCategories
-                                                    }
-                                                )
+                                        case Community.getField loggedIn.selectedCommunity .shopCategories of
+                                            RemoteData.Success ( _, categories ) ->
+                                                UR.init model
+                                                    |> UR.addMsg
+                                                        (Form.parse (categoriesForm translators categories)
+                                                            formData.categories
+                                                            { onError = GotFormMsg << CategoriesMsg
+                                                            , onSuccess = SubmittedCategories
+                                                            }
+                                                        )
+
+                                            _ ->
+                                                Debug.todo ""
 
                             PriceAndInventory mainInformationOutput imagesOutput _ ->
                                 case step of
