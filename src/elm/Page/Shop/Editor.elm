@@ -433,7 +433,10 @@ initEditingFormData translators product step =
     , images =
         Form.File.initMultiple { fileUrls = product.images, aspectRatio = Nothing }
             |> Form.init
-    , categories = Form.init Dict.empty
+    , categories =
+        product.categories
+            |> List.foldl (\category -> Dict.insert category True) Dict.empty
+            |> Form.init
     , priceAndInventory =
         Form.init
             { price = Eos.formatSymbolAmount translators product.symbol product.price
@@ -462,7 +465,7 @@ initEditingFormData translators product step =
                 PriceAndInventory
                     { title = product.title, description = product.description }
                     product.images
-                    product.categories
+                    (List.map .id product.categories)
     }
 
 

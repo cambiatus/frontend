@@ -63,7 +63,7 @@ type alias Product =
     , images : List String
     , stockTracking : StockTracking
     , creator : Profile.Minimal
-    , categories : List Shop.Category.Id
+    , categories : List Shop.Category.Model
     }
 
 
@@ -183,7 +183,7 @@ productSelectionSet =
         |> with Cambiatus.Object.Product.units
         |> with Cambiatus.Object.Product.trackStock
         |> with (Cambiatus.Object.Product.creator Profile.minimalSelectionSet)
-        |> with (Cambiatus.Object.Product.categories Shop.Category.idSelectionSet)
+        |> with (Cambiatus.Object.Product.categories Shop.Category.selectionSet)
 
 
 productPreviewSelectionSet : SelectionSet ProductPreview Cambiatus.Object.ProductPreview
