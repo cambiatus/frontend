@@ -63,6 +63,7 @@ type alias Product =
     , images : List String
     , stockTracking : StockTracking
     , creator : Profile.Minimal
+    , categories : List Shop.Category.Id
     }
 
 
@@ -147,7 +148,7 @@ encodeTransferSale t =
 productSelectionSet : SelectionSet Product Cambiatus.Object.Product
 productSelectionSet =
     SelectionSet.succeed
-        (\id title description creatorId price symbol images maybeUnits trackStock creator ->
+        (\id title description creatorId price symbol images maybeUnits trackStock creator categories ->
             { id = id
             , title = title
             , description = description
@@ -169,6 +170,7 @@ productSelectionSet =
                 else
                     NoTracking
             , creator = creator
+            , categories = categories
             }
         )
         |> with idSelectionSet
@@ -181,6 +183,7 @@ productSelectionSet =
         |> with Cambiatus.Object.Product.units
         |> with Cambiatus.Object.Product.trackStock
         |> with (Cambiatus.Object.Product.creator Profile.minimalSelectionSet)
+        |> with (Cambiatus.Object.Product.categories Shop.Category.idSelectionSet)
 
 
 productPreviewSelectionSet : SelectionSet ProductPreview Cambiatus.Object.ProductPreview
