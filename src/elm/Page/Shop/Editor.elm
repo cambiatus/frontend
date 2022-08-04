@@ -197,17 +197,18 @@ categoriesForm allCategories =
         checkbox category =
             Form.Checkbox.init
                 { label =
-                    span []
+                    span [ class "flex items-center gap-x-2" ]
                         [ case category.icon of
                             Nothing ->
                                 text ""
 
                             Just icon ->
-                                img [ class "w-8 h-8 rounded-full", alt "", src icon ] []
+                                img [ class "w-5 h-5 rounded-full", alt "", src icon ] []
                         , text category.name
                         ]
                 , id = "category-" ++ Shop.Category.idToString category.id
                 }
+                |> Form.Checkbox.withContainerAttrs [ class "flex" ]
                 |> Form.checkbox
                     { parser =
                         \value ->
@@ -217,16 +218,39 @@ categoriesForm allCategories =
                             else
                                 Ok Nothing
                     , value = \input -> Dict.get category input |> Maybe.withDefault False
+
+                    -- TODO - Update all of its parents
                     , update = \input -> Dict.insert category input
                     , externalError = always Nothing
                     }
+
+        treeToForm : Tree.Tree Shop.Category.Model -> Form.Form msg CategoriesFormInput (List Shop.Category.Id)
+        treeToForm tree =
+            Form.succeed
+                (\label children ->
+                    case label of
+                        Nothing ->
+                            children
+
+                        Just head ->
+                            head :: children
+                )
+                |> Form.withGroup []
+                    (checkbox (Tree.label tree))
+                    (if List.isEmpty (Tree.children tree) then
+                        Form.succeed []
+
+                     else
+                        Tree.children tree
+                            |> List.map (Tree.label >> checkbox)
+                            |> Form.list [ class "ml-4 mt-6 flex flex-col gap-y-6" ]
+                            |> Form.mapOutput (List.filterMap identity)
+                    )
     in
     allCategories
-        -- |> List.map checkbox
-        -- TODO - Use children as well
-        |> List.map (Tree.label >> checkbox)
-        |> Form.list []
-        |> Form.mapOutput (List.filterMap identity)
+        |> List.map treeToForm
+        |> Form.list [ class "flex flex-col gap-y-6" ]
+        |> Form.mapOutput List.concat
 
 
 type alias PriceAndInventoryFormInput =
