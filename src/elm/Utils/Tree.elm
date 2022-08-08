@@ -1,5 +1,5 @@
 module Utils.Tree exposing
-    ( findInTrees, findInForest, getAllAncestors
+    ( findInForest, findZipperInForest, getAllAncestors
     , toFlatForest, fromFlatForest
     , goUpWithoutChildren, goDownWithoutChildren
     )
@@ -9,7 +9,7 @@ module Utils.Tree exposing
 
 ## Finding elements
 
-@docs findInTrees, findInForest, getAllAncestors
+@docs findInForest, findZipperInForest, getAllAncestors
 
 
 ## Transforming from and to Zipper
@@ -23,22 +23,18 @@ module Utils.Tree exposing
 
 -}
 
--- TODO - Create tests
-
-import List.Extra
 import Tree
 import Tree.Zipper
 
 
-findInTrees : (a -> Bool) -> List (Tree.Tree a) -> Maybe a
-findInTrees fn trees =
-    trees
-        |> List.concatMap Tree.flatten
-        |> List.Extra.find fn
-
-
-findInForest : (a -> Bool) -> List (Tree.Tree a) -> Maybe (Tree.Zipper.Zipper a)
+findInForest : (a -> Bool) -> List (Tree.Tree a) -> Maybe a
 findInForest fn trees =
+    findZipperInForest fn trees
+        |> Maybe.map Tree.Zipper.label
+
+
+findZipperInForest : (a -> Bool) -> List (Tree.Tree a) -> Maybe (Tree.Zipper.Zipper a)
+findZipperInForest fn trees =
     case trees of
         [] ->
             Nothing

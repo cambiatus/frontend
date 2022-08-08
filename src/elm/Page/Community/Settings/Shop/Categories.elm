@@ -164,7 +164,7 @@ update msg model loggedIn =
         getCategoryZipper categoryId =
             case Community.getField loggedIn.selectedCommunity .shopCategories of
                 RemoteData.Success ( _, categories ) ->
-                    Utils.Tree.findInForest (\category -> category.id == categoryId) categories
+                    Utils.Tree.findZipperInForest (\category -> category.id == categoryId) categories
 
                 _ ->
                     Nothing
@@ -338,7 +338,7 @@ update msg model loggedIn =
                             forest ++ [ Tree.singleton category ]
 
                         Just parentId ->
-                            case Utils.Tree.findInForest (\parent -> parent.id == parentId) forest of
+                            case Utils.Tree.findZipperInForest (\parent -> parent.id == parentId) forest of
                                 Nothing ->
                                     forest ++ [ Tree.singleton category ]
 
@@ -797,7 +797,7 @@ update msg model loggedIn =
         CompletedMovingCategoryToRoot categoryId (RemoteData.Success (Just ())) ->
             case Community.getField loggedIn.selectedCommunity .shopCategories of
                 RemoteData.Success ( _, categories ) ->
-                    case Utils.Tree.findInForest (\{ id } -> id == categoryId) categories of
+                    case Utils.Tree.findZipperInForest (\{ id } -> id == categoryId) categories of
                         Nothing ->
                             UR.init model
 
@@ -987,7 +987,7 @@ updateDnd loggedIn ext ur =
                 RemoteData.Success ( _, categories ) ->
                     case dropZone of
                         OnTopOf parentId ->
-                            case Utils.Tree.findInForest (\{ id } -> id == parentId) categories of
+                            case Utils.Tree.findZipperInForest (\{ id } -> id == parentId) categories of
                                 Nothing ->
                                     ur
 
@@ -1235,7 +1235,7 @@ view_ translators community model categories =
                     text ""
 
                 Open categoryId formModel ->
-                    case Utils.Tree.findInTrees (\category -> category.id == categoryId) categories of
+                    case Utils.Tree.findInForest (\category -> category.id == categoryId) categories of
                         Nothing ->
                             text ""
 
@@ -1246,7 +1246,7 @@ view_ translators community model categories =
                     text ""
 
                 Just categoryId ->
-                    case Utils.Tree.findInTrees (\category -> category.id == categoryId) categories of
+                    case Utils.Tree.findInForest (\category -> category.id == categoryId) categories of
                         Nothing ->
                             text ""
 
@@ -1257,7 +1257,7 @@ view_ translators community model categories =
                     text ""
 
                 Open categoryId formModel ->
-                    case Utils.Tree.findInTrees (\category -> category.id == categoryId) categories of
+                    case Utils.Tree.findInForest (\category -> category.id == categoryId) categories of
                         Nothing ->
                             text ""
 
