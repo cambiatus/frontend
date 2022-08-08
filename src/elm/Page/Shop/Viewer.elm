@@ -43,6 +43,7 @@ import Session.Guest as Guest
 import Session.LoggedIn as LoggedIn
 import Session.Shared as Shared
 import Shop exposing (Product, ProductPreview)
+import Shop.Category
 import Transfer
 import Translation
 import UpdateResult as UR
@@ -86,6 +87,7 @@ init session saleId =
                         (CompletedSaleLoad >> AsLoggedInMsg)
                     )
                 |> UR.addCmd (Api.getBalances shared accountName (CompletedLoadBalances >> AsLoggedInMsg))
+                |> UR.addExt (LoggedIn.RequestedCommunityField Community.ShopCategoriesField)
                 |> UR.map identity identity (Page.LoggedInExternal >> UR.addExt)
 
         Page.Guest guest ->
@@ -685,97 +687,103 @@ view session model =
                             Page.fullPageLoading guest.shared
 
                 ( AsLoggedIn model_, Page.LoggedIn loggedIn ) ->
-                    case RemoteData.map .hasShop loggedIn.selectedCommunity of
-                        RemoteData.Success False ->
-                            Page.fullPageNotFound
-                                (t "error.pageNotFound")
-                                (t "shop.disabled.description")
-
+                    case Community.getField loggedIn.selectedCommunity .shopCategories of
                         RemoteData.Loading ->
                             Page.fullPageLoading loggedIn.shared
 
                         RemoteData.NotAsked ->
                             Page.fullPageLoading loggedIn.shared
 
-                        RemoteData.Failure e ->
-                            Page.fullPageGraphQLError (t "community.error_loading") e
+                        RemoteData.Failure fieldError ->
+                            case fieldError of
+                                Community.CommunityError err ->
+                                    Page.fullPageGraphQLError (t "community.error_loading") err
 
-                        RemoteData.Success True ->
-                            case model_.status of
-                                RemoteData.Loading ->
-                                    div []
-                                        [ Page.viewHeader loggedIn ""
-                                        , Page.fullPageLoading loggedIn.shared
-                                        ]
+                                Community.FieldError err ->
+                                    Page.fullPageGraphQLError (t "community.error_loading") err
 
-                                RemoteData.NotAsked ->
-                                    div []
-                                        [ Page.viewHeader loggedIn ""
-                                        , Page.fullPageLoading loggedIn.shared
-                                        ]
+                        RemoteData.Success ( community, shopCategories ) ->
+                            if not community.hasShop then
+                                Page.fullPageNotFound
+                                    (t "error.pageNotFound")
+                                    (t "shop.disabled.description")
 
-                                RemoteData.Failure e ->
-                                    Page.fullPageGraphQLError (t "shop.title") e
+                            else
+                                case model_.status of
+                                    RemoteData.Loading ->
+                                        div []
+                                            [ Page.viewHeader loggedIn ""
+                                            , Page.fullPageLoading loggedIn.shared
+                                            ]
 
-                                RemoteData.Success sale ->
-                                    let
-                                        maybeBalance =
-                                            LE.find (\bal -> bal.asset.symbol == sale.symbol) model_.balances
+                                    RemoteData.NotAsked ->
+                                        div []
+                                            [ Page.viewHeader loggedIn ""
+                                            , Page.fullPageLoading loggedIn.shared
+                                            ]
 
-                                        isOwner =
-                                            sale.creator.account == loggedIn.accountName
+                                    RemoteData.Failure e ->
+                                        Page.fullPageGraphQLError (t "shop.title") e
 
-                                        isOutOfStock =
-                                            Shop.isOutOfStock sale
+                                    RemoteData.Success sale ->
+                                        let
+                                            maybeBalance =
+                                                LE.find (\bal -> bal.asset.symbol == sale.symbol) model_.balances
 
-                                        isDisabled =
-                                            isOwner || isOutOfStock
-                                    in
-                                    div [ class "flex-grow flex flex-col" ]
-                                        [ Page.viewHeader loggedIn sale.title
-                                        , viewContent sale
-                                            (Form.view []
-                                                loggedIn.shared.translators
-                                                (\submitButton ->
-                                                    [ if isOwner then
-                                                        button
-                                                            [ class "button button-primary w-full"
-                                                            , disabled (not loggedIn.hasAcceptedCodeOfConduct)
-                                                            , onClick ClickedEditSale
-                                                            , type_ "button"
-                                                            ]
-                                                            [ text <| t "shop.edit" ]
+                                            isOwner =
+                                                sale.creator.account == loggedIn.accountName
 
-                                                      else
-                                                        submitButton
-                                                            [ class "button button-primary w-full"
-                                                            , disabled (isOutOfStock || not loggedIn.hasAcceptedCodeOfConduct)
-                                                            ]
-                                                            [ if isOutOfStock then
-                                                                text <| t "shop.sold_out"
+                                            isOutOfStock =
+                                                Shop.isOutOfStock sale
 
-                                                              else
-                                                                text <| t "shop.buy"
-                                                            ]
-                                                    ]
+                                            isDisabled =
+                                                isOwner || isOutOfStock
+                                        in
+                                        div [ class "flex-grow flex flex-col" ]
+                                            [ Page.viewHeader loggedIn sale.title
+                                            , viewContent sale
+                                                (Form.view []
+                                                    loggedIn.shared.translators
+                                                    (\submitButton ->
+                                                        [ if isOwner then
+                                                            button
+                                                                [ class "button button-primary w-full"
+                                                                , disabled (not loggedIn.hasAcceptedCodeOfConduct)
+                                                                , onClick ClickedEditSale
+                                                                , type_ "button"
+                                                                ]
+                                                                [ text <| t "shop.edit" ]
+
+                                                          else
+                                                            submitButton
+                                                                [ class "button button-primary w-full"
+                                                                , disabled (isOutOfStock || not loggedIn.hasAcceptedCodeOfConduct)
+                                                                ]
+                                                                [ if isOutOfStock then
+                                                                    text <| t "shop.sold_out"
+
+                                                                  else
+                                                                    text <| t "shop.buy"
+                                                                ]
+                                                        ]
+                                                    )
+                                                    (createForm loggedIn.shared.translators
+                                                        sale
+                                                        maybeBalance
+                                                        { isDisabled = isDisabled }
+                                                        GotFormInteractionMsg
+                                                    )
+                                                    (Form.withDisabled isDisabled model_.form)
+                                                    { toMsg = GotFormMsg
+                                                    , onSubmit = ClickedTransfer sale
+                                                    }
+                                                    |> Html.map AsLoggedInMsg
                                                 )
-                                                (createForm loggedIn.shared.translators
-                                                    sale
-                                                    maybeBalance
-                                                    { isDisabled = isDisabled }
-                                                    GotFormInteractionMsg
-                                                )
-                                                (Form.withDisabled isDisabled model_.form)
-                                                { toMsg = GotFormMsg
-                                                , onSubmit = ClickedTransfer sale
-                                                }
+                                            , viewEditSaleModal translators model_ shopCategories sale
                                                 |> Html.map AsLoggedInMsg
-                                            )
-                                        , viewEditSaleModal translators model_ sale
-                                            |> Html.map AsLoggedInMsg
-                                        , viewConfirmDeleteModal translators model_
-                                            |> Html.map AsLoggedInMsg
-                                        ]
+                                            , viewConfirmDeleteModal translators model_
+                                                |> Html.map AsLoggedInMsg
+                                            ]
 
                 _ ->
                     Page.fullPageError (t "shop.title") Http.Timeout
@@ -997,8 +1005,13 @@ createForm ({ t, tr } as translators) product maybeBalance { isDisabled } toForm
             )
 
 
-viewEditSaleModal : Translation.Translators -> LoggedInModel -> Product -> Html LoggedInMsg
-viewEditSaleModal { t } model product =
+viewEditSaleModal :
+    Translation.Translators
+    -> LoggedInModel
+    -> List Shop.Category.Tree
+    -> Product
+    -> Html LoggedInMsg
+viewEditSaleModal { t } model shopCategories product =
     let
         item step name =
             a
@@ -1018,7 +1031,11 @@ viewEditSaleModal { t } model product =
             [ div [ class "flex flex-col divide-y divide-gray-500 mt-1" ]
                 [ item Route.SaleMainInformation (t "shop.steps.main_information.title")
                 , item Route.SaleImages (t "shop.steps.images.title")
-                , item Route.SaleCategories (t "shop.steps.categories.title")
+                , if List.isEmpty shopCategories then
+                    text ""
+
+                  else
+                    item Route.SaleCategories (t "shop.steps.categories.title")
                 , item Route.SalePriceAndInventory (t "shop.steps.price_and_inventory.title")
                 , button
                     [ class "text-red py-4 flex items-center hover:opacity-60 focus-ring rounded-sm"
