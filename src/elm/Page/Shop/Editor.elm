@@ -507,7 +507,7 @@ view loggedIn model =
             else
                 t "shop.create_offer"
 
-        content =
+        content community shopCategories =
             case model.status of
                 LoadingSaleUpdate _ ->
                     Page.fullPageLoading shared
@@ -516,27 +516,28 @@ view loggedIn model =
                     Page.fullPageGraphQLError (t "shop.title") error
 
                 EditingCreate formData ->
-                    viewForm loggedIn { isEdit = False, isDisabled = False } model formData
+                    viewForm loggedIn community shopCategories { isEdit = False, isDisabled = False } model formData
 
                 Creating formData ->
-                    viewForm loggedIn { isEdit = False, isDisabled = True } model formData
+                    viewForm loggedIn community shopCategories { isEdit = False, isDisabled = True } model formData
 
                 EditingUpdate _ formData ->
-                    viewForm loggedIn { isEdit = True, isDisabled = False } model formData
+                    viewForm loggedIn community shopCategories { isEdit = True, isDisabled = False } model formData
 
                 Saving _ formData ->
-                    viewForm loggedIn { isEdit = True, isDisabled = True } model formData
+                    viewForm loggedIn community shopCategories { isEdit = True, isDisabled = True } model formData
     in
     { title = title
     , content =
-        case RemoteData.map .hasShop loggedIn.selectedCommunity of
-            RemoteData.Success True ->
-                content
+        case Community.getField loggedIn.selectedCommunity .shopCategories of
+            RemoteData.Success ( community, shopCategories ) ->
+                if community.hasShop then
+                    content community shopCategories
 
-            RemoteData.Success False ->
-                Page.fullPageNotFound
-                    (t "error.pageNotFound")
-                    (t "shop.disabled.description")
+                else
+                    Page.fullPageNotFound
+                        (t "error.pageNotFound")
+                        (t "shop.disabled.description")
 
             RemoteData.Loading ->
                 Page.fullPageLoading shared
@@ -544,18 +545,25 @@ view loggedIn model =
             RemoteData.NotAsked ->
                 Page.fullPageLoading shared
 
-            RemoteData.Failure e ->
-                Page.fullPageGraphQLError (t "community.error_loading") e
+            RemoteData.Failure fieldError ->
+                case fieldError of
+                    Community.CommunityError err ->
+                        Page.fullPageGraphQLError (t "community.error_loading") err
+
+                    Community.FieldError err ->
+                        Page.fullPageGraphQLError (t "community.error_loading") err
     }
 
 
 viewForm :
     LoggedIn.Model
+    -> Community.Model
+    -> List Shop.Category.Tree
     -> { isEdit : Bool, isDisabled : Bool }
     -> Model
     -> FormData
     -> Html Msg
-viewForm ({ shared } as loggedIn) { isEdit, isDisabled } model formData =
+viewForm ({ shared } as loggedIn) community allCategories { isEdit, isDisabled } model formData =
     let
         { t, tr } =
             shared.translators
@@ -617,7 +625,20 @@ viewForm ({ shared } as loggedIn) { isEdit, isDisabled } model formData =
                     ( 3, t "shop.steps.categories.title" )
 
                 PriceAndInventory _ _ _ ->
-                    ( 4, t "shop.steps.price_and_inventory.title" )
+                    ( if List.isEmpty allCategories then
+                        3
+
+                      else
+                        4
+                    , t "shop.steps.price_and_inventory.title"
+                    )
+
+        totalSteps =
+            if List.isEmpty allCategories then
+                3
+
+            else
+                4
 
         isStepCompleted : Route.EditSaleStep -> Bool
         isStepCompleted step =
@@ -675,7 +696,7 @@ viewForm ({ shared } as loggedIn) { isEdit, isDisabled } model formData =
                             ( 3, t "shop.steps.categories.title" )
 
                         Route.SalePriceAndInventory ->
-                            ( 4, t "shop.steps.price_and_inventory.title" )
+                            ( totalSteps, t "shop.steps.price_and_inventory.title" )
             in
             a
                 [ class "w-6 h-6 rounded-full flex-shrink-0 flex items-center justify-center transition-colors duration-300"
@@ -721,19 +742,28 @@ viewForm ({ shared } as loggedIn) { isEdit, isDisabled } model formData =
             [ div [ class "bg-white pt-4 pb-8 flex-grow flex flex-col min-h-150 lg:w-2/3 lg:mx-auto lg:rounded lg:shadow-lg lg:animate-fade-in-from-above-lg lg:fill-mode-none lg:motion-reduce:animate-none" ]
                 [ div [ class "container mx-auto px-4 lg:max-w-none lg:mx-0 lg:px-6" ]
                     [ div [ class "mb-4 flex items-center" ]
-                        [ stepBall Route.SaleMainInformation
-                        , stepLine Route.SaleMainInformation
-                        , stepBall Route.SaleImages
-                        , stepLine Route.SaleImages
-                        , stepBall Route.SaleCategories
-                        , stepLine Route.SaleCategories
-                        , stepBall Route.SalePriceAndInventory
-                        ]
+                        ([ [ stepBall Route.SaleMainInformation
+                           , stepLine Route.SaleMainInformation
+                           , stepBall Route.SaleImages
+                           , stepLine Route.SaleImages
+                           ]
+                         , if List.isEmpty allCategories then
+                            []
+
+                           else
+                            [ stepBall Route.SaleCategories
+                            , stepLine Route.SaleCategories
+                            ]
+                         , [ stepBall Route.SalePriceAndInventory
+                           ]
+                         ]
+                            |> List.concat
+                        )
                     , h2 [ class "font-bold text-black mb-2" ]
                         [ text <|
                             tr "shop.steps.index"
                                 [ ( "current", String.fromInt stepNumber )
-                                , ( "total", String.fromInt 4 )
+                                , ( "total", String.fromInt totalSteps )
                                 ]
                         ]
                     , text stepName
@@ -752,42 +782,28 @@ viewForm ({ shared } as loggedIn) { isEdit, isDisabled } model formData =
                             formData.images
                             { submitText = t "shop.steps.continue" }
                             ImagesMsg
-                            (SubmittedImages CategoriesImageTarget)
+                            (SubmittedImages
+                                (if List.isEmpty allCategories then
+                                    PriceAndInventoryImageTarget
+
+                                 else
+                                    CategoriesImageTarget
+                                )
+                            )
 
                     Categories _ _ ->
-                        case Community.getField loggedIn.selectedCommunity .shopCategories of
-                            RemoteData.Success ( community, shopCategories ) ->
-                                viewForm_ (categoriesForm shared.translators shopCategories)
-                                    formData.categories
-                                    { submitText = t "shop.steps.continue" }
-                                    CategoriesMsg
-                                    SubmittedCategories
-
-                            RemoteData.Failure fieldError ->
-                                case fieldError of
-                                    Community.CommunityError err ->
-                                        Page.fullPageGraphQLError pageTitle err
-
-                                    Community.FieldError err ->
-                                        Page.fullPageGraphQLError pageTitle err
-
-                            _ ->
-                                Page.fullPageLoading shared
+                        viewForm_ (categoriesForm shared.translators allCategories)
+                            formData.categories
+                            { submitText = t "shop.steps.continue" }
+                            CategoriesMsg
+                            SubmittedCategories
 
                     PriceAndInventory _ _ _ ->
-                        case loggedIn.selectedCommunity of
-                            RemoteData.Success community ->
-                                viewForm_ (priceAndInventoryForm shared.translators { isDisabled = isDisabled } community.symbol)
-                                    formData.priceAndInventory
-                                    { submitText = actionText }
-                                    PriceAndInventoryMsg
-                                    SubmittedPriceAndInventory
-
-                            RemoteData.Failure err ->
-                                Page.fullPageGraphQLError pageTitle err
-
-                            _ ->
-                                Page.fullPageLoading shared
+                        viewForm_ (priceAndInventoryForm shared.translators { isDisabled = isDisabled } community.symbol)
+                            formData.priceAndInventory
+                            { submitText = actionText }
+                            PriceAndInventoryMsg
+                            SubmittedPriceAndInventory
                 ]
             ]
         ]
