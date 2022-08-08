@@ -266,9 +266,9 @@ categoriesForm translators allCategories =
 
                      else
                         Tree.children tree
-                            |> List.map (Tree.label >> checkbox)
+                            |> List.map treeToForm
                             |> Form.list [ class "ml-4 mt-6 flex flex-col gap-y-6" ]
-                            |> Form.mapOutput (List.filterMap identity)
+                            |> Form.mapOutput List.concat
                     )
     in
     Form.succeed identity
