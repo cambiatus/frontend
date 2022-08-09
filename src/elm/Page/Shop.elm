@@ -8,31 +8,41 @@ module Page.Shop exposing
     )
 
 import Api
+import AssocList as Dict
 import Cambiatus.Enum.Permission as Permission
 import Community exposing (Balance)
 import Eos
 import Eos.Account
+import Form
+import Form.Checkbox
+import Form.Radio
 import Graphql.Http
-import Html exposing (Html, a, br, div, h1, h2, img, li, p, span, text, ul)
+import Html exposing (Html, a, br, button, div, h1, h2, img, li, p, span, text, ul)
 import Html.Attributes exposing (alt, class, classList, src)
 import Html.Attributes.Aria exposing (ariaLabel)
+import Html.Events exposing (onClick)
 import Http
 import I18Next exposing (t)
 import Json.Encode as Encode
 import List.Extra
 import Page exposing (Session(..))
+import Profile.EditKycForm exposing (Msg(..))
 import Profile.Summary
 import RemoteData exposing (RemoteData)
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..))
 import Session.Shared as Shared
 import Shop exposing (Filter, Product)
+import Shop.Category
 import Translation
+import Tree
 import UpdateResult as UR
 import View.Components
+import View.Modal as Modal
 
 
 
+-- TODO - Fix styling
 -- INIT
 
 
@@ -49,6 +59,7 @@ init loggedIn filter =
 
 
 
+-- |> UR.addExt (LoggedIn.RequestedCommunityField Community.ShopCategoriesField)
 -- MODEL
 
 
@@ -56,6 +67,8 @@ type alias Model =
     { cards : Status
     , balances : List Balance
     , filter : Filter
+    , isFiltersModalOpen : Bool
+    , filtersForm : Form.Model FiltersFormInput
     }
 
 
@@ -64,7 +77,154 @@ initModel filter =
     { cards = Loading
     , balances = []
     , filter = filter
+    , isFiltersModalOpen = False
+    , filtersForm = Form.init { owner = Nothing, categories = Dict.empty }
     }
+
+
+type alias FiltersFormInput =
+    { owner : Maybe Eos.Account.Name
+    , categories : CategoriesFormInput
+    }
+
+
+type alias FiltersFormOutput =
+    { owner : Maybe Eos.Account.Name
+    , categories : List Shop.Category.Id
+    }
+
+
+filtersForm : LoggedIn.Model -> RemoteData err (List Shop.Category.Tree) -> Form.Form msg FiltersFormInput FiltersFormOutput
+filtersForm loggedIn allCategories =
+    Form.succeed FiltersFormOutput
+        |> Form.with (ownerForm loggedIn.accountName)
+        |> Form.with
+            (case allCategories of
+                RemoteData.Success categories ->
+                    -- TODO - Hide categoriesForm if categories is an empty list
+                    categoriesForm categories
+
+                RemoteData.Loading ->
+                    -- TODO - Display loading
+                    Form.succeed []
+
+                RemoteData.NotAsked ->
+                    -- TODO - Display loading
+                    Form.succeed []
+
+                RemoteData.Failure _ ->
+                    -- TODO - Display error
+                    Form.succeed []
+            )
+
+
+ownerForm : Eos.Account.Name -> Form.Form msg { input | owner : Maybe Eos.Account.Name } (Maybe Eos.Account.Name)
+ownerForm currentUser =
+    Form.Radio.init
+        { -- TODO - I18N
+          label = "Offers"
+        , id = "offers-radio"
+        , optionToString =
+            \maybeAccount ->
+                case maybeAccount of
+                    Nothing ->
+                        ""
+
+                    Just account ->
+                        Eos.Account.nameToString account
+        }
+        -- TODO - I18N
+        |> Form.Radio.withOption Nothing (text "All offers")
+        -- TODO - I18N
+        |> Form.Radio.withOption (Just currentUser) (text "My offers")
+        |> Form.radio
+            (\account ->
+                if String.isEmpty account then
+                    Nothing
+
+                else
+                    Just (Eos.Account.stringToName account)
+            )
+            { parser = Ok
+            , value = .owner
+            , update = \owner values -> { values | owner = owner }
+            , externalError = always Nothing
+            }
+
+
+type alias CategoriesFormInput =
+    Dict.Dict Shop.Category.Model Bool
+
+
+categoriesForm : List Shop.Category.Tree -> Form.Form msg { input | categories : CategoriesFormInput } (List Shop.Category.Id)
+categoriesForm allCategories =
+    let
+        checkbox : Shop.Category.Model -> Form.Form msg CategoriesFormInput (Maybe Shop.Category.Id)
+        checkbox category =
+            Form.Checkbox.init
+                { label =
+                    span [ class "flex items-center gap-x-2" ]
+                        [ case category.icon of
+                            Nothing ->
+                                text ""
+
+                            Just icon ->
+                                img [ class "w-5 h-5 rounded-full", alt "", src icon ] []
+                        , text category.name
+                        ]
+                , id = "category-" ++ Shop.Category.idToString category.id
+                }
+                |> Form.Checkbox.withContainerAttrs [ class "flex" ]
+                |> Form.checkbox
+                    { parser =
+                        \value ->
+                            if value then
+                                Ok (Just category.id)
+
+                            else
+                                Ok Nothing
+                    , value = \input -> Dict.get category input |> Maybe.withDefault False
+                    , update = Dict.insert category
+                    , externalError = always Nothing
+                    }
+
+        treeToForm : Tree.Tree Shop.Category.Model -> Form.Form msg CategoriesFormInput (List Shop.Category.Id)
+        treeToForm tree =
+            Form.succeed
+                (\label children ->
+                    case label of
+                        Nothing ->
+                            children
+
+                        Just head ->
+                            head :: children
+                )
+                |> Form.withGroup []
+                    (checkbox (Tree.label tree))
+                    (if List.isEmpty (Tree.children tree) then
+                        Form.succeed []
+
+                     else
+                        Tree.children tree
+                            |> List.map treeToForm
+                            |> Form.list [ class "ml-4 mt-6 flex flex-col gap-y-6" ]
+                            |> Form.mapOutput List.concat
+                    )
+    in
+    Form.succeed identity
+        -- TODO - I18N
+        |> Form.withNoOutput (Form.arbitrary (p [] [ text "Categories" ]))
+        |> Form.with
+            (allCategories
+                -- TODO - Take only 4 if collapsed
+                |> List.map treeToForm
+                |> Form.list [ class "flex flex-col gap-y-6" ]
+                |> Form.mapOutput List.concat
+            )
+        |> Form.mapValues
+            { value = .categories
+            , update = \newChild parent -> { parent | categories = newChild }
+            }
 
 
 type Status
@@ -133,6 +293,7 @@ view loggedIn model =
                         [ viewFrozenAccountCard
                         , viewHeader loggedIn.shared.translators
                         , viewShopFilter loggedIn model
+                        , viewFiltersModal loggedIn model
                         , Page.fullPageLoading loggedIn.shared
                         ]
 
@@ -150,6 +311,7 @@ view loggedIn model =
                             [ viewFrozenAccountCard
                             , viewHeader loggedIn.shared.translators
                             , viewShopFilter loggedIn model
+                            , viewFiltersModal loggedIn model
                             , viewEmptyState loggedIn.shared.translators symbol model
                             ]
 
@@ -157,6 +319,7 @@ view loggedIn model =
                             [ viewFrozenAccountCard
                             , viewHeader loggedIn.shared.translators
                             , viewShopFilter loggedIn model
+                            , viewFiltersModal loggedIn model
                             , viewGrid loggedIn cards
                             ]
                         )
@@ -200,14 +363,6 @@ viewShopFilter loggedIn model =
         { t } =
             loggedIn.shared.translators
 
-        newFilter =
-            case model.filter of
-                Shop.All ->
-                    Shop.UserSales
-
-                Shop.UserSales ->
-                    Shop.All
-
         canSell =
             case loggedIn.profile of
                 RemoteData.Success profile ->
@@ -225,18 +380,54 @@ viewShopFilter loggedIn model =
             , Route.href (Route.NewSale Route.SaleMainInformation)
             ]
             [ text <| t "shop.create_new_offer" ]
-        , a
+        , button
             [ class "w-full md:w-40 button button-secondary"
-            , Route.href (Route.Shop newFilter)
+            , onClick ClickedOpenFiltersModal
             ]
-            [ case model.filter of
-                Shop.UserSales ->
-                    text <| t "shop.see_all"
-
-                Shop.All ->
-                    text <| t "shop.see_mine"
+            [ -- TODO - I18N
+              text "Filters"
             ]
         ]
+
+
+viewFiltersModal : LoggedIn.Model -> Model -> Html Msg
+viewFiltersModal loggedIn model =
+    let
+        categories =
+            Community.getField loggedIn.selectedCommunity .shopCategories
+                |> RemoteData.map Tuple.second
+    in
+    Modal.initWith
+        { closeMsg = ClosedFiltersModal
+        , isVisible = model.isFiltersModalOpen
+        }
+        -- TODO - I18N
+        |> Modal.withHeader "Filters"
+        |> Modal.withBody
+            [ Form.viewWithoutSubmit []
+                loggedIn.shared.translators
+                (\_ -> [])
+                (filtersForm loggedIn categories)
+                model.filtersForm
+                { toMsg = GotFiltersFormMsg }
+            ]
+        |> Modal.withFooter
+            [ button
+                [ class "button button-primary w-full"
+                , onClick
+                    (Form.parse (filtersForm loggedIn categories)
+                        model.filtersForm
+                        { onError = GotFiltersFormMsg
+                        , onSuccess = SubmittedFiltersForm
+                        }
+                    )
+                ]
+                [ -- TODO - I18N
+                  text "Apply"
+                ]
+            ]
+        |> Modal.withSize Modal.Large
+        |> Modal.toHtml
 
 
 
@@ -424,6 +615,10 @@ type Msg
     | ClickedScrollToImage { containerId : String, imageId : String }
     | ImageStartedIntersecting Shop.Id Shop.ImageId
     | ImageStoppedIntersecting Shop.Id Shop.ImageId
+    | ClickedOpenFiltersModal
+    | ClosedFiltersModal
+    | GotFiltersFormMsg (Form.Msg FiltersFormInput)
+    | SubmittedFiltersForm FiltersFormOutput
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
@@ -526,6 +721,24 @@ update msg model loggedIn =
                 _ ->
                     UR.init model
 
+        ClickedOpenFiltersModal ->
+            { model | isFiltersModalOpen = True }
+                |> UR.init
+
+        ClosedFiltersModal ->
+            { model | isFiltersModalOpen = False }
+                |> UR.init
+
+        GotFiltersFormMsg subMsg ->
+            Form.update loggedIn.shared subMsg model.filtersForm
+                |> UR.fromChild (\newForm -> { model | filtersForm = newForm })
+                    GotFiltersFormMsg
+                    LoggedIn.addFeedback
+                    model
+
+        SubmittedFiltersForm formOutput ->
+            Debug.todo ""
+
 
 msgToString : Msg -> List String
 msgToString msg =
@@ -550,3 +763,15 @@ msgToString msg =
 
         ImageStoppedIntersecting _ _ ->
             [ "ImageStoppedIntersecting" ]
+
+        ClickedOpenFiltersModal ->
+            [ "ClickedOpenFiltersModal" ]
+
+        ClosedFiltersModal ->
+            [ "ClosedFiltersModal" ]
+
+        GotFiltersFormMsg subMsg ->
+            "GotFiltersFormMsg" :: Form.msgToString subMsg
+
+        SubmittedFiltersForm _ ->
+            [ "SubmittedFiltersForm" ]
