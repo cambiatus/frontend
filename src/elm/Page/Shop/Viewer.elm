@@ -24,8 +24,8 @@ import Form.Text
 import Form.Validate
 import Graphql.Http
 import Graphql.SelectionSet
-import Html exposing (Html, a, button, div, h2, h3, span, text)
-import Html.Attributes exposing (autocomplete, class, classList, disabled, href, type_)
+import Html exposing (Html, a, button, div, h2, h3, li, span, text, ul)
+import Html.Attributes exposing (autocomplete, class, classList, disabled, href, tabindex, type_)
 import Html.Attributes.Aria exposing (ariaHidden, ariaLabel)
 import Html.Events exposing (onClick)
 import Http
@@ -47,6 +47,7 @@ import Shop.Category
 import Transfer
 import Translation
 import UpdateResult as UR
+import Url
 import View.Feedback as Feedback
 import View.Modal
 
@@ -77,6 +78,7 @@ init session saleId =
                             }
                     , currentVisibleImage = Nothing
                     , previousVisibleImage = Nothing
+                    , isDetailsOpen = False
                     }
             in
             model
@@ -103,6 +105,7 @@ init session saleId =
                     }
             , currentVisibleImage = Nothing
             , previousVisibleImage = Nothing
+            , isDetailsOpen = False
             }
                 |> UR.init
                 |> UR.addCmd
@@ -121,6 +124,7 @@ type alias Model =
     { status : Status
     , currentVisibleImage : Maybe Shop.ImageId
     , previousVisibleImage : Maybe Shop.ImageId
+    , isDetailsOpen : Bool
     }
 
 
@@ -162,6 +166,10 @@ type Msg
     | ClickedScrollToImage { containerId : String, imageId : String }
     | ImageStartedIntersecting Shop.ImageId
     | ImageStoppedIntersecting Shop.ImageId
+    | ClickedOpenDetails
+    | ClosedDetailsModal
+    | ClickedShareOffer { id : Shop.Id, title : String, description : Markdown }
+    | CopiedToClipboard
     | AsGuestMsg GuestMsg
     | AsLoggedInMsg LoggedInMsg
 
@@ -246,6 +254,76 @@ update msg model session =
 
             else
                 model |> UR.init
+
+        ( ClickedOpenDetails, _, _ ) ->
+            { model | isDetailsOpen = True }
+                |> UR.init
+
+        ( ClosedDetailsModal, _, _ ) ->
+            { model | isDetailsOpen = False }
+                |> UR.init
+
+        ( ClickedShareOffer sale, _, _ ) ->
+            let
+                shared =
+                    Page.toShared session
+
+                sharePort =
+                    if shared.canShare then
+                        { responseAddress = msg
+                        , responseData = Encode.null
+                        , data =
+                            Encode.object
+                                [ ( "name", Encode.string "share" )
+                                , ( "title", Encode.string sale.title )
+                                , ( "text", Encode.string (Markdown.toUnformattedString sale.description) )
+                                , ( "url"
+                                  , Route.ViewSale sale.id
+                                        |> Route.addRouteToUrl shared
+                                        |> Url.toString
+                                        |> Encode.string
+                                  )
+                                ]
+                        }
+
+                    else
+                        { responseAddress = msg
+                        , responseData = Encode.object [ ( "type", Encode.string "copyToClipboard" ) ]
+                        , data =
+                            Encode.object
+                                [ ( "name", Encode.string "copyToClipboard" )
+                                , ( "id", Encode.string "share-fallback-input" )
+                                ]
+                        }
+            in
+            UR.init model
+                |> UR.addPort sharePort
+
+        ( CopiedToClipboard, _, _ ) ->
+            let
+                shared =
+                    Page.toShared session
+
+                feedbackExternalMsg : Page.External Msg
+                feedbackExternalMsg =
+                    case session of
+                        Page.LoggedIn _ ->
+                            Page.LoggedInExternal
+                                (LoggedIn.ShowFeedback Feedback.Success
+                                    (shared.translators.t "copied_to_clipboard")
+                                )
+
+                        Page.Guest _ ->
+                            Page.GuestExternal
+                                (Guest.SetFeedback
+                                    (Feedback.Visible Feedback.Success
+                                        (shared.translators.t "copied_to_clipboard")
+                                    )
+                                )
+            in
+            { model | isDetailsOpen = False }
+                |> UR.init
+                |> UR.addExt feedbackExternalMsg
 
         ( AsGuestMsg subMsg, AsGuest subModel, Page.Guest guest ) ->
             updateAsGuest subMsg subModel guest
@@ -549,8 +627,11 @@ updateFormInteraction msg { maxUnits } model =
 view : Session -> Model -> { title : String, content : Html Msg }
 view session model =
     let
+        shared =
+            Page.toShared session
+
         ({ t } as translators) =
-            (Page.toShared session).translators
+            shared.translators
 
         shopTitle =
             t "shop.title"
@@ -579,6 +660,7 @@ view session model =
                 , title : String
                 , description : Markdown
                 , creator : Profile.Minimal
+                , id : Shop.Id
             }
             -> Html Msg
             -> Html Msg
@@ -629,7 +711,29 @@ view session model =
                                     , onStoppedIntersecting = ImageStoppedIntersecting
                                     }
                                     ( firstImage, otherImages )
-                        , h2 [ class "font-bold text-lg text-black mt-4", ariaHidden True ] [ text sale.title ]
+                        , div [ class "flex justify-between mt-4" ]
+                            [ h2 [ class "font-bold text-lg text-black", ariaHidden True ] [ text sale.title ]
+                            , button
+                                [ class "self-start w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200"
+                                , if isAdmin session then
+                                    onClick ClickedOpenDetails
+
+                                  else
+                                    onClick
+                                        (ClickedShareOffer
+                                            { title = sale.title
+                                            , description = sale.description
+                                            , id = sale.id
+                                            }
+                                        )
+                                ]
+                                [ if isAdmin session then
+                                    Icons.ellipsis "text-orange-300"
+
+                                  else
+                                    Icons.share "text-orange-300"
+                                ]
+                            ]
                         , Markdown.view [ class "mt-2 mb-6 text-gray-333" ] sale.description
                         , if isCreator then
                             text ""
@@ -641,6 +745,40 @@ view session model =
                         [ formView
                         ]
                     ]
+                , viewDetailsModal session
+                    { title = sale.title
+                    , description = sale.description
+                    , id = sale.id
+                    }
+                    model
+                , if not shared.canShare then
+                    Form.Text.view
+                        (Form.Text.init
+                            { label = ""
+                            , id = "share-fallback-input"
+                            }
+                            |> Form.Text.withExtraAttrs
+                                [ class "sr-only"
+                                , tabindex -1
+                                , ariaHidden True
+                                ]
+                            |> Form.Text.withContainerAttrs [ class "mb-0 overflow-hidden" ]
+                            |> Form.Text.withInputElement (Form.Text.TextareaInput { submitOnEnter = False })
+                        )
+                        { onChange = \_ -> NoOp
+                        , onBlur = NoOp
+                        , value =
+                            Route.ViewSale sale.id
+                                |> Route.addRouteToUrl shared
+                                |> Url.toString
+                        , error = text ""
+                        , hasError = False
+                        , translators = shared.translators
+                        , isRequired = False
+                        }
+
+                  else
+                    text ""
                 ]
 
         content =
@@ -791,6 +929,49 @@ view session model =
     { title = title
     , content = content
     }
+
+
+viewDetailsModal : Session -> { title : String, description : Markdown, id : Shop.Id } -> Model -> Html Msg
+viewDetailsModal session sale model =
+    let
+        viewItem icon element action itemText =
+            li [ class "w-[calc(100%+2rem)] -mx-4 px-2 py-1" ]
+                [ element
+                    [ class "flex items-center w-full px-2 py-4 hover:bg-gray-100 focus-ring rounded-sm group transition-colors"
+                    , action
+                    ]
+                    [ div [ class "w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center group-hover:bg-white transition-colors" ]
+                        [ icon "text-orange-300 w-4 h-4" ]
+                    , span [ class "ml-3 text-gray-333" ] [ text itemText ]
+                    ]
+                ]
+
+        shared =
+            Page.toShared session
+    in
+    View.Modal.initWith
+        { closeMsg = ClosedDetailsModal
+        , isVisible = model.isDetailsOpen
+        }
+        -- TODO - I18N
+        |> View.Modal.withHeader "Action options"
+        |> View.Modal.withBody
+            [ ul [ class "divide-y divide-gray-100" ]
+                [ if isAdmin session then
+                    -- TODO - I18N
+                    -- TODO - Use correct route
+                    viewItem Icons.edit a (Route.href Route.Dashboard) "Edit categories from this offer"
+
+                  else
+                    text ""
+
+                , viewItem Icons.share
+                    button
+                    (onClick (ClickedShareOffer sale))
+                    (shared.translators.t "share")
+                ]
+            ]
+        |> View.Modal.toHtml
 
 
 viewContactTheSeller : Shared.Translators -> { isGuest : Bool } -> Profile.Minimal -> Html msg
@@ -1089,6 +1270,21 @@ viewConfirmDeleteModal { t } model =
 -- UTILS
 
 
+isAdmin : Session -> Bool
+isAdmin session =
+    case session of
+        Page.Guest _ ->
+            False
+
+        Page.LoggedIn loggedIn ->
+            case loggedIn.selectedCommunity of
+                RemoteData.Success community ->
+                    community.creator == loggedIn.accountName
+
+                _ ->
+                    False
+
+
 msgToString : Msg -> List String
 msgToString msg =
     case msg of
@@ -1103,6 +1299,18 @@ msgToString msg =
 
         ImageStoppedIntersecting _ ->
             [ "ImageStoppedIntersecting" ]
+
+        ClickedOpenDetails ->
+            [ "ClickedOpenDetails" ]
+
+        ClosedDetailsModal ->
+            [ "ClosedDetailsModal" ]
+
+        ClickedShareOffer _ ->
+            [ "ClickedShareOffer" ]
+
+        CopiedToClipboard ->
+            [ "CopiedToClipboard" ]
 
         AsGuestMsg subMsg ->
             "AsGuestMsg" :: guestMsgToString subMsg
@@ -1180,6 +1388,20 @@ formInteractionMsgToString msg =
 jsAddressToMsg : List String -> Value -> Maybe Msg
 jsAddressToMsg addr val =
     case addr of
+        "ClickedShareOffer" :: _ ->
+            Decode.decodeValue
+                (Decode.at [ "addressData", "type" ] Decode.string)
+                val
+                |> Result.map
+                    (\type_ ->
+                        if type_ == "copyToClipboard" then
+                            Just CopiedToClipboard
+
+                        else
+                            Nothing
+                    )
+                |> Result.withDefault Nothing
+
         "AsLoggedInMsg" :: rAddress ->
             Maybe.map AsLoggedInMsg
                 (jsAddressToLoggedInMsg rAddress val)
