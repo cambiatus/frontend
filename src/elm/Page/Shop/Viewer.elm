@@ -714,7 +714,9 @@ view session model =
                         , div [ class "flex justify-between mt-4" ]
                             [ h2 [ class "font-bold text-lg text-black", ariaHidden True ] [ text sale.title ]
                             , button
-                                [ class "self-start w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200"
+                                [ class "ml-4 self-start w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200"
+
+                                -- TODO - Check if community has categories
                                 , if isAdmin session then
                                     onClick ClickedOpenDetails
 
@@ -959,12 +961,10 @@ viewDetailsModal session sale model =
             [ ul [ class "divide-y divide-gray-100" ]
                 [ if isAdmin session then
                     -- TODO - I18N
-                    -- TODO - Use correct route
-                    viewItem Icons.edit a (Route.href Route.Dashboard) "Edit categories from this offer"
+                    viewItem Icons.edit a (Route.href (Route.EditSale sale.id Route.SaleCategories)) "Edit categories from this offer"
 
                   else
                     text ""
-
                 , viewItem Icons.share
                     button
                     (onClick (ClickedShareOffer sale))
