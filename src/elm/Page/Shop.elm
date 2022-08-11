@@ -102,8 +102,28 @@ type alias FiltersFormOutput =
 
 filtersForm : LoggedIn.Model -> RemoteData err (List Shop.Category.Tree) -> Form.Form msg FiltersFormInput FiltersFormOutput
 filtersForm loggedIn allCategories =
+    let
+        loadingItem width =
+            div [ class "flex items-center gap-x-2" ]
+                [ div [ class "animate-skeleton-loading h-5 rounded w-5" ] []
+                , div [ class "animate-skeleton-loading h-5 rounded-full w-5" ] []
+                , div [ class "animate-skeleton-loading h-5 rounded-sm", class width ] []
+                ]
+
+        loadingForm =
+            Form.arbitraryWith []
+                (div [ class "flex flex-col gap-y-4" ]
+                    [ loadingItem "w-1/2"
+                    , loadingItem "w-2/3"
+                    , loadingItem "w-1/3"
+                    , loadingItem "w-1/2"
+                    ]
+                )
+    in
     Form.succeed FiltersFormOutput
         |> Form.with (ownerForm loggedIn.accountName)
+        -- TODO - I18N
+        |> Form.withNoOutput (Form.arbitrary (p [ class "label" ] [ text "Categories" ]))
         |> Form.with
             (case allCategories of
                 RemoteData.Success categories ->
@@ -114,16 +134,17 @@ filtersForm loggedIn allCategories =
                         categoriesForm categories
 
                 RemoteData.Loading ->
-                    -- TODO - Display loading
-                    Form.succeed []
+                    loadingForm
 
                 RemoteData.NotAsked ->
-                    -- TODO - Display loading
-                    Form.succeed []
+                    loadingForm
 
                 RemoteData.Failure _ ->
-                    -- TODO - Display error
-                    Form.succeed []
+                    Form.arbitraryWith []
+                        (p [ class "form-error" ]
+                            [ text "Something went wrong while fetching categories"
+                            ]
+                        )
             )
 
 
@@ -223,8 +244,6 @@ categoriesForm allCategories =
                     )
     in
     Form.succeed identity
-        -- TODO - I18N
-        |> Form.withNoOutput (Form.arbitrary (p [ class "label" ] [ text "Categories" ]))
         |> Form.with
             (Form.introspect
                 (\{ areCategoriesExpanded } ->
