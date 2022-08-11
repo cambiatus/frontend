@@ -18,7 +18,7 @@ import Form.Checkbox
 import Form.Radio
 import Graphql.Http
 import Html exposing (Html, a, br, button, div, h1, h2, img, li, p, span, text, ul)
-import Html.Attributes exposing (alt, class, classList, src)
+import Html.Attributes exposing (alt, class, classList, src, type_)
 import Html.Attributes.Aria exposing (ariaLabel)
 import Html.Events exposing (onClick)
 import Http
@@ -37,6 +37,7 @@ import Shop.Category
 import Translation
 import Tree
 import UpdateResult as UR
+import Utils.Tree
 import View.Components
 import View.Modal as Modal
 
@@ -77,12 +78,18 @@ initModel filter =
     , balances = []
     , filter = filter
     , isFiltersModalOpen = False
-    , filtersForm = Form.init { owner = Nothing, categories = Dict.empty }
+    , filtersForm =
+        Form.init
+            { owner = Nothing
+            , areCategoriesExpanded = False
+            , categories = Dict.empty
+            }
     }
 
 
 type alias FiltersFormInput =
     { owner : Maybe Eos.Account.Name
+    , areCategoriesExpanded : Bool
     , categories : CategoriesFormInput
     }
 
@@ -160,7 +167,7 @@ type alias CategoriesFormInput =
     Dict.Dict Shop.Category.Model Bool
 
 
-categoriesForm : List Shop.Category.Tree -> Form.Form msg { input | categories : CategoriesFormInput } (List Shop.Category.Id)
+categoriesForm : List Shop.Category.Tree -> Form.Form msg FiltersFormInput (List Shop.Category.Id)
 categoriesForm allCategories =
     let
         checkbox : Shop.Category.Model -> Form.Form msg CategoriesFormInput (Maybe Shop.Category.Id)
@@ -219,16 +226,42 @@ categoriesForm allCategories =
         -- TODO - I18N
         |> Form.withNoOutput (Form.arbitrary (p [ class "label" ] [ text "Categories" ]))
         |> Form.with
-            (allCategories
-                -- TODO - Take only 4 if collapsed
-                |> List.map treeToForm
-                |> Form.list [ class "flex flex-col gap-y-4" ]
-                |> Form.mapOutput List.concat
+            (Form.introspect
+                (\{ areCategoriesExpanded } ->
+                    allCategories
+                        |> (if areCategoriesExpanded then
+                                identity
+
+                            else
+                                Utils.Tree.takeFirst 4
+                           )
+                        |> List.map treeToForm
+                        |> Form.list [ class "flex flex-col gap-y-4" ]
+                        |> Form.mapOutput List.concat
+                        |> Form.mapValues
+                            { value = .categories
+                            , update = \newChild parent -> { parent | categories = newChild }
+                            }
+                )
             )
-        |> Form.mapValues
-            { value = .categories
-            , update = \newChild parent -> { parent | categories = newChild }
-            }
+        |> Form.withNoOutput
+            (Form.introspect
+                (\{ areCategoriesExpanded } ->
+                    if areCategoriesExpanded then
+                        Form.succeed ()
+
+                    else
+                        Form.arbitrary
+                            (button
+                                [ class "button button-secondary w-full mt-6"
+                                , type_ "button"
+                                , onClick (\values -> { values | areCategoriesExpanded = True })
+                                ]
+                                -- TODO - I18N
+                                [ text "Show all categories" ]
+                            )
+                )
+            )
 
 
 type Status
@@ -730,7 +763,10 @@ update msg model loggedIn =
                 |> UR.init
 
         ClosedFiltersModal ->
-            { model | isFiltersModalOpen = False }
+            { model
+                | isFiltersModalOpen = False
+                , filtersForm = Form.updateValues (\values -> { values | areCategoriesExpanded = False }) model.filtersForm
+            }
                 |> UR.init
 
         GotFiltersFormMsg subMsg ->
