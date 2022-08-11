@@ -19,6 +19,7 @@ module Shop exposing
     , productSelectionSet
     , productsQuery
     , updateProduct
+    , updateProductCategories
     , viewImageCarrousel
     )
 
@@ -301,6 +302,28 @@ updateProduct options selectionSet =
         , price = options.price
         , stockTracking = options.stockTracking
         }
+        selectionSet
+
+
+updateProductCategories :
+    { id : Id, categories : List Shop.Category.Id }
+    -> SelectionSet decodesTo Cambiatus.Object.Product
+    -> SelectionSet (Maybe decodesTo) RootMutation
+updateProductCategories { id, categories } selectionSet =
+    let
+        (Id unwrappedId) =
+            id
+    in
+    Mutation.product
+        (\optionals ->
+            { optionals
+                | id = Present unwrappedId
+                , categories =
+                    categories
+                        |> List.map Shop.Category.idToInt
+                        |> Present
+            }
+        )
         selectionSet
 
 
