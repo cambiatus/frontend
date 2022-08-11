@@ -42,7 +42,6 @@ import View.Modal as Modal
 
 
 
--- TODO - Fix styling
 -- INIT
 
 
@@ -56,10 +55,10 @@ init loggedIn filter =
                 (Shop.productsQuery filter loggedIn.accountName)
                 CompletedSalesLoad
             )
+        |> UR.addExt (LoggedIn.RequestedCommunityField Community.ShopCategoriesField)
 
 
 
--- |> UR.addExt (LoggedIn.RequestedCommunityField Community.ShopCategoriesField)
 -- MODEL
 
 
@@ -101,8 +100,11 @@ filtersForm loggedIn allCategories =
         |> Form.with
             (case allCategories of
                 RemoteData.Success categories ->
-                    -- TODO - Hide categoriesForm if categories is an empty list
-                    categoriesForm categories
+                    if List.isEmpty categories then
+                        Form.succeed []
+
+                    else
+                        categoriesForm categories
 
                 RemoteData.Loading ->
                     -- TODO - Display loading
@@ -137,6 +139,8 @@ ownerForm currentUser =
         |> Form.Radio.withOption Nothing (text "All offers")
         -- TODO - I18N
         |> Form.Radio.withOption (Just currentUser) (text "My offers")
+        |> Form.Radio.withDirection Form.Radio.Vertical
+        |> Form.Radio.withContainerAttrs [ class "mb-6" ]
         |> Form.radio
             (\account ->
                 if String.isEmpty account then
@@ -207,18 +211,18 @@ categoriesForm allCategories =
                      else
                         Tree.children tree
                             |> List.map treeToForm
-                            |> Form.list [ class "ml-4 mt-6 flex flex-col gap-y-6" ]
+                            |> Form.list [ class "ml-4 mt-4 flex flex-col gap-y-4" ]
                             |> Form.mapOutput List.concat
                     )
     in
     Form.succeed identity
         -- TODO - I18N
-        |> Form.withNoOutput (Form.arbitrary (p [] [ text "Categories" ]))
+        |> Form.withNoOutput (Form.arbitrary (p [ class "label" ] [ text "Categories" ]))
         |> Form.with
             (allCategories
                 -- TODO - Take only 4 if collapsed
                 |> List.map treeToForm
-                |> Form.list [ class "flex flex-col gap-y-6" ]
+                |> Form.list [ class "flex flex-col gap-y-4" ]
                 |> Form.mapOutput List.concat
             )
         |> Form.mapValues
@@ -404,7 +408,7 @@ viewFiltersModal loggedIn model =
         -- TODO - I18N
         |> Modal.withHeader "Filters"
         |> Modal.withBody
-            [ Form.viewWithoutSubmit []
+            [ Form.viewWithoutSubmit [ class "mt-4" ]
                 loggedIn.shared.translators
                 (\_ -> [])
                 (filtersForm loggedIn categories)
