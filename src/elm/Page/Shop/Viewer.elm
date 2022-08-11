@@ -953,13 +953,14 @@ viewDetailsModal session sale model =
         { closeMsg = ClosedDetailsModal
         , isVisible = model.isDetailsOpen
         }
-        -- TODO - I18N
-        |> View.Modal.withHeader "Action options"
+        |> View.Modal.withHeader (shared.translators.t "shop.action_options")
         |> View.Modal.withBody
             [ ul [ class "divide-y divide-gray-100" ]
                 [ if isAdmin session then
-                    -- TODO - I18N
-                    viewItem Icons.edit a (Route.href (Route.EditSale sale.id Route.SaleCategories)) "Edit categories from this offer"
+                    viewItem Icons.edit
+                        a
+                        (Route.href (Route.EditSale sale.id Route.SaleCategories))
+                        (shared.translators.t "shop.edit_categories")
 
                   else
                     text ""

@@ -277,7 +277,6 @@ categoriesForm translators allCategories =
         |> Form.withNoOutput
             (Form.arbitrary
                 (p [ class "mb-4" ]
-                    -- TODO - Fix translation to change "your"
                     [ text <| translators.t "shop.steps.categories.guidance" ]
                 )
             )
@@ -1035,6 +1034,28 @@ update msg model loggedIn =
 
                         Just id ->
                             Route.ViewSale id
+
+                maybeFeedbackMessage =
+                    case model.status of
+                        Creating _ ->
+                            Just "shop.create_offer_success"
+
+                        Saving _ _ ->
+                            Just "shop.save_offer_success"
+
+                        SavingAsAdmin _ _ ->
+                            Just "shop.save_offer_success"
+
+                        _ ->
+                            Nothing
+
+                maybeAddFeedback =
+                    case maybeFeedbackMessage of
+                        Nothing ->
+                            identity
+
+                        Just feedbackMessage ->
+                            UR.addExt (ShowFeedback Feedback.Success (t feedbackMessage))
             in
             UR.init model
                 |> UR.addCmd (Route.replaceUrl loggedIn.shared.navKey redirectUrl)
@@ -1055,8 +1076,7 @@ update msg model loggedIn =
                                     False
                         )
                     )
-                -- TODO - Change message when editing
-                |> UR.addExt (ShowFeedback Feedback.Success (t "shop.create_offer_success"))
+                |> maybeAddFeedback
 
         GotSaveResponse (RemoteData.Failure error) ->
             let

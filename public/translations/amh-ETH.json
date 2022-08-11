@@ -789,7 +789,10 @@
     "create_offer": "የሚሠጠዉን ፍጠር",
     "create_new_offer": "አዲስ ፍጠር",
     "create_offer_success": "የሚሰጠዉ በትክክል ተፈጥሯል",
+    "update_offer_success": "ቅናሽ በስኬት ተዘምኗል",
     "edit_offer": "የሚሰጠዉን አርትዕ",
+    "action_options": "የድርጊት አማራጮች",
+    "edit_categories": "ከዚህ ቅናሽ ምድቦችን ያርትዑ",
     "delete_offer_success": "የሚሰጠዉ በትክክል ወጥቷል",
     "delete_offer_failure": "ቅናሽዎን በሚያስወግዱበት ጊዜ የሆነ ችግር ተፈጥሯል",
     "unauthorized": "እርሶ ይህንን ሽያጭ አርትዕ ለማድረግ አልተፈቃደም",
@@ -834,7 +837,7 @@
       },
       "categories": {
         "title": "ምድቦች",
-        "guidance": "ተጠቃሚዎች ምርትዎን እንዲያገኙ ለማገዝ አንድ ወይም ከዚያ በላይ ምድቦችን መምረጥ ይችላሉ"
+        "guidance": "ተጠቃሚዎች ይህን ምርት እንዲያገኙ ለማገዝ አንድ ወይም ከዚያ በላይ ምድቦችን መምረጥ ይችላሉ"
       },
       "price_and_inventory": {
         "title": "ዋጋ እና ክምችት",

@@ -831,7 +831,10 @@
     "create_offer": "Crear oferta",
     "create_new_offer": "Crear nueva",
     "create_offer_success": "Oferta creada con éxito",
+    "update_offer_success": "Oferta actualizada con éxito",
     "edit_offer": "Editar oferta",
+    "action_options": "Opciones de acción",
+    "edit_categories": "Editar categorías de esta oferta",
     "delete_offer_success": "Oferta eliminado con éxito",
     "delete_offer_failure": "Algo salió mal al eliminar tu oferta",
     "unauthorized": "No tienes autorización para editar esta venta",
@@ -876,7 +879,7 @@
       },
       "categories": {
         "title": "Categorías",
-        "guidance": "Puede seleccionar una o más categorías para ayudar a los usuarios a encontrar su producto"
+        "guidance": "Puede seleccionar una o más categorías para ayudar a los usuarios a encontrar este producto"
       },
       "price_and_inventory": {
         "title": "Precio y Inventario",
