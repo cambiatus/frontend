@@ -28,6 +28,8 @@ import Html.Attributes exposing (alt, class, classList, disabled, maxlength, src
 import Html.Attributes.Aria exposing (ariaHidden, ariaLabel)
 import Html.Events exposing (onClick)
 import Icons
+import List.Extra
+import Log
 import Markdown exposing (Markdown)
 import Page
 import Profile.EditKycForm exposing (Msg(..))
@@ -61,15 +63,11 @@ initCreate _ =
 
 initUpdate : Shop.Id -> Route.EditSaleStep -> LoggedIn.Model -> UpdateResult
 initUpdate productId step loggedIn =
-    { status = LoadingSaleUpdate step
+    { status = LoadingSaleUpdate productId step
     , isWaitingForCategoriesToLoad = False
     }
         |> UR.init
-        |> UR.addExt
-            (LoggedIn.query loggedIn
-                (Shop.productQuery productId)
-                CompletedSaleLoad
-            )
+        |> UR.addCmd (LoggedIn.maybeInitWith (\_ -> CompletedLoadCommunity) .selectedCommunity loggedIn)
         |> UR.addExt (LoggedIn.RequestedReloadCommunityField Community.ShopCategoriesField)
 
 
@@ -89,11 +87,15 @@ type
     = EditingCreate FormData
     | Creating FormData
       -- Update
-    | LoadingSaleUpdate Route.EditSaleStep
+    | LoadingSaleUpdate Shop.Id Route.EditSaleStep
     | EditingUpdate Product FormData
     | Saving Product FormData
+      -- Update as admin
+    | EditingUpdateAsAdmin Product FormData
+    | SavingAsAdmin Product FormData
       -- Errors
     | LoadSaleFailed (Graphql.Http.Error (Maybe Product))
+    | UnauthorizedToEdit
 
 
 type alias FormData =
@@ -275,6 +277,7 @@ categoriesForm translators allCategories =
         |> Form.withNoOutput
             (Form.arbitrary
                 (p [ class "mb-4" ]
+                    -- TODO - Fix translation to change "your"
                     [ text <| translators.t "shop.steps.categories.guidance" ]
                 )
             )
@@ -497,6 +500,12 @@ view loggedIn model =
                 Saving _ _ ->
                     True
 
+                EditingUpdateAsAdmin _ _ ->
+                    True
+
+                SavingAsAdmin _ _ ->
+                    True
+
                 _ ->
                     False
 
@@ -509,23 +518,88 @@ view loggedIn model =
 
         content community shopCategories =
             case model.status of
-                LoadingSaleUpdate _ ->
+                LoadingSaleUpdate _ _ ->
                     Page.fullPageLoading shared
 
                 LoadSaleFailed error ->
                     Page.fullPageGraphQLError (t "shop.title") error
 
+                UnauthorizedToEdit ->
+                    Page.fullPageNotFound (t "shop.unauthorized") ""
+
                 EditingCreate formData ->
-                    viewForm loggedIn community shopCategories { isEdit = False, isDisabled = False } model formData
+                    viewForm loggedIn
+                        community
+                        shopCategories
+                        { isEdit = False
+                        , isDisabled = False
+                        , availableSteps =
+                            allRouteSteps
+                                |> removeCategoriesStep shopCategories
+                        }
+                        model
+                        formData
 
                 Creating formData ->
-                    viewForm loggedIn community shopCategories { isEdit = False, isDisabled = True } model formData
+                    viewForm loggedIn
+                        community
+                        shopCategories
+                        { isEdit = False
+                        , isDisabled = True
+                        , availableSteps =
+                            allRouteSteps
+                                |> removeCategoriesStep shopCategories
+                        }
+                        model
+                        formData
 
                 EditingUpdate _ formData ->
-                    viewForm loggedIn community shopCategories { isEdit = True, isDisabled = False } model formData
+                    viewForm loggedIn
+                        community
+                        shopCategories
+                        { isEdit = True
+                        , isDisabled = False
+                        , availableSteps =
+                            allRouteSteps
+                                |> removeCategoriesStep shopCategories
+                        }
+                        model
+                        formData
 
                 Saving _ formData ->
-                    viewForm loggedIn community shopCategories { isEdit = True, isDisabled = True } model formData
+                    viewForm loggedIn
+                        community
+                        shopCategories
+                        { isEdit = True
+                        , isDisabled = True
+                        , availableSteps =
+                            allRouteSteps
+                                |> removeCategoriesStep shopCategories
+                        }
+                        model
+                        formData
+
+                EditingUpdateAsAdmin _ formData ->
+                    viewForm loggedIn
+                        community
+                        shopCategories
+                        { isEdit = True
+                        , isDisabled = False
+                        , availableSteps = [ Route.SaleCategories ]
+                        }
+                        model
+                        formData
+
+                SavingAsAdmin _ formData ->
+                    viewForm loggedIn
+                        community
+                        shopCategories
+                        { isEdit = True
+                        , isDisabled = True
+                        , availableSteps = [ Route.SaleCategories ]
+                        }
+                        model
+                        formData
     in
     { title = title
     , content =
@@ -559,11 +633,15 @@ viewForm :
     LoggedIn.Model
     -> Community.Model
     -> List Shop.Category.Tree
-    -> { isEdit : Bool, isDisabled : Bool }
+    ->
+        { isEdit : Bool
+        , isDisabled : Bool
+        , availableSteps : List Route.EditSaleStep
+        }
     -> Model
     -> FormData
     -> Html Msg
-viewForm ({ shared } as loggedIn) community allCategories { isEdit, isDisabled } model formData =
+viewForm ({ shared } as loggedIn) community allCategories { isEdit, isDisabled, availableSteps } model formData =
     let
         { t, tr } =
             shared.translators
@@ -578,11 +656,19 @@ viewForm ({ shared } as loggedIn) community allCategories { isEdit, isDisabled }
         viewForm_ :
             Form.Form Msg input output
             -> Form.Model input
-            -> { submitText : String }
+            -> Route.EditSaleStep
             -> (Form.Msg input -> FormMsg)
             -> (output -> Msg)
             -> Html Msg
-        viewForm_ formFn formModel { submitText } toFormMsg onSubmitMsg =
+        viewForm_ formFn formModel routeStep toFormMsg onSubmitMsg =
+            let
+                submitText =
+                    if List.Extra.last availableSteps == Just routeStep then
+                        actionText
+
+                    else
+                        t "shop.steps.continue"
+            in
             Form.view [ class "container mx-auto px-4 flex-grow flex flex-col lg:max-w-none lg:mx-0 lg:px-6" ]
                 shared.translators
                 (\submitButton ->
@@ -613,32 +699,35 @@ viewForm ({ shared } as loggedIn) community allCategories { isEdit, isDisabled }
                 , onSubmit = onSubmitMsg
                 }
 
+        findRouteStepIndex routeStep default =
+            List.Extra.findIndex ((==) routeStep) availableSteps
+                |> Maybe.map ((+) 1)
+                |> Maybe.withDefault default
+
         ( stepNumber, stepName ) =
             case formData.currentStep of
                 MainInformation ->
-                    ( 1, t "shop.steps.main_information.title" )
+                    ( findRouteStepIndex Route.SaleMainInformation 1
+                    , t "shop.steps.main_information.title"
+                    )
 
                 Images _ ->
-                    ( 2, t "shop.steps.images.title" )
+                    ( findRouteStepIndex Route.SaleImages 2
+                    , t "shop.steps.images.title"
+                    )
 
                 Categories _ _ ->
-                    ( 3, t "shop.steps.categories.title" )
+                    ( findRouteStepIndex Route.SaleCategories 3
+                    , t "shop.steps.categories.title"
+                    )
 
                 PriceAndInventory _ _ _ ->
-                    ( if List.isEmpty allCategories then
-                        3
-
-                      else
-                        4
+                    ( findRouteStepIndex Route.SalePriceAndInventory 4
                     , t "shop.steps.price_and_inventory.title"
                     )
 
         totalSteps =
-            if List.isEmpty allCategories then
-                3
-
-            else
-                4
+            List.length availableSteps
 
         isStepCompleted : Route.EditSaleStep -> Bool
         isStepCompleted step =
@@ -684,7 +773,7 @@ viewForm ({ shared } as loggedIn) community allCategories { isEdit, isDisabled }
                 maybeNewRoute =
                     setCurrentStepInRoute model step
 
-                ( linkStepIndex, linkStepName ) =
+                ( defaultStepIndex, linkStepName ) =
                     case step of
                         Route.SaleMainInformation ->
                             ( 1, t "shop.steps.main_information.title" )
@@ -697,6 +786,9 @@ viewForm ({ shared } as loggedIn) community allCategories { isEdit, isDisabled }
 
                         Route.SalePriceAndInventory ->
                             ( totalSteps, t "shop.steps.price_and_inventory.title" )
+
+                linkStepIndex =
+                    findRouteStepIndex step defaultStepIndex
             in
             a
                 [ class "w-6 h-6 rounded-full flex-shrink-0 flex items-center justify-center transition-colors duration-300"
@@ -735,73 +827,76 @@ viewForm ({ shared } as loggedIn) community allCategories { isEdit, isDisabled }
                     ]
                     []
                 ]
+
+        viewHeader =
+            div [ class "container mx-auto px-4 lg:max-w-none lg:mx-0 lg:px-6" ]
+                [ div [ class "mb-4 flex items-center" ]
+                    (List.concatMap
+                        (\step ->
+                            if List.Extra.last availableSteps == Just step then
+                                [ stepBall step ]
+
+                            else
+                                [ stepBall step, stepLine step ]
+                        )
+                        availableSteps
+                    )
+                , h2 [ class "font-bold text-black mb-2" ]
+                    [ text <|
+                        tr "shop.steps.index"
+                            [ ( "current", String.fromInt stepNumber )
+                            , ( "total", String.fromInt totalSteps )
+                            ]
+                    ]
+                , text stepName
+                ]
     in
     div [ class "flex flex-col flex-grow" ]
         [ Page.viewHeader loggedIn pageTitle
         , div [ class "lg:container lg:mx-auto lg:px-4 lg:mt-6 lg:mb-20" ]
-            [ div [ class "bg-white pt-4 pb-8 flex-grow flex flex-col min-h-150 lg:w-2/3 lg:mx-auto lg:rounded lg:shadow-lg lg:animate-fade-in-from-above-lg lg:fill-mode-none lg:motion-reduce:animate-none" ]
-                [ div [ class "container mx-auto px-4 lg:max-w-none lg:mx-0 lg:px-6" ]
-                    [ div [ class "mb-4 flex items-center" ]
-                        ([ [ stepBall Route.SaleMainInformation
-                           , stepLine Route.SaleMainInformation
-                           , stepBall Route.SaleImages
-                           , stepLine Route.SaleImages
-                           ]
-                         , if List.isEmpty allCategories then
-                            []
+            [ div
+                [ class "bg-white pt-4 pb-8 flex-grow flex flex-col lg:w-2/3 lg:mx-auto lg:rounded lg:shadow-lg lg:animate-fade-in-from-above-lg lg:fill-mode-none lg:motion-reduce:animate-none"
+                , classList [ ( "min-h-150", List.length availableSteps > 1 ) ]
+                ]
+                [ if List.length availableSteps > 1 then
+                    viewHeader
 
-                           else
-                            [ stepBall Route.SaleCategories
-                            , stepLine Route.SaleCategories
-                            ]
-                         , [ stepBall Route.SalePriceAndInventory
-                           ]
-                         ]
-                            |> List.concat
-                        )
-                    , h2 [ class "font-bold text-black mb-2" ]
-                        [ text <|
-                            tr "shop.steps.index"
-                                [ ( "current", String.fromInt stepNumber )
-                                , ( "total", String.fromInt totalSteps )
-                                ]
-                        ]
-                    , text stepName
-                    ]
+                  else
+                    span [ class "font-bold px-4" ] [ text stepName ]
                 , hr [ class "mt-4 mb-6 border-gray-500 lg:mx-4 lg:mb-10", ariaHidden True ] []
                 , case formData.currentStep of
                     MainInformation ->
                         viewForm_ (mainInformationForm shared.translators)
                             formData.mainInformation
-                            { submitText = t "shop.steps.continue" }
+                            Route.SaleMainInformation
                             MainInformationMsg
                             (SubmittedMainInformation ImagesMainInformationTarget)
 
                     Images _ ->
                         viewForm_ (imagesForm shared.translators)
                             formData.images
-                            { submitText = t "shop.steps.continue" }
+                            Route.SaleImages
                             ImagesMsg
                             (SubmittedImages
-                                (if List.isEmpty allCategories then
-                                    PriceAndInventoryImageTarget
+                                (if List.member Route.SaleCategories availableSteps then
+                                    CategoriesImageTarget
 
                                  else
-                                    CategoriesImageTarget
+                                    PriceAndInventoryImageTarget
                                 )
                             )
 
                     Categories _ _ ->
                         viewForm_ (categoriesForm shared.translators allCategories)
                             formData.categories
-                            { submitText = t "shop.steps.continue" }
+                            Route.SaleCategories
                             CategoriesMsg
                             SubmittedCategories
 
                     PriceAndInventory _ _ _ ->
                         viewForm_ (priceAndInventoryForm shared.translators { isDisabled = isDisabled } community.symbol)
                             formData.priceAndInventory
-                            { submitText = actionText }
+                            Route.SalePriceAndInventory
                             PriceAndInventoryMsg
                             SubmittedPriceAndInventory
                 ]
@@ -819,6 +914,7 @@ type alias UpdateResult =
 
 type Msg
     = NoOp
+    | CompletedLoadCommunity
     | CompletedSaleLoad (RemoteData (Graphql.Http.Error (Maybe Product)) (Maybe Product))
     | GotFormMsg FormMsg
     | SubmittedMainInformation MainInformationTarget MainInformationFormOutput
@@ -858,15 +954,55 @@ update msg model loggedIn =
         NoOp ->
             UR.init model
 
+        CompletedLoadCommunity ->
+            case model.status of
+                LoadingSaleUpdate productId _ ->
+                    model
+                        |> UR.init
+                        |> UR.addExt
+                            (LoggedIn.query loggedIn
+                                (Shop.productQuery productId)
+                                CompletedSaleLoad
+                            )
+
+                _ ->
+                    UR.init model
+
         CompletedSaleLoad (RemoteData.Success maybeSale) ->
             case ( model.status, maybeSale ) of
-                ( LoadingSaleUpdate step, Just sale ) ->
-                    { model
-                        | status =
-                            initEditingFormData loggedIn.shared.translators sale step
-                                |> EditingUpdate sale
-                    }
-                        |> UR.init
+                ( LoadingSaleUpdate _ step, Just sale ) ->
+                    if sale.creatorId == loggedIn.accountName then
+                        { model
+                            | status =
+                                initEditingFormData loggedIn.shared.translators sale step
+                                    |> EditingUpdate sale
+                        }
+                            |> UR.init
+
+                    else
+                        case loggedIn.selectedCommunity of
+                            RemoteData.Success community ->
+                                if community.creator == loggedIn.accountName then
+                                    { model
+                                        | status =
+                                            initEditingFormData loggedIn.shared.translators sale step
+                                                |> EditingUpdateAsAdmin sale
+                                    }
+                                        |> UR.init
+
+                                else
+                                    { model | status = UnauthorizedToEdit }
+                                        |> UR.init
+
+                            _ ->
+                                UR.init model
+                                    |> UR.logImpossible msg
+                                        "Completed loading sale, but community wasn't loaded"
+                                        (Just loggedIn.accountName)
+                                        { moduleName = "Page.Shop.Editor"
+                                        , function = "update"
+                                        }
+                                        [ Log.contextFromCommunity loggedIn.selectedCommunity ]
 
                 ( _, _ ) ->
                     model
@@ -919,6 +1055,7 @@ update msg model loggedIn =
                                     False
                         )
                     )
+                -- TODO - Change message when editing
                 |> UR.addExt (ShowFeedback Feedback.Success (t "shop.create_offer_success"))
 
         GotSaveResponse (RemoteData.Failure error) ->
@@ -940,6 +1077,17 @@ update msg model loggedIn =
 
                 Saving sale form ->
                     { model | status = EditingUpdate sale form }
+                        |> UR.init
+                        |> UR.addExt (LoggedIn.ShowFeedback Feedback.Failure internalError)
+                        |> UR.logGraphqlError msg
+                            (Just loggedIn.accountName)
+                            "Got an error when editing a shop offer"
+                            { moduleName = "Page.Shop.Editor", function = "update" }
+                            []
+                            error
+
+                SavingAsAdmin sale form ->
+                    { model | status = EditingUpdateAsAdmin sale form }
                         |> UR.init
                         |> UR.addExt (LoggedIn.ShowFeedback Feedback.Failure internalError)
                         |> UR.logGraphqlError msg
@@ -1068,10 +1216,26 @@ update msg model loggedIn =
             in
             case maybeCurrentStep of
                 Just (Categories mainInformation images) ->
-                    model
-                        |> setCurrentStep (PriceAndInventory mainInformation images formOutput)
-                        |> UR.init
-                        |> UR.addCmd (setCurrentStepInUrl loggedIn.shared model Route.SalePriceAndInventory)
+                    case model.status of
+                        EditingUpdateAsAdmin sale formData ->
+                            { model | status = SavingAsAdmin sale formData }
+                                |> UR.init
+                                |> UR.addExt
+                                    (LoggedIn.mutation loggedIn
+                                        (Shop.updateProductCategories
+                                            { id = sale.id
+                                            , categories = formOutput
+                                            }
+                                            Shop.idSelectionSet
+                                        )
+                                        GotSaveResponse
+                                    )
+
+                        _ ->
+                            model
+                                |> setCurrentStep (PriceAndInventory mainInformation images formOutput)
+                                |> UR.init
+                                |> UR.addCmd (setCurrentStepInUrl loggedIn.shared model Route.SalePriceAndInventory)
 
                 _ ->
                     UR.init model
@@ -1172,13 +1336,25 @@ updateFormStockUnits updateFn model =
                 Creating form ->
                     Just ( form, Creating )
 
+                LoadingSaleUpdate _ _ ->
+                    Nothing
+
                 EditingUpdate product form ->
                     Just ( form, EditingUpdate product )
 
                 Saving product form ->
                     Just ( form, Saving product )
 
-                _ ->
+                EditingUpdateAsAdmin product form ->
+                    Just ( form, EditingUpdateAsAdmin product )
+
+                SavingAsAdmin product form ->
+                    Just ( form, SavingAsAdmin product )
+
+                LoadSaleFailed _ ->
+                    Nothing
+
+                UnauthorizedToEdit ->
                     Nothing
     in
     case maybeFormInfo of
@@ -1215,13 +1391,25 @@ getFormData model =
         Creating formData ->
             Just formData
 
+        LoadingSaleUpdate _ _ ->
+            Nothing
+
         EditingUpdate _ formData ->
             Just formData
 
         Saving _ formData ->
             Just formData
 
-        _ ->
+        EditingUpdateAsAdmin _ formData ->
+            Just formData
+
+        SavingAsAdmin _ formData ->
+            Just formData
+
+        LoadSaleFailed _ ->
+            Nothing
+
+        UnauthorizedToEdit ->
             Nothing
 
 
@@ -1234,13 +1422,25 @@ setCurrentStep newStep model =
         Creating formData ->
             { model | status = Creating { formData | currentStep = newStep } }
 
+        LoadingSaleUpdate _ _ ->
+            model
+
         EditingUpdate product formData ->
             { model | status = EditingUpdate product { formData | currentStep = newStep } }
 
         Saving product formData ->
             { model | status = Saving product { formData | currentStep = newStep } }
 
-        _ ->
+        EditingUpdateAsAdmin product formData ->
+            { model | status = EditingUpdateAsAdmin product { formData | currentStep = newStep } }
+
+        SavingAsAdmin product formData ->
+            { model | status = SavingAsAdmin product { formData | currentStep = newStep } }
+
+        LoadSaleFailed _ ->
+            model
+
+        UnauthorizedToEdit ->
             model
 
 
@@ -1380,7 +1580,7 @@ setCurrentStepInRoute model step =
         Creating _ ->
             Just (Route.NewSale step)
 
-        LoadingSaleUpdate _ ->
+        LoadingSaleUpdate _ _ ->
             Nothing
 
         EditingUpdate product _ ->
@@ -1389,7 +1589,16 @@ setCurrentStepInRoute model step =
         Saving product _ ->
             Just (Route.EditSale product.id step)
 
+        EditingUpdateAsAdmin product _ ->
+            Just (Route.EditSale product.id step)
+
+        SavingAsAdmin product _ ->
+            Just (Route.EditSale product.id step)
+
         LoadSaleFailed _ ->
+            Nothing
+
+        UnauthorizedToEdit ->
             Nothing
 
 
@@ -1420,7 +1629,19 @@ updateForm shared formMsg model =
                 Saving product form ->
                     Just ( form, Saving product )
 
-                _ ->
+                EditingUpdateAsAdmin product form ->
+                    Just ( form, EditingUpdateAsAdmin product )
+
+                SavingAsAdmin product form ->
+                    Just ( form, SavingAsAdmin product )
+
+                LoadingSaleUpdate _ _ ->
+                    Nothing
+
+                LoadSaleFailed _ ->
+                    Nothing
+
+                UnauthorizedToEdit ->
                     Nothing
     in
     case maybeFormInfo of
@@ -1462,9 +1683,30 @@ updateForm shared formMsg model =
                             model
 
 
+allRouteSteps : List Route.EditSaleStep
+allRouteSteps =
+    [ Route.SaleMainInformation
+    , Route.SaleImages
+    , Route.SaleCategories
+    , Route.SalePriceAndInventory
+    ]
+
+
+removeCategoriesStep : List Shop.Category.Tree -> List Route.EditSaleStep -> List Route.EditSaleStep
+removeCategoriesStep allCategories steps =
+    if List.isEmpty allCategories then
+        List.filter (\step -> step /= Route.SaleCategories) steps
+
+    else
+        steps
+
+
 receiveBroadcast : Translation.Translators -> LoggedIn.BroadcastMsg -> Model -> Maybe Msg
 receiveBroadcast translators broadcastMsg model =
     case broadcastMsg of
+        LoggedIn.CommunityLoaded _ ->
+            Just CompletedLoadCommunity
+
         LoggedIn.CommunityFieldLoaded community (Community.ShopCategories categories) ->
             if model.isWaitingForCategoriesToLoad then
                 case getFormData model of
@@ -1491,6 +1733,9 @@ msgToString msg =
     case msg of
         NoOp ->
             [ "NoOp" ]
+
+        CompletedLoadCommunity ->
+            [ "CompletedLoadCommunity" ]
 
         CompletedSaleLoad r ->
             [ "CompletedSaleLoad", UR.remoteDataToString r ]
@@ -1538,24 +1783,9 @@ formMsgToString msg =
 
 getCurrentStep : Model -> Route.EditSaleStep
 getCurrentStep model =
-    case model.status of
-        EditingCreate formData ->
-            getCurrentStepFromFormData formData
-
-        Creating formData ->
-            getCurrentStepFromFormData formData
-
-        LoadingSaleUpdate step ->
-            step
-
-        EditingUpdate _ formData ->
-            getCurrentStepFromFormData formData
-
-        Saving _ formData ->
-            getCurrentStepFromFormData formData
-
-        LoadSaleFailed _ ->
-            Route.SaleMainInformation
+    getFormData model
+        |> Maybe.map getCurrentStepFromFormData
+        |> Maybe.withDefault Route.SaleMainInformation
 
 
 getCurrentStepFromFormData : FormData -> Route.EditSaleStep
