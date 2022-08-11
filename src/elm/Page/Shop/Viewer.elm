@@ -715,9 +715,7 @@ view session model =
                             [ h2 [ class "font-bold text-lg text-black", ariaHidden True ] [ text sale.title ]
                             , button
                                 [ class "ml-4 self-start w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200"
-
-                                -- TODO - Check if community has categories
-                                , if isAdmin session then
+                                , if isAdmin session && communityHasCategories session then
                                     onClick ClickedOpenDetails
 
                                   else
@@ -729,7 +727,7 @@ view session model =
                                             }
                                         )
                                 ]
-                                [ if isAdmin session then
+                                [ if isAdmin session && communityHasCategories session then
                                     Icons.ellipsis "text-orange-300"
 
                                   else
@@ -1280,6 +1278,21 @@ isAdmin session =
             case loggedIn.selectedCommunity of
                 RemoteData.Success community ->
                     community.creator == loggedIn.accountName
+
+                _ ->
+                    False
+
+
+communityHasCategories : Session -> Bool
+communityHasCategories session =
+    case session of
+        Page.Guest _ ->
+            False
+
+        Page.LoggedIn loggedIn ->
+            case Community.getField loggedIn.selectedCommunity .shopCategories of
+                RemoteData.Success ( _, categories ) ->
+                    not (List.isEmpty categories)
 
                 _ ->
                     False
