@@ -3,6 +3,7 @@ module Page.Shop exposing
     , Msg
     , init
     , msgToString
+    , receiveBroadcast
     , update
     , view
     )
@@ -82,12 +83,9 @@ initModel filter =
         Form.init
             { owner = filter.owner
             , areCategoriesExpanded = False
-            , categories = Dict.empty
 
-            -- TODO - need entire model
-            -- filter.categories
-            --     |> List.map (\category -> ( category, True ))
-            --     |> Dict.fromList
+            -- Categories are filled in on CompletedLoadShopCategories
+            , categories = Dict.empty
             }
     }
 
@@ -698,6 +696,7 @@ type alias UpdateResult =
 
 type Msg
     = NoOp
+    | CompletedLoadingShopCategories (List Shop.Category.Tree)
     | CompletedSalesLoad (RemoteData (Graphql.Http.Error (List Product)) (List Product))
     | CompletedLoadBalances (Result Http.Error (List Balance))
     | ClickedAcceptCodeOfConduct
@@ -715,6 +714,27 @@ update msg model loggedIn =
     case msg of
         NoOp ->
             UR.init model
+
+        CompletedLoadingShopCategories categories ->
+            { model
+                | filtersForm =
+                    Form.updateValues
+                        (\values ->
+                            { values
+                                | categories =
+                                    model.currentFilter.categories
+                                        |> List.filterMap
+                                            (\categoryId ->
+                                                categories
+                                                    |> Utils.Tree.findInForest (\category -> category.id == categoryId)
+                                                    |> Maybe.map (\category -> ( category, True ))
+                                            )
+                                        |> Dict.fromList
+                            }
+                        )
+                        model.filtersForm
+            }
+                |> UR.init
 
         CompletedSalesLoad (RemoteData.Success sales) ->
             UR.init { model | cards = Loaded (List.map cardFromSale sales) }
@@ -843,11 +863,24 @@ update msg model loggedIn =
                     )
 
 
+receiveBroadcast : LoggedIn.BroadcastMsg -> Maybe Msg
+receiveBroadcast broadcastMsg =
+    case broadcastMsg of
+        LoggedIn.CommunityFieldLoaded _ (Community.ShopCategories categories) ->
+            Just (CompletedLoadingShopCategories categories)
+
+        _ ->
+            Nothing
+
+
 msgToString : Msg -> List String
 msgToString msg =
     case msg of
         NoOp ->
             [ "NoOp" ]
+
+        CompletedLoadingShopCategories _ ->
+            [ "CompletedLoadingShopCategories" ]
 
         CompletedSalesLoad r ->
             [ "CompletedSalesLoad", UR.remoteDataToString r ]

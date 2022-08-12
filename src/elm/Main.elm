@@ -717,6 +717,10 @@ broadcast broadcastMessage status =
                     ProfileContributions.receiveBroadcast broadcastMessage
                         |> Maybe.map GotProfileContributionsMsg
 
+                Shop _ _ ->
+                    Shop.receiveBroadcast broadcastMessage
+                        |> Maybe.map GotShopMsg
+
                 Invite _ ->
                     Invite.receiveBroadcast broadcastMessage
                         |> Maybe.map GotInviteMsg
