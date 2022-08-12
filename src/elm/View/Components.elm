@@ -1,6 +1,6 @@
 module View.Components exposing
     ( loadingLogoAnimated, loadingLogoAnimatedFluid, loadingLogoWithCustomText, loadingLogoWithNoText
-    , dialogBubble, masonryLayout, Breakpoint(..)
+    , dialogBubble, masonryLayout, keyedMasonryLayout, Breakpoint(..)
     , tooltip, pdfViewer, PdfViewerFileType(..), dateViewer, infiniteList, ElementToTrack(..), label, disablableLink
     , bgNoScroll, PreventScroll(..), keyListener, Key(..), focusTrap, intersectionObserver, pointerListener
     )
@@ -16,7 +16,7 @@ state or configuration, such as loading indicators and containers
 
 # Containers
 
-@docs dialogBubble, masonryLayout, Breakpoint
+@docs dialogBubble, masonryLayout, keyedMasonryLayout, Breakpoint
 
 
 ## Helper types
@@ -38,6 +38,7 @@ state or configuration, such as loading indicators and containers
 import Html exposing (Html, div, img, node, p, span, text)
 import Html.Attributes exposing (attribute, class, for, src)
 import Html.Events exposing (on)
+import Html.Keyed
 import Icons
 import Json.Decode
 import Time
@@ -107,6 +108,8 @@ magic. If you're changing `gap-y` or `auto-rows`, test it very well, since the
 accuracy of this component depends on those properties. If you want vertical
 gutters, give each child element a `mb-*` class and this element a negative bottom margin.
 
+If the elements are buggy, try to include `self-start` in them.
+
 You must provide at least one `Breakpoint` to specify screen sizes this should
 work as a masonry layout.
 
@@ -117,7 +120,41 @@ masonryLayout :
     -> List (Html.Attribute msg)
     -> List (Html msg)
     -> Html msg
-masonryLayout breakpoints { transitionWithParent } attrs children =
+masonryLayout breakpoints transitionWithParent attrs children =
+    node "masonry-layout"
+        (masonryLayoutAttributes breakpoints transitionWithParent attrs)
+        children
+
+
+{-| Create a masonry layout, similar to Pinterest. This uses CSS Grid + some JS
+magic. If you're changing `gap-y` or `auto-rows`, test it very well, since the
+accuracy of this component depends on those properties. If you want vertical
+gutters, give each child element a `mb-*` class and this element a negative bottom margin.
+
+If the elements are buggy, try to include `self-start` in them.
+
+You must provide at least one `Breakpoint` to specify screen sizes this should
+work as a masonry layout.
+
+-}
+keyedMasonryLayout :
+    List Breakpoint
+    -> { transitionWithParent : Bool }
+    -> List (Html.Attribute msg)
+    -> List ( String, Html msg )
+    -> Html msg
+keyedMasonryLayout breakpoints transitionWithParent attrs children =
+    Html.Keyed.node "masonry-layout"
+        (masonryLayoutAttributes breakpoints transitionWithParent attrs)
+        children
+
+
+masonryLayoutAttributes :
+    List Breakpoint
+    -> { transitionWithParent : Bool }
+    -> List (Html.Attribute msg)
+    -> List (Html.Attribute msg)
+masonryLayoutAttributes breakpoints { transitionWithParent } attrs =
     let
         classesForBreakpoint breakpoint =
             case breakpoint of
@@ -131,15 +168,12 @@ masonryLayout breakpoints { transitionWithParent } attrs children =
                 Xl ->
                     "xl:gap-y-0 xl:grid xl:auto-rows-[1px]"
     in
-    node "masonry-layout"
-        ((List.map classesForBreakpoint breakpoints
-            |> String.join " "
-            |> class
-         )
-            :: attribute "elm-transition-with-parent" (boolToString transitionWithParent)
-            :: attrs
-        )
-        children
+    (List.map classesForBreakpoint breakpoints
+        |> String.join " "
+        |> class
+    )
+        :: attribute "elm-transition-with-parent" (boolToString transitionWithParent)
+        :: attrs
 
 
 
