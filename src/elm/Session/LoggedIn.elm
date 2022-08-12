@@ -73,7 +73,6 @@ import Route exposing (Route)
 import Search exposing (State(..))
 import Session.Guest exposing (Msg(..))
 import Session.Shared as Shared exposing (Shared, Translators)
-import Shop
 import Task
 import Time
 import Translation
