@@ -124,7 +124,7 @@ filtersForm loggedIn allCategories =
                 )
     in
     Form.succeed FiltersFormOutput
-        |> Form.with (ownerForm loggedIn.accountName)
+        |> Form.with (ownerForm loggedIn.shared.translators loggedIn.accountName)
         |> Form.withNoOutput
             (case allCategories of
                 RemoteData.Success categories ->
@@ -132,12 +132,16 @@ filtersForm loggedIn allCategories =
                         Form.succeed []
 
                     else
-                        -- TODO - I18N
-                        Form.arbitrary (p [ class "label" ] [ text "Categories" ])
+                        Form.arbitrary
+                            (p [ class "label" ]
+                                [ text <| loggedIn.shared.translators.t "settings.shop.categories.title" ]
+                            )
 
                 _ ->
-                    -- TODO - I18N
-                    Form.arbitrary (p [ class "label" ] [ text "Categories" ])
+                    Form.arbitrary
+                        (p [ class "label" ]
+                            [ text <| loggedIn.shared.translators.t "settings.shop.categories.title" ]
+                        )
             )
         |> Form.with
             (case allCategories of
@@ -146,7 +150,7 @@ filtersForm loggedIn allCategories =
                         Form.succeed []
 
                     else
-                        categoriesForm categories
+                        categoriesForm loggedIn.shared.translators categories
 
                 RemoteData.Loading ->
                     loadingForm
@@ -157,17 +161,16 @@ filtersForm loggedIn allCategories =
                 RemoteData.Failure _ ->
                     Form.arbitraryWith []
                         (p [ class "form-error" ]
-                            [ text "Something went wrong while fetching categories"
+                            [ text <| loggedIn.shared.translators.t "shop.filters.categories.error_fetching"
                             ]
                         )
             )
 
 
-ownerForm : Eos.Account.Name -> Form.Form msg { input | owner : Maybe Eos.Account.Name } (Maybe Eos.Account.Name)
-ownerForm currentUser =
+ownerForm : Translation.Translators -> Eos.Account.Name -> Form.Form msg { input | owner : Maybe Eos.Account.Name } (Maybe Eos.Account.Name)
+ownerForm { t } currentUser =
     Form.Radio.init
-        { -- TODO - I18N
-          label = "Offers"
+        { label = t "shop.filters.offers.label"
         , id = "offers-radio"
         , optionToString =
             \maybeAccount ->
@@ -178,10 +181,8 @@ ownerForm currentUser =
                     Just account ->
                         Eos.Account.nameToString account
         }
-        -- TODO - I18N
-        |> Form.Radio.withOption Nothing (text "All offers")
-        -- TODO - I18N
-        |> Form.Radio.withOption (Just currentUser) (text "My offers")
+        |> Form.Radio.withOption Nothing (text <| t "shop.filters.offers.all")
+        |> Form.Radio.withOption (Just currentUser) (text <| t "shop.filters.offers.mine")
         |> Form.Radio.withDirection Form.Radio.Vertical
         |> Form.Radio.withContainerAttrs [ class "mb-6" ]
         |> Form.radio
@@ -203,8 +204,8 @@ type alias CategoriesFormInput =
     Dict.Dict Shop.Category.Model Bool
 
 
-categoriesForm : List Shop.Category.Tree -> Form.Form msg FiltersFormInput (List Shop.Category.Id)
-categoriesForm allCategories =
+categoriesForm : Translation.Translators -> List Shop.Category.Tree -> Form.Form msg FiltersFormInput (List Shop.Category.Id)
+categoriesForm { t } allCategories =
     let
         checkbox : Shop.Category.Model -> Form.Form msg CategoriesFormInput (Maybe Shop.Category.Id)
         checkbox category =
@@ -291,8 +292,7 @@ categoriesForm allCategories =
                                 , type_ "button"
                                 , onClick (\values -> { values | areCategoriesExpanded = True })
                                 ]
-                                -- TODO - I18N
-                                [ text "Show all categories" ]
+                                [ text <| t "shop.filters.categories.show_all" ]
                             )
                 )
             )
@@ -455,9 +455,7 @@ viewShopFilter loggedIn model =
             [ class "w-full md:w-40 button button-secondary"
             , onClick ClickedOpenFiltersModal
             ]
-            [ -- TODO - I18N
-              text "Filters"
-            ]
+            [ text <| t "shop.filters.title" ]
         ]
 
 
@@ -472,8 +470,7 @@ viewFiltersModal loggedIn model =
         { closeMsg = ClosedFiltersModal
         , isVisible = model.isFiltersModalOpen
         }
-        -- TODO - I18N
-        |> Modal.withHeader "Filters"
+        |> Modal.withHeader (loggedIn.shared.translators.t "shop.filters.title")
         |> Modal.withBody
             [ Form.viewWithoutSubmit [ class "mt-4" ]
                 loggedIn.shared.translators
@@ -493,9 +490,7 @@ viewFiltersModal loggedIn model =
                         }
                     )
                 ]
-                [ -- TODO - I18N
-                  text "Apply"
-                ]
+                [ text <| loggedIn.shared.translators.t "shop.filters.apply" ]
             ]
         |> Modal.withSize Modal.Large
         |> Modal.toHtml
@@ -531,8 +526,7 @@ viewEmptyState loggedIn communitySymbol model =
                         ]
 
                     else
-                        -- TODO - I18N
-                        [ text "{{user}} is not selling products or services in this community."
+                        [ text <| tr "shop.empty.user_is_not_selling" [ ( "user", Eos.Account.nameToString userName ) ]
                         , br [] []
                         , br [] []
                         , text <| t "shop.empty.offer_something"

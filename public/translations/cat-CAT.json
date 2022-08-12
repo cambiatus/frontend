@@ -855,6 +855,19 @@
     "no_image": "Cap imatge",
     "subtract_unit": "Resta una unitat",
     "add_unit": "Afegir una unitat",
+    "filters": {
+      "title": "Filtres",
+      "apply": "Aplicar",
+      "offers": {
+        "label": "Ofertes",
+        "all": "Totes les ofertes",
+        "mine": "Les meves ofertes"
+      },
+      "categories": {
+        "show_all": "Mostra totes les categories",
+        "error_fetching": "S'ha produït un error en obtenir categories"
+      }
+    },
     "carrousel": {
       "previous": "Vés a la imatge anterior",
       "next": "Vés a la imatge següent",
@@ -887,6 +900,7 @@
       "all_title": "On són les ofertes?",
       "user_title": "No tienes ninguna oferta en esta comunidad",
       "you_can_offer": "Pots oferir productes, recursos digitals i serveis per guanyar {{symbol}}.",
+      "user_is_not_selling": "{{user}} no ven productes o serveis en aquesta comunitat.",
       "no_one_is_selling": "Ningú ven productes o serveis en aquesta comunitat.",
       "offer_something": "Per què no ofereixes res?",
       "create_new": "Crear una nova oferta"

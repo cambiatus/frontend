@@ -855,6 +855,19 @@
     "no_image": "Sin imágen",
     "subtract_unit": "Restar una unidad",
     "add_unit": "Añadir una unidad",
+    "filters": {
+      "title": "Filtros",
+      "apply": "Aplicar",
+      "offers": {
+        "label": "Ofertas",
+        "all": "Todas las ofertas",
+        "mine": "Mis ofertas"
+      },
+      "categories": {
+        "show_all": "Mostrar todas las categorías",
+        "error_fetching": "Algo salió mal al buscar categorías"
+      }
+    },
     "carrousel": {
       "previous": "Ir a la imagen anterior",
       "next": "Ir a la siguiente imagen",
@@ -887,6 +900,7 @@
       "all_title": "¿Dónde están las ofertas?",
       "user_title": "No tienes ninguna oferta en esta comunidad",
       "you_can_offer": "Puedes ofrecer productos, recursos digitales y servicios para ganar {{symbol}}.",
+      "user_is_not_selling": "{{user}} no está vendiendo productos o servicios en esta comunidad.",
       "no_one_is_selling": "Nadie está vendiendo productos o servicios en esta comunidad.",
       "offer_something": "¿Por qué no ofreces algo?",
       "create_new": "Crear nueva oferta"
