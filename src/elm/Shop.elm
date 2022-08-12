@@ -1,6 +1,5 @@
 module Shop exposing
-    ( Filter(..)
-    , Id
+    ( Id
     , ImageId
     , Product
     , ProductPreview
@@ -42,6 +41,7 @@ import Icons
 import Json.Encode as Encode exposing (Value)
 import Markdown exposing (Markdown)
 import Profile
+import Shop.Category
 import Translation
 import Url.Parser
 import Utils exposing (onClickPreventAll)
@@ -108,11 +108,6 @@ type alias ProductPreview =
     , price : Float
     , title : String
     }
-
-
-type Filter
-    = UserSales
-    | All
 
 
 
@@ -230,24 +225,29 @@ productPreviewQuery (Id productId) =
     Query.productPreview { id = productId } productPreviewSelectionSet
 
 
-productsQuery : Filter -> Eos.Name -> SelectionSet (List Product) RootQuery
-productsQuery filter accName =
-    case filter of
-        UserSales ->
-            let
-                args _ =
-                    { filters =
-                        Present
-                            { account = Present (Eos.nameToString accName)
-                            , inStock = Absent
-                            , categoriesIds = Absent
-                            }
-                    }
-            in
-            Query.products args productSelectionSet
+productsQuery : { user : Maybe Eos.Name, categories : List Shop.Category.Id } -> SelectionSet (List Product) RootQuery
+productsQuery { user, categories } =
+    Query.products
+        (\_ ->
+            { filters =
+                Present
+                    { account =
+                        user
+                            |> Maybe.map Eos.nameToString
+                            |> Graphql.OptionalArgument.fromMaybe
+                    , categoriesIds =
+                        if List.isEmpty categories then
+                            Absent
 
-        All ->
-            Query.products identity productSelectionSet
+                        else
+                            categories
+                                |> List.map (Shop.Category.idToInt >> Just)
+                                |> Present
+                    , inStock = Absent
+                    }
+            }
+        )
+        productSelectionSet
 
 
 createProduct :

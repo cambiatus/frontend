@@ -461,7 +461,7 @@ viewForm ({ shared } as loggedIn) { isEdit, isDisabled } model formData =
                                 ]
                                 [ a
                                     [ class "button button-secondary w-full"
-                                    , Route.href (Route.Shop Shop.All)
+                                    , Route.href (Route.Shop { owner = Nothing, categories = [] })
                                     ]
                                     [ text <| t "menu.cancel" ]
                                 , submitButton
@@ -703,7 +703,7 @@ update msg model loggedIn =
                 redirectUrl =
                     case maybeId of
                         Nothing ->
-                            Route.Shop Shop.All
+                            Route.Shop { owner = Nothing, categories = [] }
 
                         Just id ->
                             Route.ViewSale id

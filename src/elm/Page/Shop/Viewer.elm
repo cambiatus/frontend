@@ -338,7 +338,7 @@ updateAsLoggedIn msg model loggedIn =
                         |> UR.addExt
                             (LoggedIn.ShowFeedback Feedback.Success (t "shop.transfer.success"))
                         |> UR.addCmd
-                            (Route.replaceUrl loggedIn.shared.navKey (Route.Shop Shop.All))
+                            (Route.replaceUrl loggedIn.shared.navKey (Route.Shop { owner = Nothing, categories = [] }))
 
                 _ ->
                     { model | isBuyButtonDisabled = False }
@@ -489,7 +489,7 @@ updateAsLoggedIn msg model loggedIn =
             { model | confirmDeleteModalStatus = Closed }
                 |> UR.init
                 |> UR.addExt (LoggedIn.ShowFeedback Feedback.Success (t "shop.delete_offer_success"))
-                |> UR.addCmd (Route.pushUrl loggedIn.shared.navKey (Route.Shop Shop.All))
+                |> UR.addCmd (Route.pushUrl loggedIn.shared.navKey (Route.Shop { owner = Nothing, categories = [] }))
 
         CompletedDeleteProduct (RemoteData.Failure err) ->
             { model

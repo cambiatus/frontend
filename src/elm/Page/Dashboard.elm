@@ -794,7 +794,7 @@ viewWelcomeCard ({ shared } as loggedIn) community balance =
                         "w-5 h-5"
                         (t "dashboard.my_offers")
                         a
-                        [ Route.href (Route.Shop Shop.UserSales) ]
+                        [ Route.href (Route.Shop { owner = Just loggedIn.accountName, categories = [] }) ]
 
                   else
                     text ""

@@ -32,7 +32,7 @@ import RemoteData exposing (RemoteData)
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..))
 import Session.Shared as Shared
-import Shop exposing (Filter, Product)
+import Shop exposing (Product)
 import Shop.Category
 import Translation
 import Tree
@@ -46,14 +46,14 @@ import View.Modal as Modal
 -- INIT
 
 
-init : LoggedIn.Model -> Filter -> UpdateResult
+init : LoggedIn.Model -> { owner : Maybe Eos.Account.Name, categories : List Shop.Category.Id } -> UpdateResult
 init loggedIn filter =
     initModel filter
         |> UR.init
         |> UR.addCmd (Api.getBalances loggedIn.shared loggedIn.accountName CompletedLoadBalances)
         |> UR.addExt
             (LoggedIn.query loggedIn
-                (Shop.productsQuery filter loggedIn.accountName)
+                (Shop.productsQuery { user = filter.owner, categories = filter.categories })
                 CompletedSalesLoad
             )
         |> UR.addExt (LoggedIn.RequestedCommunityField Community.ShopCategoriesField)
@@ -66,23 +66,26 @@ init loggedIn filter =
 type alias Model =
     { cards : Status
     , balances : List Balance
-    , filter : Filter
     , isFiltersModalOpen : Bool
     , filtersForm : Form.Model FiltersFormInput
     }
 
 
-initModel : Filter -> Model
+initModel : { owner : Maybe Eos.Account.Name, categories : List Shop.Category.Id } -> Model
 initModel filter =
     { cards = Loading
     , balances = []
-    , filter = filter
     , isFiltersModalOpen = False
     , filtersForm =
         Form.init
-            { owner = Nothing
+            { owner = filter.owner
             , areCategoriesExpanded = False
             , categories = Dict.empty
+
+            -- TODO - need entire model
+            -- filter.categories
+            --     |> List.map (\category -> ( category, True ))
+            --     |> Dict.fromList
             }
     }
 
@@ -122,8 +125,20 @@ filtersForm loggedIn allCategories =
     in
     Form.succeed FiltersFormOutput
         |> Form.with (ownerForm loggedIn.accountName)
-        -- TODO - I18N
-        |> Form.withNoOutput (Form.arbitrary (p [ class "label" ] [ text "Categories" ]))
+        |> Form.withNoOutput
+            (case allCategories of
+                RemoteData.Success categories ->
+                    if List.isEmpty categories then
+                        Form.succeed []
+
+                    else
+                        -- TODO - I18N
+                        Form.arbitrary (p [ class "label" ] [ text "Categories" ])
+
+                _ ->
+                    -- TODO - I18N
+                    Form.arbitrary (p [ class "label" ] [ text "Categories" ])
+            )
         |> Form.with
             (case allCategories of
                 RemoteData.Success categories ->
@@ -358,27 +373,27 @@ view loggedIn model =
 
                 Loaded cards ->
                     div [ class "container mx-auto px-4 mt-6" ]
-                        (if List.isEmpty cards && model.filter == Shop.All then
-                            [ viewFrozenAccountCard
-                            , viewEmptyState loggedIn.shared.translators symbol model
-                            ]
-
-                         else if List.isEmpty cards && model.filter == Shop.UserSales then
-                            [ viewFrozenAccountCard
-                            , viewHeader loggedIn.shared.translators
-                            , viewShopFilter loggedIn model
-                            , viewFiltersModal loggedIn model
-                            , viewEmptyState loggedIn.shared.translators symbol model
-                            ]
-
-                         else
-                            [ viewFrozenAccountCard
-                            , viewHeader loggedIn.shared.translators
-                            , viewShopFilter loggedIn model
-                            , viewFiltersModal loggedIn model
-                            , viewGrid loggedIn cards
-                            ]
-                        )
+                        -- (if List.isEmpty cards && model.filter == Shop.All then
+                        --     [ viewFrozenAccountCard
+                        --     , viewEmptyState loggedIn.shared.translators symbol model
+                        --     ]
+                        --  else if List.isEmpty cards && model.filter == Shop.UserSales then
+                        --     [ viewFrozenAccountCard
+                        --     , viewHeader loggedIn.shared.translators
+                        --     , viewShopFilter loggedIn model
+                        --     , viewFiltersModal loggedIn model
+                        --     , viewEmptyState loggedIn.shared.translators symbol model
+                        --     ]
+                        --  else
+                        --     [ viewFrozenAccountCard
+                        --     , viewHeader loggedIn.shared.translators
+                        --     , viewShopFilter loggedIn model
+                        --     , viewFiltersModal loggedIn model
+                        --     , viewGrid loggedIn cards
+                        --     ]
+                        -- )
+                        -- TODO
+                        []
     in
     { title = title
     , content =
@@ -494,25 +509,27 @@ viewEmptyState : Translation.Translators -> Eos.Symbol -> Model -> Html Msg
 viewEmptyState { t, tr } communitySymbol model =
     let
         title =
-            case model.filter of
-                Shop.UserSales ->
-                    text <| t "shop.empty.user_title"
-
-                Shop.All ->
-                    text <| t "shop.empty.all_title"
+            -- case model.filter of
+            --     Shop.UserSales ->
+            --         text <| t "shop.empty.user_title"
+            --     Shop.All ->
+            --         text <| t "shop.empty.all_title"
+            -- TODO
+            text ""
 
         description =
-            case model.filter of
-                Shop.UserSales ->
-                    [ text <| tr "shop.empty.you_can_offer" [ ( "symbol", Eos.symbolToSymbolCodeString communitySymbol ) ]
-                    ]
-
-                Shop.All ->
-                    [ text <| t "shop.empty.no_one_is_selling"
-                    , br [] []
-                    , br [] []
-                    , text <| t "shop.empty.offer_something"
-                    ]
+            -- case model.filter of
+            --     Shop.UserSales ->
+            --         [ text <| tr "shop.empty.you_can_offer" [ ( "symbol", Eos.symbolToSymbolCodeString communitySymbol ) ]
+            --         ]
+            --     Shop.All ->
+            --         [ text <| t "shop.empty.no_one_is_selling"
+            --         , br [] []
+            --         , br [] []
+            --         , text <| t "shop.empty.offer_something"
+            --         ]
+            -- TODO
+            []
     in
     div [ class "flex flex-col items-center justify-center my-10" ]
         [ img
@@ -796,7 +813,17 @@ update msg model loggedIn =
                     model
 
         SubmittedFiltersForm formOutput ->
-            Debug.todo ""
+            { model | isFiltersModalOpen = False }
+                |> UR.init
+                |> UR.addExt
+                    (LoggedIn.query loggedIn
+                        (Shop.productsQuery
+                            { user = formOutput.owner
+                            , categories = formOutput.categories
+                            }
+                        )
+                        CompletedSalesLoad
+                    )
 
 
 msgToString : Msg -> List String
