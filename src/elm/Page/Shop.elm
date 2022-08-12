@@ -849,18 +849,9 @@ update msg model loggedIn =
                     model
 
         SubmittedFiltersForm formOutput ->
-            -- TODO - Set query parameters on URL
             { model | isFiltersModalOpen = False }
                 |> UR.init
-                |> UR.addExt
-                    (LoggedIn.query loggedIn
-                        (Shop.productsQuery
-                            { user = formOutput.owner
-                            , categories = formOutput.categories
-                            }
-                        )
-                        CompletedSalesLoad
-                    )
+                |> UR.addCmd (Route.pushUrl loggedIn.shared.navKey (Route.Shop formOutput))
 
 
 receiveBroadcast : LoggedIn.BroadcastMsg -> Maybe Msg
