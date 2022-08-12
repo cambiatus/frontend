@@ -348,7 +348,7 @@ viewResults loggedIn profileSummaries claims model =
     let
         viewClaim profileSummary claimIndex claim =
             ( String.fromInt claim.id
-            , Claim.viewClaimCard loggedIn profileSummary claim
+            , Claim.viewClaimCard [ class "w-full sm:w-1/2 lg:w-1/3 xl:w-1/4 px-2" ] loggedIn profileSummary claim
                 |> Html.map (ClaimMsg claimIndex)
             )
 
