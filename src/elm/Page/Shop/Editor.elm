@@ -1041,10 +1041,10 @@ update msg model loggedIn =
                             Just "shop.create_offer_success"
 
                         Saving _ _ ->
-                            Just "shop.save_offer_success"
+                            Just "shop.update_offer_success"
 
                         SavingAsAdmin _ _ ->
-                            Just "shop.save_offer_success"
+                            Just "shop.update_offer_success"
 
                         _ ->
                             Nothing

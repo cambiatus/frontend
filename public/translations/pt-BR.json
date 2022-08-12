@@ -838,7 +838,7 @@
     "action_options": "Opções de ação",
     "edit_categories": "Editar categorias desta oferta",
     "create_offer_success": "Oferta criada com sucesso!",
-    "save_offer_success": "Oferta atualizada com sucesso!",
+    "update_offer_success": "Oferta atualizada com sucesso!",
     "delete_offer_success": "Oferta removida com sucesso",
     "delete_offer_failure": "Algo de errado aconteceu ao remover sua oferta",
     "unauthorized": "Você não tem autorização para editar essa venda",
