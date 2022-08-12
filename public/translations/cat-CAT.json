@@ -900,8 +900,8 @@
       "all_title": "On són les ofertes?",
       "user_title": "No tienes ninguna oferta en esta comunidad",
       "you_can_offer": "Pots oferir productes, recursos digitals i serveis per guanyar {{symbol}}.",
-      "user_is_not_selling": "{{user}} no ven productes o serveis en aquesta comunitat.",
-      "no_one_is_selling": "Ningú ven productes o serveis en aquesta comunitat.",
+      "user_is_not_selling": "{{user}} no ven productes o serveis que coincideixin amb els vostres filtres en aquesta comunitat.",
+      "no_one_is_selling": "Ningú no ven productes o serveis que coincideixin amb els vostres filtres en aquesta comunitat.",
       "offer_something": "Per què no ofereixes res?",
       "create_new": "Crear una nova oferta"
     },

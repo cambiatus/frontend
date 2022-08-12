@@ -904,8 +904,8 @@
       "all_title": "Onde estão as ofertas?",
       "user_title": "Você não tem nenhuma oferta nessa comunidade",
       "you_can_offer": "Você pode oferecer produtos, recursos digitais e serviços para ganhar {{symbol}}.",
-      "user_is_not_selling": "{{user}} não está vendendo produtos ou serviços nessa comunidade.",
-      "no_one_is_selling": "Ninguém está vendendo produtos ou serviços nessa comunidade.",
+      "user_is_not_selling": "{{user}} não está vendendo produtos ou serviços que combinem com seus filtros nessa comunidade.",
+      "no_one_is_selling": "Ninguém está vendendo produtos ou serviços que combinem com seus filtros nessa comunidade.",
       "offer_something": "Por que você não oferece algo?",
       "create_new": "Criar nova oferta"
     },

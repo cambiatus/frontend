@@ -373,18 +373,19 @@ view loggedIn model =
 
                 Loaded cards ->
                     div [ class "container mx-auto px-4 mt-6" ]
-                        (if List.isEmpty cards && model.currentFilter.owner == Nothing then
-                            [ viewFrozenAccountCard
-                            , viewEmptyState loggedIn symbol model
-                            ]
+                        (if List.isEmpty cards then
+                            if model.currentFilter.owner == Nothing && List.isEmpty model.currentFilter.categories then
+                                [ viewFrozenAccountCard
+                                , viewEmptyState loggedIn symbol model
+                                ]
 
-                         else if List.isEmpty cards && model.currentFilter.owner == Just loggedIn.accountName then
-                            [ viewFrozenAccountCard
-                            , viewHeader loggedIn.shared.translators
-                            , viewShopFilter loggedIn model
-                            , viewFiltersModal loggedIn model
-                            , viewEmptyState loggedIn symbol model
-                            ]
+                            else
+                                [ viewFrozenAccountCard
+                                , viewHeader loggedIn.shared.translators
+                                , viewShopFilter loggedIn model
+                                , viewFiltersModal loggedIn model
+                                , viewEmptyState loggedIn symbol model
+                                ]
 
                          else
                             [ viewFrozenAccountCard

@@ -897,8 +897,8 @@
       "all_title": "Where are all the offers?",
       "user_title": "You don't have any offers in this community",
       "you_can_offer": "You can offer products, digital assets and services to earn {{symbol}}.",
-      "user_is_not_selling": "{{user}} is not selling products or services in this community.",
-      "no_one_is_selling": "No one is selling products or services in this community.",
+      "user_is_not_selling": "{{user}} is not selling products or services that match your filters in this community.",
+      "no_one_is_selling": "No one is selling products or services that match your filters in this community.",
       "offer_something": "Why don't you offer something?",
       "create_new": "Create new offer"
     },
