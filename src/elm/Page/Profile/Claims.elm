@@ -26,7 +26,6 @@ import Graphql.SelectionSet exposing (SelectionSet)
 import Html exposing (Html, a, button, div, img, li, text, ul)
 import Html.Attributes exposing (class, classList, src)
 import Html.Events exposing (onClick)
-import Html.Keyed
 import Icons
 import Json.Decode as Decode exposing (Value)
 import Json.Encode as Encode
@@ -38,6 +37,7 @@ import Session.LoggedIn as LoggedIn
 import Session.Shared exposing (Shared)
 import Time
 import UpdateResult as UR
+import View.Components
 import View.Feedback as Feedback
 import View.Modal as Modal
 import View.TabSelector
@@ -348,7 +348,7 @@ viewResults loggedIn profileSummaries claims model =
     let
         viewClaim profileSummary claimIndex claim =
             ( String.fromInt claim.id
-            , Claim.viewClaimCard [ class "w-full sm:w-1/2 lg:w-1/3 xl:w-1/4 px-2" ] loggedIn profileSummary claim
+            , Claim.viewClaimCard [ class "w-full self-start" ] loggedIn profileSummary claim
                 |> Html.map (ClaimMsg claimIndex)
             )
 
@@ -365,7 +365,9 @@ viewResults loggedIn profileSummaries claims model =
     in
     div [ class "container mx-auto px-4 mb-10" ]
         [ if List.length claimsList > 0 then
-            Html.Keyed.ul [ class "flex flex-wrap -mx-2 pt-4" ]
+            View.Components.keyedMasonryLayout [ View.Components.Sm ]
+                { transitionWithParent = False }
+                [ class "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-4 mb-4" ]
                 (claimsList
                     |> orderFunction
                     |> List.map3 viewClaim
