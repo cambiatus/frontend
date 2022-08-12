@@ -66,6 +66,7 @@ init loggedIn filter =
 type alias Model =
     { cards : Status
     , balances : List Balance
+    , currentFilter : { owner : Maybe Eos.Account.Name, categories : List Shop.Category.Id }
     , isFiltersModalOpen : Bool
     , filtersForm : Form.Model FiltersFormInput
     }
@@ -75,6 +76,7 @@ initModel : { owner : Maybe Eos.Account.Name, categories : List Shop.Category.Id
 initModel filter =
     { cards = Loading
     , balances = []
+    , currentFilter = filter
     , isFiltersModalOpen = False
     , filtersForm =
         Form.init
@@ -373,27 +375,27 @@ view loggedIn model =
 
                 Loaded cards ->
                     div [ class "container mx-auto px-4 mt-6" ]
-                        -- (if List.isEmpty cards && model.filter == Shop.All then
-                        --     [ viewFrozenAccountCard
-                        --     , viewEmptyState loggedIn.shared.translators symbol model
-                        --     ]
-                        --  else if List.isEmpty cards && model.filter == Shop.UserSales then
-                        --     [ viewFrozenAccountCard
-                        --     , viewHeader loggedIn.shared.translators
-                        --     , viewShopFilter loggedIn model
-                        --     , viewFiltersModal loggedIn model
-                        --     , viewEmptyState loggedIn.shared.translators symbol model
-                        --     ]
-                        --  else
-                        --     [ viewFrozenAccountCard
-                        --     , viewHeader loggedIn.shared.translators
-                        --     , viewShopFilter loggedIn model
-                        --     , viewFiltersModal loggedIn model
-                        --     , viewGrid loggedIn cards
-                        --     ]
-                        -- )
-                        -- TODO
-                        []
+                        (if List.isEmpty cards && model.currentFilter.owner == Nothing then
+                            [ viewFrozenAccountCard
+                            , viewEmptyState loggedIn symbol model
+                            ]
+
+                         else if List.isEmpty cards && model.currentFilter.owner == Just loggedIn.accountName then
+                            [ viewFrozenAccountCard
+                            , viewHeader loggedIn.shared.translators
+                            , viewShopFilter loggedIn model
+                            , viewFiltersModal loggedIn model
+                            , viewEmptyState loggedIn symbol model
+                            ]
+
+                         else
+                            [ viewFrozenAccountCard
+                            , viewHeader loggedIn.shared.translators
+                            , viewShopFilter loggedIn model
+                            , viewFiltersModal loggedIn model
+                            , viewGrid loggedIn cards
+                            ]
+                        )
     in
     { title = title
     , content =
@@ -505,31 +507,45 @@ viewFiltersModal loggedIn model =
 -- VIEW GRID
 
 
-viewEmptyState : Translation.Translators -> Eos.Symbol -> Model -> Html Msg
-viewEmptyState { t, tr } communitySymbol model =
+viewEmptyState : LoggedIn.Model -> Eos.Symbol -> Model -> Html Msg
+viewEmptyState loggedIn communitySymbol model =
     let
+        { t, tr } =
+            loggedIn.shared.translators
+
         title =
-            -- case model.filter of
-            --     Shop.UserSales ->
-            --         text <| t "shop.empty.user_title"
-            --     Shop.All ->
-            --         text <| t "shop.empty.all_title"
-            -- TODO
-            text ""
+            case model.currentFilter.owner of
+                Just userName ->
+                    if userName == loggedIn.accountName then
+                        text <| t "shop.empty.user_title"
+
+                    else
+                        text <| t "shop.empty.all_title"
+
+                Nothing ->
+                    text <| t "shop.empty.all_title"
 
         description =
-            -- case model.filter of
-            --     Shop.UserSales ->
-            --         [ text <| tr "shop.empty.you_can_offer" [ ( "symbol", Eos.symbolToSymbolCodeString communitySymbol ) ]
-            --         ]
-            --     Shop.All ->
-            --         [ text <| t "shop.empty.no_one_is_selling"
-            --         , br [] []
-            --         , br [] []
-            --         , text <| t "shop.empty.offer_something"
-            --         ]
-            -- TODO
-            []
+            case model.currentFilter.owner of
+                Just userName ->
+                    if userName == loggedIn.accountName then
+                        [ text <| tr "shop.empty.you_can_offer" [ ( "symbol", Eos.symbolToSymbolCodeString communitySymbol ) ]
+                        ]
+
+                    else
+                        -- TODO - I18N
+                        [ text "{{user}} is not selling products or services in this community."
+                        , br [] []
+                        , br [] []
+                        , text <| t "shop.empty.offer_something"
+                        ]
+
+                Nothing ->
+                    [ text <| t "shop.empty.no_one_is_selling"
+                    , br [] []
+                    , br [] []
+                    , text <| t "shop.empty.offer_something"
+                    ]
     in
     div [ class "flex flex-col items-center justify-center my-10" ]
         [ img
@@ -813,6 +829,7 @@ update msg model loggedIn =
                     model
 
         SubmittedFiltersForm formOutput ->
+            -- TODO - Set query parameters on URL
             { model | isFiltersModalOpen = False }
                 |> UR.init
                 |> UR.addExt
