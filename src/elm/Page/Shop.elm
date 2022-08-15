@@ -82,7 +82,6 @@ initModel filter =
     , filtersForm =
         Form.init
             { owner = filter.owner
-            , areCategoriesExpanded = False
 
             -- Categories are filled in on CompletedLoadShopCategories
             , categories = Dict.empty
@@ -92,7 +91,6 @@ initModel filter =
 
 type alias FiltersFormInput =
     { owner : Maybe Eos.Account.Name
-    , areCategoriesExpanded : Bool
     , categories : CategoriesFormInput
     }
 
@@ -261,40 +259,14 @@ categoriesForm { t } allCategories =
     in
     Form.succeed identity
         |> Form.with
-            (Form.introspect
-                (\{ areCategoriesExpanded } ->
-                    allCategories
-                        |> (if areCategoriesExpanded then
-                                identity
-
-                            else
-                                Utils.Tree.takeFirst 4
-                           )
-                        |> List.map treeToForm
-                        |> Form.list [ class "flex flex-col gap-y-4" ]
-                        |> Form.mapOutput List.concat
-                        |> Form.mapValues
-                            { value = .categories
-                            , update = \newChild parent -> { parent | categories = newChild }
-                            }
-                )
-            )
-        |> Form.withNoOutput
-            (Form.introspect
-                (\{ areCategoriesExpanded } ->
-                    if areCategoriesExpanded then
-                        Form.succeed ()
-
-                    else
-                        Form.arbitrary
-                            (button
-                                [ class "button button-secondary w-full mt-6"
-                                , type_ "button"
-                                , onClick (\values -> { values | areCategoriesExpanded = True })
-                                ]
-                                [ text <| t "shop.filters.categories.show_all" ]
-                            )
-                )
+            (allCategories
+                |> List.map treeToForm
+                |> Form.list [ class "flex flex-col gap-y-4" ]
+                |> Form.mapOutput List.concat
+                |> Form.mapValues
+                    { value = .categories
+                    , update = \newChild parent -> { parent | categories = newChild }
+                    }
             )
 
 
@@ -830,10 +802,7 @@ update msg model loggedIn =
                 |> UR.init
 
         ClosedFiltersModal ->
-            { model
-                | isFiltersModalOpen = False
-                , filtersForm = Form.updateValues (\values -> { values | areCategoriesExpanded = False }) model.filtersForm
-            }
+            { model | isFiltersModalOpen = False }
                 |> UR.init
 
         GotFiltersFormMsg subMsg ->
