@@ -35,6 +35,7 @@ import Cambiatus.Object.Subdomain as Subdomain
 import Cambiatus.Object.User as User
 import Cambiatus.Query
 import Cambiatus.Scalar exposing (DateTime(..), Id(..))
+import Constants
 import Dict exposing (Dict)
 import Eos exposing (Symbol)
 import Eos.Account as Eos
@@ -198,7 +199,7 @@ communityInfoSelectionSet =
     SelectionSet.succeed CommunityInfo
         |> with (Eos.symbolSelectionSet Community.symbol)
         |> with Community.name
-        |> with Community.logo
+        |> with (SelectionSet.withDefault Constants.defaultCommunityLogo Community.logo)
         |> with (Community.subdomain Subdomain.name |> SelectionSet.map (Maybe.withDefault ""))
         |> with Community.hasShop
         |> with Community.hasObjectives

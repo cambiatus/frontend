@@ -57,6 +57,7 @@ import Cambiatus.Query as Query
 import Cambiatus.Scalar exposing (DateTime(..))
 import Cambiatus.Subscription as Subscription
 import Community.News
+import Constants
 import Contact
 import Eos
 import Eos.Account as Eos
@@ -332,7 +333,7 @@ communitiesSelectionSet =
         |> with Community.name
         |> with Community.description
         |> with (Eos.symbolSelectionSet Community.symbol)
-        |> with Community.logo
+        |> with (SelectionSet.withDefault Constants.defaultCommunityLogo Community.logo)
         |> with (Eos.nameSelectionSet Community.creator)
         |> with Community.memberCount
 
@@ -343,7 +344,7 @@ communitySelectionSet =
         |> with Community.name
         |> with (Markdown.selectionSet Community.description)
         |> with (Eos.symbolSelectionSet Community.symbol)
-        |> with Community.logo
+        |> with (SelectionSet.withDefault Constants.defaultCommunityLogo Community.logo)
         |> with (Community.subdomain Subdomain.name |> SelectionSet.map (Maybe.withDefault ""))
         |> with (Eos.nameSelectionSet Community.creator)
         |> with Community.inviterReward
