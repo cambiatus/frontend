@@ -807,7 +807,7 @@ communityPreviewSelectionSet =
     SelectionSet.succeed CommunityPreview
         |> with CommunityPreview.name
         |> with (Markdown.selectionSet CommunityPreview.description)
-        |> with CommunityPreview.logo
+        |> with (SelectionSet.withDefault Constants.defaultCommunityLogo CommunityPreview.logo)
         |> with (Eos.symbolSelectionSet CommunityPreview.symbol)
         |> with (CommunityPreview.subdomain Subdomain.name |> SelectionSet.map (Maybe.withDefault ""))
         |> with CommunityPreview.hasShop
