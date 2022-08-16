@@ -44,9 +44,9 @@ hasShop =
     Object.selectionForField "Bool" "hasShop" [] Decode.bool
 
 
-logo : SelectionSet String Cambiatus.Object.CommunityPreview
+logo : SelectionSet (Maybe String) Cambiatus.Object.CommunityPreview
 logo =
-    Object.selectionForField "String" "logo" [] Decode.string
+    Object.selectionForField "(Maybe String)" "logo" [] (Decode.string |> Decode.nullable)
 
 
 memberCount : SelectionSet Int Cambiatus.Object.CommunityPreview
