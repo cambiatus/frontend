@@ -829,7 +829,10 @@
     "create_offer": "Crear oferta",
     "create_new_offer": "Crea un nou",
     "create_offer_success": "Oferta creada amb èxit",
+    "update_offer_success": "Oferta actualitzada amb èxit",
     "edit_offer": "Editar oferta",
+    "action_options": "Opcions d'acció",
+    "edit_categories": "Editeu categories d'aquesta oferta",
     "delete_offer_success": "L’oferta s’ha suprimit correctament",
     "delete_offer_failure": "S'ha produït un error en eliminar la teva oferta",
     "unauthorized": "No tens autorització per a editar aquesta venda",
@@ -884,6 +887,10 @@
       "images": {
         "title": "Imatges",
         "guidance": "Afegeix imatges del producte. Podeu afegir més imatges més endavant"
+      },
+      "categories": {
+        "title": "Categories",
+        "guidance": "Podeu seleccionar una o més categories per ajudar els usuaris a trobar aquest producte"
       },
       "price_and_inventory": {
         "title": "Preu i Inventari",

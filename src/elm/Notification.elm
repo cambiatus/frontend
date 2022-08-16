@@ -25,6 +25,7 @@ import Cambiatus.Query as Query
 import Cambiatus.Scalar exposing (DateTime(..))
 import Cambiatus.Union
 import Cambiatus.Union.NotificationType
+import Constants
 import Eos
 import Eos.Account as Eos
 import Graphql.Operation exposing (RootMutation, RootQuery)
@@ -194,6 +195,6 @@ saleHistorySelectionSet =
 logoSelectionSet : SelectionSet Community Cambiatus.Object.Community
 logoSelectionSet =
     SelectionSet.succeed Community
-        |> with Community.logo
+        |> with (SelectionSet.withDefault Constants.defaultCommunityLogo Community.logo)
         |> with (Eos.symbolSelectionSet Community.symbol)
         |> with (Community.subdomain Subdomain.name |> SelectionSet.map (Maybe.withDefault ""))

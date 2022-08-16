@@ -264,7 +264,7 @@ type alias PreferenceOptionalArguments =
     }
 
 
-{-| [Auth required] A mutation to only the preferences of the logged user
+{-| [Auth required] A mutation to set the preferences of the logged user
 -}
 preference :
     (PreferenceOptionalArguments -> PreferenceOptionalArguments)

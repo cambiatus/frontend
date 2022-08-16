@@ -616,8 +616,8 @@ broadcastGuest broadcastMessage status =
             Cmd.none
 
 
-broadcast : LoggedIn.BroadcastMsg -> Status -> Cmd Msg
-broadcast broadcastMessage status =
+broadcast : LoggedIn.Model -> LoggedIn.BroadcastMsg -> Status -> Cmd Msg
+broadcast loggedIn broadcastMessage status =
     let
         maybeMsg =
             case status of
@@ -717,7 +717,11 @@ broadcast broadcastMessage status =
                     ProfileContributions.receiveBroadcast broadcastMessage
                         |> Maybe.map GotProfileContributionsMsg
 
-                Shop _ _ ->
+                ShopEditor _ subModel ->
+                    ShopEditor.receiveBroadcast loggedIn.shared.translators broadcastMessage subModel
+                        |> Maybe.map GotShopEditorMsg
+
+                Shop _ subModel ->
                     Shop.receiveBroadcast broadcastMessage
                         |> Maybe.map GotShopMsg
 
@@ -953,7 +957,12 @@ updateExternal extMsg model =
             )
 
         Page.LoggedInExternalMsg (LoggedIn.Broadcast broadcastMsg) ->
-            ( model, broadcast broadcastMsg model.status )
+            case model.session of
+                Page.LoggedIn loggedIn ->
+                    ( model, broadcast loggedIn broadcastMsg model.status )
+
+                _ ->
+                    ( model, Cmd.none )
 
         Page.LoggedInExternalMsg (LoggedIn.RunExternalMsg subExternalMsg) ->
             ( model, Utils.spawnMessage subExternalMsg )
@@ -981,7 +990,7 @@ updateLoggedInUResult toStatus toMsg model uResult =
                                     Cmd.none
 
                                 Just broadcastMsg ->
-                                    broadcast broadcastMsg m.status
+                                    broadcast loggedIn broadcastMsg m.status
                     in
                     ( { m
                         | session = Page.LoggedIn updateResult.model
@@ -1580,7 +1589,7 @@ changeRouteTo maybeRoute model =
                 newModelCmd l =
                     case model.status of
                         ShopEditor _ shopEditorModel ->
-                            ShopEditor.maybeSetStep l.shared.translators
+                            ShopEditor.maybeSetStep l
                                 step
                                 shopEditorModel
 
@@ -1588,7 +1597,7 @@ changeRouteTo maybeRoute model =
                             ShopEditor.initCreate l
             in
             newModelCmd
-                >> updateStatusWith (ShopEditor Nothing) GotShopEditorMsg model
+                >> updateLoggedInUResult (ShopEditor Nothing) GotShopEditorMsg model
                 |> withLoggedIn (Route.NewSale step)
 
         Just (Route.EditSale saleId saleStep) ->
@@ -1596,15 +1605,9 @@ changeRouteTo maybeRoute model =
                 newUpdateResult l =
                     case model.status of
                         ShopEditor _ shopEditorModel ->
-                            let
-                                ( newModel, newCmd ) =
-                                    ShopEditor.maybeSetStep l.shared.translators
-                                        saleStep
-                                        shopEditorModel
-                            in
-                            newModel
-                                |> UR.init
-                                |> UR.addCmd newCmd
+                            ShopEditor.maybeSetStep l
+                                saleStep
+                                shopEditorModel
 
                         _ ->
                             ShopEditor.initUpdate saleId saleStep l

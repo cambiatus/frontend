@@ -42,6 +42,7 @@ type SelectedObjective
 type EditSaleStep
     = SaleMainInformation
     | SaleImages
+    | SaleCategories
     | SalePriceAndInventory
 
 
@@ -431,6 +432,9 @@ saleStepFromString stepString =
         Just "images" ->
             SaleImages
 
+        Just "categories" ->
+            SaleCategories
+
         Just "priceAndInventory" ->
             SalePriceAndInventory
 
@@ -446,6 +450,9 @@ saleStepToString step =
 
         SaleImages ->
             "images"
+
+        SaleCategories ->
+            "categories"
 
         SalePriceAndInventory ->
             "priceAndInventory"

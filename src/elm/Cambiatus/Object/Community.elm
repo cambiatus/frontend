@@ -150,9 +150,9 @@ issuer =
     Object.selectionForField "(Maybe String)" "issuer" [] (Decode.string |> Decode.nullable)
 
 
-logo : SelectionSet String Cambiatus.Object.Community
+logo : SelectionSet (Maybe String) Cambiatus.Object.Community
 logo =
-    Object.selectionForField "String" "logo" [] Decode.string
+    Object.selectionForField "(Maybe String)" "logo" [] (Decode.string |> Decode.nullable)
 
 
 maxSupply : SelectionSet (Maybe Float) Cambiatus.Object.Community
