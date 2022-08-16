@@ -6,34 +6,45 @@ module Page.Shop.Editor exposing
     , initUpdate
     , maybeSetStep
     , msgToString
+    , receiveBroadcast
     , update
     , view
     )
 
+import AssocList as Dict
 import Cambiatus.Enum.Permission as Permission
+import Community
 import Eos
 import Form
+import Form.Checkbox
 import Form.File
 import Form.RichText
 import Form.Text
 import Form.Toggle
 import Form.Validate
 import Graphql.Http
-import Html exposing (Html, a, button, div, h2, hr, p, span, text)
-import Html.Attributes exposing (class, classList, disabled, maxlength, type_)
+import Html exposing (Html, a, button, div, h2, hr, img, p, span, text)
+import Html.Attributes exposing (alt, class, classList, disabled, maxlength, src, type_)
 import Html.Attributes.Aria exposing (ariaHidden, ariaLabel)
 import Html.Events exposing (onClick)
 import Icons
+import List.Extra
+import Log
 import Markdown exposing (Markdown)
 import Page
+import Profile.EditKycForm exposing (Msg(..))
 import RemoteData exposing (RemoteData)
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..))
 import Session.Shared exposing (Shared)
 import Shop exposing (Product)
+import Shop.Category
 import Translation
+import Tree
+import Tree.Zipper
 import UpdateResult as UR
 import Utils
+import Utils.Tree
 import View.Feedback as Feedback
 
 
@@ -41,20 +52,23 @@ import View.Feedback as Feedback
 -- INIT
 
 
-initCreate : LoggedIn.Model -> ( Model, Cmd Msg )
+initCreate : LoggedIn.Model -> UpdateResult
 initCreate _ =
-    ( EditingCreate initFormData, Cmd.none )
+    { status = EditingCreate initFormData
+    , isWaitingForCategoriesToLoad = False
+    }
+        |> UR.init
+        |> UR.addExt (LoggedIn.RequestedReloadCommunityField Community.ShopCategoriesField)
 
 
 initUpdate : Shop.Id -> Route.EditSaleStep -> LoggedIn.Model -> UpdateResult
 initUpdate productId step loggedIn =
-    LoadingSaleUpdate step
+    { status = LoadingSaleUpdate productId step
+    , isWaitingForCategoriesToLoad = False
+    }
         |> UR.init
-        |> UR.addExt
-            (LoggedIn.query loggedIn
-                (Shop.productQuery productId)
-                CompletedSaleLoad
-            )
+        |> UR.addCmd (LoggedIn.maybeInitWith (\_ -> CompletedLoadCommunity) .selectedCommunity loggedIn)
+        |> UR.addExt (LoggedIn.RequestedReloadCommunityField Community.ShopCategoriesField)
 
 
 
@@ -62,7 +76,9 @@ initUpdate productId step loggedIn =
 
 
 type alias Model =
-    Status
+    { status : Status
+    , isWaitingForCategoriesToLoad : Bool
+    }
 
 
 type
@@ -71,16 +87,21 @@ type
     = EditingCreate FormData
     | Creating FormData
       -- Update
-    | LoadingSaleUpdate Route.EditSaleStep
+    | LoadingSaleUpdate Shop.Id Route.EditSaleStep
     | EditingUpdate Product FormData
     | Saving Product FormData
+      -- Update as admin
+    | EditingUpdateAsAdmin Product FormData
+    | SavingAsAdmin Product FormData
       -- Errors
     | LoadSaleFailed (Graphql.Http.Error (Maybe Product))
+    | UnauthorizedToEdit
 
 
 type alias FormData =
     { mainInformation : Form.Model MainInformationFormInput
     , images : Form.Model ImagesFormInput
+    , categories : Form.Model CategoriesFormInput
     , priceAndInventory : Form.Model PriceAndInventoryFormInput
     , currentStep : Step
     }
@@ -89,7 +110,8 @@ type alias FormData =
 type Step
     = MainInformation
     | Images MainInformationFormOutput
-    | PriceAndInventory MainInformationFormOutput ImagesFormOutput
+    | Categories MainInformationFormOutput ImagesFormOutput
+    | PriceAndInventory MainInformationFormOutput ImagesFormOutput CategoriesFormOutput
 
 
 type alias MainInformationFormInput =
@@ -168,6 +190,101 @@ imagesForm translators =
                     , update = \new _ -> new
                     , externalError = always Nothing
                     }
+            )
+
+
+type alias CategoriesFormInput =
+    Dict.Dict Shop.Category.Model Bool
+
+
+type alias CategoriesFormOutput =
+    List Shop.Category.Id
+
+
+categoriesForm : Translation.Translators -> List Shop.Category.Tree -> Form.Form msg CategoriesFormInput CategoriesFormOutput
+categoriesForm translators allCategories =
+    let
+        checkbox : Shop.Category.Model -> Form.Form msg CategoriesFormInput (Maybe Shop.Category.Id)
+        checkbox category =
+            Form.Checkbox.init
+                { label =
+                    span [ class "flex items-center gap-x-2" ]
+                        [ case category.icon of
+                            Nothing ->
+                                text ""
+
+                            Just icon ->
+                                img [ class "w-5 h-5 rounded-full", alt "", src icon ] []
+                        , text category.name
+                        ]
+                , id = "category-" ++ Shop.Category.idToString category.id
+                }
+                |> Form.Checkbox.withContainerAttrs [ class "flex" ]
+                |> Form.checkbox
+                    { parser =
+                        \value ->
+                            if value then
+                                Ok (Just category.id)
+
+                            else
+                                Ok Nothing
+                    , value = \input -> Dict.get category input |> Maybe.withDefault False
+                    , update =
+                        \input values ->
+                            let
+                                ancestors =
+                                    allCategories
+                                        |> Utils.Tree.fromFlatForest
+                                        |> Maybe.andThen (Tree.Zipper.findFromRoot (\zipperCategory -> zipperCategory.id == category.id))
+                                        |> Maybe.map Utils.Tree.getAllAncestors
+                                        |> Maybe.withDefault []
+                                        |> List.map Tree.Zipper.label
+                            in
+                            if input then
+                                ancestors
+                                    |> List.foldl (\ancestor -> Dict.insert ancestor True) values
+                                    |> Dict.insert category input
+
+                            else
+                                Dict.insert category input values
+                    , externalError = always Nothing
+                    }
+
+        treeToForm : Tree.Tree Shop.Category.Model -> Form.Form msg CategoriesFormInput (List Shop.Category.Id)
+        treeToForm tree =
+            Form.succeed
+                (\label children ->
+                    case label of
+                        Nothing ->
+                            children
+
+                        Just head ->
+                            head :: children
+                )
+                |> Form.withGroup []
+                    (checkbox (Tree.label tree))
+                    (if List.isEmpty (Tree.children tree) then
+                        Form.succeed []
+
+                     else
+                        Tree.children tree
+                            |> List.map treeToForm
+                            |> Form.list [ class "ml-4 mt-6 flex flex-col gap-y-6" ]
+                            |> Form.mapOutput List.concat
+                    )
+    in
+    Form.succeed identity
+        |> Form.withNoOutput
+            (Form.arbitrary
+                (p [ class "mb-4" ]
+                    [ text <| translators.t "shop.steps.categories.guidance" ]
+                )
+            )
+        |> Form.with
+            (allCategories
+                |> List.map treeToForm
+                |> Form.list [ class "flex flex-col gap-y-6" ]
+                |> Form.mapOutput List.concat
             )
 
 
@@ -304,6 +421,7 @@ initFormData =
             , description = Form.RichText.initModel "product-description-editor" Nothing
             }
     , images = Form.init (Form.File.initMultiple { fileUrls = [], aspectRatio = Nothing })
+    , categories = Form.init Dict.empty
     , priceAndInventory =
         Form.init
             { price = "0"
@@ -323,6 +441,10 @@ initEditingFormData translators product step =
             }
     , images =
         Form.File.initMultiple { fileUrls = product.images, aspectRatio = Nothing }
+            |> Form.init
+    , categories =
+        product.categories
+            |> List.foldl (\category -> Dict.insert category True) Dict.empty
             |> Form.init
     , priceAndInventory =
         Form.init
@@ -344,10 +466,15 @@ initEditingFormData translators product step =
             Route.SaleImages ->
                 Images { title = product.title, description = product.description }
 
+            Route.SaleCategories ->
+                Categories { title = product.title, description = product.description }
+                    product.images
+
             Route.SalePriceAndInventory ->
                 PriceAndInventory
                     { title = product.title, description = product.description }
                     product.images
+                    (List.map .id product.categories)
     }
 
 
@@ -365,11 +492,17 @@ view loggedIn model =
             shared.translators.t
 
         isEdit =
-            case model of
+            case model.status of
                 EditingUpdate _ _ ->
                     True
 
                 Saving _ _ ->
+                    True
+
+                EditingUpdateAsAdmin _ _ ->
+                    True
+
+                SavingAsAdmin _ _ ->
                     True
 
                 _ ->
@@ -382,36 +515,102 @@ view loggedIn model =
             else
                 t "shop.create_offer"
 
-        content =
-            case model of
-                LoadingSaleUpdate _ ->
+        content community shopCategories =
+            case model.status of
+                LoadingSaleUpdate _ _ ->
                     Page.fullPageLoading shared
 
                 LoadSaleFailed error ->
                     Page.fullPageGraphQLError (t "shop.title") error
 
+                UnauthorizedToEdit ->
+                    Page.fullPageNotFound (t "shop.unauthorized") ""
+
                 EditingCreate formData ->
-                    viewForm loggedIn { isEdit = False, isDisabled = False } model formData
+                    viewForm loggedIn
+                        community
+                        shopCategories
+                        { isEdit = False
+                        , isDisabled = False
+                        , availableSteps =
+                            allRouteSteps
+                                |> removeCategoriesStep shopCategories
+                        }
+                        model
+                        formData
 
                 Creating formData ->
-                    viewForm loggedIn { isEdit = False, isDisabled = True } model formData
+                    viewForm loggedIn
+                        community
+                        shopCategories
+                        { isEdit = False
+                        , isDisabled = True
+                        , availableSteps =
+                            allRouteSteps
+                                |> removeCategoriesStep shopCategories
+                        }
+                        model
+                        formData
 
                 EditingUpdate _ formData ->
-                    viewForm loggedIn { isEdit = True, isDisabled = False } model formData
+                    viewForm loggedIn
+                        community
+                        shopCategories
+                        { isEdit = True
+                        , isDisabled = False
+                        , availableSteps =
+                            allRouteSteps
+                                |> removeCategoriesStep shopCategories
+                        }
+                        model
+                        formData
 
                 Saving _ formData ->
-                    viewForm loggedIn { isEdit = True, isDisabled = True } model formData
+                    viewForm loggedIn
+                        community
+                        shopCategories
+                        { isEdit = True
+                        , isDisabled = True
+                        , availableSteps =
+                            allRouteSteps
+                                |> removeCategoriesStep shopCategories
+                        }
+                        model
+                        formData
+
+                EditingUpdateAsAdmin _ formData ->
+                    viewForm loggedIn
+                        community
+                        shopCategories
+                        { isEdit = True
+                        , isDisabled = False
+                        , availableSteps = [ Route.SaleCategories ]
+                        }
+                        model
+                        formData
+
+                SavingAsAdmin _ formData ->
+                    viewForm loggedIn
+                        community
+                        shopCategories
+                        { isEdit = True
+                        , isDisabled = True
+                        , availableSteps = [ Route.SaleCategories ]
+                        }
+                        model
+                        formData
     in
     { title = title
     , content =
-        case RemoteData.map .hasShop loggedIn.selectedCommunity of
-            RemoteData.Success True ->
-                content
+        case Community.getField loggedIn.selectedCommunity .shopCategories of
+            RemoteData.Success ( community, shopCategories ) ->
+                if community.hasShop then
+                    content community shopCategories
 
-            RemoteData.Success False ->
-                Page.fullPageNotFound
-                    (t "error.pageNotFound")
-                    (t "shop.disabled.description")
+                else
+                    Page.fullPageNotFound
+                        (t "error.pageNotFound")
+                        (t "shop.disabled.description")
 
             RemoteData.Loading ->
                 Page.fullPageLoading shared
@@ -419,18 +618,29 @@ view loggedIn model =
             RemoteData.NotAsked ->
                 Page.fullPageLoading shared
 
-            RemoteData.Failure e ->
-                Page.fullPageGraphQLError (t "community.error_loading") e
+            RemoteData.Failure fieldError ->
+                case fieldError of
+                    Community.CommunityError err ->
+                        Page.fullPageGraphQLError (t "community.error_loading") err
+
+                    Community.FieldError err ->
+                        Page.fullPageGraphQLError (t "community.error_loading") err
     }
 
 
 viewForm :
     LoggedIn.Model
-    -> { isEdit : Bool, isDisabled : Bool }
+    -> Community.Model
+    -> List Shop.Category.Tree
+    ->
+        { isEdit : Bool
+        , isDisabled : Bool
+        , availableSteps : List Route.EditSaleStep
+        }
     -> Model
     -> FormData
     -> Html Msg
-viewForm ({ shared } as loggedIn) { isEdit, isDisabled } model formData =
+viewForm ({ shared } as loggedIn) community allCategories { isEdit, isDisabled, availableSteps } model formData =
     let
         { t, tr } =
             shared.translators
@@ -445,11 +655,19 @@ viewForm ({ shared } as loggedIn) { isEdit, isDisabled } model formData =
         viewForm_ :
             Form.Form Msg input output
             -> Form.Model input
-            -> { submitText : String }
+            -> Route.EditSaleStep
             -> (Form.Msg input -> FormMsg)
             -> (output -> Msg)
             -> Html Msg
-        viewForm_ formFn formModel { submitText } toFormMsg onSubmitMsg =
+        viewForm_ formFn formModel routeStep toFormMsg onSubmitMsg =
+            let
+                submitText =
+                    if List.Extra.last availableSteps == Just routeStep then
+                        actionText
+
+                    else
+                        t "shop.steps.continue"
+            in
             Form.view [ class "container mx-auto px-4 flex-grow flex flex-col lg:max-w-none lg:mx-0 lg:px-6" ]
                 shared.translators
                 (\submitButton ->
@@ -480,16 +698,35 @@ viewForm ({ shared } as loggedIn) { isEdit, isDisabled } model formData =
                 , onSubmit = onSubmitMsg
                 }
 
+        findRouteStepIndex routeStep default =
+            List.Extra.findIndex ((==) routeStep) availableSteps
+                |> Maybe.map ((+) 1)
+                |> Maybe.withDefault default
+
         ( stepNumber, stepName ) =
             case formData.currentStep of
                 MainInformation ->
-                    ( 1, t "shop.steps.main_information.title" )
+                    ( findRouteStepIndex Route.SaleMainInformation 1
+                    , t "shop.steps.main_information.title"
+                    )
 
                 Images _ ->
-                    ( 2, t "shop.steps.images.title" )
+                    ( findRouteStepIndex Route.SaleImages 2
+                    , t "shop.steps.images.title"
+                    )
 
-                PriceAndInventory _ _ ->
-                    ( 3, t "shop.steps.price_and_inventory.title" )
+                Categories _ _ ->
+                    ( findRouteStepIndex Route.SaleCategories 3
+                    , t "shop.steps.categories.title"
+                    )
+
+                PriceAndInventory _ _ _ ->
+                    ( findRouteStepIndex Route.SalePriceAndInventory 4
+                    , t "shop.steps.price_and_inventory.title"
+                    )
+
+        totalSteps =
+            List.length availableSteps
 
         isStepCompleted : Route.EditSaleStep -> Bool
         isStepCompleted step =
@@ -497,10 +734,19 @@ viewForm ({ shared } as loggedIn) { isEdit, isDisabled } model formData =
                 ( Route.SaleMainInformation, Images _ ) ->
                     True
 
-                ( Route.SaleMainInformation, PriceAndInventory _ _ ) ->
+                ( Route.SaleMainInformation, Categories _ _ ) ->
                     True
 
-                ( Route.SaleImages, PriceAndInventory _ _ ) ->
+                ( Route.SaleMainInformation, PriceAndInventory _ _ _ ) ->
+                    True
+
+                ( Route.SaleImages, Categories _ _ ) ->
+                    True
+
+                ( Route.SaleImages, PriceAndInventory _ _ _ ) ->
+                    True
+
+                ( Route.SaleCategories, PriceAndInventory _ _ _ ) ->
                     True
 
                 _ ->
@@ -517,13 +763,16 @@ viewForm ({ shared } as loggedIn) { isEdit, isDisabled } model formData =
                         Images _ ->
                             step == Route.SaleImages
 
-                        PriceAndInventory _ _ ->
+                        Categories _ _ ->
+                            step == Route.SaleCategories
+
+                        PriceAndInventory _ _ _ ->
                             step == Route.SalePriceAndInventory
 
                 maybeNewRoute =
                     setCurrentStepInRoute model step
 
-                ( linkStepIndex, linkStepName ) =
+                ( defaultStepIndex, linkStepName ) =
                     case step of
                         Route.SaleMainInformation ->
                             ( 1, t "shop.steps.main_information.title" )
@@ -531,8 +780,14 @@ viewForm ({ shared } as loggedIn) { isEdit, isDisabled } model formData =
                         Route.SaleImages ->
                             ( 2, t "shop.steps.images.title" )
 
+                        Route.SaleCategories ->
+                            ( 3, t "shop.steps.categories.title" )
+
                         Route.SalePriceAndInventory ->
-                            ( 3, t "shop.steps.price_and_inventory.title" )
+                            ( totalSteps, t "shop.steps.price_and_inventory.title" )
+
+                linkStepIndex =
+                    findRouteStepIndex step defaultStepIndex
             in
             a
                 [ class "w-6 h-6 rounded-full flex-shrink-0 flex items-center justify-center transition-colors duration-300"
@@ -571,58 +826,78 @@ viewForm ({ shared } as loggedIn) { isEdit, isDisabled } model formData =
                     ]
                     []
                 ]
+
+        viewHeader =
+            div [ class "container mx-auto px-4 lg:max-w-none lg:mx-0 lg:px-6" ]
+                [ div [ class "mb-4 flex items-center" ]
+                    (List.concatMap
+                        (\step ->
+                            if List.Extra.last availableSteps == Just step then
+                                [ stepBall step ]
+
+                            else
+                                [ stepBall step, stepLine step ]
+                        )
+                        availableSteps
+                    )
+                , h2 [ class "font-bold text-black mb-2" ]
+                    [ text <|
+                        tr "shop.steps.index"
+                            [ ( "current", String.fromInt stepNumber )
+                            , ( "total", String.fromInt totalSteps )
+                            ]
+                    ]
+                , text stepName
+                ]
     in
     div [ class "flex flex-col flex-grow" ]
         [ Page.viewHeader loggedIn pageTitle
         , div [ class "lg:container lg:mx-auto lg:px-4 lg:mt-6 lg:mb-20" ]
-            [ div [ class "bg-white pt-4 pb-8 flex-grow flex flex-col min-h-150 lg:w-2/3 lg:mx-auto lg:rounded lg:shadow-lg lg:animate-fade-in-from-above-lg lg:fill-mode-none lg:motion-reduce:animate-none" ]
-                [ div [ class "container mx-auto px-4 lg:max-w-none lg:mx-0 lg:px-6" ]
-                    [ div [ class "mb-4 flex items-center" ]
-                        [ stepBall Route.SaleMainInformation
-                        , stepLine Route.SaleMainInformation
-                        , stepBall Route.SaleImages
-                        , stepLine Route.SaleImages
-                        , stepBall Route.SalePriceAndInventory
-                        ]
-                    , h2 [ class "font-bold text-black mb-2" ]
-                        [ text <|
-                            tr "shop.steps.index"
-                                [ ( "current", String.fromInt stepNumber )
-                                , ( "total", String.fromInt 3 )
-                                ]
-                        ]
-                    , text stepName
-                    ]
+            [ div
+                [ class "bg-white pt-4 pb-8 flex-grow flex flex-col lg:w-2/3 lg:mx-auto lg:rounded lg:shadow-lg lg:animate-fade-in-from-above-lg lg:fill-mode-none lg:motion-reduce:animate-none"
+                , classList [ ( "min-h-150", List.length availableSteps > 1 ) ]
+                ]
+                [ if List.length availableSteps > 1 then
+                    viewHeader
+
+                  else
+                    span [ class "font-bold px-4" ] [ text stepName ]
                 , hr [ class "mt-4 mb-6 border-gray-500 lg:mx-4 lg:mb-10", ariaHidden True ] []
                 , case formData.currentStep of
                     MainInformation ->
                         viewForm_ (mainInformationForm shared.translators)
                             formData.mainInformation
-                            { submitText = t "shop.steps.continue" }
+                            Route.SaleMainInformation
                             MainInformationMsg
                             (SubmittedMainInformation ImagesMainInformationTarget)
 
                     Images _ ->
                         viewForm_ (imagesForm shared.translators)
                             formData.images
-                            { submitText = t "shop.steps.continue" }
+                            Route.SaleImages
                             ImagesMsg
-                            SubmittedImages
+                            (SubmittedImages
+                                (if List.member Route.SaleCategories availableSteps then
+                                    CategoriesImageTarget
 
-                    PriceAndInventory _ _ ->
-                        case loggedIn.selectedCommunity of
-                            RemoteData.Success community ->
-                                viewForm_ (priceAndInventoryForm shared.translators { isDisabled = isDisabled } community.symbol)
-                                    formData.priceAndInventory
-                                    { submitText = actionText }
-                                    PriceAndInventoryMsg
-                                    SubmittedPriceAndInventory
+                                 else
+                                    PriceAndInventoryImageTarget
+                                )
+                            )
 
-                            RemoteData.Failure err ->
-                                Page.fullPageGraphQLError pageTitle err
+                    Categories _ _ ->
+                        viewForm_ (categoriesForm shared.translators allCategories)
+                            formData.categories
+                            Route.SaleCategories
+                            CategoriesMsg
+                            SubmittedCategories
 
-                            _ ->
-                                Page.fullPageLoading shared
+                    PriceAndInventory _ _ _ ->
+                        viewForm_ (priceAndInventoryForm shared.translators { isDisabled = isDisabled } community.symbol)
+                            formData.priceAndInventory
+                            Route.SalePriceAndInventory
+                            PriceAndInventoryMsg
+                            SubmittedPriceAndInventory
                 ]
             ]
         ]
@@ -638,10 +913,12 @@ type alias UpdateResult =
 
 type Msg
     = NoOp
+    | CompletedLoadCommunity
     | CompletedSaleLoad (RemoteData (Graphql.Http.Error (Maybe Product)) (Maybe Product))
     | GotFormMsg FormMsg
     | SubmittedMainInformation MainInformationTarget MainInformationFormOutput
-    | SubmittedImages ImagesFormOutput
+    | SubmittedImages ImagesTarget ImagesFormOutput
+    | SubmittedCategories CategoriesFormOutput
     | SubmittedPriceAndInventory PriceAndInventoryFormOutput
     | GotSaveResponse (RemoteData (Graphql.Http.Error (Maybe Shop.Id)) (Maybe Shop.Id))
     | ClickedDecrementStockUnits
@@ -650,12 +927,19 @@ type Msg
 
 type MainInformationTarget
     = ImagesMainInformationTarget
+    | CategoriesMainInformationTarget
     | PriceAndInventoryMainInformationTarget
+
+
+type ImagesTarget
+    = CategoriesImageTarget
+    | PriceAndInventoryImageTarget
 
 
 type FormMsg
     = MainInformationMsg (Form.Msg MainInformationFormInput)
     | ImagesMsg (Form.Msg ImagesFormInput)
+    | CategoriesMsg (Form.Msg CategoriesFormInput)
     | PriceAndInventoryMsg (Form.Msg PriceAndInventoryFormInput)
 
 
@@ -669,12 +953,55 @@ update msg model loggedIn =
         NoOp ->
             UR.init model
 
-        CompletedSaleLoad (RemoteData.Success maybeSale) ->
-            case ( model, maybeSale ) of
-                ( LoadingSaleUpdate step, Just sale ) ->
-                    initEditingFormData loggedIn.shared.translators sale step
-                        |> EditingUpdate sale
+        CompletedLoadCommunity ->
+            case model.status of
+                LoadingSaleUpdate productId _ ->
+                    model
                         |> UR.init
+                        |> UR.addExt
+                            (LoggedIn.query loggedIn
+                                (Shop.productQuery productId)
+                                CompletedSaleLoad
+                            )
+
+                _ ->
+                    UR.init model
+
+        CompletedSaleLoad (RemoteData.Success maybeSale) ->
+            case ( model.status, maybeSale ) of
+                ( LoadingSaleUpdate _ step, Just sale ) ->
+                    if sale.creatorId == loggedIn.accountName then
+                        { model
+                            | status =
+                                initEditingFormData loggedIn.shared.translators sale step
+                                    |> EditingUpdate sale
+                        }
+                            |> UR.init
+
+                    else
+                        case loggedIn.selectedCommunity of
+                            RemoteData.Success community ->
+                                if community.creator == loggedIn.accountName then
+                                    { model
+                                        | status =
+                                            initEditingFormData loggedIn.shared.translators sale step
+                                                |> EditingUpdateAsAdmin sale
+                                    }
+                                        |> UR.init
+
+                                else
+                                    { model | status = UnauthorizedToEdit }
+                                        |> UR.init
+
+                            _ ->
+                                UR.init model
+                                    |> UR.logImpossible msg
+                                        "Completed loading sale, but community wasn't loaded"
+                                        (Just loggedIn.accountName)
+                                        { moduleName = "Page.Shop.Editor"
+                                        , function = "update"
+                                        }
+                                        [ Log.contextFromCommunity loggedIn.selectedCommunity ]
 
                 ( _, _ ) ->
                     model
@@ -686,7 +1013,7 @@ update msg model loggedIn =
                             []
 
         CompletedSaleLoad (RemoteData.Failure error) ->
-            LoadSaleFailed error
+            { model | status = LoadSaleFailed error }
                 |> UR.init
                 |> UR.logGraphqlError msg
                     (Just loggedIn.accountName)
@@ -707,6 +1034,28 @@ update msg model loggedIn =
 
                         Just id ->
                             Route.ViewSale id
+
+                maybeFeedbackMessage =
+                    case model.status of
+                        Creating _ ->
+                            Just "shop.create_offer_success"
+
+                        Saving _ _ ->
+                            Just "shop.update_offer_success"
+
+                        SavingAsAdmin _ _ ->
+                            Just "shop.update_offer_success"
+
+                        _ ->
+                            Nothing
+
+                maybeAddFeedback =
+                    case maybeFeedbackMessage of
+                        Nothing ->
+                            identity
+
+                        Just feedbackMessage ->
+                            UR.addExt (ShowFeedback Feedback.Success (t feedbackMessage))
             in
             UR.init model
                 |> UR.addCmd (Route.replaceUrl loggedIn.shared.navKey redirectUrl)
@@ -727,16 +1076,16 @@ update msg model loggedIn =
                                     False
                         )
                     )
-                |> UR.addExt (ShowFeedback Feedback.Success (t "shop.create_offer_success"))
+                |> maybeAddFeedback
 
         GotSaveResponse (RemoteData.Failure error) ->
             let
                 internalError =
                     loggedIn.shared.translators.t "error.unknown"
             in
-            case model of
+            case model.status of
                 Creating form ->
-                    EditingCreate form
+                    { model | status = EditingCreate form }
                         |> UR.init
                         |> UR.addExt (LoggedIn.ShowFeedback Feedback.Failure internalError)
                         |> UR.logGraphqlError msg
@@ -747,7 +1096,18 @@ update msg model loggedIn =
                             error
 
                 Saving sale form ->
-                    EditingUpdate sale form
+                    { model | status = EditingUpdate sale form }
+                        |> UR.init
+                        |> UR.addExt (LoggedIn.ShowFeedback Feedback.Failure internalError)
+                        |> UR.logGraphqlError msg
+                            (Just loggedIn.accountName)
+                            "Got an error when editing a shop offer"
+                            { moduleName = "Page.Shop.Editor", function = "update" }
+                            []
+                            error
+
+                SavingAsAdmin sale form ->
+                    { model | status = EditingUpdateAsAdmin sale form }
                         |> UR.init
                         |> UR.addExt (LoggedIn.ShowFeedback Feedback.Failure internalError)
                         |> UR.logGraphqlError msg
@@ -778,10 +1138,23 @@ update msg model loggedIn =
                     getFormData model
                         |> Maybe.map .currentStep
 
-                submitImagesCmd =
+                targetCmd =
                     case target of
                         ImagesMainInformationTarget ->
-                            Cmd.none
+                            setCurrentStepInUrl loggedIn.shared model Route.SaleImages
+
+                        CategoriesMainInformationTarget ->
+                            case getFormData model of
+                                Nothing ->
+                                    Cmd.none
+
+                                Just formData ->
+                                    Form.parse (imagesForm loggedIn.shared.translators)
+                                        formData.images
+                                        { onError = GotFormMsg << ImagesMsg
+                                        , onSuccess = SubmittedImages CategoriesImageTarget
+                                        }
+                                        |> Utils.spawnMessage
 
                         PriceAndInventoryMainInformationTarget ->
                             case getFormData model of
@@ -792,7 +1165,7 @@ update msg model loggedIn =
                                     Form.parse (imagesForm loggedIn.shared.translators)
                                         formData.images
                                         { onError = GotFormMsg << ImagesMsg
-                                        , onSuccess = SubmittedImages
+                                        , onSuccess = SubmittedImages PriceAndInventoryImageTarget
                                         }
                                         |> Utils.spawnMessage
             in
@@ -801,8 +1174,7 @@ update msg model loggedIn =
                     model
                         |> setCurrentStep (Images formOutput)
                         |> UR.init
-                        |> UR.addCmd (setCurrentStepInUrl loggedIn.shared model Route.SaleImages)
-                        |> UR.addCmd submitImagesCmd
+                        |> UR.addCmd targetCmd
 
                 _ ->
                     UR.init model
@@ -812,23 +1184,83 @@ update msg model loggedIn =
                             { moduleName = "Page.Shop.Editor", function = "update" }
                             []
 
-        SubmittedImages formOutput ->
+        SubmittedImages target formOutput ->
+            let
+                maybeCurrentStep =
+                    getFormData model
+                        |> Maybe.map .currentStep
+
+                targetTransformation =
+                    case target of
+                        CategoriesImageTarget ->
+                            UR.addCmd (setCurrentStepInUrl loggedIn.shared model Route.SaleCategories)
+
+                        PriceAndInventoryImageTarget ->
+                            case getFormData model of
+                                Nothing ->
+                                    identity
+
+                                Just formData ->
+                                    case Community.getField loggedIn.selectedCommunity .shopCategories of
+                                        RemoteData.Success ( _, categories ) ->
+                                            Form.parse (categoriesForm loggedIn.shared.translators categories)
+                                                formData.categories
+                                                { onError = GotFormMsg << CategoriesMsg
+                                                , onSuccess = SubmittedCategories
+                                                }
+                                                |> UR.addMsg
+
+                                        _ ->
+                                            UR.mapModel (\m -> { m | isWaitingForCategoriesToLoad = True })
+            in
+            case maybeCurrentStep of
+                Just (Images mainInformation) ->
+                    model
+                        |> setCurrentStep (Categories mainInformation formOutput)
+                        |> UR.init
+                        |> targetTransformation
+
+                _ ->
+                    UR.init model
+                        |> UR.logImpossible msg
+                            "Submitted images, but was in another step"
+                            (Just loggedIn.accountName)
+                            { moduleName = "Page.Shop.Editor", function = "update" }
+                            []
+
+        SubmittedCategories formOutput ->
             let
                 maybeCurrentStep =
                     getFormData model
                         |> Maybe.map .currentStep
             in
             case maybeCurrentStep of
-                Just (Images mainInformation) ->
-                    model
-                        |> setCurrentStep (PriceAndInventory mainInformation formOutput)
-                        |> UR.init
-                        |> UR.addCmd (setCurrentStepInUrl loggedIn.shared model Route.SalePriceAndInventory)
+                Just (Categories mainInformation images) ->
+                    case model.status of
+                        EditingUpdateAsAdmin sale formData ->
+                            { model | status = SavingAsAdmin sale formData }
+                                |> UR.init
+                                |> UR.addExt
+                                    (LoggedIn.mutation loggedIn
+                                        (Shop.updateProductCategories
+                                            { id = sale.id
+                                            , categories = formOutput
+                                            }
+                                            Shop.idSelectionSet
+                                        )
+                                        GotSaveResponse
+                                    )
+
+                        _ ->
+                            model
+                                |> setCurrentStep (PriceAndInventory mainInformation images formOutput)
+                                |> UR.init
+                                |> UR.addCmd (setCurrentStepInUrl loggedIn.shared model Route.SalePriceAndInventory)
 
                 _ ->
                     UR.init model
                         |> UR.logImpossible msg
-                            "Submitted images, but was in another step"
+                            "Submitted categories, but was in another step"
                             (Just loggedIn.accountName)
                             { moduleName = "Page.Shop.Editor", function = "update" }
                             []
@@ -840,10 +1272,10 @@ update msg model loggedIn =
                         |> Maybe.map .currentStep
             in
             case maybeCurrentStep of
-                Just (PriceAndInventory mainInformation images) ->
-                    case model of
+                Just (PriceAndInventory mainInformation images categories) ->
+                    case model.status of
                         EditingCreate formData ->
-                            Creating formData
+                            { model | status = Creating formData }
                                 |> UR.init
                                 |> UR.addExt
                                     (LoggedIn.mutation
@@ -852,6 +1284,7 @@ update msg model loggedIn =
                                             { title = mainInformation.title
                                             , description = mainInformation.description
                                             , images = images
+                                            , categories = categories
                                             , price = priceAndInventory.price.amount
                                             , stockTracking = priceAndInventory.unitTracking
                                             }
@@ -865,7 +1298,7 @@ update msg model loggedIn =
                                     { successMsg = msg, errorMsg = NoOp }
 
                         EditingUpdate sale formData ->
-                            Saving sale formData
+                            { model | status = Saving sale formData }
                                 |> UR.init
                                 |> UR.addExt
                                     (LoggedIn.mutation
@@ -875,6 +1308,7 @@ update msg model loggedIn =
                                             , title = mainInformation.title
                                             , description = mainInformation.description
                                             , images = images
+                                            , categories = categories
                                             , price = priceAndInventory.price.amount
                                             , stockTracking = priceAndInventory.unitTracking
                                             }
@@ -915,12 +1349,15 @@ updateFormStockUnits : (Int -> Int) -> Model -> UpdateResult
 updateFormStockUnits updateFn model =
     let
         maybeFormInfo =
-            case model of
+            case model.status of
                 EditingCreate form ->
                     Just ( form, EditingCreate )
 
                 Creating form ->
                     Just ( form, Creating )
+
+                LoadingSaleUpdate _ _ ->
+                    Nothing
 
                 EditingUpdate product form ->
                     Just ( form, EditingUpdate product )
@@ -928,14 +1365,23 @@ updateFormStockUnits updateFn model =
                 Saving product form ->
                     Just ( form, Saving product )
 
-                _ ->
+                EditingUpdateAsAdmin product form ->
+                    Just ( form, EditingUpdateAsAdmin product )
+
+                SavingAsAdmin product form ->
+                    Just ( form, SavingAsAdmin product )
+
+                LoadSaleFailed _ ->
+                    Nothing
+
+                UnauthorizedToEdit ->
                     Nothing
     in
     case maybeFormInfo of
         Nothing ->
             UR.init model
 
-        Just ( formData, updateModel ) ->
+        Just ( formData, updateStatus ) ->
             Form.updateValues
                 (\values ->
                     case String.toInt values.unitsInStock of
@@ -952,18 +1398,21 @@ updateFormStockUnits updateFn model =
                 )
                 formData.priceAndInventory
                 |> (\priceAndInventory -> { formData | priceAndInventory = priceAndInventory })
-                |> updateModel
+                |> (\newFormData -> { model | status = updateStatus newFormData })
                 |> UR.init
 
 
 getFormData : Model -> Maybe FormData
 getFormData model =
-    case model of
+    case model.status of
         EditingCreate formData ->
             Just formData
 
         Creating formData ->
             Just formData
+
+        LoadingSaleUpdate _ _ ->
+            Nothing
 
         EditingUpdate _ formData ->
             Just formData
@@ -971,32 +1420,56 @@ getFormData model =
         Saving _ formData ->
             Just formData
 
-        _ ->
+        EditingUpdateAsAdmin _ formData ->
+            Just formData
+
+        SavingAsAdmin _ formData ->
+            Just formData
+
+        LoadSaleFailed _ ->
+            Nothing
+
+        UnauthorizedToEdit ->
             Nothing
 
 
 setCurrentStep : Step -> Model -> Model
 setCurrentStep newStep model =
-    case model of
+    case model.status of
         EditingCreate formData ->
-            EditingCreate { formData | currentStep = newStep }
+            { model | status = EditingCreate { formData | currentStep = newStep } }
 
         Creating formData ->
-            Creating { formData | currentStep = newStep }
+            { model | status = Creating { formData | currentStep = newStep } }
+
+        LoadingSaleUpdate _ _ ->
+            model
 
         EditingUpdate product formData ->
-            EditingUpdate product { formData | currentStep = newStep }
+            { model | status = EditingUpdate product { formData | currentStep = newStep } }
 
         Saving product formData ->
-            Saving product { formData | currentStep = newStep }
+            { model | status = Saving product { formData | currentStep = newStep } }
 
-        _ ->
+        EditingUpdateAsAdmin product formData ->
+            { model | status = EditingUpdateAsAdmin product { formData | currentStep = newStep } }
+
+        SavingAsAdmin product formData ->
+            { model | status = SavingAsAdmin product { formData | currentStep = newStep } }
+
+        LoadSaleFailed _ ->
+            model
+
+        UnauthorizedToEdit ->
             model
 
 
-maybeSetStep : Translation.Translators -> Route.EditSaleStep -> Model -> ( Model, Cmd Msg )
-maybeSetStep translators step model =
+maybeSetStep : LoggedIn.Model -> Route.EditSaleStep -> Model -> UpdateResult
+maybeSetStep loggedIn step model =
     let
+        translators =
+            loggedIn.shared.translators
+
         maybeModelCmd =
             getFormData model
                 |> Maybe.map
@@ -1005,76 +1478,129 @@ maybeSetStep translators step model =
                             MainInformation ->
                                 case step of
                                     Route.SaleMainInformation ->
-                                        ( model, Cmd.none )
+                                        UR.init model
 
                                     Route.SaleImages ->
-                                        ( model
-                                        , Form.parse (mainInformationForm translators)
-                                            formData.mainInformation
-                                            { onError = GotFormMsg << MainInformationMsg
-                                            , onSuccess = SubmittedMainInformation ImagesMainInformationTarget
-                                            }
-                                            |> Utils.spawnMessage
-                                        )
+                                        UR.init model
+                                            |> UR.addMsg
+                                                (Form.parse (mainInformationForm translators)
+                                                    formData.mainInformation
+                                                    { onError = GotFormMsg << MainInformationMsg
+                                                    , onSuccess = SubmittedMainInformation ImagesMainInformationTarget
+                                                    }
+                                                )
+
+                                    Route.SaleCategories ->
+                                        UR.init model
+                                            |> UR.addMsg
+                                                (Form.parse (mainInformationForm translators)
+                                                    formData.mainInformation
+                                                    { onError = GotFormMsg << MainInformationMsg
+                                                    , onSuccess = SubmittedMainInformation CategoriesMainInformationTarget
+                                                    }
+                                                )
 
                                     Route.SalePriceAndInventory ->
-                                        ( model
-                                        , Form.parse (mainInformationForm translators)
-                                            formData.mainInformation
-                                            { onError = GotFormMsg << MainInformationMsg
-                                            , onSuccess = SubmittedMainInformation PriceAndInventoryMainInformationTarget
-                                            }
-                                            |> Utils.spawnMessage
-                                        )
+                                        UR.init model
+                                            |> UR.addMsg
+                                                (Form.parse (mainInformationForm translators)
+                                                    formData.mainInformation
+                                                    { onError = GotFormMsg << MainInformationMsg
+                                                    , onSuccess = SubmittedMainInformation PriceAndInventoryMainInformationTarget
+                                                    }
+                                                )
 
                             Images _ ->
                                 case step of
                                     Route.SaleMainInformation ->
-                                        ( setCurrentStep MainInformation model, Cmd.none )
+                                        setCurrentStep MainInformation model
+                                            |> UR.init
 
                                     Route.SaleImages ->
-                                        ( model, Cmd.none )
+                                        UR.init model
+
+                                    Route.SaleCategories ->
+                                        UR.init model
+                                            |> UR.addMsg
+                                                (Form.parse (imagesForm translators)
+                                                    formData.images
+                                                    { onError = GotFormMsg << ImagesMsg
+                                                    , onSuccess = SubmittedImages CategoriesImageTarget
+                                                    }
+                                                )
 
                                     Route.SalePriceAndInventory ->
-                                        ( model
-                                        , Form.parse (imagesForm translators)
-                                            formData.images
-                                            { onError = GotFormMsg << ImagesMsg
-                                            , onSuccess = SubmittedImages
-                                            }
-                                            |> Utils.spawnMessage
-                                        )
+                                        UR.init model
+                                            |> UR.addMsg
+                                                (Form.parse (imagesForm translators)
+                                                    formData.images
+                                                    { onError = GotFormMsg << ImagesMsg
+                                                    , onSuccess = SubmittedImages PriceAndInventoryImageTarget
+                                                    }
+                                                )
 
-                            PriceAndInventory mainInformationOutput _ ->
+                            Categories mainInformationOutput _ ->
                                 case step of
                                     Route.SaleMainInformation ->
-                                        ( setCurrentStep MainInformation model, Cmd.none )
+                                        setCurrentStep MainInformation model
+                                            |> UR.init
 
                                     Route.SaleImages ->
-                                        ( setCurrentStep (Images mainInformationOutput) model, Cmd.none )
+                                        setCurrentStep (Images mainInformationOutput) model
+                                            |> UR.init
+
+                                    Route.SaleCategories ->
+                                        UR.init model
 
                                     Route.SalePriceAndInventory ->
-                                        ( model, Cmd.none )
+                                        case Community.getField loggedIn.selectedCommunity .shopCategories of
+                                            RemoteData.Success ( _, categories ) ->
+                                                UR.init model
+                                                    |> UR.addMsg
+                                                        (Form.parse (categoriesForm translators categories)
+                                                            formData.categories
+                                                            { onError = GotFormMsg << CategoriesMsg
+                                                            , onSuccess = SubmittedCategories
+                                                            }
+                                                        )
+
+                                            _ ->
+                                                { model | isWaitingForCategoriesToLoad = True }
+                                                    |> UR.init
+
+                            PriceAndInventory mainInformationOutput imagesOutput _ ->
+                                case step of
+                                    Route.SaleMainInformation ->
+                                        setCurrentStep MainInformation model |> UR.init
+
+                                    Route.SaleImages ->
+                                        setCurrentStep (Images mainInformationOutput) model |> UR.init
+
+                                    Route.SaleCategories ->
+                                        setCurrentStep (Categories mainInformationOutput imagesOutput) model |> UR.init
+
+                                    Route.SalePriceAndInventory ->
+                                        UR.init model
                     )
     in
     case maybeModelCmd of
         Nothing ->
-            ( model, Cmd.none )
+            UR.init model
 
-        Just modelCmd ->
-            modelCmd
+        Just ur ->
+            ur
 
 
 setCurrentStepInRoute : Model -> Route.EditSaleStep -> Maybe Route.Route
 setCurrentStepInRoute model step =
-    case model of
+    case model.status of
         EditingCreate _ ->
             Just (Route.NewSale step)
 
         Creating _ ->
             Just (Route.NewSale step)
 
-        LoadingSaleUpdate _ ->
+        LoadingSaleUpdate _ _ ->
             Nothing
 
         EditingUpdate product _ ->
@@ -1083,7 +1609,16 @@ setCurrentStepInRoute model step =
         Saving product _ ->
             Just (Route.EditSale product.id step)
 
+        EditingUpdateAsAdmin product _ ->
+            Just (Route.EditSale product.id step)
+
+        SavingAsAdmin product _ ->
+            Just (Route.EditSale product.id step)
+
         LoadSaleFailed _ ->
+            Nothing
+
+        UnauthorizedToEdit ->
             Nothing
 
 
@@ -1101,7 +1636,7 @@ updateForm : Shared -> FormMsg -> Model -> UpdateResult
 updateForm shared formMsg model =
     let
         maybeFormInfo =
-            case model of
+            case model.status of
                 EditingCreate form ->
                     Just ( form, EditingCreate )
 
@@ -1114,36 +1649,103 @@ updateForm shared formMsg model =
                 Saving product form ->
                     Just ( form, Saving product )
 
-                _ ->
+                EditingUpdateAsAdmin product form ->
+                    Just ( form, EditingUpdateAsAdmin product )
+
+                SavingAsAdmin product form ->
+                    Just ( form, SavingAsAdmin product )
+
+                LoadingSaleUpdate _ _ ->
+                    Nothing
+
+                LoadSaleFailed _ ->
+                    Nothing
+
+                UnauthorizedToEdit ->
                     Nothing
     in
     case maybeFormInfo of
         Nothing ->
             UR.init model
 
-        Just ( formData, updateModel ) ->
+        Just ( formData, updateStatus ) ->
             case formMsg of
                 MainInformationMsg subMsg ->
                     Form.update shared subMsg formData.mainInformation
                         |> UR.fromChild
-                            (\newMainInformation -> updateModel { formData | mainInformation = newMainInformation })
+                            (\newMainInformation -> { model | status = updateStatus { formData | mainInformation = newMainInformation } })
                             (GotFormMsg << MainInformationMsg)
                             LoggedIn.addFeedback
                             model
 
                 ImagesMsg subMsg ->
                     Form.update shared subMsg formData.images
-                        |> UR.fromChild (\newImagesForm -> updateModel { formData | images = newImagesForm })
+                        |> UR.fromChild
+                            (\newImagesForm -> { model | status = updateStatus { formData | images = newImagesForm } })
                             (GotFormMsg << ImagesMsg)
+                            LoggedIn.addFeedback
+                            model
+
+                CategoriesMsg subMsg ->
+                    Form.update shared subMsg formData.categories
+                        |> UR.fromChild
+                            (\newCategoriesForm -> { model | status = updateStatus { formData | categories = newCategoriesForm } })
+                            (GotFormMsg << CategoriesMsg)
                             LoggedIn.addFeedback
                             model
 
                 PriceAndInventoryMsg subMsg ->
                     Form.update shared subMsg formData.priceAndInventory
-                        |> UR.fromChild (\newPriceAndInventory -> updateModel { formData | priceAndInventory = newPriceAndInventory })
+                        |> UR.fromChild
+                            (\newPriceAndInventory -> { model | status = updateStatus { formData | priceAndInventory = newPriceAndInventory } })
                             (GotFormMsg << PriceAndInventoryMsg)
                             LoggedIn.addFeedback
                             model
+
+
+allRouteSteps : List Route.EditSaleStep
+allRouteSteps =
+    [ Route.SaleMainInformation
+    , Route.SaleImages
+    , Route.SaleCategories
+    , Route.SalePriceAndInventory
+    ]
+
+
+removeCategoriesStep : List Shop.Category.Tree -> List Route.EditSaleStep -> List Route.EditSaleStep
+removeCategoriesStep allCategories steps =
+    if List.isEmpty allCategories then
+        List.filter (\step -> step /= Route.SaleCategories) steps
+
+    else
+        steps
+
+
+receiveBroadcast : Translation.Translators -> LoggedIn.BroadcastMsg -> Model -> Maybe Msg
+receiveBroadcast translators broadcastMsg model =
+    case broadcastMsg of
+        LoggedIn.CommunityLoaded _ ->
+            Just CompletedLoadCommunity
+
+        LoggedIn.CommunityFieldLoaded community (Community.ShopCategories categories) ->
+            if model.isWaitingForCategoriesToLoad then
+                case getFormData model of
+                    Nothing ->
+                        Nothing
+
+                    Just formData ->
+                        Form.parse (categoriesForm translators categories)
+                            formData.categories
+                            { onError = GotFormMsg << CategoriesMsg
+                            , onSuccess = SubmittedCategories
+                            }
+                            |> Just
+
+            else
+                Nothing
+
+        _ ->
+            Nothing
 
 
 msgToString : Msg -> List String
@@ -1151,6 +1753,9 @@ msgToString msg =
     case msg of
         NoOp ->
             [ "NoOp" ]
+
+        CompletedLoadCommunity ->
+            [ "CompletedLoadCommunity" ]
 
         CompletedSaleLoad r ->
             [ "CompletedSaleLoad", UR.remoteDataToString r ]
@@ -1164,8 +1769,11 @@ msgToString msg =
         SubmittedMainInformation _ _ ->
             [ "SubmittedMainInformation" ]
 
-        SubmittedImages _ ->
+        SubmittedImages _ _ ->
             [ "SubmittedImages" ]
+
+        SubmittedCategories _ ->
+            [ "SubmittedCategories" ]
 
         SubmittedPriceAndInventory _ ->
             [ "SubmittedPriceAndInventory" ]
@@ -1186,30 +1794,18 @@ formMsgToString msg =
         ImagesMsg subMsg ->
             "ImagesMsg" :: Form.msgToString subMsg
 
+        CategoriesMsg subMsg ->
+            "CategoriesMsg" :: Form.msgToString subMsg
+
         PriceAndInventoryMsg subMsg ->
             "PriceAndInventoryMsg" :: Form.msgToString subMsg
 
 
 getCurrentStep : Model -> Route.EditSaleStep
 getCurrentStep model =
-    case model of
-        EditingCreate formData ->
-            getCurrentStepFromFormData formData
-
-        Creating formData ->
-            getCurrentStepFromFormData formData
-
-        LoadingSaleUpdate step ->
-            step
-
-        EditingUpdate _ formData ->
-            getCurrentStepFromFormData formData
-
-        Saving _ formData ->
-            getCurrentStepFromFormData formData
-
-        LoadSaleFailed _ ->
-            Route.SaleMainInformation
+    getFormData model
+        |> Maybe.map getCurrentStepFromFormData
+        |> Maybe.withDefault Route.SaleMainInformation
 
 
 getCurrentStepFromFormData : FormData -> Route.EditSaleStep
@@ -1221,5 +1817,8 @@ getCurrentStepFromFormData formData =
         Images _ ->
             Route.SaleImages
 
-        PriceAndInventory _ _ ->
+        Categories _ _ ->
+            Route.SaleCategories
+
+        PriceAndInventory _ _ _ ->
             Route.SalePriceAndInventory

@@ -7,6 +7,7 @@ module Shop.Category exposing
     , delete
     , encodeId
     , idSelectionSet
+    , idToInt
     , idToString
     , moveToRoot
     , selectionSet
@@ -89,7 +90,7 @@ update model { icon, name, description, slug, image } =
     Cambiatus.Mutation.category
         (\optionals ->
             { optionals
-                | id = OptionalArgument.Present (unwrapId model.id)
+                | id = OptionalArgument.Present (idToInt model.id)
                 , iconUri = OptionalArgument.fromMaybeWithNull icon
                 , imageUri = OptionalArgument.fromMaybeWithNull image
                 , slug = OptionalArgument.Present (Slug.toString slug)
@@ -108,7 +109,7 @@ updateMetadata model { metaTitle, metaDescription, metaKeywords } =
     Cambiatus.Mutation.category
         (\optionals ->
             { optionals
-                | id = OptionalArgument.Present (unwrapId model.id)
+                | id = OptionalArgument.Present (idToInt model.id)
                 , metaDescription = OptionalArgument.fromMaybe metaDescription
                 , metaKeywords = OptionalArgument.Present (String.join ", " metaKeywords)
                 , metaTitle = OptionalArgument.fromMaybe metaTitle
@@ -120,7 +121,7 @@ addChild : Tree -> Id -> SelectionSet decodesTo Cambiatus.Object.Category -> Sel
 addChild tree newChildId =
     let
         toSubcategoryInput index categoryId =
-            { id = unwrapId categoryId
+            { id = idToInt categoryId
             , position = 0
             }
     in
@@ -136,7 +137,7 @@ addChild tree newChildId =
                 , id =
                     Tree.label tree
                         |> .id
-                        |> unwrapId
+                        |> idToInt
                         |> OptionalArgument.Present
             }
         )
@@ -248,8 +249,8 @@ encodeId (Id id) =
     Json.Encode.int id
 
 
-unwrapId : Id -> Int
-unwrapId (Id id) =
+idToInt : Id -> Int
+idToInt (Id id) =
     id
 
 

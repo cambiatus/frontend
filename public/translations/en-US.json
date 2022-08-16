@@ -828,7 +828,10 @@
     "create_offer": "Create offer",
     "create_new_offer": "Create new",
     "create_offer_success": "Offer created with success",
+    "update_offer_success": "Offer updated with success",
     "edit_offer": "Edit offer",
+    "action_options": "Action options",
+    "edit_categories": "Edit categories from this offer",
     "delete_offer_success": "Offer removed with success",
     "delete_offer_failure": "Something went wrong when removing your offer",
     "unauthorized": "You are not authorized to edit this sale",
@@ -870,6 +873,10 @@
       "images": {
         "title": "Images",
         "guidance": "Set the product images. You can add more later"
+      },
+      "categories": {
+        "title": "Categories",
+        "guidance": "You can select one or more categories to help users find this product"
       },
       "price_and_inventory": {
         "title": "Price and Inventory",

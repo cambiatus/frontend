@@ -44,6 +44,7 @@ import Tree
 import Tree.Zipper
 import UpdateResult as UR
 import Utils
+import Utils.Tree
 import View.Components
 import View.Feedback
 import View.Modal as Modal
@@ -163,7 +164,7 @@ update msg model loggedIn =
         getCategoryZipper categoryId =
             case Community.getField loggedIn.selectedCommunity .shopCategories of
                 RemoteData.Success ( _, categories ) ->
-                    findInForest (\category -> category.id == categoryId) categories
+                    Utils.Tree.findZipperInForest (\category -> category.id == categoryId) categories
 
                 _ ->
                     Nothing
@@ -337,14 +338,14 @@ update msg model loggedIn =
                             forest ++ [ Tree.singleton category ]
 
                         Just parentId ->
-                            case findInForest (\parent -> parent.id == parentId) forest of
+                            case Utils.Tree.findZipperInForest (\parent -> parent.id == parentId) forest of
                                 Nothing ->
                                     forest ++ [ Tree.singleton category ]
 
                                 Just zipper ->
                                     zipper
                                         |> Tree.Zipper.mapTree (Tree.appendChild (Tree.singleton category))
-                                        |> toFlatForest
+                                        |> Utils.Tree.toFlatForest
 
                 insertInCommunity : UpdateResult -> UpdateResult
                 insertInCommunity =
@@ -452,7 +453,7 @@ update msg model loggedIn =
                         Just zipper ->
                             zipper
                                 |> Tree.Zipper.replaceLabel category
-                                |> toFlatForest
+                                |> Utils.Tree.toFlatForest
                                 |> Community.ShopCategories
                                 |> LoggedIn.SetCommunityField
                                 |> UR.addExt
@@ -519,7 +520,7 @@ update msg model loggedIn =
                 removeFromForest zipper =
                     zipper
                         |> Tree.Zipper.removeTree
-                        |> Maybe.map toFlatForest
+                        |> Maybe.map Utils.Tree.toFlatForest
                         |> Maybe.withDefault []
 
                 removeFromCommunity : UpdateResult -> UpdateResult
@@ -740,7 +741,7 @@ update msg model loggedIn =
                             zipperWithMovedChild
                                 |> Tree.Zipper.findFromRoot (\{ id } -> id == categoryId)
                                 |> Maybe.map
-                                    (getAllAncestors
+                                    (Utils.Tree.getAllAncestors
                                         >> List.foldl
                                             (Tree.Zipper.label
                                                 >> .id
@@ -753,7 +754,7 @@ update msg model loggedIn =
                         |> UR.init
                         |> UR.addExt
                             (zipperWithMovedChild
-                                |> toFlatForest
+                                |> Utils.Tree.toFlatForest
                                 |> Community.ShopCategories
                                 |> LoggedIn.SetCommunityField
                             )
@@ -796,7 +797,7 @@ update msg model loggedIn =
         CompletedMovingCategoryToRoot categoryId (RemoteData.Success (Just ())) ->
             case Community.getField loggedIn.selectedCommunity .shopCategories of
                 RemoteData.Success ( _, categories ) ->
-                    case findInForest (\{ id } -> id == categoryId) categories of
+                    case Utils.Tree.findZipperInForest (\{ id } -> id == categoryId) categories of
                         Nothing ->
                             UR.init model
 
@@ -809,7 +810,7 @@ update msg model loggedIn =
                                 |> UR.init
                                 |> UR.addExt
                                     (zipperWithMovedChild
-                                        |> toFlatForest
+                                        |> Utils.Tree.toFlatForest
                                         |> Community.ShopCategories
                                         |> LoggedIn.SetCommunityField
                                     )
@@ -851,7 +852,7 @@ update msg model loggedIn =
         ClickedMoveUp categoryId ->
             case getCategoryZipper categoryId of
                 Just zipper ->
-                    case goUpWithoutChildren zipper of
+                    case Utils.Tree.goUpWithoutChildren zipper of
                         Nothing ->
                             model
                                 |> UR.init
@@ -881,7 +882,7 @@ update msg model loggedIn =
         ClickedMoveDown categoryId ->
             case getCategoryZipper categoryId of
                 Just zipper ->
-                    case goDownWithoutChildren zipper of
+                    case Utils.Tree.goDownWithoutChildren zipper of
                         Nothing ->
                             model
                                 |> UR.init
@@ -986,7 +987,7 @@ updateDnd loggedIn ext ur =
                 RemoteData.Success ( _, categories ) ->
                     case dropZone of
                         OnTopOf parentId ->
-                            case findInForest (\{ id } -> id == parentId) categories of
+                            case Utils.Tree.findZipperInForest (\{ id } -> id == parentId) categories of
                                 Nothing ->
                                     ur
 
@@ -1234,7 +1235,7 @@ view_ translators community model categories =
                     text ""
 
                 Open categoryId formModel ->
-                    case findInTrees (\category -> category.id == categoryId) categories of
+                    case Utils.Tree.findInForest (\category -> category.id == categoryId) categories of
                         Nothing ->
                             text ""
 
@@ -1245,7 +1246,7 @@ view_ translators community model categories =
                     text ""
 
                 Just categoryId ->
-                    case findInTrees (\category -> category.id == categoryId) categories of
+                    case Utils.Tree.findInForest (\category -> category.id == categoryId) categories of
                         Nothing ->
                             text ""
 
@@ -1256,7 +1257,7 @@ view_ translators community model categories =
                     text ""
 
                 Open categoryId formModel ->
-                    case findInTrees (\category -> category.id == categoryId) categories of
+                    case Utils.Tree.findInForest (\category -> category.id == categoryId) categories of
                         Nothing ->
                             text ""
 
@@ -1591,13 +1592,13 @@ viewActions translators { isParentOfNewCategoryForm, isDraggingSomething } model
 
         canGoDown =
             not
-                (Maybe.Extra.isNothing (goDownWithoutChildren zipper)
+                (Maybe.Extra.isNothing (Utils.Tree.goDownWithoutChildren zipper)
                     && Maybe.Extra.isNothing (Tree.Zipper.parent zipper)
                 )
 
         canGoUp =
             not
-                (Maybe.Extra.isNothing (goUpWithoutChildren zipper)
+                (Maybe.Extra.isNothing (Utils.Tree.goUpWithoutChildren zipper)
                     && Maybe.Extra.isNothing (Tree.Zipper.parent zipper)
                 )
 
@@ -2309,65 +2310,6 @@ subscriptions model =
 -- UTILS
 
 
-findInTrees : (a -> Bool) -> List (Tree.Tree a) -> Maybe a
-findInTrees fn trees =
-    trees
-        |> List.concatMap Tree.flatten
-        |> List.Extra.find fn
-
-
-findInForest : (a -> Bool) -> List (Tree.Tree a) -> Maybe (Tree.Zipper.Zipper a)
-findInForest fn trees =
-    case trees of
-        [] ->
-            Nothing
-
-        firstTree :: otherTrees ->
-            Tree.Zipper.fromForest firstTree otherTrees
-                |> Tree.Zipper.findFromRoot fn
-
-
-toFlatForest : Tree.Zipper.Zipper a -> List (Tree.Tree a)
-toFlatForest zipper =
-    zipper
-        |> Tree.Zipper.toForest
-        |> (\( first, others ) -> first :: others)
-
-
-fromFlatForest : List (Tree.Tree a) -> Maybe (Tree.Zipper.Zipper a)
-fromFlatForest trees =
-    case trees of
-        first :: others ->
-            Just (Tree.Zipper.fromForest first others)
-
-        [] ->
-            Nothing
-
-
-goUpWithoutChildren : Tree.Zipper.Zipper a -> Maybe (Tree.Zipper.Zipper a)
-goUpWithoutChildren zipper =
-    Tree.Zipper.backward zipper
-        |> Maybe.andThen
-            (\backwardZipper ->
-                if Tree.Zipper.parent zipper == Just backwardZipper then
-                    Tree.Zipper.parent backwardZipper
-
-                else
-                    Just backwardZipper
-            )
-
-
-goDownWithoutChildren : Tree.Zipper.Zipper Shop.Category.Model -> Maybe (Tree.Zipper.Zipper Shop.Category.Model)
-goDownWithoutChildren zipper =
-    case Tree.Zipper.nextSibling zipper of
-        Nothing ->
-            Tree.Zipper.parent zipper
-                |> Maybe.andThen Tree.Zipper.parent
-
-        Just firstSibling ->
-            Just firstSibling
-
-
 moveChild :
     { childZipper : Tree.Zipper.Zipper Shop.Category.Model
     , parentId : Shop.Category.Id
@@ -2412,27 +2354,12 @@ moveToRoot { childZipper } =
         |> Tree.Zipper.removeTree
         |> Maybe.andThen
             (\zipperWithoutChild ->
-                toFlatForest zipperWithoutChild
+                Utils.Tree.toFlatForest zipperWithoutChild
                     |> insertNewChild
                     |> List.sortBy (Tree.label >> .name)
-                    |> fromFlatForest
+                    |> Utils.Tree.fromFlatForest
             )
         |> Maybe.withDefault childZipper
-
-
-getAllAncestors : Tree.Zipper.Zipper a -> List (Tree.Zipper.Zipper a)
-getAllAncestors zipper =
-    getAllAncestorsHelper zipper []
-
-
-getAllAncestorsHelper : Tree.Zipper.Zipper a -> List (Tree.Zipper.Zipper a) -> List (Tree.Zipper.Zipper a)
-getAllAncestorsHelper zipper ancestors =
-    case Tree.Zipper.parent zipper of
-        Nothing ->
-            ancestors
-
-        Just parent ->
-            getAllAncestorsHelper parent (parent :: ancestors)
 
 
 isAncestorOf : Shop.Category.Id -> Shop.Category.Tree -> Bool

@@ -19,6 +19,7 @@ module Shop exposing
     , productSelectionSet
     , productsQuery
     , updateProduct
+    , updateProductCategories
     , viewImageCarrousel
     )
 
@@ -42,6 +43,7 @@ import Icons
 import Json.Encode as Encode exposing (Value)
 import Markdown exposing (Markdown)
 import Profile
+import Shop.Category
 import Translation
 import Url.Parser
 import Utils exposing (onClickPreventAll)
@@ -62,6 +64,7 @@ type alias Product =
     , images : List String
     , stockTracking : StockTracking
     , creator : Profile.Minimal
+    , categories : List Shop.Category.Model
     }
 
 
@@ -146,7 +149,7 @@ encodeTransferSale t =
 productSelectionSet : SelectionSet Product Cambiatus.Object.Product
 productSelectionSet =
     SelectionSet.succeed
-        (\id title description creatorId price symbol images maybeUnits trackStock creator ->
+        (\id title description creatorId price symbol images maybeUnits trackStock creator categories ->
             { id = id
             , title = title
             , description = description
@@ -168,6 +171,7 @@ productSelectionSet =
                 else
                     NoTracking
             , creator = creator
+            , categories = categories
             }
         )
         |> with idSelectionSet
@@ -180,6 +184,7 @@ productSelectionSet =
         |> with Cambiatus.Object.Product.units
         |> with Cambiatus.Object.Product.trackStock
         |> with (Cambiatus.Object.Product.creator Profile.minimalSelectionSet)
+        |> with (Cambiatus.Object.Product.categories Shop.Category.selectionSet)
 
 
 productPreviewSelectionSet : SelectionSet ProductPreview Cambiatus.Object.ProductPreview
@@ -254,6 +259,7 @@ createProduct :
     { title : String
     , description : Markdown
     , images : List String
+    , categories : List Shop.Category.Id
     , price : Float
     , stockTracking : StockTracking
     }
@@ -265,6 +271,7 @@ createProduct options selectionSet =
         , title = options.title
         , description = options.description
         , images = options.images
+        , categories = options.categories
         , price = options.price
         , stockTracking = options.stockTracking
         }
@@ -279,6 +286,7 @@ updateProduct :
     , title : String
     , description : Markdown
     , images : List String
+    , categories : List Shop.Category.Id
     , price : Float
     , stockTracking : StockTracking
     }
@@ -290,9 +298,32 @@ updateProduct options selectionSet =
         , title = options.title
         , description = options.description
         , images = options.images
+        , categories = options.categories
         , price = options.price
         , stockTracking = options.stockTracking
         }
+        selectionSet
+
+
+updateProductCategories :
+    { id : Id, categories : List Shop.Category.Id }
+    -> SelectionSet decodesTo Cambiatus.Object.Product
+    -> SelectionSet (Maybe decodesTo) RootMutation
+updateProductCategories { id, categories } selectionSet =
+    let
+        (Id unwrappedId) =
+            id
+    in
+    Mutation.product
+        (\optionals ->
+            { optionals
+                | id = Present unwrappedId
+                , categories =
+                    categories
+                        |> List.map Shop.Category.idToInt
+                        |> Present
+            }
+        )
         selectionSet
 
 
@@ -301,12 +332,13 @@ upsert :
     , title : String
     , description : Markdown
     , images : List String
+    , categories : List Shop.Category.Id
     , price : Float
     , stockTracking : StockTracking
     }
     -> SelectionSet decodesTo Cambiatus.Object.Product
     -> SelectionSet (Maybe decodesTo) RootMutation
-upsert { id, title, description, images, price, stockTracking } =
+upsert { id, title, description, images, categories, price, stockTracking } =
     Mutation.product
         (\_ ->
             { id =
@@ -316,7 +348,10 @@ upsert { id, title, description, images, price, stockTracking } =
 
                     Just (Id unwrappedId) ->
                         Present unwrappedId
-            , categories = Absent
+            , categories =
+                categories
+                    |> List.map Shop.Category.idToInt
+                    |> Present
             , title = Present title
             , description = Present (Markdown.toRawString description)
             , images = Present images
