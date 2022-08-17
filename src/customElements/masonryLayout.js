@@ -21,7 +21,7 @@ export default () => (
       window.addEventListener('resize', this.resizeItems)
 
       this.domNodeListener = (e) => {
-        this.resizeItem(e.target);
+        this.resizeItem(e.target)
       }
 
       this.addEventListener('DOMNodeInserted', this.domNodeListener)
