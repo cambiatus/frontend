@@ -302,6 +302,32 @@ update msg model loggedIn =
 
                         EditingNewCategory { parent } ->
                             parent
+
+                position =
+                    case Community.getField loggedIn.selectedCommunity .shopCategories of
+                        RemoteData.Success ( _, categories ) ->
+                            case parentId of
+                                Nothing ->
+                                    categories
+                                        |> List.map (Tree.label >> .position)
+                                        |> List.maximum
+                                        |> Maybe.map ((+) 1)
+                                        |> Maybe.withDefault 0
+
+                                Just validParentId ->
+                                    categories
+                                        |> Utils.Tree.findZipperInForest (\category -> category.id == validParentId)
+                                        |> Maybe.andThen
+                                            (Tree.Zipper.tree
+                                                >> Tree.children
+                                                >> List.map (Tree.label >> .position)
+                                                >> List.maximum
+                                                >> Maybe.map ((+) 1)
+                                            )
+                                        |> Maybe.withDefault 0
+
+                        _ ->
+                            0
             in
             { model
                 | newCategoryState =
@@ -323,6 +349,7 @@ update msg model loggedIn =
                             , slug = slug
                             , image = image
                             , parentId = parentId
+                            , position = position
                             }
                             Shop.Category.selectionSet
                         )
