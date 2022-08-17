@@ -228,7 +228,7 @@ viewContent loggedIn { claims, profileSummaries, pageInfo } model =
         (if List.length claims > 0 then
             [ View.Components.masonryLayout [ View.Components.Sm ]
                 { transitionWithParent = False }
-                [ class "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-4 mb-4" ]
+                [ class "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-4 mb-4 sm:auto-rows-[5px]" ]
                 (List.map3 viewClaim
                     profileSummaries
                     (List.range 0 (List.length claims))
