@@ -408,8 +408,8 @@ updateProfileSummaries externalMsg claimProfileSummaries =
 
 {-| Claim card with a short claim overview. Used on Dashboard and Analysis pages.
 -}
-viewClaimCard : LoggedIn.Model -> ClaimProfileSummaries -> Model -> Html Msg
-viewClaimCard loggedIn profileSummaries claim =
+viewClaimCard : List (Html.Attribute Msg) -> LoggedIn.Model -> ClaimProfileSummaries -> Model -> Html Msg
+viewClaimCard attributes loggedIn profileSummaries claim =
     let
         { t, tr } =
             loggedIn.shared.translators
@@ -454,7 +454,7 @@ viewClaimCard loggedIn profileSummaries claim =
             else
                 tr "claim.days_ago" [ ( "day_count", String.fromInt claimAging ) ]
     in
-    div [ class "w-full sm:w-1/2 lg:w-1/3 xl:w-1/4 px-2" ]
+    div attributes
         [ viewClaimModal loggedIn profileSummaries claim
         , div
             [ class "flex flex-col p-4 my-2 rounded-lg bg-white hover:shadow cursor-pointer"

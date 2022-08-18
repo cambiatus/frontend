@@ -19,10 +19,17 @@ export default () => (
         image.addEventListener('load', () => this.resizeItems()))
 
       window.addEventListener('resize', this.resizeItems)
+
+      this.domNodeListener = (e) => {
+        this.resizeItem(e.target)
+      }
+
+      this.addEventListener('DOMNodeInserted', this.domNodeListener)
     }
 
     disconnectedCallback () {
       window.removeEventListener('resize', this.resizeItems)
+      this.removeEventListener('DOMNodeInserted', this.domNodeListener)
     }
 
     transitionWithParent () {
@@ -53,6 +60,10 @@ export default () => (
     }
 
     resizeItem (item) {
+      if (!item || !item.getBoundingClientRect) {
+        return
+      }
+
       const rowGap = parseInt(window.getComputedStyle(this).getPropertyValue('grid-row-gap'))
       const rowHeight = parseInt(window.getComputedStyle(this).getPropertyValue('grid-auto-rows'))
       const currentHeight = item.getBoundingClientRect().height
