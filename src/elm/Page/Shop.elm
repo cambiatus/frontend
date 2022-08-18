@@ -356,7 +356,7 @@ view loggedIn model =
                                 , viewHeader loggedIn.shared.translators
                                 , viewShopFilter loggedIn model
                                 , viewFiltersModal loggedIn model
-                                , viewEmptyState loggedIn symbol model
+                                , viewEmptyStateWithFilters loggedIn.shared.translators
                                 ]
 
                          else
@@ -525,6 +525,19 @@ viewEmptyState loggedIn communitySymbol model =
             , Route.href (Route.NewSale Route.SaleMainInformation)
             ]
             [ text <| t "shop.empty.create_new" ]
+        ]
+
+
+viewEmptyStateWithFilters : Translation.Translators -> Html msg
+viewEmptyStateWithFilters { t } =
+    div [ class "flex flex-col items-center mt-16 mb-10" ]
+        [ img [ alt "", src "/images/not_found.svg", class "w-1/2 md:w-40" ] []
+        , p [ class "mt-6 text-gray-900" ] [ text <| t "shop.empty.no_results_found" ]
+        , a
+            [ class "button button-secondary mt-2"
+            , Route.href (Route.Shop { owner = Nothing, categories = [] })
+            ]
+            [ text <| t "shop.empty.clear_filters" ]
         ]
 
 
