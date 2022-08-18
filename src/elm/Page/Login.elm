@@ -720,7 +720,8 @@ passphraseValidator =
             else
                 Err (\translators_ -> translators_.t "auth.login.wordsMode.input.atLeastThreeLettersError")
     in
-    Form.Validate.custom has12Words
+    Form.Validate.map String.toLower
+        >> Form.Validate.custom has12Words
         >> Form.Validate.custom wordsHave3Letters
         >> Form.Validate.map Passphrase
 
