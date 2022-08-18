@@ -475,14 +475,16 @@ viewAppliedFilters translators community cards model =
                     text ""
 
                 Just category ->
-                    div [ class "bg-white text-orange-300 rounded-sm flex items-center justify-center font-bold p-2 gap-4 flex-shrink-0 mr-4" ]
+                    div [ class "bg-white text-orange-300 rounded-sm flex items-center justify-center font-bold p-2 gap-4 flex-shrink-0 mr-4 sm:last:mr-0" ]
                         [ text category.name
-                        , button [ onClick (ClickedRemoveCategoryFilter categoryId) ] [ Icons.close "fill-current w-[14px]" ]
+                        , button [ onClick (ClickedRemoveCategoryFilter categoryId) ] [ Icons.close "fill-current w-3.5" ]
                         ]
     in
     div []
-        [ div [ class "container mx-auto pl-4 flex mt-4 overflow-scroll" ]
-            (List.map viewAppliedFilter model.currentFilter.categories)
+        [ div [ class "container mx-auto pl-4 mt-4 sm:pr-4" ]
+            [ div [ class "flex overflow-scroll" ]
+                (List.map viewAppliedFilter model.currentFilter.categories)
+            ]
         , if List.isEmpty cards then
             text ""
 
