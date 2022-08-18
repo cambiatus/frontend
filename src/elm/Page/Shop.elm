@@ -344,7 +344,12 @@ view loggedIn model =
                             text ""
 
                           else
-                            viewAppliedFilters loggedIn.shared.translators community model
+                            viewFilterTags community model
+                        , if List.isEmpty model.currentFilter.categories then
+                            text ""
+
+                          else
+                            viewFoundOffersAmount loggedIn.shared.translators community model
                         , viewFiltersModal loggedIn model
                         , div [ class "container mx-auto px-4" ]
                             [ Page.fullPageLoading loggedIn.shared ]
@@ -372,7 +377,7 @@ view loggedIn model =
                                     text ""
 
                                   else
-                                    viewAppliedFilters loggedIn.shared.translators community model
+                                    viewFilterTags community model
                                 , div [ class "container mx-auto px-4" ]
                                     [ viewEmptyStateWithFilters loggedIn.shared.translators ]
                                 , viewFiltersModal loggedIn model
@@ -389,7 +394,12 @@ view loggedIn model =
                                 text ""
 
                               else
-                                viewAppliedFilters loggedIn.shared.translators community model
+                                viewFilterTags community model
+                            , if List.isEmpty model.currentFilter.categories then
+                                text ""
+
+                              else
+                                viewFoundOffersAmount loggedIn.shared.translators community model
                             , div [ class "container mx-auto px-4" ]
                                 [ viewGrid loggedIn cards ]
                             , viewFiltersModal loggedIn model
@@ -469,8 +479,8 @@ viewShopFilter loggedIn model =
         ]
 
 
-viewAppliedFilters : Translation.Translators -> Community.Model -> Model -> Html Msg
-viewAppliedFilters translators community model =
+viewFilterTags : Community.Model -> Model -> Html msg
+viewFilterTags community model =
     let
         getCategory categoryId =
             community.shopCategories
@@ -497,33 +507,35 @@ viewAppliedFilters translators community model =
                             [ Icons.close "fill-current w-3.5" ]
                         ]
     in
-    div []
-        [ div [ class "container mx-auto pl-4 mt-4 sm:pr-4" ]
-            [ div [ class "flex overflow-auto focus-ring rounded-sm" ]
-                (List.map viewAppliedFilter model.currentFilter.categories)
-            ]
-        , div [ class "bg-white w-full py-4 mt-4" ]
-            [ div [ class "container mx-auto flex w-full justify-between px-4" ]
-                [ case model.cards of
-                    Loaded cards ->
-                        if List.length cards == 1 then
-                            Markdown.fromTranslation translators "shop.filters.found_single_offer"
-                                |> Markdown.view []
+    div [ class "container mx-auto pl-4 mt-4 sm:pr-4" ]
+        [ div [ class "flex overflow-auto focus-ring rounded-sm" ]
+            (List.map viewAppliedFilter model.currentFilter.categories)
+        ]
 
-                        else
-                            Markdown.fromTranslationWithReplacements translators
-                                "shop.filters.found_offers"
-                                [ ( "count", String.fromInt (List.length cards) ) ]
-                                |> Markdown.view []
 
-                    _ ->
-                        div [ class "w-44 rounded-md animate-skeleton-loading" ] []
-                , a
-                    [ class "text-orange-300 hover:underline flex-shrink-0 focus-ring rounded-sm focus:ring-offset-2"
-                    , Route.href (Route.Shop { owner = model.currentFilter.owner, categories = [] })
-                    ]
-                    [ text <| translators.t "shop.empty.clear_filters" ]
+viewFoundOffersAmount : Translation.Translators -> Community.Model -> Model -> Html Msg
+viewFoundOffersAmount translators community model =
+    div [ class "bg-white w-full py-4 mt-4" ]
+        [ div [ class "container mx-auto flex w-full justify-between px-4" ]
+            [ case model.cards of
+                Loaded cards ->
+                    if List.length cards == 1 then
+                        Markdown.fromTranslation translators "shop.filters.found_single_offer"
+                            |> Markdown.view []
+
+                    else
+                        Markdown.fromTranslationWithReplacements translators
+                            "shop.filters.found_offers"
+                            [ ( "count", String.fromInt (List.length cards) ) ]
+                            |> Markdown.view []
+
+                _ ->
+                    div [ class "w-44 rounded-md animate-skeleton-loading" ] []
+            , a
+                [ class "text-orange-300 hover:underline flex-shrink-0 focus-ring rounded-sm focus:ring-offset-2"
+                , Route.href (Route.Shop { owner = model.currentFilter.owner, categories = [] })
                 ]
+                [ text <| translators.t "shop.empty.clear_filters" ]
             ]
         ]
 
