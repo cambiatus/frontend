@@ -414,6 +414,9 @@ viewShopFilter loggedIn model =
 
                 _ ->
                     False
+
+        numberOfFiltersApplied =
+            List.length model.currentFilter.categories
     in
     div [ class "grid xs-max:grid-cols-1 grid-cols-2 md:flex mt-4 gap-4" ]
         [ View.Components.disablableLink
@@ -428,7 +431,14 @@ viewShopFilter loggedIn model =
             [ class "w-full md:w-40 button button-secondary"
             , onClick ClickedOpenFiltersModal
             ]
-            [ text <| t "shop.filters.title" ]
+            [ text <| t "shop.filters.title"
+            , if numberOfFiltersApplied > 0 then
+                span [ class "ml-2 bg-orange-300 rounded-full px-2 h-6 min-w-6 text-white flex items-center justify-center text-center" ]
+                    [ text (String.fromInt numberOfFiltersApplied) ]
+
+              else
+                text ""
+            ]
         ]
 
 
