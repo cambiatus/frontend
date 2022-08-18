@@ -477,12 +477,16 @@ viewAppliedFilters translators community cards model =
                 Just category ->
                     div [ class "bg-white text-orange-300 rounded-sm flex items-center justify-center font-bold p-2 gap-4 flex-shrink-0 mr-4 sm:last:mr-0" ]
                         [ text category.name
-                        , button [ onClick (ClickedRemoveCategoryFilter categoryId) ] [ Icons.close "fill-current w-3.5" ]
+                        , button
+                            [ class "focus-ring focus:ring-offset-4 rounded-sm"
+                            , onClick (ClickedRemoveCategoryFilter categoryId)
+                            ]
+                            [ Icons.close "fill-current w-3.5" ]
                         ]
     in
     div []
         [ div [ class "container mx-auto pl-4 mt-4 sm:pr-4" ]
-            [ div [ class "flex overflow-scroll" ]
+            [ div [ class "flex overflow-auto focus-ring rounded-sm" ]
                 (List.map viewAppliedFilter model.currentFilter.categories)
             ]
         , if List.isEmpty cards then
@@ -501,7 +505,7 @@ viewAppliedFilters translators community cards model =
                             [ ( "count", String.fromInt (List.length cards) ) ]
                             |> Markdown.view []
                     , a
-                        [ class "text-orange-300 hover:underline flex-shrink-0"
+                        [ class "text-orange-300 hover:underline flex-shrink-0 focus-ring rounded-sm focus:ring-offset-2"
                         , Route.href (Route.Shop { owner = model.currentFilter.owner, categories = [] })
                         ]
                         [ text <| translators.t "shop.empty.clear_filters" ]
