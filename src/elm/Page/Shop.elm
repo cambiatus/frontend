@@ -27,6 +27,7 @@ import I18Next exposing (t)
 import Icons
 import Json.Encode as Encode
 import List.Extra
+import Markdown
 import Page exposing (Session(..))
 import Profile.EditKycForm exposing (Msg(..))
 import Profile.Summary
@@ -345,39 +346,46 @@ view loggedIn model =
                     Page.fullPageGraphQLError (t "shop.title") e
 
                 Loaded cards ->
-                    div [ class "container mx-auto px-4 mt-6" ]
-                        (if List.isEmpty cards then
-                            if model.currentFilter.owner == Nothing && List.isEmpty model.currentFilter.categories then
+                    if List.isEmpty cards then
+                        if model.currentFilter.owner == Nothing && List.isEmpty model.currentFilter.categories then
+                            div [ class "container mx-auto px-4 mt-6" ]
                                 [ viewFrozenAccountCard
                                 , viewEmptyState loggedIn community.symbol model
                                 ]
 
-                            else
-                                [ viewFrozenAccountCard
-                                , viewHeader loggedIn.shared.translators
-                                , viewShopFilter loggedIn model
+                        else
+                            div [ class "mt-6" ]
+                                [ div [ class "container mx-auto px-4" ]
+                                    [ viewFrozenAccountCard
+                                    , viewHeader loggedIn.shared.translators
+                                    , viewShopFilter loggedIn model
+                                    ]
                                 , if List.isEmpty model.currentFilter.categories then
                                     text ""
 
                                   else
-                                    viewAppliedFilters community model
-                                , viewEmptyStateWithFilters loggedIn.shared.translators
+                                    viewAppliedFilters loggedIn.shared.translators community cards model
+                                , div [ class "container mx-auto px-4" ]
+                                    [ viewEmptyStateWithFilters loggedIn.shared.translators ]
                                 , viewFiltersModal loggedIn model
                                 ]
 
-                         else
-                            [ viewFrozenAccountCard
-                            , viewHeader loggedIn.shared.translators
-                            , viewShopFilter loggedIn model
+                    else
+                        div [ class "mt-6" ]
+                            [ div [ class "container mx-auto px-4" ]
+                                [ viewFrozenAccountCard
+                                , viewHeader loggedIn.shared.translators
+                                , viewShopFilter loggedIn model
+                                ]
                             , if List.isEmpty model.currentFilter.categories then
                                 text ""
 
                               else
-                                viewAppliedFilters community model
-                            , viewGrid loggedIn cards
+                                viewAppliedFilters loggedIn.shared.translators community cards model
+                            , div [ class "container mx-auto px-4" ]
+                                [ viewGrid loggedIn cards ]
                             , viewFiltersModal loggedIn model
                             ]
-                        )
     in
     { title = title
     , content =
@@ -453,8 +461,8 @@ viewShopFilter loggedIn model =
         ]
 
 
-viewAppliedFilters : Community.Model -> Model -> Html Msg
-viewAppliedFilters community model =
+viewAppliedFilters : Translation.Translators -> Community.Model -> List Card -> Model -> Html Msg
+viewAppliedFilters translators community cards model =
     let
         getCategory categoryId =
             community.shopCategories
@@ -467,13 +475,37 @@ viewAppliedFilters community model =
                     text ""
 
                 Just category ->
-                    div [ class "bg-white text-orange-300 rounded-sm flex items-center justify-center font-bold p-2 gap-4 flex-shrink-0" ]
+                    div [ class "bg-white text-orange-300 rounded-sm flex items-center justify-center font-bold p-2 gap-4 flex-shrink-0 mr-4" ]
                         [ text category.name
                         , button [ onClick (ClickedRemoveCategoryFilter categoryId) ] [ Icons.close "fill-current w-[14px]" ]
                         ]
     in
-    div [ class "flex gap-4 mt-4 overflow-scroll" ]
-        (List.map viewAppliedFilter model.currentFilter.categories)
+    div []
+        [ div [ class "container mx-auto pl-4 flex mt-4 overflow-scroll" ]
+            (List.map viewAppliedFilter model.currentFilter.categories)
+        , if List.isEmpty cards then
+            text ""
+
+          else
+            div [ class "bg-white w-full py-4 mt-4" ]
+                [ div [ class "container mx-auto flex w-full justify-between px-4" ]
+                    [ if List.length cards == 1 then
+                        Markdown.fromTranslation translators "shop.filters.found_single_offer"
+                            |> Markdown.view []
+
+                      else
+                        Markdown.fromTranslationWithReplacements translators
+                            "shop.filters.found_offers"
+                            [ ( "count", String.fromInt (List.length cards) ) ]
+                            |> Markdown.view []
+                    , a
+                        [ class "text-orange-300 hover:underline flex-shrink-0"
+                        , Route.href (Route.Shop { owner = model.currentFilter.owner, categories = [] })
+                        ]
+                        [ text <| translators.t "shop.empty.clear_filters" ]
+                    ]
+                ]
+        ]
 
 
 viewFiltersModal : LoggedIn.Model -> Model -> Html Msg

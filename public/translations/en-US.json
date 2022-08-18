@@ -858,6 +858,8 @@
     "filters": {
       "title": "Filters",
       "apply": "Apply",
+      "found_single_offer": "We found **1 offer**",
+      "found_offers": "We found **{{count}} offers**",
       "offers": {
         "label": "Offers",
         "all": "All offers",

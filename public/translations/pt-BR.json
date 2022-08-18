@@ -865,6 +865,8 @@
     "filters": {
       "title": "Filtros",
       "apply": "Aplicar",
+      "found_single_offer": "Encontramos **1 oferta**",
+      "found_offers": "Encontramos **{{count}} ofertas**",
       "offers": {
         "label": "Ofertas",
         "all": "Todas as ofertas",

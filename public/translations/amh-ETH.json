@@ -819,6 +819,8 @@
     "filters": {
       "title": "ማጣሪያዎች",
       "apply": "ያመልክቱ",
+      "found_single_offer": "**1 ቅናሽ** አግኝተናል",
+      "found_offers": "**{{count}} ቅናሾች** አግኝተናል",
       "offers": {
         "label": "ቅናሾች",
         "all": "ሁሉም ቅናሾች",

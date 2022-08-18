@@ -861,6 +861,8 @@
     "filters": {
       "title": "Filtres",
       "apply": "Aplicar",
+      "found_single_offer": "Hem trobat **1 oferta**",
+      "found_offers": "Hem trobat **{{count}} ofertes**",
       "offers": {
         "label": "Ofertes",
         "all": "Totes les ofertes",
