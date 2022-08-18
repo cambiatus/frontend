@@ -24,6 +24,7 @@ import Html.Attributes.Aria exposing (ariaLabel)
 import Html.Events exposing (onClick)
 import Http
 import I18Next exposing (t)
+import Icons
 import Json.Encode as Encode
 import List.Extra
 import Page exposing (Session(..))
@@ -329,7 +330,7 @@ view loggedIn model =
             else
                 text ""
 
-        content symbol =
+        content community =
             case model.cards of
                 Loading ->
                     div [ class "container mx-auto px-4 mt-6 mb-10" ]
@@ -348,23 +349,33 @@ view loggedIn model =
                         (if List.isEmpty cards then
                             if model.currentFilter.owner == Nothing && List.isEmpty model.currentFilter.categories then
                                 [ viewFrozenAccountCard
-                                , viewEmptyState loggedIn symbol model
+                                , viewEmptyState loggedIn community.symbol model
                                 ]
 
                             else
                                 [ viewFrozenAccountCard
                                 , viewHeader loggedIn.shared.translators
                                 , viewShopFilter loggedIn model
-                                , viewFiltersModal loggedIn model
+                                , if List.isEmpty model.currentFilter.categories then
+                                    text ""
+
+                                  else
+                                    viewAppliedFilters community model
                                 , viewEmptyStateWithFilters loggedIn.shared.translators
+                                , viewFiltersModal loggedIn model
                                 ]
 
                          else
                             [ viewFrozenAccountCard
                             , viewHeader loggedIn.shared.translators
                             , viewShopFilter loggedIn model
-                            , viewFiltersModal loggedIn model
+                            , if List.isEmpty model.currentFilter.categories then
+                                text ""
+
+                              else
+                                viewAppliedFilters community model
                             , viewGrid loggedIn cards
+                            , viewFiltersModal loggedIn model
                             ]
                         )
     in
@@ -373,7 +384,7 @@ view loggedIn model =
         case loggedIn.selectedCommunity of
             RemoteData.Success community ->
                 if community.hasShop then
-                    content community.symbol
+                    content community
 
                 else
                     Page.fullPageNotFound
@@ -440,6 +451,29 @@ viewShopFilter loggedIn model =
                 text ""
             ]
         ]
+
+
+viewAppliedFilters : Community.Model -> Model -> Html Msg
+viewAppliedFilters community model =
+    let
+        getCategory categoryId =
+            community.shopCategories
+                |> RemoteData.toMaybe
+                |> Maybe.andThen (Utils.Tree.findInForest (\category -> category.id == categoryId))
+
+        viewAppliedFilter categoryId =
+            case getCategory categoryId of
+                Nothing ->
+                    text ""
+
+                Just category ->
+                    div [ class "bg-white text-orange-300 rounded-sm flex items-center justify-center font-bold p-2 gap-4 flex-shrink-0" ]
+                        [ text category.name
+                        , button [ onClick (ClickedRemoveCategoryFilter categoryId) ] [ Icons.close "fill-current w-[14px]" ]
+                        ]
+    in
+    div [ class "flex gap-4 mt-4 overflow-scroll" ]
+        (List.map viewAppliedFilter model.currentFilter.categories)
 
 
 viewFiltersModal : LoggedIn.Model -> Model -> Html Msg
@@ -697,6 +731,7 @@ type Msg
     | ClosedFiltersModal
     | GotFiltersFormMsg (Form.Msg FiltersFormInput)
     | SubmittedFiltersForm FiltersFormOutput
+    | ClickedRemoveCategoryFilter Shop.Category.Id
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
@@ -840,6 +875,31 @@ update msg model loggedIn =
                 |> UR.init
                 |> UR.addCmd (Route.pushUrl loggedIn.shared.navKey (Route.Shop formOutput))
 
+        ClickedRemoveCategoryFilter categoryId ->
+            -- TODO - Send query again
+            let
+                oldFilter =
+                    model.currentFilter
+            in
+            { model
+                | currentFilter =
+                    { oldFilter
+                        | categories = List.filter (\id -> id /= categoryId) oldFilter.categories
+                    }
+                , filtersForm =
+                    model.filtersForm
+                        |> Form.updateValues
+                            (\values ->
+                                { values
+                                    | categories =
+                                        Dict.filter
+                                            (\category _ -> category.id /= categoryId)
+                                            values.categories
+                                }
+                            )
+            }
+                |> UR.init
+
 
 receiveBroadcast : LoggedIn.BroadcastMsg -> Maybe Msg
 receiveBroadcast broadcastMsg =
@@ -889,3 +949,6 @@ msgToString msg =
 
         SubmittedFiltersForm _ ->
             [ "SubmittedFiltersForm" ]
+
+        ClickedRemoveCategoryFilter _ ->
+            [ "ClickedRemoveCategoryFilter" ]
