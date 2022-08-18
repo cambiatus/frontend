@@ -43,6 +43,7 @@ import RemoteData exposing (RemoteData)
 import Route
 import Session.Guest as Guest
 import Session.Shared exposing (Shared)
+import Set exposing (Set)
 import Task
 import UpdateResult as UR
 import View.Feedback as Feedback
@@ -53,11 +54,24 @@ import View.Pin as Pin
 -- INIT
 
 
-init : Guest.Model -> ( Model, Cmd Msg )
-init _ =
-    ( EnteringPassphrase initPassphraseModel
-    , Cmd.none
-    )
+init : Guest.Model -> UpdateResult
+init guest =
+    let
+        requestBip39 =
+            case guest.shared.bip39 of
+                Session.Shared.Bip39Loaded _ ->
+                    identity
+
+                Session.Shared.Bip39NotLoaded ->
+                    UR.addPort
+                        { responseAddress = GotBip39 Set.empty
+                        , responseData = Encode.null
+                        , data = Encode.object [ ( "name", Encode.string "getBip39" ) ]
+                        }
+    in
+    EnteringPassphrase initPassphraseModel
+        |> UR.init
+        |> requestBip39
 
 
 initPassphraseModel : PassphraseModel
@@ -167,7 +181,7 @@ passphraseForm ({ translators } as shared) { hasPasted } =
                 |> Form.textField
                     { parser =
                         Form.Validate.succeed
-                            >> passphraseValidator
+                            >> passphraseValidator shared.bip39
                             >> Form.Validate.validate translators
                     , value = .passphrase
                     , update = \passphrase input -> { input | passphrase = passphrase }
@@ -323,6 +337,7 @@ type Msg
     = WentToPin Passphrase
     | GotPassphraseMsg PassphraseMsg
     | GotPinMsg PinMsg
+    | GotBip39 (Set String)
 
 
 type PassphraseMsg
@@ -400,6 +415,15 @@ update msg model guest =
                                     |> EnteringPassphrase
                                     |> UR.setModel ur
                     )
+
+        ( GotBip39 bip39, _ ) ->
+            let
+                oldShared =
+                    guest.shared
+            in
+            model
+                |> UR.init
+                |> UR.addExt (Guest.UpdatedShared { oldShared | bip39 = Session.Shared.Bip39Loaded bip39 })
 
         -- Impossible Msgs
         ( GotPassphraseMsg _, EnteringPin _ ) ->
@@ -697,8 +721,8 @@ updateWithPin msg model ({ shared } as guest) =
 -- UTILS
 
 
-passphraseValidator : Form.Validate.Validator String -> Form.Validate.Validator Passphrase
-passphraseValidator =
+passphraseValidator : Session.Shared.Bip39Status -> Form.Validate.Validator String -> Form.Validate.Validator Passphrase
+passphraseValidator maybeBip39Wordlist =
     let
         has12Words passphrase =
             if List.length (String.words passphrase) >= 12 then
@@ -709,6 +733,32 @@ passphraseValidator =
 
             else
                 Err (\translators_ -> translators_.t "auth.login.wordsMode.input.notPassphraseError")
+
+        isBip39 passphrase =
+            case maybeBip39Wordlist of
+                Session.Shared.Bip39NotLoaded ->
+                    Ok passphrase
+
+                Session.Shared.Bip39Loaded bip39Wordlist ->
+                    case
+                        String.words passphrase
+                            |> List.filter (\word -> not (Set.member word bip39Wordlist))
+                    of
+                        firstWord :: [] ->
+                            Err (\translators_ -> translators_.tr "auth.login.wordsMode.input.invalid_word" [ ( "word", firstWord ) ])
+
+                        firstWord :: otherWords ->
+                            Err
+                                (\translators_ ->
+                                    translators_.tr "auth.login.wordsMode.input.invalid_words"
+                                        [ ( "words"
+                                          , String.join ", " (firstWord :: otherWords)
+                                          )
+                                        ]
+                                )
+
+                        [] ->
+                            Ok passphrase
 
         wordsHave3Letters passphrase =
             if
@@ -723,6 +773,7 @@ passphraseValidator =
     Form.Validate.map String.toLower
         >> Form.Validate.custom has12Words
         >> Form.Validate.custom wordsHave3Letters
+        >> Form.Validate.custom isBip39
         >> Form.Validate.map Passphrase
 
 
@@ -768,6 +819,15 @@ jsAddressToMsg addr val =
         "GotPinMsg" :: "PinIgnored" :: [] ->
             Just (GotPinMsg PinIgnored)
 
+        "GotBip39" :: [] ->
+            Decode.decodeValue
+                (Decode.field "bip39" (Decode.list Decode.string)
+                    |> Decode.map Set.fromList
+                )
+                val
+                |> Result.map GotBip39
+                |> Result.toMaybe
+
         _ ->
             Nothing
 
@@ -783,6 +843,9 @@ msgToString msg =
 
         GotPinMsg pinMsg ->
             "GotPinMsg" :: pinMsgToString pinMsg
+
+        GotBip39 _ ->
+            [ "GotBip39" ]
 
 
 passphraseMsgToString : PassphraseMsg -> List String

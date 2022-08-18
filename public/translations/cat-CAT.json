@@ -207,6 +207,8 @@
           "notPassphraseError": "Introduïu 12 paraules",
           "notLatinLettersError": "Si us plau, utilitzeu només lletres bàsiques llatines",
           "atLeastThreeLettersError": "Totes les paraules han de tenir almenys 3 lletres",
+          "invalid_word": "{{word}} no és una paraula vàlida. Comprova les teves 12 paraules i torna-ho a provar.",
+          "invalid_words": "Aquestes paraules no són vàlides: {{words}}. Comprova les teves 12 paraules i torna-ho a provar.",
           "paste": "Enganxa",
           "pasted": "Enganxat"
         }

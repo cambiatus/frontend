@@ -1,5 +1,6 @@
 module Session.Shared exposing
-    ( Shared
+    ( Bip39Status(..)
+    , Shared
     , TranslationStatus(..)
     , Translators
     , init
@@ -25,6 +26,7 @@ import Html.Events exposing (onClick)
 import Http
 import I18Next exposing (Translations, initialTranslations)
 import Ports
+import Set exposing (Set)
 import Time exposing (Posix)
 import Translation
 import Url exposing (Url)
@@ -54,6 +56,12 @@ type alias Shared =
     , selectedCommunity : Maybe Eos.Symbol
     , pinVisibility : Bool
     , hasSeenSponsorModal : Bool
+
+    -- Bip39 is what we use to generate the 12 words to login. We store them in
+    -- Shared so that we don't need more HTTP requests than necessary (or to
+    -- store the words hardcoded into Elm code, increasing the bundle size).
+    -- We use Bip39 in the login page to validate the 12 words
+    , bip39 : Bip39Status
     }
 
 
@@ -96,6 +104,7 @@ init ({ maybeAccount, endpoints, allowCommunityCreation, tokenContract, communit
       , selectedCommunity = flags.selectedCommunity
       , pinVisibility = flags.pinVisibility
       , hasSeenSponsorModal = flags.hasSeenSponsorModal
+      , bip39 = Bip39NotLoaded
       }
     , case environment of
         Environment.Production ->
@@ -104,6 +113,11 @@ init ({ maybeAccount, endpoints, allowCommunityCreation, tokenContract, communit
         _ ->
             Cmd.none
     )
+
+
+type Bip39Status
+    = Bip39Loaded (Set String)
+    | Bip39NotLoaded
 
 
 type TranslationStatus

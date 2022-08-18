@@ -207,6 +207,8 @@
           "notPassphraseError": "Please, enter 12 words",
           "notLatinLettersError": "Please, use only basic Latin letters",
           "atLeastThreeLettersError": "All words should have at least 3 letters",
+          "invalid_word": "{{word}} is not a valid word. Check your 12 words and try again.",
+          "invalid_words": "These words are not valid: {{words}}. Check your 12 words and try again.",
           "paste": "Paste",
           "pasted": "Pasted"
         }

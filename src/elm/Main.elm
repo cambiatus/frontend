@@ -1392,7 +1392,7 @@ changeRouteTo maybeRoute model =
 
         Just (Route.Login maybeInvitation maybeRedirect) ->
             Login.init
-                >> updateStatusWith (Login maybeRedirect) GotLoginMsg model
+                >> updateGuestUResult (Login maybeRedirect) GotLoginMsg model
                 |> withGuest maybeInvitation maybeRedirect
 
         Just (Route.News config) ->

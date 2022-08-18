@@ -212,6 +212,8 @@
           "notPassphraseError": "Por favor, digite 12 palavras",
           "notLatinLettersError": "Por favor, use apenas letras",
           "atLeastThreeLettersError": "Todas as palavras devem ter ao menos 3 letras",
+          "invalid_word": "{{word}} não é uma palavra válida. Verifique suas 12 palavras e tente novamente",
+          "invalid_words": "Essas palavras não são válidas: {{words}}. Verifique suas 12 palavras e tente novamente",
           "paste": "Colar",
           "pasted": "Colado"
         }
