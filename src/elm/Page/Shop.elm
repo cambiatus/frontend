@@ -334,12 +334,20 @@ view loggedIn model =
         content community =
             case model.cards of
                 Loading ->
-                    div [ class "container mx-auto px-4 mt-6 mb-10" ]
-                        [ viewFrozenAccountCard
-                        , viewHeader loggedIn.shared.translators
-                        , viewShopFilter loggedIn model
+                    div [ class "mt-6 mb-10" ]
+                        [ div [ class "container mx-auto px-4" ]
+                            [ viewFrozenAccountCard
+                            , viewHeader loggedIn.shared.translators
+                            , viewShopFilter loggedIn model
+                            ]
+                        , if List.isEmpty model.currentFilter.categories then
+                            text ""
+
+                          else
+                            viewAppliedFilters loggedIn.shared.translators community model
                         , viewFiltersModal loggedIn model
-                        , Page.fullPageLoading loggedIn.shared
+                        , div [ class "container mx-auto px-4" ]
+                            [ Page.fullPageLoading loggedIn.shared ]
                         ]
 
                 LoadingFailed e ->
@@ -364,7 +372,7 @@ view loggedIn model =
                                     text ""
 
                                   else
-                                    viewAppliedFilters loggedIn.shared.translators community cards model
+                                    viewAppliedFilters loggedIn.shared.translators community model
                                 , div [ class "container mx-auto px-4" ]
                                     [ viewEmptyStateWithFilters loggedIn.shared.translators ]
                                 , viewFiltersModal loggedIn model
@@ -381,7 +389,7 @@ view loggedIn model =
                                 text ""
 
                               else
-                                viewAppliedFilters loggedIn.shared.translators community cards model
+                                viewAppliedFilters loggedIn.shared.translators community model
                             , div [ class "container mx-auto px-4" ]
                                 [ viewGrid loggedIn cards ]
                             , viewFiltersModal loggedIn model
@@ -461,8 +469,8 @@ viewShopFilter loggedIn model =
         ]
 
 
-viewAppliedFilters : Translation.Translators -> Community.Model -> List Card -> Model -> Html Msg
-viewAppliedFilters translators community cards model =
+viewAppliedFilters : Translation.Translators -> Community.Model -> Model -> Html Msg
+viewAppliedFilters translators community model =
     let
         getCategory categoryId =
             community.shopCategories
@@ -477,9 +485,14 @@ viewAppliedFilters translators community cards model =
                 Just category ->
                     div [ class "bg-white text-orange-300 rounded-sm flex items-center justify-center font-bold p-2 gap-4 flex-shrink-0 mr-4 sm:last:mr-0" ]
                         [ text category.name
-                        , button
+                        , a
                             [ class "focus-ring focus:ring-offset-4 rounded-sm"
-                            , onClick (ClickedRemoveCategoryFilter categoryId)
+                            , Route.href
+                                (Route.Shop
+                                    { owner = model.currentFilter.owner
+                                    , categories = List.filter (\id -> id /= categoryId) model.currentFilter.categories
+                                    }
+                                )
                             ]
                             [ Icons.close "fill-current w-3.5" ]
                         ]
@@ -489,28 +502,29 @@ viewAppliedFilters translators community cards model =
             [ div [ class "flex overflow-auto focus-ring rounded-sm" ]
                 (List.map viewAppliedFilter model.currentFilter.categories)
             ]
-        , if List.isEmpty cards then
-            text ""
+        , div [ class "bg-white w-full py-4 mt-4" ]
+            [ div [ class "container mx-auto flex w-full justify-between px-4" ]
+                [ case model.cards of
+                    Loaded cards ->
+                        if List.length cards == 1 then
+                            Markdown.fromTranslation translators "shop.filters.found_single_offer"
+                                |> Markdown.view []
 
-          else
-            div [ class "bg-white w-full py-4 mt-4" ]
-                [ div [ class "container mx-auto flex w-full justify-between px-4" ]
-                    [ if List.length cards == 1 then
-                        Markdown.fromTranslation translators "shop.filters.found_single_offer"
-                            |> Markdown.view []
+                        else
+                            Markdown.fromTranslationWithReplacements translators
+                                "shop.filters.found_offers"
+                                [ ( "count", String.fromInt (List.length cards) ) ]
+                                |> Markdown.view []
 
-                      else
-                        Markdown.fromTranslationWithReplacements translators
-                            "shop.filters.found_offers"
-                            [ ( "count", String.fromInt (List.length cards) ) ]
-                            |> Markdown.view []
-                    , a
-                        [ class "text-orange-300 hover:underline flex-shrink-0 focus-ring rounded-sm focus:ring-offset-2"
-                        , Route.href (Route.Shop { owner = model.currentFilter.owner, categories = [] })
-                        ]
-                        [ text <| translators.t "shop.empty.clear_filters" ]
+                    _ ->
+                        div [ class "w-44 rounded-md animate-skeleton-loading" ] []
+                , a
+                    [ class "text-orange-300 hover:underline flex-shrink-0 focus-ring rounded-sm focus:ring-offset-2"
+                    , Route.href (Route.Shop { owner = model.currentFilter.owner, categories = [] })
                     ]
+                    [ text <| translators.t "shop.empty.clear_filters" ]
                 ]
+            ]
         ]
 
 
@@ -769,7 +783,6 @@ type Msg
     | ClosedFiltersModal
     | GotFiltersFormMsg (Form.Msg FiltersFormInput)
     | SubmittedFiltersForm FiltersFormOutput
-    | ClickedRemoveCategoryFilter Shop.Category.Id
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
@@ -913,31 +926,6 @@ update msg model loggedIn =
                 |> UR.init
                 |> UR.addCmd (Route.pushUrl loggedIn.shared.navKey (Route.Shop formOutput))
 
-        ClickedRemoveCategoryFilter categoryId ->
-            -- TODO - Send query again
-            let
-                oldFilter =
-                    model.currentFilter
-            in
-            { model
-                | currentFilter =
-                    { oldFilter
-                        | categories = List.filter (\id -> id /= categoryId) oldFilter.categories
-                    }
-                , filtersForm =
-                    model.filtersForm
-                        |> Form.updateValues
-                            (\values ->
-                                { values
-                                    | categories =
-                                        Dict.filter
-                                            (\category _ -> category.id /= categoryId)
-                                            values.categories
-                                }
-                            )
-            }
-                |> UR.init
-
 
 receiveBroadcast : LoggedIn.BroadcastMsg -> Maybe Msg
 receiveBroadcast broadcastMsg =
@@ -987,6 +975,3 @@ msgToString msg =
 
         SubmittedFiltersForm _ ->
             [ "SubmittedFiltersForm" ]
-
-        ClickedRemoveCategoryFilter _ ->
-            [ "ClickedRemoveCategoryFilter" ]
