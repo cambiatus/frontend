@@ -31,8 +31,9 @@ import Form
 import Form.Text
 import Form.Validate
 import Graphql.Http
-import Html exposing (Html, a, button, div, img, p, span, strong, text)
-import Html.Attributes exposing (autocomplete, autofocus, class, classList, rows, src, type_)
+import Html exposing (Html, a, br, button, div, img, p, span, strong, text)
+import Html.Attributes exposing (autocomplete, autofocus, class, classList, rows, spellcheck, src, type_)
+import Html.Attributes.Aria exposing (ariaHidden)
 import Html.Events exposing (onClick)
 import Html.Keyed
 import Json.Decode as Decode
@@ -122,8 +123,8 @@ type alias PassphraseInput =
     { passphrase : String }
 
 
-passphraseForm : Shared -> { hasPasted : Bool } -> Form.Form PassphraseMsg PassphraseInput Passphrase
-passphraseForm ({ translators } as shared) { hasPasted } =
+passphraseForm : Shared -> { hasPasted : Bool, hasTriedSubmitting : Bool } -> Form.Form PassphraseMsg PassphraseInput Passphrase
+passphraseForm ({ translators } as shared) { hasPasted, hasTriedSubmitting } =
     let
         { t } =
             translators
@@ -148,6 +149,54 @@ passphraseForm ({ translators } as shared) { hasPasted } =
 
             else
                 text ""
+
+        viewHighlights currentText =
+            div
+                [ class "absolute inset-px pointer-events-none p-4 overflow-hidden"
+                , ariaHidden True
+                ]
+                (currentText
+                    |> String.split "\n"
+                    |> List.map
+                        (\line ->
+                            if String.isEmpty line then
+                                br [] []
+
+                            else
+                                p []
+                                    (line
+                                        |> String.split " "
+                                        |> List.map
+                                            (\word ->
+                                                if String.isEmpty word then
+                                                    span [ class "inline-block" ] [ text " " ]
+
+                                                else
+                                                    span
+                                                        [ case shared.bip39 of
+                                                            Session.Shared.Bip39NotLoaded ->
+                                                                class "transition-colors"
+
+                                                            Session.Shared.Bip39Loaded bip39Wordlist ->
+                                                                if
+                                                                    hasTriedSubmitting
+                                                                        && not (Set.member word bip39Wordlist.english)
+                                                                        && not (Set.member word bip39Wordlist.portuguese)
+                                                                        && not (Set.member word bip39Wordlist.spanish)
+                                                                then
+                                                                    -- TODO - Scroll with the input
+                                                                    class "bg-red/60 text-white"
+
+                                                                else
+                                                                    class "transition-colors"
+                                                        , class "pointer-events-none rounded-sm px-0.5 -mx-0.5"
+                                                        ]
+                                                        [ text word ]
+                                            )
+                                        |> List.intersperse (span [] [ text " " ])
+                                    )
+                        )
+                )
     in
     Form.succeed identity
         |> Form.withDecoration (viewIllustration "login_key.svg")
@@ -160,33 +209,41 @@ passphraseForm ({ translators } as shared) { hasPasted } =
                 ]
             )
         |> Form.with
-            (Form.Text.init
-                { label = t "auth.login.wordsMode.input.label"
-                , id = "passphrase-input"
-                }
-                |> Form.Text.withInputElement (Form.Text.TextareaInput { submitOnEnter = True })
-                |> Form.Text.withPlaceholder (t "auth.login.wordsMode.input.placeholder")
-                |> Form.Text.withExtraAttrs
-                    [ class "min-w-full block p-4"
-                    , classList [ ( "pb-18", shared.canReadClipboard ) ]
-                    , rows 2
-                    , autofocus True
-                    , autocomplete False
-                    ]
-                |> Form.Text.withCounter (Form.Text.CountWords 12)
-                |> Form.Text.withCounterAttrs [ class "!text-white" ]
-                |> Form.Text.withLabelAttrs [ class "text-white" ]
-                |> Form.Text.withErrorAttrs [ class "form-error-on-dark-bg" ]
-                |> Form.Text.withElements [ viewPasteButton ]
-                |> Form.textField
-                    { parser =
-                        Form.Validate.succeed
-                            >> passphraseValidator shared.bip39
-                            >> Form.Validate.validate translators
-                    , value = .passphrase
-                    , update = \passphrase input -> { input | passphrase = passphrase }
-                    , externalError = always Nothing
-                    }
+            (Form.introspect
+                (\values ->
+                    Form.Text.init
+                        { label = t "auth.login.wordsMode.input.label"
+                        , id = "passphrase-input"
+                        }
+                        |> Form.Text.withInputElement (Form.Text.TextareaInput { submitOnEnter = True })
+                        |> Form.Text.withPlaceholder (t "auth.login.wordsMode.input.placeholder")
+                        |> Form.Text.withExtraAttrs
+                            [ class "min-w-full block p-4 relative bg-transparent z-10 caret-black text-transparent"
+                            , classList [ ( "pb-18", shared.canReadClipboard ) ]
+                            , rows 2
+                            , autofocus True
+                            , autocomplete False
+                            , spellcheck False
+                            ]
+                        |> Form.Text.withInputContainerAttrs [ class "bg-white rounded" ]
+                        |> Form.Text.withCounter (Form.Text.CountWords 12)
+                        |> Form.Text.withCounterAttrs [ class "!text-white" ]
+                        |> Form.Text.withLabelAttrs [ class "text-white" ]
+                        |> Form.Text.withErrorAttrs [ class "form-error-on-dark-bg" ]
+                        |> Form.Text.withElements
+                            [ viewPasteButton
+                            , viewHighlights values.passphrase
+                            ]
+                        |> Form.textField
+                            { parser =
+                                Form.Validate.succeed
+                                    >> passphraseValidator shared.bip39
+                                    >> Form.Validate.validate translators
+                            , value = .passphrase
+                            , update = \passphrase input -> { input | passphrase = passphrase }
+                            , externalError = always Nothing
+                            }
+                )
             )
 
 
@@ -267,7 +324,7 @@ viewPassphrase ({ shared } as guest) model =
                 [ text (t "dashboard.continue") ]
             ]
         )
-        (passphraseForm shared { hasPasted = model.hasPasted })
+        (passphraseForm shared { hasPasted = model.hasPasted, hasTriedSubmitting = Form.isShowingAllErrors model.form })
         model.form
         { toMsg = GotPassphraseFormMsg
         , onSubmit = ClickedNextStep
