@@ -45,6 +45,7 @@ type alias Model =
     , metaTitle : Maybe String
     , metaDescription : Maybe String
     , metaKeywords : List String
+    , position : Int
     }
 
 
@@ -55,10 +56,11 @@ create :
     , slug : Slug
     , image : Maybe String
     , parentId : Maybe Id
+    , position : Int
     }
     -> SelectionSet decodesTo Cambiatus.Object.Category
     -> SelectionSet (Maybe decodesTo) RootMutation
-create { icon, name, slug, description, image, parentId } =
+create { icon, name, slug, description, image, parentId, position } =
     Cambiatus.Mutation.category
         (\optionals ->
             { optionals
@@ -71,7 +73,7 @@ create { icon, name, slug, description, image, parentId } =
                 , name = OptionalArgument.Present name
                 , description = OptionalArgument.Present (Markdown.toRawString description)
                 , imageUri = OptionalArgument.fromMaybe image
-                , position = OptionalArgument.Present 0
+                , position = OptionalArgument.Present position
             }
         )
 
@@ -182,6 +184,7 @@ selectionSet =
                         >> Maybe.withDefault []
                     )
             )
+        |> SelectionSet.with Cambiatus.Object.Category.position
 
 
 
@@ -213,7 +216,7 @@ treesSelectionSet categoriesSelectionSet =
                             Nothing
                     )
                     children
-                    |> List.sortBy (Tree.label >> .name)
+                    |> List.sortBy (Tree.label >> .position)
                 )
     in
     categoriesSelectionSet selectionSet
@@ -228,7 +231,7 @@ treesSelectionSet categoriesSelectionSet =
                             Nothing
                     )
                     allCategories
-                    |> List.sortBy (Tree.label >> .name)
+                    |> List.sortBy (Tree.label >> .position)
             )
 
 
