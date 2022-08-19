@@ -64,7 +64,7 @@ init guest =
 
                 Session.Shared.Bip39NotLoaded ->
                     UR.addPort
-                        { responseAddress = GotBip39 Set.empty
+                        { responseAddress = GotBip39 { english = Set.empty, portuguese = Set.empty, spanish = Set.empty }
                         , responseData = Encode.null
                         , data = Encode.object [ ( "name", Encode.string "getBip39" ) ]
                         }
@@ -337,7 +337,7 @@ type Msg
     = WentToPin Passphrase
     | GotPassphraseMsg PassphraseMsg
     | GotPinMsg PinMsg
-    | GotBip39 (Set String)
+    | GotBip39 { english : Set String, portuguese : Set String, spanish : Set String }
 
 
 type PassphraseMsg
@@ -742,7 +742,12 @@ passphraseValidator maybeBip39Wordlist =
                 Session.Shared.Bip39Loaded bip39Wordlist ->
                     case
                         String.words passphrase
-                            |> List.filter (\word -> not (Set.member word bip39Wordlist))
+                            |> List.filter
+                                (\word ->
+                                    not (Set.member word bip39Wordlist.english)
+                                        && not (Set.member word bip39Wordlist.portuguese)
+                                        && not (Set.member word bip39Wordlist.spanish)
+                                )
                     of
                         firstWord :: [] ->
                             Err (\translators_ -> translators_.tr "auth.login.wordsMode.input.invalid_word" [ ( "word", firstWord ) ])
@@ -820,9 +825,22 @@ jsAddressToMsg addr val =
             Just (GotPinMsg PinIgnored)
 
         "GotBip39" :: [] ->
+            let
+                decodeLanguage key =
+                    Decode.field key (Decode.list Decode.string)
+                        |> Decode.map Set.fromList
+            in
             Decode.decodeValue
-                (Decode.field "bip39" (Decode.list Decode.string)
-                    |> Decode.map Set.fromList
+                (Decode.map3
+                    (\english portuguese spanish ->
+                        { english = english
+                        , portuguese = portuguese
+                        , spanish = spanish
+                        }
+                    )
+                    (decodeLanguage "english")
+                    (decodeLanguage "portuguese")
+                    (decodeLanguage "spanish")
                 )
                 val
                 |> Result.map GotBip39

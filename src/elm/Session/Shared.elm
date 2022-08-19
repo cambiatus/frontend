@@ -116,7 +116,7 @@ init ({ maybeAccount, endpoints, allowCommunityCreation, tokenContract, communit
 
 
 type Bip39Status
-    = Bip39Loaded (Set String)
+    = Bip39Loaded { english : Set String, portuguese : Set String, spanish : Set String }
     | Bip39NotLoaded
 
 

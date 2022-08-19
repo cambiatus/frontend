@@ -1420,7 +1420,11 @@ async function handleJavascriptPort (arg) {
       return {}
     }
     case 'getBip39': {
-      return { bip39: bip39.wordlists.EN }
+      return {
+        english: bip39.wordlists.english,
+        portuguese: bip39.wordlists.portuguese,
+        spanish: bip39.wordlists.spanish
+      }
     }
     default: {
       return { error: `No treatment found for Elm port ${arg.data.name}` }

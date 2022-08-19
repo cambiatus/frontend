@@ -18,13 +18,28 @@ function generateFrom (password) {
 
 /***
  * Generates a random mnemonic
- * @param {string} userLang - User's language.
+ * @param {string} userLocale - User's locale.
  * @returns {[string,string]}
  */
-function generateRandom (userLang) {
+function generateRandom (userLocale) {
+  const userLang = userLocale.toLowerCase().split('-')[0]
+
+  let wordlist = bip39.wordlists.english
+  switch (userLang) {
+    case 'es':
+      wordlist = bip39.wordlists.spanish
+      break;
+    case 'pt':
+      wordlist = bip39.wordlists.portuguese
+      break;
+
+    default:
+      break;
+  }
+
   const strength = null
   const rng = null
-  const wordlist = (userLang === 'es') ? bip39.wordlists.spanish : null
+
   const mnemonic = bip39.generateMnemonic(strength, rng, wordlist)
   return [mnemonic, bip39.mnemonicToSeedHex(mnemonic)]
 }
