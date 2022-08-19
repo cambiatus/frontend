@@ -50,7 +50,6 @@ import RemoteData exposing (RemoteData)
 import Route
 import Session.LoggedIn as LoggedIn
 import Session.Shared exposing (Shared)
-import Shop
 import Task
 import Time
 import Transfer exposing (QueryTransfers, Transfer)
@@ -794,7 +793,7 @@ viewWelcomeCard ({ shared } as loggedIn) community balance =
                         "w-5 h-5"
                         (t "dashboard.my_offers")
                         a
-                        [ Route.href (Route.Shop Shop.UserSales) ]
+                        [ Route.href (Route.Shop { owner = Just loggedIn.accountName, categories = [] }) ]
 
                   else
                     text ""

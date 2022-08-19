@@ -73,7 +73,6 @@ import Route exposing (Route)
 import Search exposing (State(..))
 import Session.Guest exposing (Msg(..))
 import Session.Shared as Shared exposing (Shared, Translators)
-import Shop
 import Task
 import Time
 import Translation
@@ -1103,7 +1102,7 @@ viewMainMenu page model =
             isActive page Route.Dashboard
 
         isInShop =
-            isActive page (Route.Shop Shop.All)
+            isActive page (Route.Shop { owner = Nothing, categories = [] })
     in
     nav
         [ class "grid relative md:mx-4"
@@ -1114,7 +1113,7 @@ viewMainMenu page model =
         ]
         [ menuItem "menu.dashboard" Route.Dashboard
         , if hasShop then
-            menuItem "menu.shop" (Route.Shop Shop.All)
+            menuItem "menu.shop" (Route.Shop { owner = Nothing, categories = [] })
 
           else
             text ""

@@ -6,6 +6,7 @@ module Shop.Category exposing
     , create
     , delete
     , encodeId
+    , idFromString
     , idSelectionSet
     , idToInt
     , idToString
@@ -257,3 +258,9 @@ idToInt (Id id) =
 idToString : Id -> String
 idToString (Id id) =
     String.fromInt id
+
+
+idFromString : String -> Maybe Id
+idFromString id =
+    String.toInt id
+        |> Maybe.map Id

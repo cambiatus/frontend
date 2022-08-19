@@ -780,8 +780,6 @@
     "all_offers": "የተሰጠ ሁሉም",
     "my_communities_offers": "ለኔ ማህበረሰብ የተሰጠ",
     "my_offers": "እኔ የተሰጠዉት ",
-    "see_mine": "የኔን ተመልከት",
-    "see_all": "ሁሉንም እይ",
     "rate_sale": "ደራጃ መስጠት",
     "messages": "መልዕክቶች",
     "no_answer_yet": "እስከ አሁን መለስ የለም",
@@ -818,6 +816,21 @@
     "no_image": "ምስል የለም",
     "subtract_unit": "አሃድ ቀንስ",
     "add_unit": "ክፍል ጨምር",
+    "filters": {
+      "title": "ማጣሪያዎች",
+      "apply": "ያመልክቱ",
+      "found_single_offer": "**1 ቅናሽ** አግኝተናል",
+      "found_offers": "**{{count}} ቅናሾች** አግኝተናል",
+      "offers": {
+        "label": "ቅናሾች",
+        "all": "ሁሉም ቅናሾች",
+        "mine": "የእኔ ቅናሾች"
+      },
+      "categories": {
+        "show_all": "ሁሉንም ምድቦች አሳይ",
+        "error_fetching": "ምድቦችን በማምጣት ላይ የሆነ ችግር ተፈጥሯል"
+      }
+    },
     "carrousel": {
       "previous": "ወደ ቀዳሚው ምስል ይሂዱ",
       "next": "ወደ ቀጣዩ ምስል ይሂዱ",
@@ -854,9 +867,12 @@
       "all_title": "ቅናሾቹ የት አሉ?",
       "user_title": "በዚህ ማህበረሰብ ውስጥ ምንም ቅናሾች የሉዎትም",
       "you_can_offer": "{{symbol}} ለማግኘት ምርቶችን፣ ዲጂታል ግብዓቶችን እና አገልግሎቶችን ማቅረብ ይችላሉ።",
-      "no_one_is_selling": "ማንም ሰው በዚህ ማህበረሰብ ውስጥ ምርቶችን ወይም አገልግሎቶችን አይሸጥም።",
+      "user_is_not_selling": "{{user}} በዚህ ማህበረሰብ ውስጥ ከእርስዎ ማጣሪያዎች ጋር የሚዛመዱ ምርቶችን ወይም አገልግሎቶችን አይሸጥም።",
+      "no_one_is_selling": "ማንም ሰው በዚህ ማህበረሰብ ውስጥ ከእርስዎ ማጣሪያዎች ጋር የሚዛመዱ ምርቶችን ወይም አገልግሎቶችን አይሸጥም።",
       "offer_something": "ለምን አንድ ነገር አታቀርብም?",
-      "create_new": "አዲስ ቅናሽ ፍጠር"
+      "create_new": "አዲስ ቅናሽ ፍጠር",
+      "no_results_found": "ምንም ውጤቶች አልተገኙም",
+      "clear_filters": "ማጣሪያዎችን አጽዳ"
     },
     "transfer": {
       "units_label": "መጠኑን ይምረጡ",

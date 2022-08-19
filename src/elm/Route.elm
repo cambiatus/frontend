@@ -21,6 +21,7 @@ import Html exposing (Attribute)
 import Html.Attributes as Attr
 import Session.Shared exposing (Shared)
 import Shop
+import Shop.Category
 import Url exposing (Url)
 import Url.Builder exposing (QueryParameter)
 import Url.Parser as Url exposing ((</>), (<?>), Parser, int, oneOf, s, string, top)
@@ -85,7 +86,7 @@ type Route
     | CommunitySponsor
     | CommunitySupporters
     | Claim Int Int Int
-    | Shop Shop.Filter
+    | Shop { owner : Maybe Eos.Account.Name, categories : List Shop.Category.Id }
     | NewSale EditSaleStep
     | EditSale Shop.Id EditSaleStep
     | ViewSale Shop.Id
@@ -194,17 +195,21 @@ parser url =
         , Url.map CommunitySettingsContacts (s "community" </> s "settings" </> s "contacts")
         , Url.map CommunitySettingsShopCategories (s "community" </> s "settings" </> s "shop" </> s "categories")
         , Url.map Claim (s "objectives" </> int </> s "action" </> int </> s "claim" </> int)
-        , Url.map Shop
+        , Url.map (\maybeOwner categoriesIds -> Shop { owner = maybeOwner, categories = categoriesIds })
             (s "shop"
-                <?> Query.map
-                        (\filter ->
-                            if String.startsWith "user" filter then
-                                Shop.UserSales
-
-                            else
-                                Shop.All
-                        )
-                        (Query.map (Maybe.withDefault "") (Query.string "filter"))
+                <?> (Query.string "from"
+                        |> Query.map (Maybe.map Eos.Account.stringToName)
+                    )
+                <?> (Query.string "categories"
+                        |> Query.map
+                            (Maybe.map
+                                (String.split ","
+                                    >> List.map Shop.Category.idFromString
+                                    >> List.filterMap identity
+                                )
+                                >> Maybe.withDefault []
+                            )
+                    )
             )
         , Url.map NewSale
             (s "shop"
@@ -453,16 +458,6 @@ saleStepToString step =
             "priceAndInventory"
 
 
-shopFilterToString : Shop.Filter -> String
-shopFilterToString filter =
-    case filter of
-        Shop.All ->
-            "all"
-
-        Shop.UserSales ->
-            "user"
-
-
 boolToString : Bool -> String
 boolToString bool =
     if bool then
@@ -661,9 +656,24 @@ routeToString route =
                     , []
                     )
 
-                Shop maybeFilter ->
+                Shop { owner, categories } ->
                     ( [ "shop" ]
-                    , queryBuilder shopFilterToString (Just maybeFilter) "filter"
+                    , [ owner
+                            |> Maybe.map
+                                (Eos.Account.nameToString
+                                    >> Url.Builder.string "from"
+                                )
+                      , if List.isEmpty categories then
+                            Nothing
+
+                        else
+                            categories
+                                |> List.map Shop.Category.idToString
+                                |> String.join ","
+                                |> Url.Builder.string "categories"
+                                |> Just
+                      ]
+                        |> List.filterMap identity
                     )
 
                 NewSale saleStep ->

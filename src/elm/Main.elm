@@ -62,6 +62,7 @@ import Route exposing (Route)
 import Session.Guest as Guest
 import Session.LoggedIn as LoggedIn
 import Shop
+import Shop.Category
 import Task
 import Time
 import UpdateResult as UR exposing (UpdateResult)
@@ -205,7 +206,7 @@ type Status
     | ProfileClaims ProfileClaims.Model
     | ProfileAddContact ProfileAddContact.Model
     | Register (Maybe String) (Maybe Route) Register.Model
-    | Shop Shop.Filter Shop.Model
+    | Shop { owner : Maybe Eos.Account.Name, categories : List Shop.Category.Id } Shop.Model
     | ShopEditor (Maybe Shop.Id) ShopEditor.Model
     | ShopViewer Shop.Id ShopViewer.Model
     | ViewTransfer Int ViewTransfer.Model
@@ -719,6 +720,10 @@ broadcast loggedIn broadcastMessage status =
                 ShopEditor _ subModel ->
                     ShopEditor.receiveBroadcast loggedIn.shared.translators broadcastMessage subModel
                         |> Maybe.map GotShopEditorMsg
+
+                Shop _ subModel ->
+                    Shop.receiveBroadcast broadcastMessage
+                        |> Maybe.map GotShopMsg
 
                 Invite _ ->
                     Invite.receiveBroadcast broadcastMessage

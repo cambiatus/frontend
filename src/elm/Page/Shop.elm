@@ -3,49 +3,63 @@ module Page.Shop exposing
     , Msg
     , init
     , msgToString
+    , receiveBroadcast
     , update
     , view
     )
 
 import Api
+import AssocList as Dict
 import Cambiatus.Enum.Permission as Permission
 import Community exposing (Balance)
 import Eos
 import Eos.Account
+import Form
+import Form.Checkbox
+import Form.Radio
 import Graphql.Http
-import Html exposing (Html, a, br, div, h1, h2, img, li, p, span, text, ul)
+import Html exposing (Html, a, br, button, div, h1, h2, img, li, p, span, text, ul)
 import Html.Attributes exposing (alt, class, classList, src)
 import Html.Attributes.Aria exposing (ariaLabel)
+import Html.Events exposing (onClick)
 import Http
 import I18Next exposing (t)
+import Icons
 import Json.Encode as Encode
 import List.Extra
+import Markdown
 import Page exposing (Session(..))
+import Profile.EditKycForm exposing (Msg(..))
 import Profile.Summary
 import RemoteData exposing (RemoteData)
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..))
 import Session.Shared as Shared
-import Shop exposing (Filter, Product)
+import Shop exposing (Product)
+import Shop.Category
 import Translation
+import Tree
 import UpdateResult as UR
+import Utils.Tree
 import View.Components
+import View.Modal as Modal
 
 
 
 -- INIT
 
 
-init : LoggedIn.Model -> Filter -> UpdateResult
+init : LoggedIn.Model -> { owner : Maybe Eos.Account.Name, categories : List Shop.Category.Id } -> UpdateResult
 init loggedIn filter =
     initModel filter
         |> UR.init
         |> UR.addCmd (Api.getBalances loggedIn.shared loggedIn.accountName CompletedLoadBalances)
         |> UR.addExt
             (LoggedIn.query loggedIn
-                (Shop.productsQuery filter loggedIn.accountName)
+                (Shop.productsQuery { user = filter.owner, categories = filter.categories })
                 CompletedSalesLoad
             )
+        |> UR.addExt (LoggedIn.RequestedCommunityField Community.ShopCategoriesField)
 
 
 
@@ -55,16 +69,207 @@ init loggedIn filter =
 type alias Model =
     { cards : Status
     , balances : List Balance
-    , filter : Filter
+    , currentFilter : { owner : Maybe Eos.Account.Name, categories : List Shop.Category.Id }
+    , isFiltersModalOpen : Bool
+    , filtersForm : Form.Model FiltersFormInput
     }
 
 
-initModel : Filter -> Model
+initModel : { owner : Maybe Eos.Account.Name, categories : List Shop.Category.Id } -> Model
 initModel filter =
     { cards = Loading
     , balances = []
-    , filter = filter
+    , currentFilter = filter
+    , isFiltersModalOpen = False
+    , filtersForm =
+        Form.init
+            { owner = filter.owner
+
+            -- Categories are filled in on CompletedLoadShopCategories
+            , categories = Dict.empty
+            }
     }
+
+
+type alias FiltersFormInput =
+    { owner : Maybe Eos.Account.Name
+    , categories : CategoriesFormInput
+    }
+
+
+type alias FiltersFormOutput =
+    { owner : Maybe Eos.Account.Name
+    , categories : List Shop.Category.Id
+    }
+
+
+filtersForm : LoggedIn.Model -> RemoteData err (List Shop.Category.Tree) -> Form.Form msg FiltersFormInput FiltersFormOutput
+filtersForm loggedIn allCategories =
+    let
+        loadingItem width =
+            div [ class "flex items-center gap-x-2" ]
+                [ div [ class "animate-skeleton-loading h-5 rounded w-5" ] []
+                , div [ class "animate-skeleton-loading h-5 rounded-full w-5" ] []
+                , div [ class "animate-skeleton-loading h-5 rounded-sm", class width ] []
+                ]
+
+        loadingForm =
+            Form.arbitraryWith []
+                (div [ class "flex flex-col gap-y-4" ]
+                    [ loadingItem "w-1/2"
+                    , loadingItem "w-2/3"
+                    , loadingItem "w-1/3"
+                    , loadingItem "w-1/2"
+                    ]
+                )
+    in
+    Form.succeed FiltersFormOutput
+        |> Form.with (ownerForm loggedIn.shared.translators loggedIn.accountName)
+        |> Form.withNoOutput
+            (case allCategories of
+                RemoteData.Success categories ->
+                    if List.isEmpty categories then
+                        Form.succeed []
+
+                    else
+                        Form.arbitrary
+                            (p [ class "label" ]
+                                [ text <| loggedIn.shared.translators.t "settings.shop.categories.title" ]
+                            )
+
+                _ ->
+                    Form.arbitrary
+                        (p [ class "label" ]
+                            [ text <| loggedIn.shared.translators.t "settings.shop.categories.title" ]
+                        )
+            )
+        |> Form.with
+            (case allCategories of
+                RemoteData.Success categories ->
+                    if List.isEmpty categories then
+                        Form.succeed []
+
+                    else
+                        categoriesForm loggedIn.shared.translators categories
+
+                RemoteData.Loading ->
+                    loadingForm
+
+                RemoteData.NotAsked ->
+                    loadingForm
+
+                RemoteData.Failure _ ->
+                    Form.arbitraryWith []
+                        (p [ class "form-error" ]
+                            [ text <| loggedIn.shared.translators.t "shop.filters.categories.error_fetching"
+                            ]
+                        )
+            )
+
+
+ownerForm : Translation.Translators -> Eos.Account.Name -> Form.Form msg { input | owner : Maybe Eos.Account.Name } (Maybe Eos.Account.Name)
+ownerForm { t } currentUser =
+    Form.Radio.init
+        { label = t "shop.filters.offers.label"
+        , id = "offers-radio"
+        , optionToString =
+            \maybeAccount ->
+                case maybeAccount of
+                    Nothing ->
+                        ""
+
+                    Just account ->
+                        Eos.Account.nameToString account
+        }
+        |> Form.Radio.withOption Nothing (text <| t "shop.filters.offers.all")
+        |> Form.Radio.withOption (Just currentUser) (text <| t "shop.filters.offers.mine")
+        |> Form.Radio.withDirection Form.Radio.Vertical
+        |> Form.Radio.withContainerAttrs [ class "mb-6" ]
+        |> Form.radio
+            (\account ->
+                if String.isEmpty account then
+                    Nothing
+
+                else
+                    Just (Eos.Account.stringToName account)
+            )
+            { parser = Ok
+            , value = .owner
+            , update = \owner values -> { values | owner = owner }
+            , externalError = always Nothing
+            }
+
+
+type alias CategoriesFormInput =
+    Dict.Dict Shop.Category.Model Bool
+
+
+categoriesForm : Translation.Translators -> List Shop.Category.Tree -> Form.Form msg FiltersFormInput (List Shop.Category.Id)
+categoriesForm { t } allCategories =
+    let
+        checkbox : Shop.Category.Model -> Form.Form msg CategoriesFormInput (Maybe Shop.Category.Id)
+        checkbox category =
+            Form.Checkbox.init
+                { label =
+                    span [ class "flex items-center gap-x-2" ]
+                        [ case category.icon of
+                            Nothing ->
+                                text ""
+
+                            Just icon ->
+                                img [ class "w-5 h-5 rounded-full", alt "", src icon ] []
+                        , text category.name
+                        ]
+                , id = "category-" ++ Shop.Category.idToString category.id
+                }
+                |> Form.Checkbox.withContainerAttrs [ class "flex" ]
+                |> Form.checkbox
+                    { parser =
+                        \value ->
+                            if value then
+                                Ok (Just category.id)
+
+                            else
+                                Ok Nothing
+                    , value = \input -> Dict.get category input |> Maybe.withDefault False
+                    , update = Dict.insert category
+                    , externalError = always Nothing
+                    }
+
+        treeToForm : Tree.Tree Shop.Category.Model -> Form.Form msg CategoriesFormInput (List Shop.Category.Id)
+        treeToForm tree =
+            Form.succeed
+                (\label children ->
+                    case label of
+                        Nothing ->
+                            children
+
+                        Just head ->
+                            head :: children
+                )
+                |> Form.withGroup []
+                    (checkbox (Tree.label tree))
+                    (if List.isEmpty (Tree.children tree) then
+                        Form.succeed []
+
+                     else
+                        Tree.children tree
+                            |> List.map treeToForm
+                            |> Form.list [ class "ml-4 mt-4 flex flex-col gap-y-4" ]
+                            |> Form.mapOutput List.concat
+                    )
+    in
+    Form.succeed identity
+        |> Form.with
+            (allCategories
+                |> List.map treeToForm
+                |> Form.list [ class "flex flex-col gap-y-4" ]
+                |> Form.mapOutput List.concat
+                |> Form.mapValues
+                    { value = .categories
+                    , update = \newChild parent -> { parent | categories = newChild }
+                    }
+            )
 
 
 type Status
@@ -126,47 +331,86 @@ view loggedIn model =
             else
                 text ""
 
-        content symbol =
+        content community =
             case model.cards of
                 Loading ->
-                    div [ class "container mx-auto px-4 mt-6 mb-10" ]
-                        [ viewFrozenAccountCard
-                        , viewHeader loggedIn.shared.translators
-                        , viewShopFilter loggedIn model
-                        , Page.fullPageLoading loggedIn.shared
+                    div [ class "mt-6 mb-10" ]
+                        [ div [ class "container mx-auto px-4" ]
+                            [ viewFrozenAccountCard
+                            , viewHeader loggedIn.shared.translators
+                            , viewShopFilter loggedIn model
+                            ]
+                        , if List.isEmpty model.currentFilter.categories then
+                            text ""
+
+                          else
+                            viewFilterTags community model
+                        , if List.isEmpty model.currentFilter.categories then
+                            text ""
+
+                          else
+                            viewFoundOffersAmount loggedIn.shared.translators community model
+                        , viewFiltersModal loggedIn model
+                        , div [ class "container mx-auto px-4" ]
+                            [ Page.fullPageLoading loggedIn.shared ]
                         ]
 
                 LoadingFailed e ->
                     Page.fullPageGraphQLError (t "shop.title") e
 
                 Loaded cards ->
-                    div [ class "container mx-auto px-4 mt-6" ]
-                        (if List.isEmpty cards && model.filter == Shop.All then
-                            [ viewFrozenAccountCard
-                            , viewEmptyState loggedIn.shared.translators symbol model
-                            ]
+                    if List.isEmpty cards then
+                        if model.currentFilter.owner == Nothing && List.isEmpty model.currentFilter.categories then
+                            div [ class "container mx-auto px-4 mt-6" ]
+                                [ viewFrozenAccountCard
+                                , viewEmptyState loggedIn community.symbol model
+                                ]
 
-                         else if List.isEmpty cards && model.filter == Shop.UserSales then
-                            [ viewFrozenAccountCard
-                            , viewHeader loggedIn.shared.translators
-                            , viewShopFilter loggedIn model
-                            , viewEmptyState loggedIn.shared.translators symbol model
-                            ]
+                        else
+                            div [ class "mt-6" ]
+                                [ div [ class "container mx-auto px-4" ]
+                                    [ viewFrozenAccountCard
+                                    , viewHeader loggedIn.shared.translators
+                                    , viewShopFilter loggedIn model
+                                    ]
+                                , if List.isEmpty model.currentFilter.categories then
+                                    text ""
 
-                         else
-                            [ viewFrozenAccountCard
-                            , viewHeader loggedIn.shared.translators
-                            , viewShopFilter loggedIn model
-                            , viewGrid loggedIn cards
+                                  else
+                                    viewFilterTags community model
+                                , div [ class "container mx-auto px-4" ]
+                                    [ viewEmptyStateWithFilters loggedIn.shared.translators ]
+                                , viewFiltersModal loggedIn model
+                                ]
+
+                    else
+                        div [ class "mt-6" ]
+                            [ div [ class "container mx-auto px-4" ]
+                                [ viewFrozenAccountCard
+                                , viewHeader loggedIn.shared.translators
+                                , viewShopFilter loggedIn model
+                                ]
+                            , if List.isEmpty model.currentFilter.categories then
+                                text ""
+
+                              else
+                                viewFilterTags community model
+                            , if List.isEmpty model.currentFilter.categories then
+                                text ""
+
+                              else
+                                viewFoundOffersAmount loggedIn.shared.translators community model
+                            , div [ class "container mx-auto px-4" ]
+                                [ viewGrid loggedIn cards ]
+                            , viewFiltersModal loggedIn model
                             ]
-                        )
     in
     { title = title
     , content =
         case loggedIn.selectedCommunity of
             RemoteData.Success community ->
                 if community.hasShop then
-                    content community.symbol
+                    content community
 
                 else
                     Page.fullPageNotFound
@@ -200,14 +444,6 @@ viewShopFilter loggedIn model =
         { t } =
             loggedIn.shared.translators
 
-        newFilter =
-            case model.filter of
-                Shop.All ->
-                    Shop.UserSales
-
-                Shop.UserSales ->
-                    Shop.All
-
         canSell =
             case loggedIn.profile of
                 RemoteData.Success profile ->
@@ -215,6 +451,9 @@ viewShopFilter loggedIn model =
 
                 _ ->
                     False
+
+        numberOfFiltersApplied =
+            List.length model.currentFilter.categories
     in
     div [ class "grid xs-max:grid-cols-1 grid-cols-2 md:flex mt-4 gap-4" ]
         [ View.Components.disablableLink
@@ -225,42 +464,156 @@ viewShopFilter loggedIn model =
             , Route.href (Route.NewSale Route.SaleMainInformation)
             ]
             [ text <| t "shop.create_new_offer" ]
-        , a
+        , button
             [ class "w-full md:w-40 button button-secondary"
-            , Route.href (Route.Shop newFilter)
+            , onClick ClickedOpenFiltersModal
             ]
-            [ case model.filter of
-                Shop.UserSales ->
-                    text <| t "shop.see_all"
+            [ text <| t "shop.filters.title"
+            , if numberOfFiltersApplied > 0 then
+                span [ class "ml-2 bg-orange-300 rounded-full px-2 h-6 min-w-6 text-white flex items-center justify-center text-center" ]
+                    [ text (String.fromInt numberOfFiltersApplied) ]
 
-                Shop.All ->
-                    text <| t "shop.see_mine"
+              else
+                text ""
             ]
         ]
+
+
+viewFilterTags : Community.Model -> Model -> Html msg
+viewFilterTags community model =
+    let
+        getCategory categoryId =
+            community.shopCategories
+                |> RemoteData.toMaybe
+                |> Maybe.andThen (Utils.Tree.findInForest (\category -> category.id == categoryId))
+
+        viewAppliedFilter categoryId =
+            case getCategory categoryId of
+                Nothing ->
+                    text ""
+
+                Just category ->
+                    div [ class "bg-white text-orange-300 rounded-sm flex items-center justify-center font-bold p-2 gap-4 flex-shrink-0 mr-4 sm:last:mr-0" ]
+                        [ text category.name
+                        , a
+                            [ class "focus-ring focus:ring-offset-4 rounded-sm"
+                            , Route.href
+                                (Route.Shop
+                                    { owner = model.currentFilter.owner
+                                    , categories = List.filter (\id -> id /= categoryId) model.currentFilter.categories
+                                    }
+                                )
+                            ]
+                            [ Icons.close "fill-current w-3.5" ]
+                        ]
+    in
+    div [ class "container mx-auto pl-4 mt-4 sm:pr-4" ]
+        [ div [ class "flex overflow-auto focus-ring rounded-sm" ]
+            (List.map viewAppliedFilter model.currentFilter.categories)
+        ]
+
+
+viewFoundOffersAmount : Translation.Translators -> Community.Model -> Model -> Html Msg
+viewFoundOffersAmount translators community model =
+    div [ class "bg-white w-full py-4 mt-4" ]
+        [ div [ class "container mx-auto flex w-full justify-between px-4" ]
+            [ case model.cards of
+                Loaded cards ->
+                    if List.length cards == 1 then
+                        Markdown.fromTranslation translators "shop.filters.found_single_offer"
+                            |> Markdown.view []
+
+                    else
+                        Markdown.fromTranslationWithReplacements translators
+                            "shop.filters.found_offers"
+                            [ ( "count", String.fromInt (List.length cards) ) ]
+                            |> Markdown.view []
+
+                _ ->
+                    div [ class "w-44 rounded-md animate-skeleton-loading" ] []
+            , a
+                [ class "text-orange-300 hover:underline flex-shrink-0 focus-ring rounded-sm focus:ring-offset-2"
+                , Route.href (Route.Shop { owner = model.currentFilter.owner, categories = [] })
+                ]
+                [ text <| translators.t "shop.empty.clear_filters" ]
+            ]
+        ]
+
+
+viewFiltersModal : LoggedIn.Model -> Model -> Html Msg
+viewFiltersModal loggedIn model =
+    let
+        categories =
+            Community.getField loggedIn.selectedCommunity .shopCategories
+                |> RemoteData.map Tuple.second
+    in
+    Modal.initWith
+        { closeMsg = ClosedFiltersModal
+        , isVisible = model.isFiltersModalOpen
+        }
+        |> Modal.withHeader (loggedIn.shared.translators.t "shop.filters.title")
+        |> Modal.withBody
+            [ Form.viewWithoutSubmit [ class "mt-4" ]
+                loggedIn.shared.translators
+                (\_ -> [])
+                (filtersForm loggedIn categories)
+                model.filtersForm
+                { toMsg = GotFiltersFormMsg }
+            ]
+        |> Modal.withFooter
+            [ button
+                [ class "button button-primary w-full"
+                , onClick
+                    (Form.parse (filtersForm loggedIn categories)
+                        model.filtersForm
+                        { onError = GotFiltersFormMsg
+                        , onSuccess = SubmittedFiltersForm
+                        }
+                    )
+                ]
+                [ text <| loggedIn.shared.translators.t "shop.filters.apply" ]
+            ]
+        |> Modal.withSize Modal.Large
+        |> Modal.toHtml
 
 
 
 -- VIEW GRID
 
 
-viewEmptyState : Translation.Translators -> Eos.Symbol -> Model -> Html Msg
-viewEmptyState { t, tr } communitySymbol model =
+viewEmptyState : LoggedIn.Model -> Eos.Symbol -> Model -> Html Msg
+viewEmptyState loggedIn communitySymbol model =
     let
-        title =
-            case model.filter of
-                Shop.UserSales ->
-                    text <| t "shop.empty.user_title"
+        { t, tr } =
+            loggedIn.shared.translators
 
-                Shop.All ->
+        title =
+            case model.currentFilter.owner of
+                Just userName ->
+                    if userName == loggedIn.accountName then
+                        text <| t "shop.empty.user_title"
+
+                    else
+                        text <| t "shop.empty.all_title"
+
+                Nothing ->
                     text <| t "shop.empty.all_title"
 
         description =
-            case model.filter of
-                Shop.UserSales ->
-                    [ text <| tr "shop.empty.you_can_offer" [ ( "symbol", Eos.symbolToSymbolCodeString communitySymbol ) ]
-                    ]
+            case model.currentFilter.owner of
+                Just userName ->
+                    if userName == loggedIn.accountName then
+                        [ text <| tr "shop.empty.you_can_offer" [ ( "symbol", Eos.symbolToSymbolCodeString communitySymbol ) ]
+                        ]
 
-                Shop.All ->
+                    else
+                        [ text <| tr "shop.empty.user_is_not_selling" [ ( "user", Eos.Account.nameToString userName ) ]
+                        , br [] []
+                        , br [] []
+                        , text <| t "shop.empty.offer_something"
+                        ]
+
+                Nothing ->
                     [ text <| t "shop.empty.no_one_is_selling"
                     , br [] []
                     , br [] []
@@ -280,6 +633,19 @@ viewEmptyState { t, tr } communitySymbol model =
             , Route.href (Route.NewSale Route.SaleMainInformation)
             ]
             [ text <| t "shop.empty.create_new" ]
+        ]
+
+
+viewEmptyStateWithFilters : Translation.Translators -> Html msg
+viewEmptyStateWithFilters { t } =
+    div [ class "flex flex-col items-center mt-16 mb-10" ]
+        [ img [ alt "", src "/images/not_found.svg", class "w-1/2 md:w-40" ] []
+        , p [ class "mt-6 text-gray-900" ] [ text <| t "shop.empty.no_results_found" ]
+        , a
+            [ class "button button-secondary mt-2"
+            , Route.href (Route.Shop { owner = Nothing, categories = [] })
+            ]
+            [ text <| t "shop.empty.clear_filters" ]
         ]
 
 
@@ -418,12 +784,17 @@ type alias UpdateResult =
 
 type Msg
     = NoOp
+    | CompletedLoadingShopCategories (List Shop.Category.Tree)
     | CompletedSalesLoad (RemoteData (Graphql.Http.Error (List Product)) (List Product))
     | CompletedLoadBalances (Result Http.Error (List Balance))
     | ClickedAcceptCodeOfConduct
     | ClickedScrollToImage { containerId : String, imageId : String }
     | ImageStartedIntersecting Shop.Id Shop.ImageId
     | ImageStoppedIntersecting Shop.Id Shop.ImageId
+    | ClickedOpenFiltersModal
+    | ClosedFiltersModal
+    | GotFiltersFormMsg (Form.Msg FiltersFormInput)
+    | SubmittedFiltersForm FiltersFormOutput
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
@@ -431,6 +802,27 @@ update msg model loggedIn =
     case msg of
         NoOp ->
             UR.init model
+
+        CompletedLoadingShopCategories categories ->
+            { model
+                | filtersForm =
+                    Form.updateValues
+                        (\values ->
+                            { values
+                                | categories =
+                                    model.currentFilter.categories
+                                        |> List.filterMap
+                                            (\categoryId ->
+                                                categories
+                                                    |> Utils.Tree.findInForest (\category -> category.id == categoryId)
+                                                    |> Maybe.map (\category -> ( category, True ))
+                                            )
+                                        |> Dict.fromList
+                            }
+                        )
+                        model.filtersForm
+            }
+                |> UR.init
 
         CompletedSalesLoad (RemoteData.Success sales) ->
             UR.init { model | cards = Loaded (List.map cardFromSale sales) }
@@ -526,12 +918,45 @@ update msg model loggedIn =
                 _ ->
                     UR.init model
 
+        ClickedOpenFiltersModal ->
+            { model | isFiltersModalOpen = True }
+                |> UR.init
+
+        ClosedFiltersModal ->
+            { model | isFiltersModalOpen = False }
+                |> UR.init
+
+        GotFiltersFormMsg subMsg ->
+            Form.update loggedIn.shared subMsg model.filtersForm
+                |> UR.fromChild (\newForm -> { model | filtersForm = newForm })
+                    GotFiltersFormMsg
+                    LoggedIn.addFeedback
+                    model
+
+        SubmittedFiltersForm formOutput ->
+            { model | isFiltersModalOpen = False }
+                |> UR.init
+                |> UR.addCmd (Route.pushUrl loggedIn.shared.navKey (Route.Shop formOutput))
+
+
+receiveBroadcast : LoggedIn.BroadcastMsg -> Maybe Msg
+receiveBroadcast broadcastMsg =
+    case broadcastMsg of
+        LoggedIn.CommunityFieldLoaded _ (Community.ShopCategories categories) ->
+            Just (CompletedLoadingShopCategories categories)
+
+        _ ->
+            Nothing
+
 
 msgToString : Msg -> List String
 msgToString msg =
     case msg of
         NoOp ->
             [ "NoOp" ]
+
+        CompletedLoadingShopCategories _ ->
+            [ "CompletedLoadingShopCategories" ]
 
         CompletedSalesLoad r ->
             [ "CompletedSalesLoad", UR.remoteDataToString r ]
@@ -550,3 +975,15 @@ msgToString msg =
 
         ImageStoppedIntersecting _ _ ->
             [ "ImageStoppedIntersecting" ]
+
+        ClickedOpenFiltersModal ->
+            [ "ClickedOpenFiltersModal" ]
+
+        ClosedFiltersModal ->
+            [ "ClosedFiltersModal" ]
+
+        GotFiltersFormMsg subMsg ->
+            "GotFiltersFormMsg" :: Form.msgToString subMsg
+
+        SubmittedFiltersForm _ ->
+            [ "SubmittedFiltersForm" ]

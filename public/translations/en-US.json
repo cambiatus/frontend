@@ -819,8 +819,6 @@
     "all_offers": "All offers",
     "my_communities_offers": "My communities’ offers",
     "my_offers": "My offers",
-    "see_mine": "See mine",
-    "see_all": "See all",
     "rate_sale": "Rating",
     "messages": "Messages",
     "no_answer_yet": "No answer yet",
@@ -857,6 +855,21 @@
     "no_image": "No image",
     "subtract_unit": "Subtract a unit",
     "add_unit": "Add a unit",
+    "filters": {
+      "title": "Filters",
+      "apply": "Apply",
+      "found_single_offer": "We found **1 offer**",
+      "found_offers": "We found **{{count}} offers**",
+      "offers": {
+        "label": "Offers",
+        "all": "All offers",
+        "mine": "My offers"
+      },
+      "categories": {
+        "show_all": "Show all categories",
+        "error_fetching": "Something went wrong when fetching categories"
+      }
+    },
     "carrousel": {
       "previous": "Go to previous image",
       "next": "Go to next image",
@@ -893,9 +906,12 @@
       "all_title": "Where are all the offers?",
       "user_title": "You don't have any offers in this community",
       "you_can_offer": "You can offer products, digital assets and services to earn {{symbol}}.",
-      "no_one_is_selling": "No one is selling products or services in this community.",
+      "user_is_not_selling": "{{user}} is not selling products or services that match your filters in this community.",
+      "no_one_is_selling": "No one is selling products or services that match your filters in this community.",
       "offer_something": "Why don't you offer something?",
-      "create_new": "Create new offer"
+      "create_new": "Create new offer",
+      "no_results_found": "No results found",
+      "clear_filters": "Clear filters"
     },
     "transfer": {
       "units_label": "Pick the amount",
