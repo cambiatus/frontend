@@ -34,7 +34,7 @@ import Graphql.Http
 import Html exposing (Html, a, br, button, div, img, p, span, strong, text)
 import Html.Attributes exposing (autocomplete, autofocus, class, classList, rows, spellcheck, src, type_)
 import Html.Attributes.Aria exposing (ariaHidden)
-import Html.Events exposing (onClick)
+import Html.Events exposing (on, onClick)
 import Html.Keyed
 import Json.Decode as Decode
 import Json.Decode.Pipeline as DecodePipeline
@@ -152,51 +152,55 @@ passphraseForm ({ translators } as shared) { hasPasted, hasTriedSubmitting } =
 
         viewHighlights currentText =
             div
-                [ class "absolute inset-px pointer-events-none p-4 overflow-hidden"
+                [ class "absolute inset-px pointer-events-none"
                 , ariaHidden True
                 ]
-                (currentText
-                    |> String.split "\n"
-                    |> List.map
-                        (\line ->
-                            if String.isEmpty line then
-                                br [] []
+                [ div
+                    [ Html.Attributes.id "highlights"
+                    , class "p-4 overflow-auto h-full scrollbar-hidden"
+                    ]
+                    (currentText
+                        |> String.split "\n"
+                        |> List.map
+                            (\line ->
+                                if String.isEmpty line then
+                                    br [] []
 
-                            else
-                                p []
-                                    (line
-                                        |> String.split " "
-                                        |> List.map
-                                            (\word ->
-                                                if String.isEmpty word then
-                                                    span [ class "inline-block" ] [ text " " ]
+                                else
+                                    p []
+                                        (line
+                                            |> String.split " "
+                                            |> List.map
+                                                (\word ->
+                                                    if String.isEmpty word then
+                                                        span [ class "inline-block" ] [ text " " ]
 
-                                                else
-                                                    span
-                                                        [ case shared.bip39 of
-                                                            Session.Shared.Bip39NotLoaded ->
-                                                                class "transition-colors"
-
-                                                            Session.Shared.Bip39Loaded bip39Wordlist ->
-                                                                if
-                                                                    hasTriedSubmitting
-                                                                        && not (Set.member word bip39Wordlist.english)
-                                                                        && not (Set.member word bip39Wordlist.portuguese)
-                                                                        && not (Set.member word bip39Wordlist.spanish)
-                                                                then
-                                                                    -- TODO - Scroll with the input
-                                                                    class "bg-red/60 text-white"
-
-                                                                else
+                                                    else
+                                                        span
+                                                            [ case shared.bip39 of
+                                                                Session.Shared.Bip39NotLoaded ->
                                                                     class "transition-colors"
-                                                        , class "pointer-events-none rounded-sm px-0.5 -mx-0.5"
-                                                        ]
-                                                        [ text word ]
-                                            )
-                                        |> List.intersperse (span [] [ text " " ])
-                                    )
-                        )
-                )
+
+                                                                Session.Shared.Bip39Loaded bip39Wordlist ->
+                                                                    if
+                                                                        hasTriedSubmitting
+                                                                            && not (Set.member word bip39Wordlist.english)
+                                                                            && not (Set.member word bip39Wordlist.portuguese)
+                                                                            && not (Set.member word bip39Wordlist.spanish)
+                                                                    then
+                                                                        class "bg-red/60 text-white"
+
+                                                                    else
+                                                                        class "transition-colors"
+                                                            , class "pointer-events-none rounded-sm px-0.5 -mx-0.5"
+                                                            ]
+                                                            [ text word ]
+                                                )
+                                            |> List.intersperse (span [] [ text " " ])
+                                        )
+                            )
+                    )
+                ]
     in
     Form.succeed identity
         |> Form.withDecoration (viewIllustration "login_key.svg")
@@ -224,6 +228,10 @@ passphraseForm ({ translators } as shared) { hasPasted, hasTriedSubmitting } =
                             , autofocus True
                             , autocomplete False
                             , spellcheck False
+                            , on "scroll"
+                                (Decode.at [ "target", "scrollTop" ] Decode.int
+                                    |> Decode.map (\scrollTop -> ScrolledTextArea { scrollTop = scrollTop })
+                                )
                             ]
                         |> Form.Text.withInputContainerAttrs [ class "bg-white rounded" ]
                         |> Form.Text.withCounter (Form.Text.CountWords 12)
@@ -401,6 +409,7 @@ type PassphraseMsg
     = PassphraseIgnored
     | ClickedPaste
     | GotClipboardResponse ClipboardResponse
+    | ScrolledTextArea { scrollTop : Int }
     | GotPassphraseFormMsg (Form.Msg PassphraseInput)
     | ClickedNextStep Passphrase
 
@@ -586,6 +595,13 @@ updateWithPassphrase msg model { shared } =
                     (Feedback.Hidden
                         |> Guest.SetFeedback
                         |> PassphraseGuestExternal
+                    )
+
+        ScrolledTextArea { scrollTop } ->
+            UR.init model
+                |> UR.addCmd
+                    (Dom.setViewportOf "highlights" 0 (toFloat scrollTop)
+                        |> Task.attempt (\_ -> PassphraseIgnored)
                     )
 
         GotPassphraseFormMsg subMsg ->
@@ -934,6 +950,9 @@ passphraseMsgToString msg =
 
         GotClipboardResponse _ ->
             [ "GotClipboardResponse" ]
+
+        ScrolledTextArea _ ->
+            [ "ScrolledTextArea" ]
 
         GotPassphraseFormMsg subMsg ->
             "GotPassphraseFormMsg" :: Form.msgToString subMsg
