@@ -329,7 +329,7 @@ view model { imageUrl, cropperAttributes } =
                 [ src imageUrl
                 , alt ""
                 , id entireImageId
-                , class "opacity-20 pointer-events-none select-none max-h-full"
+                , class "opacity-20 pointer-events-none select-none max-w-full max-h-[35vh] lg:max-h-[60vh]"
                 , Html.Events.on "load" (Json.Decode.succeed ImageLoaded)
                 ]
                 []
