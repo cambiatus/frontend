@@ -132,7 +132,7 @@ passphraseForm ({ translators } as shared) { hasPasted, hasTriedSubmitting } =
         viewPasteButton =
             if shared.canReadClipboard then
                 button
-                    [ class "absolute bottom-4 left-1/2 -translate-x-1/2 button"
+                    [ class "absolute bottom-4 left-1/2 -translate-x-1/2 button z-10"
                     , classList
                         [ ( "button-secondary", not hasPasted )
                         , ( "button-primary", hasPasted )
