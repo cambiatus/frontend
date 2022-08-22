@@ -598,54 +598,68 @@ intersectionObserver options =
         []
 
 
-{-| A component that attaches events related to pointers to the document and
-passes it into Elm
+{-| A component that attaches events related to pointers to the document and the
+element and passes it into Elm.
+
+  - `document.onDragOver`: This event is fired when something is being dragged and
+    the pointer moves.
+  - `element.onDragEnd`: This event is fired when the user releases the pointer
+    after a drag operation.
+  - `element.onDragStart`: This event is fired whenever the user starts dragging
+    an element.
+
+Make sure the element has `draggble = true`.
+
 -}
 pointerListener :
-    { onPointerMove :
-        Maybe
-            ({ x : Float
-             , y : Float
-             , previousX : Float
-             , previousY : Float
-             }
-             -> msg
-            )
-    , onPointerUp : Maybe msg
+    { document :
+        { onDragOver :
+            Maybe
+                ({ x : Float
+                 , y : Float
+                 , previousX : Float
+                 , previousY : Float
+                 }
+                 -> msg
+                )
+        }
+    , element :
+        { onDragStart :
+            Maybe
+                { dragImage : Maybe String
+                , listener : msg
+                }
+        , onDragEnd : Maybe msg
+        }
     }
+    -> List (Html.Attribute msg)
+    -> List (Html msg)
     -> Html msg
-pointerListener { onPointerMove, onPointerUp } =
+pointerListener { document, element } attrs children =
     node "pointer-listener"
-        [ case onPointerMove of
-            Nothing ->
-                class ""
-
-            Just pointerMoveListener ->
-                on "document-pointermove"
-                    (Json.Decode.field "detail"
-                        (Json.Decode.map4
-                            (\x y previousX previousY ->
-                                pointerMoveListener
-                                    { x = x
-                                    , y = y
-                                    , previousX = previousX
-                                    , previousY = previousY
-                                    }
-                            )
-                            (Json.Decode.field "clientX" Json.Decode.float)
-                            (Json.Decode.field "clientY" Json.Decode.float)
-                            (Json.Decode.field "previousX" Json.Decode.float)
-                            (Json.Decode.field "previousY" Json.Decode.float)
-                        )
+        (optionalListenerWithArgs "document-dragover"
+            document.onDragOver
+            (Json.Decode.field "detail"
+                (Json.Decode.map4
+                    (\x y previousX previousY ->
+                        { x = x
+                        , y = y
+                        , previousX = previousX
+                        , previousY = previousY
+                        }
                     )
-        , case onPointerUp of
-            Nothing ->
-                class ""
-
-            Just pointerUpListener ->
-                on "document-pointerup" (Json.Decode.succeed pointerUpListener)
-        ]
-        []
+                    (Json.Decode.field "clientX" Json.Decode.float)
+                    (Json.Decode.field "clientY" Json.Decode.float)
+                    (Json.Decode.field "previousX" Json.Decode.float)
+                    (Json.Decode.field "previousY" Json.Decode.float)
+                )
+            )
+            :: optionalListener "element-dragend" element.onDragEnd
+            :: optionalListener "element-dragstart" (Maybe.map .listener element.onDragStart)
+            :: optionalAttr "element-pointerdown-drag-image" (Maybe.andThen .dragImage element.onDragStart)
+            :: attrs
+        )
+        children
 
 
 
@@ -685,6 +699,26 @@ optionalAttr attr maybeAttr =
 
         Just attrValue ->
             attribute attr attrValue
+
+
+optionalListener : String -> Maybe msg -> Html.Attribute msg
+optionalListener eventName maybeMsg =
+    case maybeMsg of
+        Nothing ->
+            class ""
+
+        Just msg ->
+            on eventName (Json.Decode.succeed msg)
+
+
+optionalListenerWithArgs : String -> Maybe (a -> msg) -> Json.Decode.Decoder a -> Html.Attribute msg
+optionalListenerWithArgs eventName maybeMsg decoder =
+    case maybeMsg of
+        Nothing ->
+            class ""
+
+        Just msg ->
+            on eventName (Json.Decode.map msg decoder)
 
 
 dateFormatter :

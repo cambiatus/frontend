@@ -4,7 +4,7 @@ import Browser.Dom
 import Dict
 import File
 import Html exposing (Html, button, div, img, input, node)
-import Html.Attributes exposing (alt, attribute, class, classList, id, src, style, type_, value)
+import Html.Attributes exposing (alt, attribute, class, classList, draggable, id, src, style, type_, value)
 import Html.Events
 import Icons
 import Json.Decode
@@ -377,14 +377,31 @@ viewCropper model dimmensions { imageUrl, cropperAttributes } =
         floatToPx offset =
             String.fromFloat offset ++ "px"
     in
-    [ div
+    [ View.Components.pointerListener
+        { document =
+            { onDragOver =
+                if model.isDragging then
+                    Just Dragged
+
+                else
+                    Nothing
+            }
+        , element =
+            { onDragStart =
+                Just
+                    { dragImage = Nothing
+                    , listener = StartedDragging
+                    }
+            , onDragEnd = Just StoppedDragging
+            }
+        }
         (class "absolute overflow-hidden border border-dashed border-gray-400 cursor-move z-20 select-none mx-auto"
             :: classList [ ( "transition-all origin-center", not model.isDragging && not model.isChangingDimmensions && not model.isReflowing ) ]
             :: style "top" (floatToPx topOffset)
             :: style "left" (floatToPx leftOffset)
             :: style "width" (floatToPx selection.width)
             :: style "height" (floatToPx selection.height)
-            :: onPointerDown StartedDragging
+            :: draggable "true"
             :: List.map (Html.Attributes.map Basics.never) cropperAttributes
         )
         [ img
@@ -401,14 +418,6 @@ viewCropper model dimmensions { imageUrl, cropperAttributes } =
             ]
             []
         ]
-    , if model.isDragging then
-        View.Components.pointerListener
-            { onPointerMove = Just Dragged
-            , onPointerUp = Just StoppedDragging
-            }
-
-      else
-        Html.text ""
     , node "image-cropper"
         [ if model.isRequestingCroppedImage then
             attribute "elm-generate-new-cropped-image" "true"

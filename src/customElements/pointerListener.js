@@ -6,15 +6,19 @@ export default () => (
       this.previousX = null
       this.previousY = null
 
-      this.listeners = {
-        'pointermove': (e) => {
+      this.documentListeners = {
+        'dragover': (e) => {
           if (this.previousX == null || this.previousY == null) {
             this.previousX = e.clientX
             this.previousY = e.clientY
             return
           }
 
-          this.dispatchEvent(new CustomEvent('document-pointermove', {
+          if (this.previousX == e.clientX && this.previousY == e.clientY) {
+            return
+          }
+
+          this.dispatchEvent(new CustomEvent('document-dragover', {
             detail: {
               clientX: e.clientX,
               clientY: e.clientY,
@@ -25,22 +29,45 @@ export default () => (
 
           this.previousX = e.clientX
           this.previousY = e.clientY
-        },
-        'pointerup': () => {
-          this.dispatchEvent(new CustomEvent('document-pointerup'))
         }
       }
 
-      Object.keys(this.listeners).forEach((key) => {
-        document.addEventListener(key, this.listeners[key])
+      this.elementListeners = {
+        'dragstart': (e) => {
+          this.dispatchEvent(new CustomEvent('element-dragstart'))
+
+          const dragImageElement = document.createElement('span')
+
+          dragImageElement.classList.add('sr-only')
+          dragImageElement.classList.add('pointer-events-none')
+          dragImageElement.setAttribute('aria-hidden', 'true')
+
+          e.dataTransfer.setDragImage(dragImageElement, 0, 0)
+        },
+        'dragend': () => {
+          this.dispatchEvent(new CustomEvent('element-dragend'))
+        }
+      }
+
+
+      Object.keys(this.documentListeners).forEach((key) => {
+        document.addEventListener(key, this.documentListeners[key])
+      })
+
+      Object.keys(this.elementListeners).forEach((key) => {
+        this.addEventListener(key, this.elementListeners[key])
       })
     }
 
     disconnectedCallback () {
-      Object.keys(this.listeners).forEach((key) => {
-        document.removeEventListener(key, this.listeners[key])
+      Object.keys(this.elementListeners).forEach((key) => {
+        this.removeEventListener(key, this.elementListeners[key])
       })
-      this.listeners = undefined
+
+      Object.keys(this.documentListeners).forEach((key) => {
+        document.removeEventListener(key, this.documentListeners[key])
+      })
+      this.documentListeners = undefined
     }
   }
 )
