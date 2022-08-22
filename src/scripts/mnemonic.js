@@ -6,19 +6,11 @@ import * as bip39 from 'bip39'
  * @returns {[string,string]}
  */
 function generateRandom (userLocale) {
-  const userLang = userLocale.toLowerCase().split('-')[0]
-
   let wordlist = bip39.wordlists.english
-  switch (userLang) {
-    case 'es':
-      wordlist = bip39.wordlists.spanish
-      break;
-    case 'pt':
-      wordlist = bip39.wordlists.portuguese
-      break;
-
-    default:
-      break;
+  if (userLocale.toLowerCase().startsWith('es')) {
+    wordlist = bip39.wordlists.spanish
+  } else if (userLocale.toLowerCase().startsWith('pt')) {
+    wordlist = bip39.wordlists.portuguese
   }
 
   const strength = undefined
