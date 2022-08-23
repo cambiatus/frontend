@@ -235,25 +235,29 @@ update msg model =
                     UR.init model
 
                 Loaded dimmensions ->
-                    let
-                        selection =
-                            calculateSelectionDimmensions model dimmensions
-                    in
-                    { model
-                        | dimmensions =
-                            Loaded
-                                { dimmensions
-                                    | topOffset =
-                                        clamp dimmensions.container.top
-                                            (dimmensions.container.top + dimmensions.container.height - selection.height)
-                                            (dimmensions.topOffset + y - previousY)
-                                    , leftOffset =
-                                        clamp dimmensions.container.left
-                                            (dimmensions.container.left + dimmensions.container.width - selection.width)
-                                            (dimmensions.leftOffset + x - previousX)
-                                }
-                    }
-                        |> UR.init
+                    if not model.isDragging then
+                        UR.init model
+
+                    else
+                        let
+                            selection =
+                                calculateSelectionDimmensions model dimmensions
+                        in
+                        { model
+                            | dimmensions =
+                                Loaded
+                                    { dimmensions
+                                        | topOffset =
+                                            clamp dimmensions.container.top
+                                                (dimmensions.container.top + dimmensions.container.height - selection.height)
+                                                (dimmensions.topOffset + y - previousY)
+                                        , leftOffset =
+                                            clamp dimmensions.container.left
+                                                (dimmensions.container.left + dimmensions.container.width - selection.width)
+                                                (dimmensions.leftOffset + x - previousX)
+                                    }
+                        }
+                            |> UR.init
 
         ChangedDimmensions percentageString ->
             case model.dimmensions of

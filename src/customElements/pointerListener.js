@@ -6,6 +6,12 @@ export default () => (
       this.previousX = null
       this.previousY = null
 
+      this.dragImageElement = document.createElement('span')
+      this.dragImageElement.classList.add('sr-only')
+      this.dragImageElement.classList.add('pointer-events-none')
+      this.dragImageElement.setAttribute('aria-hidden', 'true')
+      document.body.appendChild(this.dragImageElement)
+
       this.documentListeners = {
         'dragover': (e) => {
           if (this.previousX == null || this.previousY == null) {
@@ -36,13 +42,7 @@ export default () => (
         'dragstart': (e) => {
           this.dispatchEvent(new CustomEvent('element-dragstart'))
 
-          const dragImageElement = document.createElement('span')
-
-          dragImageElement.classList.add('sr-only')
-          dragImageElement.classList.add('pointer-events-none')
-          dragImageElement.setAttribute('aria-hidden', 'true')
-
-          e.dataTransfer.setDragImage(dragImageElement, 0, 0)
+          e.dataTransfer.setDragImage(this.dragImageElement, 0, 0)
         },
         'dragend': () => {
           this.dispatchEvent(new CustomEvent('element-dragend'))
@@ -60,6 +60,10 @@ export default () => (
     }
 
     disconnectedCallback () {
+      if (this.dragImageElement && document.body.contains(this.dragImageElement)) {
+        document.body.removeChild(this.dragImageElement)
+      }
+
       Object.keys(this.elementListeners).forEach((key) => {
         this.removeEventListener(key, this.elementListeners[key])
       })
