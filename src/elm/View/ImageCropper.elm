@@ -513,17 +513,6 @@ calculateSelectionDimmensions model dimmensions =
     }
 
 
-onPointerDown : msg -> Html.Attribute msg
-onPointerDown msg =
-    Html.Events.custom "pointerdown"
-        (Json.Decode.succeed
-            { message = msg
-            , stopPropagation = True
-            , preventDefault = True
-            }
-        )
-
-
 msgToString : Msg -> List String
 msgToString msg =
     case msg of
