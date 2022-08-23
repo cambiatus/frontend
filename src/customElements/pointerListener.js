@@ -14,13 +14,13 @@ export default () => (
 
       this.documentListeners = {
         'dragover': (e) => {
-          if (this.previousX == null || this.previousY == null) {
+          if (this.previousX === null || this.previousY === null) {
             this.previousX = e.clientX
             this.previousY = e.clientY
             return
           }
 
-          if (this.previousX == e.clientX && this.previousY == e.clientY) {
+          if (this.previousX === e.clientX && this.previousY === e.clientY) {
             return
           }
 
@@ -49,7 +49,6 @@ export default () => (
         }
       }
 
-
       Object.keys(this.documentListeners).forEach((key) => {
         document.addEventListener(key, this.documentListeners[key])
       })
@@ -71,6 +70,7 @@ export default () => (
       Object.keys(this.documentListeners).forEach((key) => {
         document.removeEventListener(key, this.documentListeners[key])
       })
+
       this.documentListeners = undefined
     }
   }
