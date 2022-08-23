@@ -229,7 +229,7 @@ update msg model =
                             ]
                     }
 
-        Dragged { x, y, previousX, previousY } ->
+        Dragged { x, y } ->
             case model.dimmensions of
                 Loading ->
                     UR.init model
@@ -247,14 +247,8 @@ update msg model =
                             | dimmensions =
                                 Loaded
                                     { dimmensions
-                                        | topOffset =
-                                            clamp dimmensions.container.top
-                                                (dimmensions.container.top + dimmensions.container.height - selection.height)
-                                                (dimmensions.topOffset + y - previousY)
-                                        , leftOffset =
-                                            clamp dimmensions.container.left
-                                                (dimmensions.container.left + dimmensions.container.width - selection.width)
-                                                (dimmensions.leftOffset + x - previousX)
+                                        | topOffset = y - selection.height / 2
+                                        , leftOffset = x - selection.width / 2
                                     }
                         }
                             |> UR.init
