@@ -662,9 +662,10 @@ view session model =
                 , creator : Profile.Minimal
                 , id : Shop.Id
             }
+            -> List Shop.Category.Model
             -> Html Msg
             -> Html Msg
-        viewContent sale formView =
+        viewContent sale categories formView =
             let
                 isGuest =
                     case session of
@@ -734,7 +735,22 @@ view session model =
                                     Icons.share "text-orange-300"
                                 ]
                             ]
-                        , Markdown.view [ class "mt-2 mb-6 text-gray-333" ] sale.description
+                        , Markdown.view [ class "mt-2 mb-4 text-gray-333" ] sale.description
+                        , div
+                            [ class "flex flex-wrap gap-2"
+                            , classList
+                                [ ( "mb-6", not (List.isEmpty categories) )
+                                , ( "mb-2", List.isEmpty categories )
+                                ]
+                            ]
+                            (categories
+                                |> List.map
+                                    (\category ->
+                                        span [ class "bg-gray-100 px-2 py-1 text-black font-bold text-sm uppercase" ]
+                                            [ text category.name
+                                            ]
+                                    )
+                            )
                         , if isCreator then
                             text ""
 
@@ -787,6 +803,7 @@ view session model =
                     case model_.productPreview of
                         RemoteData.Success sale ->
                             viewContent sale
+                                []
                                 (Form.viewWithoutSubmit []
                                     guest.shared.translators
                                     (\_ ->
@@ -880,6 +897,7 @@ view session model =
                                         div [ class "flex-grow flex flex-col" ]
                                             [ Page.viewHeader loggedIn sale.title
                                             , viewContent sale
+                                                sale.categories
                                                 (Form.view []
                                                     loggedIn.shared.translators
                                                     (\submitButton ->
