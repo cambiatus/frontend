@@ -173,6 +173,8 @@
           "notPassphraseError": "እባኮን , 12 ቃላትን ያስገቡ",
           "notLatinLettersError": "እባኮን , የላትን ፊደል ብቻ ይጠቀሙ",
           "atLeastThreeLettersError": "ሁሉም ቃላት ቢያንስ 3 ፊደል ያላቸዉ መሆን አለበት",
+          "invalid_word": "{{word}} ትክክለኛ ቃል አይደለም። የእርስዎን 12 ቃላት ይፈትሹ እና እንደገና ይሞክሩ።",
+          "invalid_words": "እነዚህ ቃላት ልክ አይደሉም፡ {{words}}። የእርስዎን 12 ቃላት ይፈትሹ እና እንደገና ይሞክሩ።",
           "paste": "ለጥፍ",
           "pasted": "ተለጠፈ"
         }

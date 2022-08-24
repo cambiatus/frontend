@@ -12,6 +12,7 @@ import pdfDefinition from './scripts/pdfDefinition'
 import './styles/main.css'
 import pdfFonts from './vfs_fonts'
 import { register as registerCustomElements } from './customElements/index'
+import { wordlists as bip39Wordlists } from 'bip39'
 
 // =========================================
 // Initial constants
@@ -1417,6 +1418,13 @@ async function handleJavascriptPort (arg) {
       document.querySelector('body').classList.remove(className)
 
       return {}
+    }
+    case 'getBip39': {
+      return {
+        english: bip39Wordlists.english,
+        portuguese: bip39Wordlists.portuguese,
+        spanish: bip39Wordlists.spanish
+      }
     }
     default: {
       return { error: `No treatment found for Elm port ${arg.data.name}` }

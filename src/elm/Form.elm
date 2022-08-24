@@ -5,7 +5,7 @@ module Form exposing
     , textField, richText, toggle, checkbox, radio, select, file, fileMultiple, datePicker, userPicker, userPickerMultiple, arbitrary, arbitraryWith, unsafeArbitrary
     , view, viewWithoutSubmit, Model, init, Msg, update, updateValues, getValue, hasFieldsLoading, msgToString
     , withDisabled
-    , isDisabled
+    , isDisabled, isShowingAllErrors
     , parse
     )
 
@@ -93,7 +93,7 @@ documentation if you're stuck.
 
 ### Checking attributes and state
 
-@docs isDisabled
+@docs isDisabled, isShowingAllErrors
 
 
 ## Validating
@@ -1030,6 +1030,18 @@ the form is disabled.
 isDisabled : Model values -> Bool
 isDisabled (Model model) =
     model.disabled
+
+
+{-| Checks if the form is showing all errors. This will be true after the user
+tried to submit the form. It can be useful to conditionally validate the form.
+-}
+isShowingAllErrors : Model values -> Bool
+isShowingAllErrors (Model model) =
+    let
+        (ErrorTracking errorTracking) =
+            model.errorTracking
+    in
+    errorTracking.showAllErrors
 
 
 {-| Determines which errors we should show. This is opaque so it can't be

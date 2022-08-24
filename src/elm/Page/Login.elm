@@ -31,9 +31,10 @@ import Form
 import Form.Text
 import Form.Validate
 import Graphql.Http
-import Html exposing (Html, a, button, div, img, p, span, strong, text)
-import Html.Attributes exposing (autocomplete, autofocus, class, classList, rows, src, type_)
-import Html.Events exposing (onClick)
+import Html exposing (Html, a, br, button, div, img, p, span, strong, text)
+import Html.Attributes exposing (autocomplete, autofocus, class, classList, rows, spellcheck, src, type_)
+import Html.Attributes.Aria exposing (ariaHidden)
+import Html.Events exposing (on, onClick)
 import Html.Keyed
 import Json.Decode as Decode
 import Json.Decode.Pipeline as DecodePipeline
@@ -43,6 +44,7 @@ import RemoteData exposing (RemoteData)
 import Route
 import Session.Guest as Guest
 import Session.Shared exposing (Shared)
+import Set exposing (Set)
 import Task
 import UpdateResult as UR
 import View.Feedback as Feedback
@@ -53,11 +55,24 @@ import View.Pin as Pin
 -- INIT
 
 
-init : Guest.Model -> ( Model, Cmd Msg )
-init _ =
-    ( EnteringPassphrase initPassphraseModel
-    , Cmd.none
-    )
+init : Guest.Model -> UpdateResult
+init guest =
+    let
+        requestBip39 =
+            case guest.shared.bip39 of
+                Session.Shared.Bip39Loaded _ ->
+                    identity
+
+                Session.Shared.Bip39NotLoaded ->
+                    UR.addPort
+                        { responseAddress = GotBip39 { english = Set.empty, portuguese = Set.empty, spanish = Set.empty }
+                        , responseData = Encode.null
+                        , data = Encode.object [ ( "name", Encode.string "getBip39" ) ]
+                        }
+    in
+    EnteringPassphrase initPassphraseModel
+        |> UR.init
+        |> requestBip39
 
 
 initPassphraseModel : PassphraseModel
@@ -108,8 +123,8 @@ type alias PassphraseInput =
     { passphrase : String }
 
 
-passphraseForm : Shared -> { hasPasted : Bool } -> Form.Form PassphraseMsg PassphraseInput Passphrase
-passphraseForm ({ translators } as shared) { hasPasted } =
+passphraseForm : Shared -> { hasPasted : Bool, hasTriedSubmitting : Bool } -> Form.Form PassphraseMsg PassphraseInput Passphrase
+passphraseForm ({ translators } as shared) { hasPasted, hasTriedSubmitting } =
     let
         { t } =
             translators
@@ -117,7 +132,7 @@ passphraseForm ({ translators } as shared) { hasPasted } =
         viewPasteButton =
             if shared.canReadClipboard then
                 button
-                    [ class "absolute bottom-4 left-1/2 -translate-x-1/2 button"
+                    [ class "absolute bottom-4 left-1/2 -translate-x-1/2 button z-10"
                     , classList
                         [ ( "button-secondary", not hasPasted )
                         , ( "button-primary", hasPasted )
@@ -134,6 +149,58 @@ passphraseForm ({ translators } as shared) { hasPasted } =
 
             else
                 text ""
+
+        viewHighlights currentText =
+            div
+                [ class "absolute inset-px pointer-events-none"
+                , ariaHidden True
+                ]
+                [ div
+                    [ Html.Attributes.id "highlights"
+                    , class "p-4 overflow-auto h-full scrollbar-hidden"
+                    ]
+                    (currentText
+                        |> String.split "\n"
+                        |> List.map
+                            (\line ->
+                                if String.isEmpty line then
+                                    br [] []
+
+                                else
+                                    p []
+                                        (line
+                                            |> String.split " "
+                                            |> List.map
+                                                (\word ->
+                                                    if String.isEmpty word then
+                                                        span [ class "inline-block" ] [ text " " ]
+
+                                                    else
+                                                        span
+                                                            [ case shared.bip39 of
+                                                                Session.Shared.Bip39NotLoaded ->
+                                                                    class "transition-colors"
+
+                                                                Session.Shared.Bip39Loaded bip39Wordlist ->
+                                                                    if
+                                                                        hasTriedSubmitting
+                                                                            && not (Set.member word bip39Wordlist.english)
+                                                                            && not (Set.member word bip39Wordlist.portuguese)
+                                                                            && not (Set.member word bip39Wordlist.spanish)
+                                                                    then
+                                                                        class "bg-red/60 text-white"
+
+                                                                    else
+                                                                        class "transition-colors"
+                                                            , class "pointer-events-none rounded-sm px-0.5 -mx-0.5"
+                                                            ]
+                                                            [ text word ]
+                                                )
+                                            |> List.intersperse (span [] [ text " " ])
+                                        )
+                            )
+                    )
+                ]
     in
     Form.succeed identity
         |> Form.withDecoration (viewIllustration "login_key.svg")
@@ -146,33 +213,45 @@ passphraseForm ({ translators } as shared) { hasPasted } =
                 ]
             )
         |> Form.with
-            (Form.Text.init
-                { label = t "auth.login.wordsMode.input.label"
-                , id = "passphrase-input"
-                }
-                |> Form.Text.withInputElement (Form.Text.TextareaInput { submitOnEnter = True })
-                |> Form.Text.withPlaceholder (t "auth.login.wordsMode.input.placeholder")
-                |> Form.Text.withExtraAttrs
-                    [ class "min-w-full block p-4"
-                    , classList [ ( "pb-18", shared.canReadClipboard ) ]
-                    , rows 2
-                    , autofocus True
-                    , autocomplete False
-                    ]
-                |> Form.Text.withCounter (Form.Text.CountWords 12)
-                |> Form.Text.withCounterAttrs [ class "!text-white" ]
-                |> Form.Text.withLabelAttrs [ class "text-white" ]
-                |> Form.Text.withErrorAttrs [ class "form-error-on-dark-bg" ]
-                |> Form.Text.withElements [ viewPasteButton ]
-                |> Form.textField
-                    { parser =
-                        Form.Validate.succeed
-                            >> passphraseValidator
-                            >> Form.Validate.validate translators
-                    , value = .passphrase
-                    , update = \passphrase input -> { input | passphrase = passphrase }
-                    , externalError = always Nothing
-                    }
+            (Form.introspect
+                (\values ->
+                    Form.Text.init
+                        { label = t "auth.login.wordsMode.input.label"
+                        , id = "passphrase-input"
+                        }
+                        |> Form.Text.withInputElement (Form.Text.TextareaInput { submitOnEnter = True })
+                        |> Form.Text.withPlaceholder (t "auth.login.wordsMode.input.placeholder")
+                        |> Form.Text.withExtraAttrs
+                            [ class "min-w-full block p-4 relative bg-transparent z-10 caret-black text-transparent"
+                            , classList [ ( "pb-18", shared.canReadClipboard ) ]
+                            , rows 2
+                            , autofocus True
+                            , autocomplete False
+                            , spellcheck False
+                            , on "scroll"
+                                (Decode.at [ "target", "scrollTop" ] Decode.int
+                                    |> Decode.map (\scrollTop -> ScrolledTextArea { scrollTop = scrollTop })
+                                )
+                            ]
+                        |> Form.Text.withInputContainerAttrs [ class "bg-white rounded" ]
+                        |> Form.Text.withCounter (Form.Text.CountWords 12)
+                        |> Form.Text.withCounterAttrs [ class "!text-white" ]
+                        |> Form.Text.withLabelAttrs [ class "text-white" ]
+                        |> Form.Text.withErrorAttrs [ class "form-error-on-dark-bg" ]
+                        |> Form.Text.withElements
+                            [ viewPasteButton
+                            , viewHighlights values.passphrase
+                            ]
+                        |> Form.textField
+                            { parser =
+                                Form.Validate.succeed
+                                    >> passphraseValidator shared.bip39
+                                    >> Form.Validate.validate translators
+                            , value = .passphrase
+                            , update = \passphrase input -> { input | passphrase = passphrase }
+                            , externalError = always Nothing
+                            }
+                )
             )
 
 
@@ -253,7 +332,7 @@ viewPassphrase ({ shared } as guest) model =
                 [ text (t "dashboard.continue") ]
             ]
         )
-        (passphraseForm shared { hasPasted = model.hasPasted })
+        (passphraseForm shared { hasPasted = model.hasPasted, hasTriedSubmitting = Form.isShowingAllErrors model.form })
         model.form
         { toMsg = GotPassphraseFormMsg
         , onSubmit = ClickedNextStep
@@ -323,12 +402,14 @@ type Msg
     = WentToPin Passphrase
     | GotPassphraseMsg PassphraseMsg
     | GotPinMsg PinMsg
+    | GotBip39 { english : Set String, portuguese : Set String, spanish : Set String }
 
 
 type PassphraseMsg
     = PassphraseIgnored
     | ClickedPaste
     | GotClipboardResponse ClipboardResponse
+    | ScrolledTextArea { scrollTop : Int }
     | GotPassphraseFormMsg (Form.Msg PassphraseInput)
     | ClickedNextStep Passphrase
 
@@ -400,6 +481,15 @@ update msg model guest =
                                     |> EnteringPassphrase
                                     |> UR.setModel ur
                     )
+
+        ( GotBip39 bip39, _ ) ->
+            let
+                oldShared =
+                    guest.shared
+            in
+            model
+                |> UR.init
+                |> UR.addExt (Guest.UpdatedShared { oldShared | bip39 = Session.Shared.Bip39Loaded bip39 })
 
         -- Impossible Msgs
         ( GotPassphraseMsg _, EnteringPin _ ) ->
@@ -505,6 +595,13 @@ updateWithPassphrase msg model { shared } =
                     (Feedback.Hidden
                         |> Guest.SetFeedback
                         |> PassphraseGuestExternal
+                    )
+
+        ScrolledTextArea { scrollTop } ->
+            UR.init model
+                |> UR.addCmd
+                    (Dom.setViewportOf "highlights" 0 (toFloat scrollTop)
+                        |> Task.attempt (\_ -> PassphraseIgnored)
                     )
 
         GotPassphraseFormMsg subMsg ->
@@ -697,8 +794,8 @@ updateWithPin msg model ({ shared } as guest) =
 -- UTILS
 
 
-passphraseValidator : Form.Validate.Validator String -> Form.Validate.Validator Passphrase
-passphraseValidator =
+passphraseValidator : Session.Shared.Bip39Status -> Form.Validate.Validator String -> Form.Validate.Validator Passphrase
+passphraseValidator maybeBip39Wordlist =
     let
         has12Words passphrase =
             if List.length (String.words passphrase) >= 12 then
@@ -710,6 +807,37 @@ passphraseValidator =
             else
                 Err (\translators_ -> translators_.t "auth.login.wordsMode.input.notPassphraseError")
 
+        isBip39 passphrase =
+            case maybeBip39Wordlist of
+                Session.Shared.Bip39NotLoaded ->
+                    Ok passphrase
+
+                Session.Shared.Bip39Loaded bip39Wordlist ->
+                    case
+                        String.words passphrase
+                            |> List.filter
+                                (\word ->
+                                    not (Set.member word bip39Wordlist.english)
+                                        && not (Set.member word bip39Wordlist.portuguese)
+                                        && not (Set.member word bip39Wordlist.spanish)
+                                )
+                    of
+                        firstWord :: [] ->
+                            Err (\translators_ -> translators_.tr "auth.login.wordsMode.input.invalid_word" [ ( "word", firstWord ) ])
+
+                        firstWord :: otherWords ->
+                            Err
+                                (\translators_ ->
+                                    translators_.tr "auth.login.wordsMode.input.invalid_words"
+                                        [ ( "words"
+                                          , String.join ", " (firstWord :: otherWords)
+                                          )
+                                        ]
+                                )
+
+                        [] ->
+                            Ok passphrase
+
         wordsHave3Letters passphrase =
             if
                 String.words passphrase
@@ -720,8 +848,10 @@ passphraseValidator =
             else
                 Err (\translators_ -> translators_.t "auth.login.wordsMode.input.atLeastThreeLettersError")
     in
-    Form.Validate.custom has12Words
+    Form.Validate.map String.toLower
+        >> Form.Validate.custom has12Words
         >> Form.Validate.custom wordsHave3Letters
+        >> Form.Validate.custom isBip39
         >> Form.Validate.map Passphrase
 
 
@@ -767,6 +897,28 @@ jsAddressToMsg addr val =
         "GotPinMsg" :: "PinIgnored" :: [] ->
             Just (GotPinMsg PinIgnored)
 
+        "GotBip39" :: [] ->
+            let
+                decodeLanguage key =
+                    Decode.field key (Decode.list Decode.string)
+                        |> Decode.map Set.fromList
+            in
+            Decode.decodeValue
+                (Decode.map3
+                    (\english portuguese spanish ->
+                        { english = english
+                        , portuguese = portuguese
+                        , spanish = spanish
+                        }
+                    )
+                    (decodeLanguage "english")
+                    (decodeLanguage "portuguese")
+                    (decodeLanguage "spanish")
+                )
+                val
+                |> Result.map GotBip39
+                |> Result.toMaybe
+
         _ ->
             Nothing
 
@@ -783,6 +935,9 @@ msgToString msg =
         GotPinMsg pinMsg ->
             "GotPinMsg" :: pinMsgToString pinMsg
 
+        GotBip39 _ ->
+            [ "GotBip39" ]
+
 
 passphraseMsgToString : PassphraseMsg -> List String
 passphraseMsgToString msg =
@@ -795,6 +950,9 @@ passphraseMsgToString msg =
 
         GotClipboardResponse _ ->
             [ "GotClipboardResponse" ]
+
+        ScrolledTextArea _ ->
+            [ "ScrolledTextArea" ]
 
         GotPassphraseFormMsg subMsg ->
             "GotPassphraseFormMsg" :: Form.msgToString subMsg
