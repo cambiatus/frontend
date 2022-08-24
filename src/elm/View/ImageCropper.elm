@@ -4,7 +4,7 @@ import Browser.Dom
 import Dict
 import File
 import Html exposing (Html, button, div, img, input, node)
-import Html.Attributes exposing (alt, attribute, class, classList, id, src, style, type_, value)
+import Html.Attributes exposing (alt, attribute, class, classList, draggable, id, src, style, type_, value)
 import Html.Events
 import Icons
 import Json.Decode
@@ -229,31 +229,29 @@ update msg model =
                             ]
                     }
 
-        Dragged { x, y, previousX, previousY } ->
+        Dragged { x, y } ->
             case model.dimmensions of
                 Loading ->
                     UR.init model
 
                 Loaded dimmensions ->
-                    let
-                        selection =
-                            calculateSelectionDimmensions model dimmensions
-                    in
-                    { model
-                        | dimmensions =
-                            Loaded
-                                { dimmensions
-                                    | topOffset =
-                                        clamp dimmensions.container.top
-                                            (dimmensions.container.top + dimmensions.container.height - selection.height)
-                                            (dimmensions.topOffset + y - previousY)
-                                    , leftOffset =
-                                        clamp dimmensions.container.left
-                                            (dimmensions.container.left + dimmensions.container.width - selection.width)
-                                            (dimmensions.leftOffset + x - previousX)
-                                }
-                    }
-                        |> UR.init
+                    if not model.isDragging then
+                        UR.init model
+
+                    else
+                        let
+                            selection =
+                                calculateSelectionDimmensions model dimmensions
+                        in
+                        { model
+                            | dimmensions =
+                                Loaded
+                                    { dimmensions
+                                        | topOffset = y - selection.height / 2
+                                        , leftOffset = x - selection.width / 2
+                                    }
+                        }
+                            |> UR.init
 
         ChangedDimmensions percentageString ->
             case model.dimmensions of
@@ -329,7 +327,7 @@ view model { imageUrl, cropperAttributes } =
                 [ src imageUrl
                 , alt ""
                 , id entireImageId
-                , class "opacity-20 pointer-events-none select-none max-h-full"
+                , class "opacity-20 pointer-events-none select-none max-w-full max-h-[35vh] lg:max-h-[60vh]"
                 , Html.Events.on "load" (Json.Decode.succeed ImageLoaded)
                 ]
                 []
@@ -377,14 +375,31 @@ viewCropper model dimmensions { imageUrl, cropperAttributes } =
         floatToPx offset =
             String.fromFloat offset ++ "px"
     in
-    [ div
+    [ View.Components.pointerListener
+        { document =
+            { onDragOver =
+                if model.isDragging then
+                    Just Dragged
+
+                else
+                    Nothing
+            }
+        , element =
+            { onDragStart =
+                Just
+                    { dragImage = Nothing
+                    , listener = StartedDragging
+                    }
+            , onDragEnd = Just StoppedDragging
+            }
+        }
         (class "absolute overflow-hidden border border-dashed border-gray-400 cursor-move z-20 select-none mx-auto"
             :: classList [ ( "transition-all origin-center", not model.isDragging && not model.isChangingDimmensions && not model.isReflowing ) ]
             :: style "top" (floatToPx topOffset)
             :: style "left" (floatToPx leftOffset)
             :: style "width" (floatToPx selection.width)
             :: style "height" (floatToPx selection.height)
-            :: onPointerDown StartedDragging
+            :: draggable "true"
             :: List.map (Html.Attributes.map Basics.never) cropperAttributes
         )
         [ img
@@ -401,14 +416,6 @@ viewCropper model dimmensions { imageUrl, cropperAttributes } =
             ]
             []
         ]
-    , if model.isDragging then
-        View.Components.pointerListener
-            { onPointerMove = Just Dragged
-            , onPointerUp = Just StoppedDragging
-            }
-
-      else
-        Html.text ""
     , node "image-cropper"
         [ if model.isRequestingCroppedImage then
             attribute "elm-generate-new-cropped-image" "true"
@@ -498,17 +505,6 @@ calculateSelectionDimmensions model dimmensions =
     { width = selectionWidth
     , height = selectionWidth / model.aspectRatio
     }
-
-
-onPointerDown : msg -> Html.Attribute msg
-onPointerDown msg =
-    Html.Events.custom "pointerdown"
-        (Json.Decode.succeed
-            { message = msg
-            , stopPropagation = True
-            , preventDefault = True
-            }
-        )
 
 
 msgToString : Msg -> List String
