@@ -339,6 +339,7 @@ type Page
     | CommunitySettingsContacts
     | Claim
     | Notification
+    | Settings
     | Shop
     | ShopEditor
     | ShopViewer
