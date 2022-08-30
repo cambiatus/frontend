@@ -2,6 +2,7 @@ module Auth exposing
     ( ExternalMsg(..)
     , Model
     , Msg
+    , changeLastKnownPin
     , init
     , jsAddressToMsg
     , maybePrivateKey
@@ -140,6 +141,11 @@ maybePrivateKey model =
 
         WithoutPrivateKey ->
             Nothing
+
+
+changeLastKnownPin : String -> Model -> Model
+changeLastKnownPin newPin model =
+    { model | pinModel = Pin.withLastKnownPin newPin model.pinModel }
 
 
 

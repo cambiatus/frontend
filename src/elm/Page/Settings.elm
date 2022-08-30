@@ -19,6 +19,8 @@ import Translation
 import UpdateResult as UR
 import View.Components
 import View.Feedback
+import View.Modal
+import View.Pin
 
 
 
@@ -26,20 +28,42 @@ import View.Feedback
 
 
 type alias Model =
-    { claimNotificationStatus : ToggleStatus
+    { pinInput : View.Pin.Model
+    , isNewPinModalVisible : Bool
+    , claimNotificationStatus : ToggleStatus
     , transferNotificationStatus : ToggleStatus
     , digestNotificationStatus : ToggleStatus
     }
 
 
 init : LoggedIn.Model -> ( Model, Cmd Msg )
-init _ =
-    ( { claimNotificationStatus = NotUpdating
+init loggedIn =
+    let
+        ( pinModel, pinCmd ) =
+            initPin loggedIn
+    in
+    ( { pinInput = pinModel
+      , isNewPinModalVisible = False
+      , claimNotificationStatus = NotUpdating
       , transferNotificationStatus = NotUpdating
       , digestNotificationStatus = NotUpdating
       }
-    , Cmd.none
+    , pinCmd
     )
+
+
+initPin : LoggedIn.Model -> ( View.Pin.Model, Cmd Msg )
+initPin loggedIn =
+    View.Pin.init
+        { label = "profile.newPin"
+        , id = "new-pin-input"
+        , withConfirmation = False
+        , submitLabel = "profile.pin.button"
+        , submittingLabel = "profile.pin.button"
+        , pinVisibility = loggedIn.shared.pinVisibility
+        , lastKnownPin = loggedIn.auth.pinModel.lastKnownPin
+        }
+        |> Tuple.mapSecond (Cmd.map GotPinMsg)
 
 
 type ToggleStatus
@@ -60,6 +84,11 @@ type NotificationPreference
 type Msg
     = NoOp
     | ClickedDownloadPdf
+    | ClickedChangePin
+    | ClosedNewPinModal
+    | GotPinMsg View.Pin.Msg
+    | SubmittedNewPin String
+    | ChangedToNewPin String
     | ToggledClaimNotification Bool
     | ToggledTransferNotification Bool
     | ToggledDigestNotification Bool
@@ -107,6 +136,79 @@ update msg model loggedIn =
                     []
                     model
                     { successMsg = msg, errorMsg = NoOp }
+
+        ClickedChangePin ->
+            let
+                ( newPin, pinCmd ) =
+                    initPin loggedIn
+            in
+            { model
+                | isNewPinModalVisible = True
+                , pinInput = newPin
+            }
+                |> UR.init
+                |> UR.addCmd pinCmd
+
+        ClosedNewPinModal ->
+            { model | isNewPinModalVisible = False }
+                |> UR.init
+
+        GotPinMsg subMsg ->
+            View.Pin.update loggedIn.shared subMsg model.pinInput
+                |> UR.fromChild (\newPinInput -> { model | pinInput = newPinInput })
+                    GotPinMsg
+                    (\ext ur ->
+                        case ext of
+                            View.Pin.SendFeedback feedback ->
+                                LoggedIn.addFeedback feedback ur
+
+                            View.Pin.SubmitPin pin ->
+                                let
+                                    ( newShared, submitCmd ) =
+                                        View.Pin.postSubmitAction ur.model.pinInput
+                                            pin
+                                            loggedIn.shared
+                                            SubmittedNewPin
+                                in
+                                ur
+                                    |> UR.mapModel (\m -> { m | isNewPinModalVisible = False })
+                                    |> UR.addCmd submitCmd
+                                    |> UR.addExt (LoggedIn.UpdatedLoggedIn { loggedIn | shared = newShared })
+                    )
+                    model
+
+        SubmittedNewPin newPin ->
+            let
+                addChangePinPort =
+                    case loggedIn.auth.pinModel.lastKnownPin of
+                        Nothing ->
+                            identity
+
+                        Just currentPin ->
+                            UR.addPort
+                                { responseAddress = msg
+                                , responseData = Json.Encode.string newPin
+                                , data =
+                                    Json.Encode.object
+                                        [ ( "name", Json.Encode.string "changePin" )
+                                        , ( "currentPin", Json.Encode.string currentPin )
+                                        , ( "newPin", Json.Encode.string newPin )
+                                        ]
+                                }
+            in
+            model
+                |> UR.init
+                |> addChangePinPort
+                |> LoggedIn.withPrivateKey loggedIn
+                    []
+                    model
+                    { successMsg = msg, errorMsg = NoOp }
+
+        ChangedToNewPin newPin ->
+            model
+                |> UR.init
+                |> UR.addExt (LoggedIn.ShowFeedback View.Feedback.Success (loggedIn.shared.translators.t "profile.pin.successMsg"))
+                |> UR.addExt (LoggedIn.ChangedPin newPin)
 
         ToggledClaimNotification newValue ->
             model
@@ -259,10 +361,28 @@ view loggedIn model =
         div [ class "container mx-auto px-4 mt-6 mb-20" ]
             ([ viewAccountSettings
              , viewNotificationPreferences loggedIn model
+             , [ viewNewPinModal loggedIn.shared.translators model ]
              ]
                 |> List.concat
             )
     }
+
+
+viewNewPinModal : Translation.Translators -> Model -> Html Msg
+viewNewPinModal translators model =
+    View.Modal.initWith
+        { closeMsg = ClosedNewPinModal
+        , isVisible = model.isNewPinModalVisible
+        }
+        |> View.Modal.withHeader (translators.t "profile.changePin")
+        |> View.Modal.withBody
+            [ p [ class "text-sm" ]
+                [ text <| translators.t "profile.changePinPrompt"
+                ]
+            , View.Pin.view translators model.pinInput
+                |> Html.map GotPinMsg
+            ]
+        |> View.Modal.toHtml
 
 
 viewAccountSettings : List (Html Msg)
@@ -285,9 +405,12 @@ viewAccountSettings =
         , viewCardItem
             -- TODO - I18N
             [ text "My security PIN"
-
-            -- TODO - I18N
-            , button [ class "button button-secondary" ] [ text "Change" ]
+            , button
+                [ class "button button-secondary"
+                , onClick ClickedChangePin
+                ]
+                -- TODO - I18N
+                [ text "Change" ]
             ]
         , viewCardItem
             [ span [ class "flex items-center" ]
@@ -434,6 +557,12 @@ jsAddressToMsg addr val =
                 |> Result.map (\_ -> NoOp)
                 |> Result.toMaybe
 
+        "SubmittedNewPin" :: _ ->
+            val
+                |> Json.Decode.decodeValue (Json.Decode.field "addressData" Json.Decode.string)
+                |> Result.map ChangedToNewPin
+                |> Result.toMaybe
+
         _ ->
             Nothing
 
@@ -446,6 +575,21 @@ msgToString msg =
 
         ClickedDownloadPdf ->
             [ "ClickedDownloadPdf" ]
+
+        ClickedChangePin ->
+            [ "ClickedChangePin" ]
+
+        ClosedNewPinModal ->
+            [ "ClosedNewPinModal" ]
+
+        GotPinMsg subMsg ->
+            "GotPinMsg" :: View.Pin.msgToString subMsg
+
+        SubmittedNewPin _ ->
+            [ "SubmittedNewPin" ]
+
+        ChangedToNewPin _ ->
+            [ "ChangedToNewPin" ]
 
         ToggledClaimNotification _ ->
             [ "ToggledClaimNotification" ]

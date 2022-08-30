@@ -730,15 +730,10 @@ async function handleJavascriptPort (arg) {
         privateKey: decryptedKey
       }
 
-      // `.encryptedPassphrase` property was added in https://github.com/cambiatus/frontend/pull/270 while redesigning
-      // the Profile page. For the users who were already logged-in before these changes were introduced,
-      // this property may not exist.
-      if (userStorage.encryptedPassphrase) {
-        data.passphrase = sjcl.decrypt(
-          currentPin,
-          userStorage.encryptedPassphrase
-        )
-      }
+      data.passphrase = sjcl.decrypt(
+        currentPin,
+        userStorage.encryptedPassphrase
+      )
 
       storePin(data, newPin)
 

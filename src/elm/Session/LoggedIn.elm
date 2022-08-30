@@ -1305,6 +1305,7 @@ type External msg
     | HideFeedback
     | ShowCodeOfConductModal
     | ExternalActionMsg Action.Msg
+    | ChangedPin String
 
 
 {-| Perform a GraphQL query. This function is preferred over `Api.Graphql.query`
@@ -1723,6 +1724,9 @@ mapExternal mapFn msg =
         ExternalActionMsg subMsg ->
             ExternalActionMsg subMsg
 
+        ChangedPin newPin ->
+            ChangedPin newPin
+
 
 type Resource
     = CommunityResource
@@ -1936,6 +1940,9 @@ updateExternal externalMsg ({ shared } as model) =
 
         ExternalActionMsg subMsg ->
             { defaultResult | cmd = Utils.spawnMessage (GotActionMsg subMsg) }
+
+        ChangedPin newPin ->
+            { defaultResult | model = { model | auth = Auth.changeLastKnownPin newPin model.auth } }
 
 
 type alias UpdateResult msg =
@@ -3348,3 +3355,6 @@ externalMsgToString externalMsg =
 
         ExternalActionMsg subMsg ->
             "ExternalActionMsg" :: Action.msgToString subMsg
+
+        ChangedPin _ ->
+            [ "ChangedPin" ]
