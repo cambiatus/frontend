@@ -3,7 +3,6 @@ module Page.Settings exposing (Model, Msg, init, jsAddressToMsg, msgToString, up
 import Cambiatus.Mutation
 import Cambiatus.Object
 import Cambiatus.Object.User
-import Eos.Account
 import Form.Toggle
 import Graphql.Http
 import Graphql.OptionalArgument as OptionalArgument
@@ -13,7 +12,7 @@ import Html.Attributes exposing (class)
 import Html.Events exposing (onClick)
 import Json.Decode
 import Json.Encode
-import Profile
+import Maybe.Extra
 import RemoteData exposing (RemoteData)
 import Route
 import Session.LoggedIn as LoggedIn
@@ -96,7 +95,7 @@ type Msg
     | ClickedDeleteKyc
     | ClosedDeleteKycModal
     | AcceptedDeleteKyc
-    | FinishedDeletingKyc (RemoteData (Graphql.Http.Error Profile.DeleteKycAndAddressResult) Profile.DeleteKycAndAddressResult)
+    | FinishedDeletingKyc (RemoteData (Graphql.Http.Error ()) ())
     | ToggledClaimNotification Bool
     | ToggledTransferNotification Bool
     | ToggledDigestNotification Bool
@@ -227,11 +226,34 @@ update msg model loggedIn =
                 |> UR.init
 
         AcceptedDeleteKyc ->
+            let
+                deleteKycMutation =
+                    Cambiatus.Mutation.deleteKyc Graphql.SelectionSet.empty
+
+                deleteAddressMutation =
+                    Cambiatus.Mutation.deleteAddress Graphql.SelectionSet.empty
+
+                mutation =
+                    case loggedIn.profile of
+                        RemoteData.Success profile ->
+                            if Maybe.Extra.isJust profile.address then
+                                Graphql.SelectionSet.map2 (\_ _ -> ())
+                                    deleteKycMutation
+                                    deleteAddressMutation
+
+                            else
+                                Graphql.SelectionSet.map (\_ -> ()) deleteKycMutation
+
+                        _ ->
+                            Graphql.SelectionSet.map2 (\_ _ -> ())
+                                deleteKycMutation
+                                deleteAddressMutation
+            in
             { model | isDeleteKycModalVisible = False }
                 |> UR.init
                 |> UR.addExt
                     (LoggedIn.mutation loggedIn
-                        (Profile.deleteKycAndAddressMutation loggedIn.accountName)
+                        mutation
                         FinishedDeletingKyc
                     )
                 |> UR.addExt (LoggedIn.UpdatedLoggedIn { loggedIn | profile = RemoteData.Loading })
