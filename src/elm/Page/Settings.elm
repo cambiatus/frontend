@@ -8,12 +8,14 @@ import Form.Toggle
 import Graphql.Http
 import Graphql.OptionalArgument as OptionalArgument
 import Graphql.SelectionSet
-import Html exposing (Html, button, div, h2, li, p, span, text, ul)
+import Html exposing (Html, a, button, div, h2, li, p, span, text, ul)
 import Html.Attributes exposing (class)
 import Html.Events exposing (onClick)
 import Json.Decode
 import Json.Encode
+import Profile
 import RemoteData exposing (RemoteData)
+import Route
 import Session.LoggedIn as LoggedIn
 import Translation
 import UpdateResult as UR
@@ -30,6 +32,7 @@ import View.Pin
 type alias Model =
     { pinInput : View.Pin.Model
     , isNewPinModalVisible : Bool
+    , isDeleteKycModalVisible : Bool
     , claimNotificationStatus : ToggleStatus
     , transferNotificationStatus : ToggleStatus
     , digestNotificationStatus : ToggleStatus
@@ -44,6 +47,7 @@ init loggedIn =
     in
     ( { pinInput = pinModel
       , isNewPinModalVisible = False
+      , isDeleteKycModalVisible = False
       , claimNotificationStatus = NotUpdating
       , transferNotificationStatus = NotUpdating
       , digestNotificationStatus = NotUpdating
@@ -89,6 +93,10 @@ type Msg
     | GotPinMsg View.Pin.Msg
     | SubmittedNewPin String
     | ChangedToNewPin String
+    | ClickedDeleteKyc
+    | ClosedDeleteKycModal
+    | AcceptedDeleteKyc
+    | FinishedDeletingKyc (RemoteData (Graphql.Http.Error Profile.DeleteKycAndAddressResult) Profile.DeleteKycAndAddressResult)
     | ToggledClaimNotification Bool
     | ToggledTransferNotification Bool
     | ToggledDigestNotification Bool
@@ -209,6 +217,46 @@ update msg model loggedIn =
                 |> UR.init
                 |> UR.addExt (LoggedIn.ShowFeedback View.Feedback.Success (loggedIn.shared.translators.t "profile.pin.successMsg"))
                 |> UR.addExt (LoggedIn.ChangedPin newPin)
+
+        ClickedDeleteKyc ->
+            { model | isDeleteKycModalVisible = True }
+                |> UR.init
+
+        ClosedDeleteKycModal ->
+            { model | isDeleteKycModalVisible = False }
+                |> UR.init
+
+        AcceptedDeleteKyc ->
+            { model | isDeleteKycModalVisible = False }
+                |> UR.init
+                |> UR.addExt
+                    (LoggedIn.mutation loggedIn
+                        (Profile.deleteKycAndAddressMutation loggedIn.accountName)
+                        FinishedDeletingKyc
+                    )
+                |> UR.addExt (LoggedIn.UpdatedLoggedIn { loggedIn | profile = RemoteData.Loading })
+
+        FinishedDeletingKyc (RemoteData.Success _) ->
+            model
+                |> UR.init
+                |> UR.addExt (LoggedIn.ReloadResource LoggedIn.ProfileResource)
+                |> UR.addExt (LoggedIn.ShowFeedback View.Feedback.Success (loggedIn.shared.translators.t "community.kyc.delete.success"))
+
+        FinishedDeletingKyc RemoteData.Loading ->
+            UR.init model
+
+        FinishedDeletingKyc RemoteData.NotAsked ->
+            UR.init model
+
+        FinishedDeletingKyc (RemoteData.Failure error) ->
+            model
+                |> UR.init
+                |> UR.logGraphqlError msg
+                    (Just loggedIn.accountName)
+                    "Got an error when trying to delete KYC and address"
+                    { moduleName = "Page.Settings", function = "update" }
+                    []
+                    error
 
         ToggledClaimNotification newValue ->
             model
@@ -359,9 +407,11 @@ view loggedIn model =
     { title = "TODO"
     , content =
         div [ class "container mx-auto px-4 mt-6 mb-20" ]
-            ([ viewAccountSettings
+            ([ viewAccountSettings loggedIn
              , viewNotificationPreferences loggedIn model
-             , [ viewNewPinModal loggedIn.shared.translators model ]
+             , [ viewNewPinModal loggedIn.shared.translators model
+               , viewDeleteKycModal loggedIn.shared.translators model
+               ]
              ]
                 |> List.concat
             )
@@ -385,8 +435,35 @@ viewNewPinModal translators model =
         |> View.Modal.toHtml
 
 
-viewAccountSettings : List (Html Msg)
-viewAccountSettings =
+viewDeleteKycModal : Translation.Translators -> Model -> Html Msg
+viewDeleteKycModal { t } model =
+    View.Modal.initWith
+        { closeMsg = ClosedDeleteKycModal
+        , isVisible = model.isDeleteKycModalVisible
+        }
+        |> View.Modal.withHeader (t "community.kyc.delete.confirmationHeader")
+        |> View.Modal.withBody [ text <| t "community.kyc.delete.confirmationBody" ]
+        |> View.Modal.withFooter
+            [ button
+                [ class "modal-cancel"
+                , onClick ClosedDeleteKycModal
+                ]
+                [ text <| t "community.kyc.delete.cancel" ]
+            , button
+                [ class "modal-accept"
+                , onClick AcceptedDeleteKyc
+                ]
+                [ text <| t "community.kyc.delete.confirm" ]
+            ]
+        |> View.Modal.toHtml
+
+
+viewAccountSettings : LoggedIn.Model -> List (Html Msg)
+viewAccountSettings loggedIn =
+    let
+        { t, tr } =
+            loggedIn.shared.translators
+    in
     [ h2 [ class "mb-4" ]
         -- TODO - I18N
         [ text "Account ", span [ class "font-bold" ] [ text "settings" ] ]
@@ -412,20 +489,51 @@ viewAccountSettings =
                 -- TODO - I18N
                 [ text "Change" ]
             ]
-        , viewCardItem
-            [ span [ class "flex items-center" ]
-                [ -- TODO - I18N
-                  text "KYC Data"
-                , View.Components.tooltip
-                    { message = "TODO"
-                    , iconClass = "text-orange-300"
-                    , containerClass = ""
-                    }
-                ]
+        , case loggedIn.profile of
+            RemoteData.Success profile ->
+                viewCardItem
+                    [ div []
+                        [ span [ class "flex items-center" ]
+                            [ text <| t "community.kyc.dataTitle"
+                            , View.Components.tooltip
+                                { message = t "community.kyc.info"
+                                , iconClass = "text-orange-300"
+                                , containerClass = ""
+                                }
+                            ]
+                        , case profile.kyc of
+                            Just _ ->
+                                span [ class "uppercase text-red mt-2 text-sm" ]
+                                    [ text <| t "community.kyc.delete.warning" ]
 
-            -- TODO - I18N
-            , button [ class "button button-secondary" ] [ text "Add" ]
-            ]
+                            Nothing ->
+                                text ""
+                        ]
+                    , case profile.kyc of
+                        Just _ ->
+                            button
+                                [ class "button button-danger"
+                                , onClick ClickedDeleteKyc
+                                ]
+                                [ text <| t "community.kyc.delete.label" ]
+
+                        Nothing ->
+                            a
+                                [ class "button button-secondary"
+                                , Route.href Route.ProfileAddKyc
+                                ]
+                                [ text <| t "menu.add" ]
+                    ]
+
+            RemoteData.Loading ->
+                div [ class "w-full max-w-xs h-6 rounded-md mt-4 mb-4 animate-skeleton-loading" ] []
+
+            RemoteData.NotAsked ->
+                div [ class "w-full max-w-xs h-6 rounded-md mt-4 mb-4 animate-skeleton-loading" ] []
+
+            RemoteData.Failure _ ->
+                -- If the profile fails to load, the entire screen shows an error
+                text ""
         ]
     ]
 
@@ -491,7 +599,8 @@ viewNotificationPreferences loggedIn model =
                 ]
 
         RemoteData.Failure err ->
-            Debug.todo ""
+            -- If the profile fails to load, the entire screen shows an error
+            text ""
     ]
 
 
@@ -590,6 +699,18 @@ msgToString msg =
 
         ChangedToNewPin _ ->
             [ "ChangedToNewPin" ]
+
+        ClickedDeleteKyc ->
+            [ "ClickedDeleteKyc" ]
+
+        ClosedDeleteKycModal ->
+            [ "ClosedDeleteKycModal" ]
+
+        AcceptedDeleteKyc ->
+            [ "AcceptedDeleteKyc" ]
+
+        FinishedDeletingKyc r ->
+            [ "FinishedDeletingKyc", UR.remoteDataToString r ]
 
         ToggledClaimNotification _ ->
             [ "ToggledClaimNotification" ]
