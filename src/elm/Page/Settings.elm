@@ -355,16 +355,16 @@ viewNotificationPreferences loggedIn model =
 
         RemoteData.Loading ->
             div [ class "bg-white rounded-md p-4 divide-y" ]
-                [ div [ class "w-20 animate-skeleton-loading" ] []
-                , div [ class "w-20 animate-skeleton-loading" ] []
-                , div [ class "w-20 animate-skeleton-loading" ] []
+                [ div [ class "w-full max-w-xs h-4 mb-4 animate-skeleton-loading" ] []
+                , div [ class "w-full max-w-sm h-4 my-4 animate-skeleton-loading" ] []
+                , div [ class "w-full max-w-27 h-4 mt-4 animate-skeleton-loading" ] []
                 ]
 
         RemoteData.NotAsked ->
             div [ class "bg-white rounded-md p-4 divide-y" ]
-                [ div [ class "w-20 animate-skeleton-loading" ] []
-                , div [ class "w-20 animate-skeleton-loading" ] []
-                , div [ class "w-20 animate-skeleton-loading" ] []
+                [ div [ class "w-full max-w-xs h-4 mb-4 animate-skeleton-loading" ] []
+                , div [ class "w-full max-w-sm h-4 my-4 animate-skeleton-loading" ] []
+                , div [ class "w-full max-w-27 h-4 mt-4 animate-skeleton-loading" ] []
                 ]
 
         RemoteData.Failure err ->
