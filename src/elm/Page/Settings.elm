@@ -19,7 +19,6 @@ import Translation
 import UpdateResult as UR
 import View.Components
 import View.Feedback
-import View.Modal
 
 
 
@@ -27,8 +26,7 @@ import View.Modal
 
 
 type alias Model =
-    { pdfDownloadStatus : PdfDownloadStatus
-    , claimNotificationStatus : ToggleStatus
+    { claimNotificationStatus : ToggleStatus
     , transferNotificationStatus : ToggleStatus
     , digestNotificationStatus : ToggleStatus
     }
@@ -36,8 +34,7 @@ type alias Model =
 
 init : LoggedIn.Model -> ( Model, Cmd Msg )
 init _ =
-    ( { pdfDownloadStatus = PdfOk
-      , claimNotificationStatus = NotUpdating
+    ( { claimNotificationStatus = NotUpdating
       , transferNotificationStatus = NotUpdating
       , digestNotificationStatus = NotUpdating
       }
@@ -56,11 +53,6 @@ type NotificationPreference
     | Digest
 
 
-type PdfDownloadStatus
-    = PdfOk
-    | EncryptedPassphraseNotPresent
-
-
 
 -- TYPES
 
@@ -68,8 +60,6 @@ type PdfDownloadStatus
 type Msg
     = NoOp
     | ClickedDownloadPdf
-    | FinishedDownloadingPdf PdfDownloadStatus
-    | ClosedPdfErrorModal
     | ToggledClaimNotification Bool
     | ToggledTransferNotification Bool
     | ToggledDigestNotification Bool
@@ -117,14 +107,6 @@ update msg model loggedIn =
                     []
                     model
                     { successMsg = msg, errorMsg = NoOp }
-
-        FinishedDownloadingPdf pdfDownloadStatus ->
-            { model | pdfDownloadStatus = pdfDownloadStatus }
-                |> UR.init
-
-        ClosedPdfErrorModal ->
-            { model | pdfDownloadStatus = PdfOk }
-                |> UR.init
 
         ToggledClaimNotification newValue ->
             model
@@ -277,45 +259,10 @@ view loggedIn model =
         div [ class "container mx-auto px-4 mt-6 mb-20" ]
             ([ viewAccountSettings
              , viewNotificationPreferences loggedIn model
-             , [ viewPdfErrorModal loggedIn model ]
              ]
                 |> List.concat
             )
     }
-
-
-viewPdfErrorModal : LoggedIn.Model -> Model -> Html Msg
-viewPdfErrorModal loggedIn model =
-    View.Modal.initWith
-        { closeMsg = ClosedPdfErrorModal
-        , isVisible =
-            case model.pdfDownloadStatus of
-                PdfOk ->
-                    False
-
-                EncryptedPassphraseNotPresent ->
-                    True
-        }
-        -- TODO - I18N
-        |> View.Modal.withHeader "Sorry, we can't find your 12 words"
-        |> View.Modal.withBody
-            [ p [ class "my-3" ]
-                -- TODO - I18N
-                [ text "Please, check if you have your 12 words saved during the registration process and use them for further signing in." ]
-            , p [ class "my-3" ]
-                -- TODO - I18N
-                [ text "If you completely lost your 12 words, please, contact us and provide this private key and we will help you to recover:"
-                ]
-            , case LoggedIn.maybePrivateKey loggedIn of
-                Nothing ->
-                    text ""
-
-                Just pk ->
-                    p [ class "font-bold my-3 text-lg text-center border p-4 rounded-sm bg-gray-100" ]
-                        [ text (Eos.Account.privateKeyToString pk)
-                        ]
-            ]
-        |> View.Modal.toHtml
 
 
 viewAccountSettings : List (Html Msg)
@@ -484,16 +431,7 @@ jsAddressToMsg addr val =
         "ClickedDownloadPdf" :: _ ->
             val
                 |> Json.Decode.decodeValue (Json.Decode.field "isDownloaded" Json.Decode.bool)
-                |> Result.map
-                    (\isDownloaded ->
-                        FinishedDownloadingPdf
-                            (if isDownloaded then
-                                PdfOk
-
-                             else
-                                EncryptedPassphraseNotPresent
-                            )
-                    )
+                |> Result.map (\_ -> NoOp)
                 |> Result.toMaybe
 
         _ ->
@@ -508,12 +446,6 @@ msgToString msg =
 
         ClickedDownloadPdf ->
             [ "ClickedDownloadPdf" ]
-
-        FinishedDownloadingPdf _ ->
-            [ "FinishedDownloadingPdf" ]
-
-        ClosedPdfErrorModal ->
-            [ "ClosedPdfErrorModal" ]
 
         ToggledClaimNotification _ ->
             [ "ToggledClaimNotification" ]
