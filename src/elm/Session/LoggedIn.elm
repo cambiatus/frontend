@@ -819,10 +819,11 @@ viewHeader page ({ shared } as model) profile_ =
                 , if model.showUserNav then
                     let
                         menuItemClass =
-                            "flex w-full px-3 py-2 justify-start items-center text-sm focus-ring rounded first:rounded-t-lg lg:first:rounded-t last:rounded-b-lg hover:bg-gray-200 focus-visible:bg-gray-200 transition-colors"
+                            "flex w-full py-2 pl-2 pr-8 justify-start items-center text-sm focus-ring rounded first:rounded-t-lg lg:first:rounded-t last:rounded-b-lg hover:bg-gray-200 focus-visible:bg-gray-200 transition-colors"
 
-                        menuIconClass =
-                            "mr-3 w-6 fill-current"
+                        menuIcon icon =
+                            div [ class "w-6 md:w-7 lg:w-8 flex items-center justify-center mr-2" ]
+                                [ icon "h-4 fill-current" ]
                     in
                     View.Components.focusTrap { initialFocusId = Nothing }
                         []
@@ -833,7 +834,7 @@ viewHeader page ({ shared } as model) profile_ =
                                 , Route.href (Route.Profile model.accountName)
                                 , onClick ClickedNavLink
                                 ]
-                                [ Icons.profile menuIconClass
+                                [ menuIcon Icons.profile
                                 , text_ "menu.profile"
                                 ]
                             , a
@@ -841,29 +842,32 @@ viewHeader page ({ shared } as model) profile_ =
                                 , Route.href Route.Settings
                                 , onClick ClickedNavLink
                                 ]
-                                [ Icons.settings menuIconClass
+                                [ menuIcon Icons.settings
                                 , text_ "settings.account.title"
                                 ]
                             , button
                                 [ class menuItemClass
                                 , onClick ToggleLanguageItems
                                 ]
-                                [ Icons.languages menuIconClass
+                                [ menuIcon Icons.languages
                                 , text_ "menu.languages"
                                 ]
                             , if model.showLanguageItems then
-                                div [ class "ml-2 mb-2" ]
+                                div [ class "ml-4 mb-2" ]
                                     (button
                                         [ class menuItemClass
-                                        , class "uppercase focus-ring rounded-sm"
+                                        , class "uppercase !rounded !text-xs"
                                         ]
-                                        [ Shared.langFlag shared.language
+                                        [ Shared.langFlag [ class "w-4 h-4 mr-2" ] shared.language
                                         , text (Translation.languageToLanguageCode shared.language)
                                         ]
                                         :: Shared.viewLanguageItems
-                                            [ class menuItemClass
-                                            , class "uppercase !rounded"
-                                            ]
+                                            { containerAttrs =
+                                                [ class menuItemClass
+                                                , class "uppercase !rounded !text-xs"
+                                                ]
+                                            , flagIconAttrs = [ class "w-4 h-4 mr-2" ]
+                                            }
                                             shared
                                             ClickedLanguage
                                     )
@@ -875,7 +879,7 @@ viewHeader page ({ shared } as model) profile_ =
                                 , class "text-red hover:bg-red/10 focus:bg-red/10"
                                 , onClick ClickedLogout
                                 ]
-                                [ Icons.close menuIconClass
+                                [ menuIcon Icons.close
                                 , text_ "menu.logout"
                                 ]
                             ]

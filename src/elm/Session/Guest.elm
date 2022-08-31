@@ -250,7 +250,7 @@ viewPageHeader model shared =
                 , onClick (ShowLanguageNav (not model.showLanguageNav))
                 , onMouseEnter (ShowLanguageNav True)
                 ]
-                [ Shared.langFlag shared.language
+                [ Shared.langFlag [ class "w-6 h-6 mr-2" ] shared.language
                 , if model.showLanguageNav then
                     div [ class "flex-grow whitespace-nowrap uppercase" ]
                         [ text (Translation.languageToLanguageCode model.shared.language) ]
@@ -276,7 +276,13 @@ viewPageHeader model shared =
                     [ ( "hidden", not model.showLanguageNav )
                     ]
                 ]
-                (Shared.viewLanguageItems [ class "flex w-full px-4 py-2 text-gray items-center text-sm uppercase focus-ring rounded-sm hover:text-indigo-500 focus-visible:text-indigo-500" ] shared ClickedLanguage)
+                (Shared.viewLanguageItems
+                    { containerAttrs = [ class "flex w-full px-4 py-2 text-gray items-center text-sm uppercase focus-ring rounded-sm hover:text-indigo-500 focus-visible:text-indigo-500" ]
+                    , flagIconAttrs = [ class "w-6 h-6 mr-2" ]
+                    }
+                    shared
+                    ClickedLanguage
+                )
             ]
         ]
 

@@ -209,22 +209,28 @@ loadTranslation result shared =
 -- VIEW
 
 
-viewLanguageItems : List (Html.Attribute msg) -> Shared -> (Translation.Language -> msg) -> List (Html msg)
-viewLanguageItems attributes shared toMsg =
+viewLanguageItems :
+    { containerAttrs : List (Html.Attribute msg)
+    , flagIconAttrs : List (Html.Attribute msg)
+    }
+    -> Shared
+    -> (Translation.Language -> msg)
+    -> List (Html msg)
+viewLanguageItems { containerAttrs, flagIconAttrs } shared toMsg =
     Translation.allLanguages
         |> List.filter (\l -> l /= shared.language)
         |> List.sortBy Translation.languageToLocale
         |> List.map
             (\lang ->
-                button (onClick (toMsg lang) :: attributes)
-                    [ langFlag lang
+                button (onClick (toMsg lang) :: containerAttrs)
+                    [ langFlag flagIconAttrs lang
                     , text (Translation.languageToLanguageCode lang)
                     ]
             )
 
 
-langFlag : Translation.Language -> Html msg
-langFlag language =
+langFlag : List (Html.Attribute msg) -> Translation.Language -> Html msg
+langFlag attrs language =
     let
         iconLink =
             case language of
@@ -244,9 +250,10 @@ langFlag language =
                     "/icons/flag-ethiopia.svg"
     in
     img
-        [ class "object-cover rounded-full w-6 h-6 mr-2"
-        , src iconLink
-        ]
+        (class "object-cover rounded-full"
+            :: src iconLink
+            :: attrs
+        )
         []
 
 
