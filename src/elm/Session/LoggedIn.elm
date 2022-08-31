@@ -8,7 +8,6 @@ module Session.LoggedIn exposing
     , Resource(..)
     , addFeedback
     , codeOfConductUrl
-    , executeFeedback
     , hasPermissions
     , init
     , initLogin
@@ -17,7 +16,6 @@ module Session.LoggedIn exposing
     , mapExternal
     , mapMsg
     , maybeInitWith
-    , maybePrivateKey
     , msgToString
     , mutation
     , profile
@@ -298,11 +296,6 @@ initModel shared lastKnownPin maybePrivateKey_ accountName authToken =
       }
     , Cmd.map GotAuthMsg authCmd
     )
-
-
-maybePrivateKey : Model -> Maybe Eos.PrivateKey
-maybePrivateKey model =
-    Auth.maybePrivateKey model.auth
 
 
 

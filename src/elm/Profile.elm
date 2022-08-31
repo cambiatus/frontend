@@ -2,13 +2,11 @@ module Profile exposing
     ( Basic
     , CommunityInfo
     , Contribution
-    , DeleteKycAndAddressResult
     , Minimal
     , Model
     , ProfileForm
     , contributionCountQuery
     , contributionsQuery
-    , deleteKycAndAddressMutation
     , minimalSelectionSet
     , mutation
     , profileToForm
@@ -29,7 +27,6 @@ import Cambiatus.Mutation
 import Cambiatus.Object
 import Cambiatus.Object.Community as Community
 import Cambiatus.Object.Contribution
-import Cambiatus.Object.DeleteStatus
 import Cambiatus.Object.Role
 import Cambiatus.Object.Subdomain as Subdomain
 import Cambiatus.Object.User as User
@@ -322,53 +319,6 @@ upsertKycMutation data =
             }
         }
         Kyc.selectionSet
-
-
-
--- DELETE KYC/ADDRESS
-
-
-type alias DeleteKycResult =
-    { result : String
-    , status : String
-    }
-
-
-deleteKycMutation : Eos.Name -> SelectionSet (Maybe DeleteKycResult) RootMutation
-deleteKycMutation _ =
-    Cambiatus.Mutation.deleteKyc
-        (SelectionSet.succeed DeleteKycResult
-            |> with Cambiatus.Object.DeleteStatus.status
-            |> with Cambiatus.Object.DeleteStatus.reason
-        )
-
-
-type alias DeleteAddressResult =
-    { result : String
-    , status : String
-    }
-
-
-deleteAddressMutation : Eos.Name -> SelectionSet (Maybe DeleteAddressResult) RootMutation
-deleteAddressMutation _ =
-    Cambiatus.Mutation.deleteAddress
-        (SelectionSet.succeed DeleteAddressResult
-            |> with Cambiatus.Object.DeleteStatus.status
-            |> with Cambiatus.Object.DeleteStatus.reason
-        )
-
-
-type alias DeleteKycAndAddressResult =
-    { deleteKyc : Maybe DeleteKycResult
-    , deleteAddress : Maybe DeleteAddressResult
-    }
-
-
-deleteKycAndAddressMutation : Eos.Name -> SelectionSet DeleteKycAndAddressResult RootMutation
-deleteKycAndAddressMutation accountName =
-    SelectionSet.map2 DeleteKycAndAddressResult
-        (deleteKycMutation accountName)
-        (deleteAddressMutation accountName)
 
 
 

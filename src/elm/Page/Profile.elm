@@ -2,7 +2,6 @@ module Page.Profile exposing
     ( Model
     , Msg
     , init
-    , jsAddressToMsg
     , msgToString
     , receiveBroadcast
     , update
@@ -14,7 +13,6 @@ import Api.Relay
 import Avatar
 import Cambiatus.Enum.ContactType as ContactType
 import Cambiatus.Enum.CurrencyType
-import Cambiatus.Mutation
 import Cambiatus.Object
 import Cambiatus.Object.Claim
 import Cambiatus.Object.Network
@@ -26,23 +24,18 @@ import Community
 import Eos
 import Eos.Account as Eos
 import Eos.Explorer
-import Form.Toggle
 import Graphql.Http
 import Graphql.Operation exposing (RootQuery)
 import Graphql.OptionalArgument as OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet)
-import Html exposing (Html, a, br, button, div, li, p, span, text, ul)
+import Html exposing (Html, a, br, div, li, p, span, text, ul)
 import Html.Attributes exposing (class, classList, href, id, tabindex, target)
-import Html.Events exposing (onClick)
 import Http
 import Icons
-import Json.Decode as Decode exposing (Value)
-import Json.Encode as Encode
 import Kyc
 import List.Extra as List
 import Log
 import Markdown
-import Maybe.Extra
 import Page exposing (Session(..))
 import Profile
 import Profile.Address
@@ -57,9 +50,6 @@ import Transfer exposing (QueryTransfers)
 import UpdateResult as UR
 import Utils
 import View.Components
-import View.Feedback as Feedback
-import View.Modal as Modal
-import View.Pin as Pin
 
 
 
@@ -73,11 +63,6 @@ type alias Model =
     , graphqlInfo : RemoteData (QueryError (Graphql.Http.Error (Maybe GraphqlInfo))) GraphqlInfo
     , contributionInfo : Maybe ContributionInfo
     , transfersStatus : TransfersStatus
-    , isDeleteKycModalVisible : Bool
-    , downloadingPdfStatus : DownloadStatus
-    , isNewPinModalVisible : Bool
-    , pinInputModel : Pin.Model
-    , currentPin : Maybe String
     }
 
 
@@ -104,17 +89,6 @@ init loggedIn profileName =
                         CompletedLoadProfile
                     )
 
-        ( pinModel, pinCmd ) =
-            Pin.init
-                { label = "profile.newPin"
-                , id = "new-pin-input"
-                , withConfirmation = False
-                , submitLabel = "profile.pin.button"
-                , submittingLabel = "profile.pin.button"
-                , pinVisibility = loggedIn.shared.pinVisibility
-                , lastKnownPin = loggedIn.auth.pinModel.lastKnownPin
-                }
-
         model =
             { profileName = profileName
             , profile = RemoteData.Loading
@@ -122,17 +96,11 @@ init loggedIn profileName =
             , graphqlInfo = RemoteData.Loading
             , contributionInfo = Nothing
             , transfersStatus = Loading []
-            , isDeleteKycModalVisible = False
-            , downloadingPdfStatus = NotDownloading
-            , isNewPinModalVisible = False
-            , pinInputModel = pinModel
-            , currentPin = Nothing
             }
     in
     model
         |> UR.init
         |> fetchProfile
-        |> UR.addCmd (Cmd.map GotPinMsg pinCmd)
         |> UR.addCmd (LoggedIn.maybeInitWith CompletedLoadCommunity .selectedCommunity loggedIn)
         |> UR.addExt (LoggedIn.RequestedCommunityField Community.ContributionsField)
 
@@ -189,35 +157,13 @@ type alias Network =
     }
 
 
-type DownloadStatus
-    = Downloading
-    | DownloadWithError
-    | NotDownloading
-
-
 type Msg
-    = Ignored
-    | CompletedLoadProfile (RemoteData (Graphql.Http.Error (Maybe Profile.Model)) (Maybe Profile.Model))
+    = CompletedLoadProfile (RemoteData (Graphql.Http.Error (Maybe Profile.Model)) (Maybe Profile.Model))
     | CompletedLoadCommunity Community.Model
     | CompletedLoadContributions (List Community.Contribution)
     | CompletedLoadBalance (Result (QueryError Http.Error) Community.Balance)
     | CompletedLoadGraphqlInfo (RemoteData (Graphql.Http.Error (Maybe GraphqlInfo)) (Maybe GraphqlInfo))
     | CompletedLoadUserTransfers (RemoteData (Graphql.Http.Error (Maybe QueryTransfers)) (Maybe QueryTransfers))
-    | ToggledClaimNotification Bool
-    | ToggledTransferNotification Bool
-    | ToggledDigest Bool
-    | CompletedSettingNotificationPreferences (Maybe NotificationPreferences) (RemoteData (Graphql.Http.Error (Maybe NotificationPreferences)) (Maybe NotificationPreferences))
-    | ToggleDeleteKycModal
-    | DeleteKycAccepted
-    | DeleteKycAndAddressCompleted (RemoteData (Graphql.Http.Error DeleteKycAndAddressResult) DeleteKycAndAddressResult)
-    | ClickedDownloadPdf
-    | DownloadPdfProcessed Bool
-    | ClickedClosePdfDownloadError
-    | ClickedChangePin
-    | ClickedCloseNewPinModal
-    | GotPinMsg Pin.Msg
-    | SubmittedNewPin String
-    | PinChanged String
     | GotTransferCardProfileSummaryMsg Int Profile.Summary.Msg
     | ClickedTransferCard Int
     | RequestedMoreTransfers
@@ -234,9 +180,6 @@ type alias UpdateResult =
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
 update msg model loggedIn =
     case msg of
-        Ignored ->
-            UR.init model
-
         CompletedLoadProfile (RemoteData.Success (Just profile)) ->
             if profile.account == model.profileName then
                 { model | profile = RemoteData.Success profile }
@@ -444,213 +387,6 @@ update msg model loggedIn =
         CompletedLoadUserTransfers RemoteData.NotAsked ->
             UR.init model
 
-        ToggledClaimNotification newValue ->
-            actOnNotificationPreferenceToggle loggedIn
-                model
-                (\profile -> { profile | claimNotification = newValue })
-                (\optionals -> { optionals | claimNotification = OptionalArgument.Present newValue })
-
-        ToggledTransferNotification newValue ->
-            actOnNotificationPreferenceToggle loggedIn
-                model
-                (\profile -> { profile | transferNotification = newValue })
-                (\optionals -> { optionals | transferNotification = OptionalArgument.Present newValue })
-
-        ToggledDigest newValue ->
-            actOnNotificationPreferenceToggle loggedIn
-                model
-                (\profile -> { profile | digest = newValue })
-                (\optionals -> { optionals | digest = OptionalArgument.Present newValue })
-
-        CompletedSettingNotificationPreferences maybeOriginalPreferences (RemoteData.Failure err) ->
-            let
-                revertPreferences profileRemoteData =
-                    case maybeOriginalPreferences of
-                        Nothing ->
-                            profileRemoteData
-
-                        Just preferences ->
-                            case profileRemoteData of
-                                RemoteData.Success profile ->
-                                    { profile
-                                        | claimNotification = preferences.claim
-                                        , transferNotification = preferences.transfer
-                                        , digest = preferences.digest
-                                    }
-                                        |> RemoteData.Success
-
-                                _ ->
-                                    profileRemoteData
-            in
-            { model | profile = revertPreferences model.profile }
-                |> UR.init
-                |> UR.addExt (LoggedIn.UpdatedLoggedIn { loggedIn | profile = revertPreferences loggedIn.profile })
-                |> UR.addExt
-                    (LoggedIn.ShowFeedback Feedback.Failure
-                        (loggedIn.shared.translators.t "profile.preferences.error")
-                    )
-                |> UR.logGraphqlError msg
-                    (Just loggedIn.accountName)
-                    "Got an error when setting notification preferences"
-                    { moduleName = "Page.Profile", function = "update" }
-                    []
-                    err
-
-        CompletedSettingNotificationPreferences _ _ ->
-            -- We already do an optimistic update on the UI, so no need to do anything else
-            UR.init model
-
-        ToggleDeleteKycModal ->
-            { model | isDeleteKycModalVisible = not model.isDeleteKycModalVisible }
-                |> UR.init
-
-        DeleteKycAccepted ->
-            { model | isDeleteKycModalVisible = False }
-                |> UR.init
-                |> UR.addExt
-                    (LoggedIn.mutation loggedIn
-                        (Profile.deleteKycAndAddressMutation loggedIn.accountName)
-                        DeleteKycAndAddressCompleted
-                    )
-                |> UR.addExt (LoggedIn.UpdatedLoggedIn { loggedIn | profile = RemoteData.Loading })
-
-        DeleteKycAndAddressCompleted (RemoteData.Success _) ->
-            model
-                |> UR.init
-                |> UR.addExt (LoggedIn.ReloadResource LoggedIn.ProfileResource)
-                |> UR.addExt (LoggedIn.ShowFeedback Feedback.Success (loggedIn.shared.translators.t "community.kyc.delete.success"))
-
-        DeleteKycAndAddressCompleted (RemoteData.Failure error) ->
-            model
-                |> UR.init
-                |> UR.logGraphqlError msg
-                    (Just loggedIn.accountName)
-                    "Got an error when trying to delete KYC and address"
-                    { moduleName = "Page.Profile", function = "update" }
-                    []
-                    error
-                |> UR.addExt (LoggedIn.ReloadResource LoggedIn.ProfileResource)
-
-        DeleteKycAndAddressCompleted RemoteData.Loading ->
-            model
-                |> UR.init
-
-        DeleteKycAndAddressCompleted RemoteData.NotAsked ->
-            model
-                |> UR.init
-
-        ClickedDownloadPdf ->
-            let
-                currentPin =
-                    model.currentPin
-                        |> Maybe.Extra.orElse loggedIn.auth.pinModel.lastKnownPin
-                        |> Maybe.withDefault ""
-            in
-            { model | downloadingPdfStatus = Downloading }
-                |> UR.init
-                |> UR.addPort
-                    { responseAddress = DownloadPdfProcessed False
-                    , responseData = Encode.null
-                    , data =
-                        Encode.object
-                            [ ( "name", Encode.string "downloadAuthPdfFromProfile" )
-                            , ( "pin", Encode.string currentPin )
-                            ]
-                    }
-                |> LoggedIn.withPrivateKey loggedIn
-                    []
-                    model
-                    { successMsg = msg, errorMsg = Ignored }
-
-        DownloadPdfProcessed downloadStatus ->
-            { model
-                | downloadingPdfStatus =
-                    if downloadStatus then
-                        NotDownloading
-
-                    else
-                        DownloadWithError
-            }
-                |> UR.init
-
-        ClickedClosePdfDownloadError ->
-            { model | downloadingPdfStatus = NotDownloading }
-                |> UR.init
-
-        ClickedChangePin ->
-            let
-                oldPinInputModel =
-                    model.pinInputModel
-            in
-            { model
-                | isNewPinModalVisible = True
-                , pinInputModel = { oldPinInputModel | isPinVisible = loggedIn.auth.pinModel.isPinVisible }
-            }
-                |> UR.init
-                |> LoggedIn.withPrivateKey loggedIn
-                    []
-                    model
-                    { successMsg = msg, errorMsg = Ignored }
-
-        ClickedCloseNewPinModal ->
-            { model | isNewPinModalVisible = False }
-                |> UR.init
-
-        GotPinMsg subMsg ->
-            Pin.update loggedIn.shared subMsg model.pinInputModel
-                |> UR.fromChild (\pinModel -> { model | pinInputModel = pinModel })
-                    GotPinMsg
-                    (\ext ur ->
-                        case ext of
-                            Pin.SendFeedback feedback ->
-                                UR.addExt (LoggedIn.executeFeedback feedback) ur
-
-                            Pin.SubmitPin pin ->
-                                let
-                                    ( newShared, submitCmd ) =
-                                        Pin.postSubmitAction ur.model.pinInputModel
-                                            pin
-                                            loggedIn.shared
-                                            SubmittedNewPin
-                                in
-                                ur
-                                    |> UR.addCmd submitCmd
-                                    |> UR.addExt (LoggedIn.UpdatedLoggedIn { loggedIn | shared = newShared })
-                    )
-                    model
-
-        SubmittedNewPin newPin ->
-            let
-                currentPin =
-                    model.currentPin
-                        |> Maybe.Extra.orElse loggedIn.auth.pinModel.lastKnownPin
-                        |> Maybe.withDefault ""
-            in
-            model
-                |> UR.init
-                |> UR.addPort
-                    { responseAddress = PinChanged newPin
-                    , responseData = Encode.null
-                    , data =
-                        Encode.object
-                            [ ( "name", Encode.string "changePin" )
-                            , ( "currentPin", Encode.string currentPin )
-                            , ( "newPin", Encode.string newPin )
-                            ]
-                    }
-                |> LoggedIn.withPrivateKey loggedIn
-                    []
-                    model
-                    { successMsg = msg, errorMsg = Ignored }
-
-        PinChanged newPin ->
-            { model
-                | isNewPinModalVisible = False
-                , currentPin = Just newPin
-            }
-                |> UR.init
-                |> UR.addExt (LoggedIn.ShowFeedback Feedback.Success (loggedIn.shared.translators.t "profile.pin.successMsg"))
-
         GotTransferCardProfileSummaryMsg transferId subMsg ->
             let
                 updateTransfers transfers =
@@ -692,56 +428,6 @@ update msg model loggedIn =
                 _ ->
                     model
                         |> UR.init
-
-
-actOnNotificationPreferenceToggle :
-    LoggedIn.Model
-    -> Model
-    -> (Profile.Model -> Profile.Model)
-    -> (Cambiatus.Mutation.PreferenceOptionalArguments -> Cambiatus.Mutation.PreferenceOptionalArguments)
-    -> UpdateResult
-actOnNotificationPreferenceToggle loggedIn model updateProfile fillMutationArgs =
-    let
-        updatedProfile profileRemoteData =
-            case profileRemoteData of
-                RemoteData.Success profile ->
-                    RemoteData.Success (updateProfile profile)
-
-                _ ->
-                    profileRemoteData
-
-        originalPreferences =
-            let
-                profile =
-                    case loggedIn.profile of
-                        RemoteData.Success profile_ ->
-                            RemoteData.Success profile_
-
-                        _ ->
-                            model.profile
-            in
-            case profile of
-                RemoteData.Success validProfile ->
-                    Just
-                        { claim = validProfile.claimNotification
-                        , transfer = validProfile.transferNotification
-                        , digest = validProfile.digest
-                        }
-
-                _ ->
-                    Nothing
-    in
-    { model | profile = updatedProfile model.profile }
-        |> UR.init
-        |> UR.addExt
-            (LoggedIn.mutation loggedIn
-                (Cambiatus.Mutation.preference
-                    fillMutationArgs
-                    notificationsSelectionSet
-                )
-                (CompletedSettingNotificationPreferences originalPreferences)
-            )
-        |> UR.addExt (LoggedIn.UpdatedLoggedIn { loggedIn | profile = updatedProfile loggedIn.profile })
 
 
 
@@ -823,80 +509,7 @@ view_ loggedIn model profile balance graphqlInfo =
             , viewDetails loggedIn profile balance graphqlInfo model
             ]
         , div [ class "z-0 absolute w-full h-full md:w-1/2 md:bg-white" ] []
-        , viewNewPinModal loggedIn.shared model
-        , viewDownloadPdfErrorModal loggedIn model
-        , viewDeleteKycModal loggedIn.shared.translators model
         ]
-
-
-viewNewPinModal : Shared -> Model -> Html Msg
-viewNewPinModal shared model =
-    Modal.initWith
-        { closeMsg = ClickedCloseNewPinModal
-        , isVisible = model.isNewPinModalVisible
-        }
-        |> Modal.withHeader (shared.translators.t "profile.changePin")
-        |> Modal.withBody
-            [ p [ class "text-sm" ]
-                [ text (shared.translators.t "profile.changePinPrompt") ]
-            , Pin.view shared.translators model.pinInputModel
-                |> Html.map GotPinMsg
-            ]
-        |> Modal.toHtml
-
-
-viewDownloadPdfErrorModal : LoggedIn.Model -> Model -> Html Msg
-viewDownloadPdfErrorModal loggedIn model =
-    Modal.initWith
-        { closeMsg = ClickedClosePdfDownloadError
-        , isVisible =
-            case model.downloadingPdfStatus of
-                DownloadWithError ->
-                    True
-
-                _ ->
-                    False
-        }
-        |> Modal.withHeader "Sorry, we can't find your 12 words"
-        |> Modal.withBody
-            [ p [ class "my-3" ]
-                [ text "Please, check if you have your 12 words saved during the registration process and use them for further signing in." ]
-            , p [ class "my-3" ]
-                [ text "If you completely lost your 12 words, please, contact us and provide this private key and we will help you to recover:"
-                ]
-            , case LoggedIn.maybePrivateKey loggedIn of
-                Nothing ->
-                    text ""
-
-                Just pk ->
-                    p [ class "font-bold my-3 text-lg text-center border p-4 rounded-sm bg-gray-100" ]
-                        [ text (Eos.privateKeyToString pk)
-                        ]
-            ]
-        |> Modal.toHtml
-
-
-viewDeleteKycModal : Translators -> Model -> Html Msg
-viewDeleteKycModal { t } model =
-    Modal.initWith
-        { closeMsg = ToggleDeleteKycModal
-        , isVisible = model.isDeleteKycModalVisible
-        }
-        |> Modal.withHeader (t "community.kyc.delete.confirmationHeader")
-        |> Modal.withBody [ text (t "community.kyc.delete.confirmationBody") ]
-        |> Modal.withFooter
-            [ button
-                [ class "modal-cancel"
-                , onClick ToggleDeleteKycModal
-                ]
-                [ text (t "community.kyc.delete.cancel") ]
-            , button
-                [ class "modal-accept"
-                , onClick DeleteKycAccepted
-                ]
-                [ text (t "community.kyc.delete.confirm") ]
-            ]
-        |> Modal.toHtml
 
 
 viewProfile : LoggedIn.Model -> Profile.Model -> Html msg
@@ -1069,11 +682,6 @@ viewDetails loggedIn profile balance graphqlInfo model =
                         ]
                     ]
                 ]
-            , if isProfileOwner then
-                viewSettings loggedIn profile
-
-              else
-                text ""
             , if isProfileOwner || isCommunityAdmin then
                 viewHistory loggedIn.shared balance graphqlInfo model.contributionInfo
 
@@ -1103,28 +711,6 @@ viewDetailsItem label content verticalAlign =
             , span [ class "text-indigo-500 font-semibold text-sm text-right" ]
                 [ content ]
             ]
-        ]
-
-
-viewDetailsToggle :
-    Translators
-    -> { label : String, id : String, onToggle : Bool -> Msg, value : Bool }
-    -> Html Msg
-viewDetailsToggle translators { label, id, onToggle, value } =
-    li [ class "py-4" ]
-        [ Form.Toggle.init { label = text label, id = id }
-            |> Form.Toggle.withContainerAttrs [ class "text-sm" ]
-            |> (\options ->
-                    Form.Toggle.view options
-                        { onToggle = onToggle
-                        , onBlur = Ignored
-                        , value = value
-                        , error = text ""
-                        , hasError = False
-                        , isRequired = False
-                        , translators = translators
-                        }
-               )
         ]
 
 
@@ -1178,101 +764,6 @@ viewKycInfo kyc =
     viewDetailsItem (text documentLabel)
         (text kyc.document)
         Center
-
-
-viewSettings : LoggedIn.Model -> Profile.Model -> Html Msg
-viewSettings loggedIn profile =
-    let
-        text_ =
-            text << loggedIn.shared.translators.t
-
-        kycLabel =
-            span [ class "flex items-center mb-2" ]
-                [ text_ "community.kyc.dataTitle"
-                , span [ class "icon-tooltip ml-1" ]
-                    [ Icons.question "inline-block text-orange-300"
-                    , p [ class "icon-tooltip-content" ]
-                        [ text_ "community.kyc.info" ]
-                    ]
-                ]
-
-        kycButton =
-            case profile.kyc of
-                Just _ ->
-                    button
-                        [ class "button-secondary uppercase button-sm text-red border-red"
-                        , onClick ToggleDeleteKycModal
-                        ]
-                        [ text_ "community.kyc.delete.label" ]
-
-                Nothing ->
-                    a
-                        [ class "button-secondary uppercase button-sm"
-                        , Route.href Route.ProfileAddKyc
-                        ]
-                        [ text_ "menu.add" ]
-    in
-    div [ class "bg-white w-full md:bg-gray-100" ]
-        [ div [ class "px-4" ]
-            [ div [ class "container mx-auto" ]
-                [ div [ class "bg-white mb-6 w-full md:bg-gray-100" ]
-                    [ ul [ class "w-full divide-y divide-gray-500" ]
-                        [ viewDetailsItem (text_ "profile.12words.title")
-                            (button
-                                [ class "button-secondary uppercase button-sm"
-                                , onClick ClickedDownloadPdf
-                                ]
-                                [ text_ "profile.12words.button" ]
-                            )
-                            Center
-                        , viewDetailsItem (text_ "profile.pin.title")
-                            (button
-                                [ class "button-secondary uppercase button-sm"
-                                , onClick ClickedChangePin
-                                ]
-                                [ text_ "profile.pin.button"
-                                ]
-                            )
-                            Center
-                        , case profile.kyc of
-                            Nothing ->
-                                viewDetailsItem kycLabel
-                                    kycButton
-                                    Center
-
-                            Just _ ->
-                                viewDetailsItem
-                                    (div []
-                                        [ kycLabel
-                                        , span [ class "uppercase text-red pt-2 text-sm" ]
-                                            [ text_ "community.kyc.delete.warning" ]
-                                        ]
-                                    )
-                                    kycButton
-                                    Top
-                        , viewDetailsToggle loggedIn.shared.translators
-                            { label = loggedIn.shared.translators.t "profile.preferences.claim_notification"
-                            , id = "claim-notification-toggle"
-                            , onToggle = ToggledClaimNotification
-                            , value = profile.claimNotification
-                            }
-                        , viewDetailsToggle loggedIn.shared.translators
-                            { label = loggedIn.shared.translators.t "profile.preferences.transfer_notification"
-                            , id = "transfer-notification-toggle"
-                            , onToggle = ToggledTransferNotification
-                            , value = profile.transferNotification
-                            }
-                        , viewDetailsToggle loggedIn.shared.translators
-                            { label = loggedIn.shared.translators.t "profile.preferences.digest"
-                            , id = "monthly-digest-toggle"
-                            , onToggle = ToggledDigest
-                            , value = profile.digest
-                            }
-                        ]
-                    ]
-                ]
-            ]
-        ]
 
 
 viewLatestTransactions : LoggedIn.Model -> Model -> Html Msg
@@ -1574,21 +1065,6 @@ fetchTransfers loggedIn community maybeCursor =
         CompletedLoadUserTransfers
 
 
-type alias NotificationPreferences =
-    { claim : Bool
-    , transfer : Bool
-    , digest : Bool
-    }
-
-
-notificationsSelectionSet : SelectionSet NotificationPreferences Cambiatus.Object.User
-notificationsSelectionSet =
-    SelectionSet.succeed NotificationPreferences
-        |> SelectionSet.with User.claimNotification
-        |> SelectionSet.with User.transferNotification
-        |> SelectionSet.with User.digest
-
-
 
 -- UTILS
 
@@ -1612,27 +1088,9 @@ receiveBroadcast broadcastMsg =
             Nothing
 
 
-jsAddressToMsg : List String -> Value -> Maybe Msg
-jsAddressToMsg addr val =
-    case addr of
-        "DownloadPdfProcessed" :: _ ->
-            Decode.decodeValue (Decode.field "isDownloaded" Decode.bool) val
-                |> Result.map DownloadPdfProcessed
-                |> Result.toMaybe
-
-        "PinChanged" :: newPin :: [] ->
-            Just (PinChanged newPin)
-
-        _ ->
-            Nothing
-
-
 msgToString : Msg -> List String
 msgToString msg =
     case msg of
-        Ignored ->
-            [ "Ignored" ]
-
         CompletedLoadProfile r ->
             [ "CompletedLoadProfile", UR.remoteDataToString r ]
 
@@ -1650,51 +1108,6 @@ msgToString msg =
 
         CompletedLoadUserTransfers r ->
             [ "CompletedLoadUserTransfers", UR.remoteDataToString r ]
-
-        ToggledClaimNotification _ ->
-            [ "ToggledClaimNotification" ]
-
-        ToggledTransferNotification _ ->
-            [ "ToggledTransferNotification" ]
-
-        ToggledDigest _ ->
-            [ "ToggledDigest" ]
-
-        CompletedSettingNotificationPreferences _ r ->
-            [ "CompletedSettingNotificationPreferences", UR.remoteDataToString r ]
-
-        ToggleDeleteKycModal ->
-            [ "ToggleDeleteKycModal" ]
-
-        DeleteKycAccepted ->
-            [ "DeleteKycAccepted" ]
-
-        DeleteKycAndAddressCompleted r ->
-            [ "DeleteKycAndAddressCompleted", UR.remoteDataToString r ]
-
-        ClickedDownloadPdf ->
-            [ "ClickedDownloadPdf" ]
-
-        DownloadPdfProcessed _ ->
-            [ "DownloadPdfProcessed" ]
-
-        ClickedClosePdfDownloadError ->
-            [ "ClickedClosePdfDownloadError" ]
-
-        ClickedChangePin ->
-            [ "ClickedChangePin" ]
-
-        ClickedCloseNewPinModal ->
-            [ "ClickedCloseNewPinModal" ]
-
-        GotPinMsg subMsg ->
-            "GotPinMsg" :: Pin.msgToString subMsg
-
-        SubmittedNewPin _ ->
-            [ "SubmittedNewPin" ]
-
-        PinChanged newPin ->
-            [ "PinChanged", newPin ]
 
         GotTransferCardProfileSummaryMsg _ subMsg ->
             "GotTransferCardProfileSummaryMsg" :: Profile.Summary.msgToString subMsg

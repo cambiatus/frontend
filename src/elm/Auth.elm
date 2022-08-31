@@ -5,7 +5,6 @@ module Auth exposing
     , changeLastKnownPin
     , init
     , jsAddressToMsg
-    , maybePrivateKey
     , msgToString
     , removePrivateKey
     , update
@@ -131,16 +130,6 @@ type Status
 removePrivateKey : Model -> Model
 removePrivateKey model =
     { model | status = WithoutPrivateKey }
-
-
-maybePrivateKey : Model -> Maybe Eos.PrivateKey
-maybePrivateKey model =
-    case model.status of
-        WithPrivateKey pk ->
-            Just pk
-
-        WithoutPrivateKey ->
-            Nothing
 
 
 changeLastKnownPin : String -> Model -> Model
@@ -326,12 +315,12 @@ withPrivateKey :
 withPrivateKey model { requiredPermissions, currentPermissions } config successfulUR =
     let
         actWithPrivateKey =
-            case maybePrivateKey model of
-                Nothing ->
+            case model.status of
+                WithoutPrivateKey ->
                     UR.init config.defaultModel
                         |> config.onAskedPrivateKey
 
-                Just privateKey ->
+                WithPrivateKey privateKey ->
                     successfulUR privateKey
     in
     if List.isEmpty requiredPermissions then

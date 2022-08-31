@@ -1702,10 +1702,6 @@ jsAddressToMsg address val =
             Maybe.map GotSettingsMsg
                 (Settings.jsAddressToMsg rAddress val)
 
-        "GotProfileMsg" :: rAddress ->
-            Maybe.map GotProfileMsg
-                (Profile.jsAddressToMsg rAddress val)
-
         "GotCommunitySettingsFeaturesMsg" :: rAddress ->
             Maybe.map GotCommunitySettingsFeaturesMsg
                 (CommunitySettingsFeatures.jsAddressToMsg rAddress val)
