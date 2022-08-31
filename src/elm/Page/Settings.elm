@@ -253,7 +253,7 @@ update msg model loggedIn =
                 |> UR.init
                 |> UR.logGraphqlError msg
                     (Just loggedIn.accountName)
-                    "Got an error when trying to delete KYC and address"
+                    "Got an error when trying to delete KYC"
                     { moduleName = "Page.Settings", function = "update" }
                     []
                     error
