@@ -276,7 +276,7 @@ viewPageHeader model shared =
                     [ ( "hidden", not model.showLanguageNav )
                     ]
                 ]
-                (Shared.viewLanguageItems shared ClickedLanguage)
+                (Shared.viewLanguageItems [ class "flex w-full px-4 py-2 text-gray items-center text-sm uppercase focus-ring rounded-sm hover:text-indigo-500 focus-visible:text-indigo-500" ] shared ClickedLanguage)
             ]
         ]
 

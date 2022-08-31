@@ -783,11 +783,7 @@ viewHeader page ({ shared } as model) profile_ =
                 text ""
             , div [ class "relative z-50 lg:min-w-50" ]
                 [ button
-                    [ class "h-12 z-10 py-2 px-3 relative hidden lg:w-full lg:visible lg:flex lg:items-center lg:bg-white lg:focus-ring lg:focus-visible:ring-orange-300 lg:focus-visible:ring-opacity-50"
-                    , classList
-                        [ ( "rounded-tr-lg rounded-tl-lg", model.showUserNav )
-                        , ( "rounded-lg", not model.showUserNav )
-                        ]
+                    [ class "h-12 z-10 py-2 px-3 relative rounded-t hidden lg:w-full lg:visible lg:flex lg:items-center lg:bg-white lg:focus-ring lg:focus-visible:ring-orange-300 lg:focus-visible:ring-opacity-50"
                     , type_ "button"
                     , onClick (ShowUserNav (not model.showUserNav))
                     , onMouseEnter (ShowUserNav True)
@@ -801,9 +797,7 @@ viewHeader page ({ shared } as model) profile_ =
                         ]
                     ]
                 , button
-                    [ class "z-10 flex relative focus-ring focus-visible:ring-orange-300 focus-visible:ring-opacity-50 focus-visible:ring-offset-4 lg:hidden"
-                    , classList [ ( "rounded-tr-lg rounded-tl-lg", model.showUserNav ) ]
-                    , classList [ ( "rounded-lg", not model.showUserNav ) ]
+                    [ class "z-10 flex relative rounded focus-ring focus-visible:ring-orange-300 focus-visible:ring-opacity-50 focus-visible:ring-offset-4 lg:hidden"
                     , type_ "button"
                     , onClick (ShowUserNav (not model.showUserNav))
                     , onMouseEnter (ShowUserNav True)
@@ -825,18 +819,21 @@ viewHeader page ({ shared } as model) profile_ =
                 , if model.showUserNav then
                     let
                         menuItemClass =
-                            "flex w-full px-4 py-4 justify-start items-center text-sm focus-ring rounded-sm hover:text-orange-300 focus-visible:text-orange-300 border-t first:border-t-0"
+                            "flex w-full px-3 py-2 justify-start items-center text-sm focus-ring rounded hover:bg-gray-200 focus-visible:bg-gray-200 transition-colors"
+
+                        menuIconClass =
+                            "mr-3 w-6 fill-current"
                     in
                     View.Components.focusTrap { initialFocusId = Nothing }
                         []
                         [ nav
-                            [ class "absolute right-0 lg:w-full py-2 px-4 shadow-lg bg-white rounded-t-lg rounded-b-lg lg:rounded-t-none z-50" ]
+                            [ class "absolute right-0 lg:w-full py-1.5 px-1.5 shadow-lg bg-white rounded lg:rounded-t-none z-50" ]
                             [ a
                                 [ class menuItemClass
                                 , Route.href (Route.Profile model.accountName)
                                 , onClick ClickedNavLink
                                 ]
-                                [ Icons.profile "mr-4 fill-current"
+                                [ Icons.profile menuIconClass
                                 , text_ "menu.profile"
                                 ]
                             , a
@@ -844,35 +841,41 @@ viewHeader page ({ shared } as model) profile_ =
                                 , Route.href Route.Settings
                                 , onClick ClickedNavLink
                                 ]
-                                [ Icons.settings "mr-4 fill-current"
+                                [ Icons.settings menuIconClass
                                 , text_ "settings.account.title"
                                 ]
                             , button
                                 [ class menuItemClass
                                 , onClick ToggleLanguageItems
                                 ]
-                                [ Icons.languages "mr-4 fill-current"
+                                [ Icons.languages menuIconClass
                                 , text_ "menu.languages"
                                 ]
                             , if model.showLanguageItems then
-                                div [ class "ml-6 mb-2" ]
+                                div [ class "ml-2 mb-2" ]
                                     (button
                                         [ class menuItemClass
+                                        , class "uppercase focus-ring rounded-sm"
                                         ]
                                         [ Shared.langFlag shared.language
                                         , text (Translation.languageToLanguageCode shared.language)
                                         ]
-                                        :: Shared.viewLanguageItems shared ClickedLanguage
+                                        :: Shared.viewLanguageItems
+                                            [ class menuItemClass
+                                            , class "uppercase"
+                                            ]
+                                            shared
+                                            ClickedLanguage
                                     )
 
                               else
                                 text ""
                             , button
                                 [ class menuItemClass
-                                , class "hover:text-red focus-visible:text-red"
+                                , class "text-red hover:bg-red/10 focus:bg-red/10"
                                 , onClick ClickedLogout
                                 ]
-                                [ Icons.close "fill-current m-1 mr-5"
+                                [ Icons.close menuIconClass
                                 , text_ "menu.logout"
                                 ]
                             ]

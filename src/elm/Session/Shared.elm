@@ -209,17 +209,14 @@ loadTranslation result shared =
 -- VIEW
 
 
-viewLanguageItems : Shared -> (Translation.Language -> msg) -> List (Html msg)
-viewLanguageItems shared toMsg =
+viewLanguageItems : List (Html.Attribute msg) -> Shared -> (Translation.Language -> msg) -> List (Html msg)
+viewLanguageItems attributes shared toMsg =
     Translation.allLanguages
         |> List.filter (\l -> l /= shared.language)
         |> List.sortBy Translation.languageToLocale
         |> List.map
             (\lang ->
-                button
-                    [ class "flex px-4 py-2 text-gray justify-between items-center text-sm uppercase focus-ring rounded-sm hover:text-indigo-500 focus-visible:text-indigo-500"
-                    , onClick (toMsg lang)
-                    ]
+                button (onClick (toMsg lang) :: attributes)
                     [ langFlag lang
                     , text (Translation.languageToLanguageCode lang)
                     ]
