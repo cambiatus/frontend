@@ -823,20 +823,32 @@ viewHeader page ({ shared } as model) profile_ =
                   else
                     text ""
                 , if model.showUserNav then
+                    let
+                        menuItemClass =
+                            "flex w-full px-4 py-4 justify-start items-center text-sm focus-ring rounded-sm hover:text-orange-300 focus-visible:text-orange-300 border-t first:border-t-0"
+                    in
                     View.Components.focusTrap { initialFocusId = Nothing }
                         []
                         [ nav
                             [ class "absolute right-0 lg:w-full py-2 px-4 shadow-lg bg-white rounded-t-lg rounded-b-lg lg:rounded-t-none z-50" ]
                             [ a
-                                [ class "flex block w-full px-4 py-4 justify-start items-center text-sm focus-ring rounded-sm hover:text-orange-300 focus-visible:text-orange-300"
+                                [ class menuItemClass
                                 , Route.href (Route.Profile model.accountName)
-                                , onClick ClickedProfileIcon
+                                , onClick ClickedNavLink
                                 ]
                                 [ Icons.profile "mr-4 fill-current"
                                 , text_ "menu.profile"
                                 ]
+                            , a
+                                [ class menuItemClass
+                                , Route.href Route.Settings
+                                , onClick ClickedNavLink
+                                ]
+                                [ Icons.settings "mr-4 fill-current"
+                                , text_ "settings.account.title"
+                                ]
                             , button
-                                [ class "flex block w-full px-4 py-4 justify-start items-center text-sm border-t focus-ring rounded-sm hover:text-orange-300 focus-visible:text-orange-300"
+                                [ class menuItemClass
                                 , onClick ToggleLanguageItems
                                 ]
                                 [ Icons.languages "mr-4 fill-current"
@@ -845,7 +857,7 @@ viewHeader page ({ shared } as model) profile_ =
                             , if model.showLanguageItems then
                                 div [ class "ml-6 mb-2" ]
                                     (button
-                                        [ class "flex px-4 py-2 text-gray items-center text-indigo-500 font-bold text-xs uppercase focus-ring rounded-sm"
+                                        [ class menuItemClass
                                         ]
                                         [ Shared.langFlag shared.language
                                         , text (Translation.languageToLanguageCode shared.language)
@@ -856,7 +868,8 @@ viewHeader page ({ shared } as model) profile_ =
                               else
                                 text ""
                             , button
-                                [ class "flex block w-full px-4 py-4 justify-start items-center text-sm border-t focus-ring rounded-sm hover:text-red focus-visible:text-red"
+                                [ class menuItemClass
+                                , class "hover:text-red focus-visible:text-red"
                                 , onClick ClickedLogout
                                 ]
                                 [ Icons.close "fill-current m-1 mr-5"
@@ -1566,8 +1579,8 @@ mapMsg mapFn msg =
         GotActionMsg subMsg ->
             GotActionMsg subMsg
 
-        ClickedProfileIcon ->
-            ClickedProfileIcon
+        ClickedNavLink ->
+            ClickedNavLink
 
         ClosedSearch ->
             ClosedSearch
@@ -1988,7 +2001,7 @@ type Msg externalMsg
     | GotFeedbackMsg Feedback.Msg
     | GotSearchMsg Search.Msg
     | GotActionMsg Action.Msg
-    | ClickedProfileIcon
+    | ClickedNavLink
     | ClosedSearch
     | GotTimeInternal Time.Posix
     | CompletedLoadContributionCount (RemoteData (Graphql.Http.Error (Maybe Int)) (Maybe Int))
@@ -2056,7 +2069,7 @@ update msg model =
                     )
                     model
 
-        ClickedProfileIcon ->
+        ClickedNavLink ->
             { closeAllModals | searchModel = Search.closeSearch model.searchModel }
                 |> UR.init
 
@@ -3171,8 +3184,8 @@ msgToString msg =
         GotTimeInternal _ ->
             [ "GotTimeInternal" ]
 
-        ClickedProfileIcon ->
-            [ "ClickedProfileIcon" ]
+        ClickedNavLink ->
+            [ "ClickedNavLink" ]
 
         ClosedSearch ->
             [ "ClosedSearch" ]
