@@ -13,7 +13,6 @@ import Html.Events exposing (onClick)
 import Json.Decode
 import Json.Encode
 import Markdown
-import Maybe.Extra
 import Page
 import RemoteData exposing (RemoteData)
 import Route
@@ -97,7 +96,7 @@ type Msg
     | ClickedDeleteKyc
     | ClosedDeleteKycModal
     | AcceptedDeleteKyc
-    | FinishedDeletingKyc (RemoteData (Graphql.Http.Error ()) ())
+    | FinishedDeletingKyc (RemoteData (Graphql.Http.Error (Maybe ())) (Maybe ()))
     | ToggledClaimNotification Bool
     | ToggledTransferNotification Bool
     | ToggledDigestNotification Bool
@@ -228,34 +227,11 @@ update msg model loggedIn =
                 |> UR.init
 
         AcceptedDeleteKyc ->
-            let
-                deleteKycMutation =
-                    Cambiatus.Mutation.deleteKyc Graphql.SelectionSet.empty
-
-                deleteAddressMutation =
-                    Cambiatus.Mutation.deleteAddress Graphql.SelectionSet.empty
-
-                mutation =
-                    case loggedIn.profile of
-                        RemoteData.Success profile ->
-                            if Maybe.Extra.isJust profile.address then
-                                Graphql.SelectionSet.map2 (\_ _ -> ())
-                                    deleteKycMutation
-                                    deleteAddressMutation
-
-                            else
-                                Graphql.SelectionSet.map (\_ -> ()) deleteKycMutation
-
-                        _ ->
-                            Graphql.SelectionSet.map2 (\_ _ -> ())
-                                deleteKycMutation
-                                deleteAddressMutation
-            in
             { model | isDeleteKycModalVisible = False }
                 |> UR.init
                 |> UR.addExt
                     (LoggedIn.mutation loggedIn
-                        mutation
+                        (Cambiatus.Mutation.deleteKyc Graphql.SelectionSet.empty)
                         FinishedDeletingKyc
                     )
                 |> UR.addExt (LoggedIn.UpdatedLoggedIn { loggedIn | profile = RemoteData.Loading })
