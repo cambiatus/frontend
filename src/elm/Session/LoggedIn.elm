@@ -783,7 +783,7 @@ viewHeader page ({ shared } as model) profile_ =
                 text ""
             , div [ class "relative z-50 lg:min-w-50" ]
                 [ button
-                    [ class "h-12 z-10 py-2 px-3 relative rounded-t hidden lg:w-full lg:visible lg:flex lg:items-center lg:bg-white lg:focus-ring lg:focus-visible:ring-orange-300 lg:focus-visible:ring-opacity-50"
+                    [ class "h-12 z-10 py-2 px-3 relative rounded-t-lg hidden lg:w-full lg:visible lg:flex lg:items-center lg:bg-white lg:focus-ring lg:focus-visible:ring-orange-300 lg:focus-visible:ring-opacity-50"
                     , type_ "button"
                     , onClick (ShowUserNav (not model.showUserNav))
                     , onMouseEnter (ShowUserNav True)
@@ -797,7 +797,7 @@ viewHeader page ({ shared } as model) profile_ =
                         ]
                     ]
                 , button
-                    [ class "z-10 flex relative rounded focus-ring focus-visible:ring-orange-300 focus-visible:ring-opacity-50 focus-visible:ring-offset-4 lg:hidden"
+                    [ class "z-10 flex relative rounded-lg focus-ring focus-visible:ring-orange-300 focus-visible:ring-opacity-50 focus-visible:ring-offset-4 lg:hidden"
                     , type_ "button"
                     , onClick (ShowUserNav (not model.showUserNav))
                     , onMouseEnter (ShowUserNav True)
@@ -819,7 +819,7 @@ viewHeader page ({ shared } as model) profile_ =
                 , if model.showUserNav then
                     let
                         menuItemClass =
-                            "flex w-full px-3 py-2 justify-start items-center text-sm focus-ring rounded hover:bg-gray-200 focus-visible:bg-gray-200 transition-colors"
+                            "flex w-full px-3 py-2 justify-start items-center text-sm focus-ring rounded first:rounded-t-lg lg:first:rounded-t last:rounded-b-lg hover:bg-gray-200 focus-visible:bg-gray-200 transition-colors"
 
                         menuIconClass =
                             "mr-3 w-6 fill-current"
@@ -827,7 +827,7 @@ viewHeader page ({ shared } as model) profile_ =
                     View.Components.focusTrap { initialFocusId = Nothing }
                         []
                         [ nav
-                            [ class "absolute right-0 lg:w-full py-1.5 px-1.5 shadow-lg bg-white rounded lg:rounded-t-none z-50" ]
+                            [ class "absolute right-0 lg:w-full py-1.5 px-1.5 shadow-lg bg-white rounded-lg lg:rounded-t-none z-50" ]
                             [ a
                                 [ class menuItemClass
                                 , Route.href (Route.Profile model.accountName)
@@ -862,7 +862,7 @@ viewHeader page ({ shared } as model) profile_ =
                                         ]
                                         :: Shared.viewLanguageItems
                                             [ class menuItemClass
-                                            , class "uppercase"
+                                            , class "uppercase !rounded"
                                             ]
                                             shared
                                             ClickedLanguage
