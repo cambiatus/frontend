@@ -14,6 +14,7 @@ import Json.Decode
 import Json.Encode
 import Markdown
 import Maybe.Extra
+import Page
 import RemoteData exposing (RemoteData)
 import Route
 import Session.LoggedIn as LoggedIn
@@ -427,17 +428,24 @@ actOnNotificationPreferenceToggle loggedIn notification newValue =
 
 view : LoggedIn.Model -> Model -> { title : String, content : Html Msg }
 view loggedIn model =
-    { title = loggedIn.shared.translators.t "settings.account.title"
+    let
+        title =
+            loggedIn.shared.translators.t "settings.account.title"
+    in
+    { title = title
     , content =
-        div [ class "container mx-auto px-4 mt-6 mb-20" ]
-            ([ viewAccountSettings loggedIn
-             , viewNotificationPreferences loggedIn model
-             , [ viewNewPinModal loggedIn.shared.translators model
-               , viewDeleteKycModal loggedIn.shared.translators model
-               ]
-             ]
-                |> List.concat
-            )
+        div []
+            [ Page.viewHeader loggedIn title
+            , div [ class "container mx-auto px-4 mt-6 mb-20" ]
+                ([ viewAccountSettings loggedIn
+                 , viewNotificationPreferences loggedIn model
+                 , [ viewNewPinModal loggedIn.shared.translators model
+                   , viewDeleteKycModal loggedIn.shared.translators model
+                   ]
+                 ]
+                    |> List.concat
+                )
+            ]
     }
 
 
