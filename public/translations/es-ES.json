@@ -1175,6 +1175,11 @@
   },
   "settings": {
     "success": "Configuraciones guardadas exitosamente",
+    "account": {
+      "title": "Configuraciones",
+      "account_settings": "**Configuraciones** de la cuenta",
+      "notification_settings": "Notificaciónes de **correo electrónico**"
+    },
     "community_info": {
       "title": "Informaciones de la Comunidad",
       "description": "Logo, nombre, descripción, url",

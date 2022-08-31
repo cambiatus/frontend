@@ -12,6 +12,7 @@ import Html.Attributes exposing (class)
 import Html.Events exposing (onClick)
 import Json.Decode
 import Json.Encode
+import Markdown
 import Maybe.Extra
 import RemoteData exposing (RemoteData)
 import Route
@@ -426,7 +427,7 @@ actOnNotificationPreferenceToggle loggedIn notification newValue =
 
 view : LoggedIn.Model -> Model -> { title : String, content : Html Msg }
 view loggedIn model =
-    { title = "TODO"
+    { title = loggedIn.shared.translators.t "settings.account.title"
     , content =
         div [ class "container mx-auto px-4 mt-6 mb-20" ]
             ([ viewAccountSettings loggedIn
@@ -487,29 +488,25 @@ viewAccountSettings loggedIn =
             loggedIn.shared.translators
     in
     [ h2 [ class "mb-4" ]
-        -- TODO - I18N
-        [ text "Account ", span [ class "font-bold" ] [ text "settings" ] ]
+        [ Markdown.fromTranslation loggedIn.shared.translators "settings.account.account_settings"
+            |> Markdown.view []
+        ]
     , ul [ class "bg-white rounded-md p-4 divide-y" ]
         [ viewCardItem
-            -- TODO - I18N
-            [ text "My 12 words"
-
-            -- TODO - I18N
+            [ text <| t "profile.12words.title"
             , button
                 [ class "button button-secondary"
                 , onClick ClickedDownloadPdf
                 ]
-                [ text "Download" ]
+                [ text <| t "profile.12words.button" ]
             ]
         , viewCardItem
-            -- TODO - I18N
-            [ text "My security PIN"
+            [ text <| t "profile.pin.title"
             , button
                 [ class "button button-secondary"
                 , onClick ClickedChangePin
                 ]
-                -- TODO - I18N
-                [ text "Change" ]
+                [ text <| t "profile.pin.button" ]
             ]
         , case loggedIn.profile of
             RemoteData.Success profile ->
@@ -562,9 +559,14 @@ viewAccountSettings loggedIn =
 
 viewNotificationPreferences : LoggedIn.Model -> Model -> List (Html Msg)
 viewNotificationPreferences loggedIn model =
+    let
+        { t } =
+            loggedIn.shared.translators
+    in
     [ h2 [ class "mb-4 mt-10" ]
-        -- TODO - I18N
-        [ span [ class "font-bold" ] [ text "E-mail" ], text " notifications" ]
+        [ Markdown.fromTranslation loggedIn.shared.translators "settings.account.notification_settings"
+            |> Markdown.view []
+        ]
     , case loggedIn.profile of
         RemoteData.Success profile ->
             let
@@ -579,8 +581,7 @@ viewNotificationPreferences loggedIn model =
             ul [ class "bg-white rounded-md p-4 divide-y" ]
                 [ viewCardItem
                     [ viewNotificationToggle loggedIn.shared.translators
-                        -- TODO - I18N
-                        { label = "Claim notification"
+                        { label = t "profile.preferences.claim_notification"
                         , id = "claim_notification"
                         , onToggle = ToggledClaimNotification
                         , value = updatingOrProfile .claimNotificationStatus .claimNotification
@@ -588,8 +589,7 @@ viewNotificationPreferences loggedIn model =
                     ]
                 , viewCardItem
                     [ viewNotificationToggle loggedIn.shared.translators
-                        -- TODO - I18N
-                        { label = "Transfer notification"
+                        { label = t "profile.preferences.transfer_notification"
                         , id = "transfer_notification"
                         , onToggle = ToggledTransferNotification
                         , value = updatingOrProfile .transferNotificationStatus .transferNotification
@@ -597,8 +597,7 @@ viewNotificationPreferences loggedIn model =
                     ]
                 , viewCardItem
                     [ viewNotificationToggle loggedIn.shared.translators
-                        -- TODO - I18N
-                        { label = "Monthly news about the community"
+                        { label = t "profile.preferences.digest"
                         , id = "digest_notification"
                         , onToggle = ToggledDigestNotification
                         , value = updatingOrProfile .digestNotificationStatus .digest
