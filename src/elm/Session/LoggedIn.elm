@@ -819,7 +819,7 @@ viewHeader page ({ shared } as model) profile_ =
                 , if model.showUserNav then
                     let
                         menuItemClass =
-                            "flex w-full py-2 pl-2.5 pr-8 lg:pr-2 justify-start items-center text-base lg:text-sm focus-ring rounded first:rounded-t lg:first:rounded-t last:rounded-b hover:bg-gray-200 focus-visible:bg-gray-200 transition-colors"
+                            "flex w-full py-4 lg:py-2 pl-2.5 pr-8 lg:pr-2 justify-start items-center text-base lg:text-sm focus-ring rounded first:rounded-t lg:first:rounded-t last:rounded-b hover:bg-gray-200 focus-visible:bg-gray-200 transition-colors"
 
                         menuIcon icon =
                             div [ class "w-6 md:w-7 lg:w-8 flex items-center justify-center mr-2" ]
@@ -856,7 +856,7 @@ viewHeader page ({ shared } as model) profile_ =
                                 div [ class "ml-4 mb-2" ]
                                     (button
                                         [ class menuItemClass
-                                        , class "uppercase !rounded !text-xs"
+                                        , class "uppercase !rounded !text-sm lg:!text-xs"
                                         ]
                                         [ Shared.langFlag [ class "w-4 h-4 mr-2" ] shared.language
                                         , text (Translation.languageToLanguageCode shared.language)
@@ -864,7 +864,7 @@ viewHeader page ({ shared } as model) profile_ =
                                         :: Shared.viewLanguageItems
                                             { containerAttrs =
                                                 [ class menuItemClass
-                                                , class "uppercase !rounded !text-xs"
+                                                , class "uppercase !rounded !text-sm lg:!text-xs"
                                                 ]
                                             , flagIconAttrs = [ class "w-4 h-4 mr-2" ]
                                             }
