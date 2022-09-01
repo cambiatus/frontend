@@ -479,7 +479,7 @@ viewAccountSettings loggedIn =
         [ viewCardItem
             [ text <| t "profile.12words.title"
             , button
-                [ class "button button-secondary"
+                [ class "button button-secondary flex-shrink-0 ml-4"
                 , onClick ClickedDownloadPdf
                 ]
                 [ text <| t "profile.12words.button" ]
@@ -487,7 +487,7 @@ viewAccountSettings loggedIn =
         , viewCardItem
             [ text <| t "profile.pin.title"
             , button
-                [ class "button button-secondary"
+                [ class "button button-secondary flex-shrink-0 ml-4"
                 , onClick ClickedChangePin
                 ]
                 [ text <| t "profile.pin.button" ]
@@ -515,14 +515,14 @@ viewAccountSettings loggedIn =
                     , case profile.kyc of
                         Just _ ->
                             button
-                                [ class "button button-danger"
+                                [ class "button button-danger flex-shrink-0 ml-4"
                                 , onClick ClickedDeleteKyc
                                 ]
                                 [ text <| t "community.kyc.delete.label" ]
 
                         Nothing ->
                             a
-                                [ class "button button-secondary"
+                                [ class "button button-secondary ml-4"
                                 , Route.href Route.ProfileAddKyc
                                 ]
                                 [ text <| t "menu.add" ]
@@ -621,6 +621,7 @@ viewNotificationToggle :
 viewNotificationToggle translators { label, id, onToggle, value } =
     Form.Toggle.init { label = text label, id = id }
         |> Form.Toggle.withContainerAttrs [ class "w-full" ]
+        |> Form.Toggle.withToggleContainerAttrs [ class "w-40 flex items-center flex-shrink-0" ]
         |> (\options ->
                 Form.Toggle.view options
                     { onToggle = onToggle
