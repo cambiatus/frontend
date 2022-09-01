@@ -783,7 +783,7 @@ viewHeader page ({ shared } as model) profile_ =
                 text ""
             , div [ class "relative z-50 lg:min-w-50" ]
                 [ button
-                    [ class "z-10 py-2 px-3 relative rounded-t hidden lg:w-full lg:visible lg:flex lg:items-center lg:bg-white lg:focus-ring lg:focus-visible:ring-orange-300 lg:focus-visible:ring-opacity-50"
+                    [ class "z-10 pt-3 -mt-3 px-3 relative rounded-t hidden lg:w-full lg:visible lg:flex lg:items-center lg:bg-white lg:focus-ring lg:focus-visible:ring-orange-300 lg:focus-visible:ring-opacity-50"
                     , type_ "button"
                     , onClick (ShowUserNav (not model.showUserNav))
                     , onMouseEnter (ShowUserNav True)
