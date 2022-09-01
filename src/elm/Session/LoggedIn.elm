@@ -783,7 +783,7 @@ viewHeader page ({ shared } as model) profile_ =
                 text ""
             , div [ class "relative z-50 lg:min-w-50" ]
                 [ button
-                    [ class "h-12 z-10 py-2 px-3 relative rounded-t hidden lg:w-full lg:visible lg:flex lg:items-center lg:bg-white lg:focus-ring lg:focus-visible:ring-orange-300 lg:focus-visible:ring-opacity-50"
+                    [ class "z-10 py-2 px-3 relative rounded-t hidden lg:w-full lg:visible lg:flex lg:items-center lg:bg-white lg:focus-ring lg:focus-visible:ring-orange-300 lg:focus-visible:ring-opacity-50"
                     , type_ "button"
                     , onClick (ShowUserNav (not model.showUserNav))
                     , onMouseEnter (ShowUserNav True)
@@ -819,16 +819,16 @@ viewHeader page ({ shared } as model) profile_ =
                 , if model.showUserNav then
                     let
                         menuItemClass =
-                            "flex w-full py-2 pl-2 pr-8 justify-start items-center text-sm focus-ring rounded first:rounded-t lg:first:rounded-t last:rounded-b hover:bg-gray-200 focus-visible:bg-gray-200 transition-colors"
+                            "flex w-full py-2 pl-2.5 pr-8 lg:pr-2 justify-start items-center text-base lg:text-sm focus-ring rounded first:rounded-t lg:first:rounded-t last:rounded-b hover:bg-gray-200 focus-visible:bg-gray-200 transition-colors"
 
                         menuIcon icon =
                             div [ class "w-6 md:w-7 lg:w-8 flex items-center justify-center mr-2" ]
-                                [ icon "h-4 fill-current" ]
+                                [ icon "h-5 lg:h-4 fill-current" ]
                     in
                     View.Components.focusTrap { initialFocusId = Nothing }
                         []
                         [ nav
-                            [ class "absolute right-0 lg:w-full py-1.5 px-1.5 shadow-lg bg-white rounded lg:rounded-t-none z-50" ]
+                            [ class "absolute right-0 lg:w-full py-1 px-1 shadow-lg bg-white rounded lg:rounded-t-none z-50" ]
                             [ a
                                 [ class menuItemClass
                                 , Route.href (Route.Profile model.accountName)
