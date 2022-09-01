@@ -1172,6 +1172,11 @@
   },
   "settings": {
     "success": "Settings saved successfully",
+    "account": {
+      "title": "Settings",
+      "account_settings": "Account **settings**",
+      "notification_settings": "**E-mail** notifications"
+    },
     "community_info": {
       "title": "Community Information",
       "description": "Logo, name, description, url",

@@ -13,6 +13,7 @@ module View.Pin exposing
     , withBackgroundColor
     , withDisabled
     , withIsSubmitting
+    , withLastKnownPin
     , withProblem
     )
 
@@ -400,6 +401,11 @@ withProblem field problem model =
 withBackgroundColor : Background -> Model -> Model
 withBackgroundColor background model =
     { model | background = background }
+
+
+withLastKnownPin : String -> Model -> Model
+withLastKnownPin newPin model =
+    { model | lastKnownPin = Just newPin }
 
 
 type Background

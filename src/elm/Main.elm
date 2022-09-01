@@ -52,6 +52,7 @@ import Page.Profile.Claims as ProfileClaims
 import Page.Profile.Contributions as ProfileContributions
 import Page.Profile.Editor as ProfileEditor
 import Page.Register as Register
+import Page.Settings as Settings
 import Page.Shop as Shop
 import Page.Shop.Editor as ShopEditor
 import Page.Shop.Viewer as ShopViewer
@@ -206,6 +207,7 @@ type Status
     | ProfileClaims ProfileClaims.Model
     | ProfileAddContact ProfileAddContact.Model
     | Register (Maybe String) (Maybe Route) Register.Model
+    | Settings Settings.Model
     | Shop { owner : Maybe Eos.Account.Name, categories : List Shop.Category.Id } Shop.Model
     | ShopEditor (Maybe Shop.Id) ShopEditor.Model
     | ShopViewer Shop.Id ShopViewer.Model
@@ -258,6 +260,7 @@ type Msg
     | GotProfileClaimsMsg ProfileClaims.Msg
     | GotProfileAddContactMsg ProfileAddContact.Msg
     | GotRegisterMsg Register.Msg
+    | GotSettingsMsg Settings.Msg
     | GotShopMsg Shop.Msg
     | GotShopEditorMsg ShopEditor.Msg
     | GotShopViewerMsg ShopViewer.Msg
@@ -385,6 +388,11 @@ update msg model =
                 >> updateGuestUResult (Register maybeInvitation maybeRedirect) GotRegisterMsg model
                 -- provides the above composed function with the initial guest input
                 |> withGuest
+
+        ( GotSettingsMsg subMsg, Settings subModel ) ->
+            Settings.update subMsg subModel
+                >> updateLoggedInUResult Settings GotSettingsMsg model
+                |> withLoggedIn
 
         ( GotPaymentHistoryMsg subMsg, PaymentHistory subModel ) ->
             PaymentHistory.update subMsg subModel
@@ -1177,6 +1185,9 @@ statusToRoute status session =
         Register inviteId maybeRedirect _ ->
             Just (Route.Register inviteId maybeRedirect)
 
+        Settings _ ->
+            Just Route.Settings
+
         Shop filter _ ->
             Just (Route.Shop filter)
 
@@ -1394,6 +1405,11 @@ changeRouteTo maybeRoute model =
             Register.init invitation
                 >> updateStatusWith (Register invitation maybeRedirect) GotRegisterMsg model
                 |> withGuest invitation maybeRedirect
+
+        Just Route.Settings ->
+            Settings.init
+                >> updateStatusWith Settings GotSettingsMsg model
+                |> withLoggedIn Route.Settings
 
         Just (Route.Login maybeInvitation maybeRedirect) ->
             Login.init
@@ -1682,9 +1698,9 @@ jsAddressToMsg address val =
             Maybe.map GotRegisterMsg
                 (Register.jsAddressToMsg rAddress val)
 
-        "GotProfileMsg" :: rAddress ->
-            Maybe.map GotProfileMsg
-                (Profile.jsAddressToMsg rAddress val)
+        "GotSettingsMsg" :: rAddress ->
+            Maybe.map GotSettingsMsg
+                (Settings.jsAddressToMsg rAddress val)
 
         "GotCommunitySettingsFeaturesMsg" :: rAddress ->
             Maybe.map GotCommunitySettingsFeaturesMsg
@@ -1836,6 +1852,9 @@ msgToString msg =
         GotRegisterMsg subMsg ->
             "GotRegisterMsg" :: Register.msgToString subMsg
 
+        GotSettingsMsg subMsg ->
+            "GotSettingsMsg" :: Settings.msgToString subMsg
+
         GotShopMsg subMsg ->
             "GotShopMsg" :: Shop.msgToString subMsg
 
@@ -1966,6 +1985,9 @@ view model =
 
         Register _ _ subModel ->
             viewGuest subModel Guest.Register GotRegisterMsg Register.view
+
+        Settings subModel ->
+            viewLoggedIn subModel LoggedIn.Settings GotSettingsMsg Settings.view
 
         Login _ subModel ->
             viewGuest subModel Guest.Login GotLoginMsg Login.view

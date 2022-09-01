@@ -1133,6 +1133,11 @@
   },
   "settings": {
     "success": "ቅንብሩ በትክክል ተቀምጧል",
+    "account": {
+      "title": "ቅንብሮች",
+      "account_settings": "መለያ **ማደራጃ**",
+      "notification_settings": "**ኢ-ሜል** ማሳወቂያዎች"
+    },
     "community_info": {
       "title": "የማህበረሰብ መረጃ",
       "description": "አርማ, ስም, ማብራራያ, ዩ.አር.ኤል.",

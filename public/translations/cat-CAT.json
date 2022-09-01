@@ -1174,6 +1174,11 @@
   },
   "settings": {
     "success": "La configuració s'ha desat correctament",
+    "account": {
+      "title": "Configuració",
+      "account_settings": "**Configuració** del compte",
+      "notification_settings": "Notificacions per **correu electrònic**"
+    },
     "community_info": {
       "title": "Informació de la Comunitat",
       "description": "Logo, nom, descripció, url",

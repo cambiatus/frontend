@@ -86,6 +86,7 @@ type Route
     | CommunitySponsor
     | CommunitySupporters
     | Claim Int Int Int
+    | Settings
     | Shop { owner : Maybe Eos.Account.Name, categories : List Shop.Category.Id }
     | NewSale EditSaleStep
     | EditSale Shop.Id EditSaleStep
@@ -195,6 +196,7 @@ parser url =
         , Url.map CommunitySettingsContacts (s "community" </> s "settings" </> s "contacts")
         , Url.map CommunitySettingsShopCategories (s "community" </> s "settings" </> s "shop" </> s "categories")
         , Url.map Claim (s "objectives" </> int </> s "action" </> int </> s "claim" </> int)
+        , Url.map Settings (s "settings")
         , Url.map (\maybeOwner categoriesIds -> Shop { owner = maybeOwner, categories = categoriesIds })
             (s "shop"
                 <?> (Query.string "from"
@@ -655,6 +657,9 @@ routeToString route =
                       ]
                     , []
                     )
+
+                Settings ->
+                    ( [ "settings" ], [] )
 
                 Shop { owner, categories } ->
                     ( [ "shop" ]

@@ -8,7 +8,6 @@ module Session.LoggedIn exposing
     , Resource(..)
     , addFeedback
     , codeOfConductUrl
-    , executeFeedback
     , hasPermissions
     , init
     , initLogin
@@ -17,7 +16,6 @@ module Session.LoggedIn exposing
     , mapExternal
     , mapMsg
     , maybeInitWith
-    , maybePrivateKey
     , msgToString
     , mutation
     , profile
@@ -300,11 +298,6 @@ initModel shared lastKnownPin maybePrivateKey_ accountName authToken =
     )
 
 
-maybePrivateKey : Model -> Maybe Eos.PrivateKey
-maybePrivateKey model =
-    Auth.maybePrivateKey model.auth
-
-
 
 -- VIEW
 
@@ -339,6 +332,7 @@ type Page
     | CommunitySettingsContacts
     | Claim
     | Notification
+    | Settings
     | Shop
     | ShopEditor
     | ShopViewer
@@ -789,11 +783,7 @@ viewHeader page ({ shared } as model) profile_ =
                 text ""
             , div [ class "relative z-50 lg:min-w-50" ]
                 [ button
-                    [ class "h-12 z-10 py-2 px-3 relative hidden lg:w-full lg:visible lg:flex lg:items-center lg:bg-white lg:focus-ring lg:focus-visible:ring-orange-300 lg:focus-visible:ring-opacity-50"
-                    , classList
-                        [ ( "rounded-tr-lg rounded-tl-lg", model.showUserNav )
-                        , ( "rounded-lg", not model.showUserNav )
-                        ]
+                    [ class "z-10 pt-3 -mt-3 px-3 relative rounded-t hidden lg:w-full lg:visible lg:flex lg:items-center lg:bg-white lg:focus-ring lg:focus-visible:ring-orange-300 lg:focus-visible:ring-opacity-50"
                     , type_ "button"
                     , onClick (ShowUserNav (not model.showUserNav))
                     , onMouseEnter (ShowUserNav True)
@@ -807,9 +797,7 @@ viewHeader page ({ shared } as model) profile_ =
                         ]
                     ]
                 , button
-                    [ class "z-10 flex relative focus-ring focus-visible:ring-orange-300 focus-visible:ring-opacity-50 focus-visible:ring-offset-4 lg:hidden"
-                    , classList [ ( "rounded-tr-lg rounded-tl-lg", model.showUserNav ) ]
-                    , classList [ ( "rounded-lg", not model.showUserNav ) ]
+                    [ class "z-10 flex relative rounded focus-ring focus-visible:ring-orange-300 focus-visible:ring-opacity-50 focus-visible:ring-offset-4 lg:hidden"
                     , type_ "button"
                     , onClick (ShowUserNav (not model.showUserNav))
                     , onMouseEnter (ShowUserNav True)
@@ -829,43 +817,69 @@ viewHeader page ({ shared } as model) profile_ =
                   else
                     text ""
                 , if model.showUserNav then
+                    let
+                        menuItemClass =
+                            "flex w-full py-4 lg:py-2 pl-2.5 pr-8 lg:pr-2 justify-start items-center text-base lg:text-sm focus-ring rounded first:rounded-t lg:first:rounded-t last:rounded-b hover:bg-gray-200 focus-visible:bg-gray-200 transition-colors"
+
+                        menuIcon icon =
+                            div [ class "w-6 md:w-7 lg:w-8 flex items-center justify-center mr-2" ]
+                                [ icon "h-5 lg:h-4 fill-current" ]
+                    in
                     View.Components.focusTrap { initialFocusId = Nothing }
                         []
                         [ nav
-                            [ class "absolute right-0 lg:w-full py-2 px-4 shadow-lg bg-white rounded-t-lg rounded-b-lg lg:rounded-t-none z-50" ]
+                            [ class "absolute right-0 lg:w-full py-1 px-1 shadow-lg bg-white rounded lg:rounded-t-none z-50" ]
                             [ a
-                                [ class "flex block w-full px-4 py-4 justify-start items-center text-sm focus-ring rounded-sm hover:text-orange-300 focus-visible:text-orange-300"
+                                [ class menuItemClass
                                 , Route.href (Route.Profile model.accountName)
-                                , onClick ClickedProfileIcon
+                                , onClick ClickedNavLink
                                 ]
-                                [ Icons.profile "mr-4 fill-current"
+                                [ menuIcon Icons.profile
                                 , text_ "menu.profile"
                                 ]
+                            , a
+                                [ class menuItemClass
+                                , Route.href Route.Settings
+                                , onClick ClickedNavLink
+                                ]
+                                [ menuIcon Icons.settings
+                                , text_ "settings.account.title"
+                                ]
                             , button
-                                [ class "flex block w-full px-4 py-4 justify-start items-center text-sm border-t focus-ring rounded-sm hover:text-orange-300 focus-visible:text-orange-300"
+                                [ class menuItemClass
                                 , onClick ToggleLanguageItems
                                 ]
-                                [ Icons.languages "mr-4 fill-current"
+                                [ menuIcon Icons.languages
                                 , text_ "menu.languages"
                                 ]
                             , if model.showLanguageItems then
-                                div [ class "ml-6 mb-2" ]
+                                div [ class "ml-4 mb-2" ]
                                     (button
-                                        [ class "flex px-4 py-2 text-gray items-center text-indigo-500 font-bold text-xs uppercase focus-ring rounded-sm"
+                                        [ class menuItemClass
+                                        , class "uppercase !rounded !text-sm lg:!text-xs"
                                         ]
-                                        [ Shared.langFlag shared.language
+                                        [ Shared.langFlag [ class "w-4 h-4 mr-2" ] shared.language
                                         , text (Translation.languageToLanguageCode shared.language)
                                         ]
-                                        :: Shared.viewLanguageItems shared ClickedLanguage
+                                        :: Shared.viewLanguageItems
+                                            { containerAttrs =
+                                                [ class menuItemClass
+                                                , class "uppercase !rounded !text-sm lg:!text-xs"
+                                                ]
+                                            , flagIconAttrs = [ class "w-4 h-4 mr-2" ]
+                                            }
+                                            shared
+                                            ClickedLanguage
                                     )
 
                               else
                                 text ""
                             , button
-                                [ class "flex block w-full px-4 py-4 justify-start items-center text-sm border-t focus-ring rounded-sm hover:text-red focus-visible:text-red"
+                                [ class menuItemClass
+                                , class "text-red hover:bg-red/10 focus:bg-red/10"
                                 , onClick ClickedLogout
                                 ]
-                                [ Icons.close "fill-current m-1 mr-5"
+                                [ menuIcon Icons.close
                                 , text_ "menu.logout"
                                 ]
                             ]
@@ -1304,6 +1318,7 @@ type External msg
     | HideFeedback
     | ShowCodeOfConductModal
     | ExternalActionMsg Action.Msg
+    | ChangedPin String
 
 
 {-| Perform a GraphQL query. This function is preferred over `Api.Graphql.query`
@@ -1571,8 +1586,8 @@ mapMsg mapFn msg =
         GotActionMsg subMsg ->
             GotActionMsg subMsg
 
-        ClickedProfileIcon ->
-            ClickedProfileIcon
+        ClickedNavLink ->
+            ClickedNavLink
 
         ClosedSearch ->
             ClosedSearch
@@ -1721,6 +1736,9 @@ mapExternal mapFn msg =
 
         ExternalActionMsg subMsg ->
             ExternalActionMsg subMsg
+
+        ChangedPin newPin ->
+            ChangedPin newPin
 
 
 type Resource
@@ -1936,6 +1954,9 @@ updateExternal externalMsg ({ shared } as model) =
         ExternalActionMsg subMsg ->
             { defaultResult | cmd = Utils.spawnMessage (GotActionMsg subMsg) }
 
+        ChangedPin newPin ->
+            { defaultResult | model = { model | auth = Auth.changeLastKnownPin newPin model.auth } }
+
 
 type alias UpdateResult msg =
     UR.UpdateResult Model (Msg msg) (ExternalMsg msg)
@@ -1987,7 +2008,7 @@ type Msg externalMsg
     | GotFeedbackMsg Feedback.Msg
     | GotSearchMsg Search.Msg
     | GotActionMsg Action.Msg
-    | ClickedProfileIcon
+    | ClickedNavLink
     | ClosedSearch
     | GotTimeInternal Time.Posix
     | CompletedLoadContributionCount (RemoteData (Graphql.Http.Error (Maybe Int)) (Maybe Int))
@@ -2055,7 +2076,7 @@ update msg model =
                     )
                     model
 
-        ClickedProfileIcon ->
+        ClickedNavLink ->
             { closeAllModals | searchModel = Search.closeSearch model.searchModel }
                 |> UR.init
 
@@ -3170,8 +3191,8 @@ msgToString msg =
         GotTimeInternal _ ->
             [ "GotTimeInternal" ]
 
-        ClickedProfileIcon ->
-            [ "ClickedProfileIcon" ]
+        ClickedNavLink ->
+            [ "ClickedNavLink" ]
 
         ClosedSearch ->
             [ "ClosedSearch" ]
@@ -3347,3 +3368,6 @@ externalMsgToString externalMsg =
 
         ExternalActionMsg subMsg ->
             "ExternalActionMsg" :: Action.msgToString subMsg
+
+        ChangedPin _ ->
+            [ "ChangedPin" ]

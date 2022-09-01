@@ -730,15 +730,10 @@ async function handleJavascriptPort (arg) {
         privateKey: decryptedKey
       }
 
-      // `.encryptedPassphrase` property was added in https://github.com/cambiatus/frontend/pull/270 while redesigning
-      // the Profile page. For the users who were already logged-in before these changes were introduced,
-      // this property may not exist.
-      if (userStorage.encryptedPassphrase) {
-        data.passphrase = sjcl.decrypt(
-          currentPin,
-          userStorage.encryptedPassphrase
-        )
-      }
+      data.passphrase = sjcl.decrypt(
+        currentPin,
+        userStorage.encryptedPassphrase
+      )
 
       storePin(data, newPin)
 
@@ -854,17 +849,8 @@ async function handleJavascriptPort (arg) {
       const store = JSON.parse(getItem(USER_KEY))
       const pin = arg.data.pin
 
-      // `.encryptedPassphrase` property was added in https://github.com/cambiatus/frontend/pull/270 while redesigning
-      // the Profile page. For the users who were already logged-in before these changes were introduced,
-      // this property may not exist. This case is handled by passing `isDownloaded: false` to Elm
-      // for further processing.
-      if (store.encryptedPassphrase) {
-        const decryptedPassphrase = sjcl.decrypt(pin, store.encryptedPassphrase)
-        return downloadPdf(store.accountName, decryptedPassphrase)
-      } else {
-        // The case when there's not passphrase stored in user's browser, only the Private Key
-        return { isDownloaded: false }
-      }
+      const decryptedPassphrase = sjcl.decrypt(pin, store.encryptedPassphrase)
+      return downloadPdf(store.accountName, decryptedPassphrase)
     }
     case 'accountNameToUint64': {
       return { uint64name: eos.modules.format.encodeName(arg.data.accountName, false) }
