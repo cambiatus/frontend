@@ -22,10 +22,10 @@ jobs:
         run: yarn check-css
 
       - name: "Check elm-format"
-        uses: sparksp/elm-format-action@v1
+        uses: sparksp/elm-format-action@v1.0.2
 
       - name: "Check elm-review"
-        uses: sparksp/elm-review-action@v1.0.4
+        uses: sparksp/elm-review-action@v1.0.6
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -33,12 +33,14 @@ jobs:
         run: yarn test
       
       - name: "Check elm-review on elm-book"
-        uses: sparksp/elm-review-action@v1.0.4
+        uses: sparksp/elm-review-action@v1.0.6
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           working-directory: ./elm-book
 
       - name: "Check elm-format on elm-book"
-        uses: sparksp/elm-format-action@v1
+        uses: sparksp/elm-format-action@v1.0.2
         with:
           working-directory: ./elm-book
 
