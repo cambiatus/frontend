@@ -37,7 +37,9 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          working-directory: ./elm-book
+          elm_review_config: elm-book/review
+          elm_json: elm-book/elm.json
+          elm_files: elm-book/src/elm
 
       - name: "Check elm-format on elm-book"
         uses: sparksp/elm-format-action@v1.0.2
