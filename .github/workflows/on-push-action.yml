@@ -32,22 +32,8 @@ jobs:
       - name: "Check elm-test"
         run: yarn test
       
-      - name: "Check elm-review on elm-book"
-        uses: sparksp/elm-review-action@v1.0.6
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          elm_review_config: elm-book/review
-          elm_json: elm-book/elm.json
-          elm_files: elm-book/src/elm
-
-      - name: "Check elm-format on elm-book"
-        uses: sparksp/elm-format-action@v1.0.2
-        with:
-          working-directory: ./elm-book
-
       - name: Build asset
         run: yarn build
 
       - name: Check elm-book
-        run: cd elm-book && yarn install --production && yarn build
+        run: cd elm-book && yarn install --production && yarn elm-review && yarn elm-format --validate ./src/elm && yarn build
