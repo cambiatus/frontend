@@ -35,12 +35,12 @@ jobs:
       - name: "Check elm-review on elm-book"
         uses: sparksp/elm-review-action@v1.0.4
         with:
-          - working-directory: ./elm-book
+          working-directory: ./elm-book
 
       - name: "Check elm-format on elm-book"
         uses: sparksp/elm-format-action@v1
         with:
-          - working-directory: ./elm-book
+          working-directory: ./elm-book
 
       - name: Build asset
         run: yarn build
