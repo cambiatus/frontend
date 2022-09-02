@@ -18,7 +18,7 @@ import UpdateResult
 type alias Model =
     { singleFileExample : Form.File.Model
     , multipleFilesExample : Form.File.Model
-    , singleFileRoundedExample : Form.File.Model
+    , singleFileRoundedExample :     Form.File.Model
     }
 
 
