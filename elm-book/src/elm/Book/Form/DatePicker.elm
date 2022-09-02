@@ -1,4 +1,4 @@
-module Book.Form.DatePicker exposing (Model, Msg, chapter, initModel, updateSharedState)
+module Book.Form.DatePicker exposing (Model, chapter, initModel)
 
 import Book.Helpers
 import Date
@@ -32,62 +32,8 @@ initModel =
 -- UPDATE
 
 
-type Msg
-    = NoOp
-    | GotRelativeDatePickerMsg (Form.DatePicker.Options Msg) (Form.DatePicker.ViewConfig Msg) Form.DatePicker.Msg
-    | GotAbsoluteDatePickerMsg (Form.DatePicker.Options Msg) (Form.DatePicker.ViewConfig Msg) Form.DatePicker.Msg
-    | GotErrorDatePickerMsg (Form.DatePicker.Options Msg) (Form.DatePicker.ViewConfig Msg) Form.DatePicker.Msg
-
-
 type alias SharedState x =
     { x | datepickerModel : Model }
-
-
-updateSharedState : Msg -> SharedState x -> ( SharedState x, Cmd Msg )
-updateSharedState msg sharedState =
-    let
-        model =
-            sharedState.datepickerModel
-    in
-    case msg of
-        NoOp ->
-            ( sharedState, Cmd.none )
-
-        GotRelativeDatePickerMsg options viewConfig subMsg ->
-            let
-                ( newModel, subCmd ) =
-                    Form.DatePicker.update options
-                        viewConfig
-                        subMsg
-                        sharedState.datepickerModel.relative
-            in
-            ( { sharedState | datepickerModel = { model | relative = newModel } }
-            , Cmd.map (GotRelativeDatePickerMsg options viewConfig) subCmd
-            )
-
-        GotAbsoluteDatePickerMsg options viewConfig subMsg ->
-            let
-                ( newModel, subCmd ) =
-                    Form.DatePicker.update options
-                        viewConfig
-                        subMsg
-                        sharedState.datepickerModel.absolute
-            in
-            ( { sharedState | datepickerModel = { model | absolute = newModel } }
-            , Cmd.map (GotAbsoluteDatePickerMsg options viewConfig) subCmd
-            )
-
-        GotErrorDatePickerMsg options viewConfig subMsg ->
-            let
-                ( newModel, subCmd ) =
-                    Form.DatePicker.update options
-                        viewConfig
-                        subMsg
-                        sharedState.datepickerModel.withError
-            in
-            ( { sharedState | datepickerModel = { model | withError = newModel } }
-            , Cmd.map (GotErrorDatePickerMsg options viewConfig) subCmd
-            )
 
 
 

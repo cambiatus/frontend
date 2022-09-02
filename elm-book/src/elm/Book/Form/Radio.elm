@@ -35,7 +35,7 @@ type Msg
     = SelectedFruit (Maybe Fruit)
     | SelectedVerticalFruit (Maybe Fruit)
     | SelectedErrorFruit (Maybe Fruit)
-    | BlurredField String
+    | BlurredField
 
 
 update : Msg -> Model -> Model
@@ -50,7 +50,7 @@ update msg model =
         SelectedErrorFruit errorFruit ->
             { model | selectedErrorFruit = errorFruit }
 
-        BlurredField _ ->
+        BlurredField ->
             model
 
 
@@ -66,13 +66,6 @@ updateSharedState msg sharedState =
 defaultOptions : { id : String } -> Form.Radio.Options (Maybe Fruit) msg
 defaultOptions { id } =
     let
-        allOptions =
-            Book.Helpers.allFruits
-                |> List.map
-                    (\fruit ->
-                        ( Just fruit, Html.text (Book.Helpers.fruitToString fruit) )
-                    )
-
         addOptions radio =
             List.foldl
                 (\fruit ->
@@ -99,7 +92,7 @@ view model =
     in
     Form.Radio.view options
         { onSelect = SelectedFruit
-        , onBlur = BlurredField "fruit-picker-radio"
+        , onBlur = BlurredField
         , value = model.selectedFruit
         , error = Html.text ""
         , hasError = False
@@ -115,7 +108,7 @@ viewVertical model =
     in
     Form.Radio.view options
         { onSelect = SelectedVerticalFruit
-        , onBlur = BlurredField "fruit-picker-vertical-radio"
+        , onBlur = BlurredField
         , value = model.selectedVerticalFruit
         , error = Html.text ""
         , hasError = False
@@ -151,7 +144,7 @@ viewWithError model =
     in
     Form.Radio.view options
         { onSelect = SelectedErrorFruit
-        , onBlur = BlurredField "fruit-picker-error-radio"
+        , onBlur = BlurredField
         , value = model.selectedErrorFruit
         , error = Book.Helpers.viewError [] True (Just "Something went wrong")
         , hasError = True

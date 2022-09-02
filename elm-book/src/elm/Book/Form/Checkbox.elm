@@ -33,7 +33,7 @@ initModel =
 type Msg
     = ToggledBasicExample Bool
     | ToggledErrorExample Bool
-    | BlurredField String
+    | BlurredField
 
 
 update : Msg -> Model -> Model
@@ -45,7 +45,7 @@ update msg model =
         ToggledErrorExample errorExample ->
             { model | errorExample = errorExample }
 
-        BlurredField _ ->
+        BlurredField ->
             model
 
 
@@ -78,7 +78,7 @@ view model =
     in
     Form.Checkbox.view options
         { onCheck = ToggledBasicExample
-        , onBlur = BlurredField "basic-example-checkbox"
+        , onBlur = BlurredField
         , value = model.basicExample
         , error = Html.text ""
         , hasError = False
@@ -97,7 +97,7 @@ viewWithError model =
     in
     Form.Checkbox.view options
         { onCheck = ToggledErrorExample
-        , onBlur = BlurredField "example-with-error-checkbox"
+        , onBlur = BlurredField
         , value = model.errorExample
         , error = Book.Helpers.viewError [] True (Just "Something went wrong")
         , hasError = True

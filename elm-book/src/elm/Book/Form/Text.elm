@@ -15,7 +15,6 @@ import Html exposing (Html)
 
 type alias Model =
     { basicExample : String
-    , textareaExample : String
     , currencyExample : String
     , maskExample : String
     }
@@ -24,7 +23,6 @@ type alias Model =
 initModel : Model
 initModel =
     { basicExample = ""
-    , textareaExample = ""
     , currencyExample = ""
     , maskExample = ""
     }
@@ -37,10 +35,8 @@ initModel =
 type Msg
     = NoOp
     | ChangedBasicExample String
-    | ChangedTextareaExample String
     | ChangedCurrencyExample String
     | ChangedMaskExample String
-    | BlurredField String
 
 
 update : Msg -> Model -> Model
@@ -52,17 +48,11 @@ update msg model =
         ChangedBasicExample basicExample ->
             { model | basicExample = basicExample }
 
-        ChangedTextareaExample textareaExample ->
-            { model | textareaExample = textareaExample }
-
         ChangedCurrencyExample currencyExample ->
             { model | currencyExample = currencyExample }
 
         ChangedMaskExample maskExample ->
             { model | maskExample = maskExample }
-
-        BlurredField _ ->
-            model
 
 
 updateSharedState : Msg -> { x | textModel : Model } -> { x | textModel : Model }
@@ -86,7 +76,7 @@ viewBasic model =
     in
     Form.Text.view options
         { onChange = ChangedBasicExample
-        , onBlur = BlurredField "basic-example"
+        , onBlur = NoOp
         , value = model.basicExample
         , error = Html.text ""
         , hasError = False
@@ -109,7 +99,7 @@ viewTextarea model =
     in
     Form.Text.view options
         { onChange = ChangedBasicExample
-        , onBlur = BlurredField "textarea-example"
+        , onBlur = NoOp
         , value = model.basicExample
         , error = Html.text ""
         , hasError = False
@@ -130,7 +120,7 @@ viewWithCurrency model =
     in
     Form.Text.view options
         { onChange = ChangedCurrencyExample
-        , onBlur = BlurredField "currency-example"
+        , onBlur = NoOp
         , value = model.currencyExample
         , error = Html.text ""
         , hasError = False
@@ -152,7 +142,7 @@ viewWithMask model =
     in
     Form.Text.view options
         { onChange = ChangedMaskExample
-        , onBlur = BlurredField "phone-example"
+        , onBlur = NoOp
         , value = model.maskExample
         , error = Html.text ""
         , hasError = False

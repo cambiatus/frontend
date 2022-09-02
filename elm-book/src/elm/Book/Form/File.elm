@@ -163,7 +163,7 @@ viewSideBySide :
     -> { image : String, error : Maybe String }
     -> Html (ElmBook.Msg x)
 viewSideBySide options { image, error } =
-    Html.div [ Html.Attributes.class "grid grid-cols-2 gap-4" ]
+    Html.div [ class "grid grid-cols-2 gap-4" ]
         [ Form.File.view
             (options
                 |> Form.File.withLabel "Without image selected"
