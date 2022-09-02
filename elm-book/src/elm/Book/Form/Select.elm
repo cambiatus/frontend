@@ -32,7 +32,7 @@ initModel =
 type Msg
     = SelectedFruit Fruit
     | SelectedFruitWithError Fruit
-    | BlurredField String
+    | BlurredField
 
 
 update : Msg -> Model -> Model
@@ -44,7 +44,7 @@ update msg model =
         SelectedFruitWithError fruit ->
             { model | selectedFruitWithError = fruit }
 
-        BlurredField _ ->
+        BlurredField ->
             model
 
 
@@ -86,7 +86,7 @@ viewBasic model =
     in
     Form.Select.view options
         { onSelect = SelectedFruit
-        , onBlur = BlurredField "fruit-picker-example"
+        , onBlur = BlurredField
         , value = model.selectedFruit
         , error = Html.text ""
         , hasError = False
@@ -125,7 +125,7 @@ viewWithError error model =
     in
     Form.Select.view options
         { onSelect = SelectedFruitWithError
-        , onBlur = BlurredField "fruit-error-example"
+        , onBlur = BlurredField
         , value = model.selectedFruitWithError
         , error = Book.Helpers.viewError [] True (Just error)
         , hasError = True

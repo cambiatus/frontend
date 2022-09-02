@@ -1,4 +1,4 @@
-module Book.Form.RichText exposing (Model, Msg, chapter, initModel, updateSharedState)
+module Book.Form.RichText exposing (Model, Msg, chapter, initModel)
 
 import Book.Helpers
 import ElmBook.Actions as Actions
@@ -33,22 +33,6 @@ type Msg
 
 type alias SharedState x =
     { x | richTextModel : Model }
-
-
-updateSharedState : Msg -> SharedState x -> ( SharedState x, Cmd Msg )
-updateSharedState msg sharedState =
-    case msg of
-        GotRichTextMsg subMsg ->
-            let
-                ( newModel, subCmd ) =
-                    Form.RichText.update subMsg sharedState.richTextModel
-            in
-            ( { sharedState | richTextModel = newModel }
-            , Cmd.map GotRichTextMsg subCmd
-            )
-
-        NoOp ->
-            ( sharedState, Cmd.none )
 
 
 update : Msg -> Form.RichText.Model -> ( Form.RichText.Model, Cmd Msg )

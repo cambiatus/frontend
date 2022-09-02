@@ -22,18 +22,18 @@ jobs:
         run: yarn check-css
 
       - name: "Check elm-format"
-        uses: sparksp/elm-format-action@v1
+        uses: sparksp/elm-format-action@v1.0.2
 
       - name: "Check elm-review"
-        uses: sparksp/elm-review-action@v1.0.4
+        uses: sparksp/elm-review-action@v1.0.6
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: "Check elm-test"
         run: yarn test
-
+      
       - name: Build asset
         run: yarn build
 
       - name: Check elm-book
-        run: cd elm-book && yarn install --production && yarn build
+        run: cd elm-book && yarn install --production && yarn elm-review && yarn elm-format --validate ./src/elm && yarn build
