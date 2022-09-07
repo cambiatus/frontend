@@ -163,7 +163,7 @@ interestsForm { t } =
                 |> Form.withGroup
                     [ class "flex" ]
                     (Form.Text.init { label = t "profile.edit.labels.interests", id = "interest-input" }
-                        |> Form.Text.withContainerAttrs [ class "w-full mb-4" ]
+                        |> Form.Text.withContainerAttrs [ class "w-full !mb-4" ]
                         |> Form.textField
                             { parser = Ok
                             , value = .interest
@@ -196,7 +196,7 @@ interestsForm { t } =
             (Form.introspect
                 (\values ->
                     Form.arbitrary
-                        (div [ class "flex flex-wrap mb-4 gap-x-4 gap-y-2" ]
+                        (div [ class "flex flex-wrap mb-10 gap-x-4 gap-y-2" ]
                             (List.map viewInterest values.interests)
                         )
                 )
