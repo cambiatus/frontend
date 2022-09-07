@@ -51,9 +51,6 @@ if (env !== 'development') {
   })
 
   Sentry.setTag('cambiatus.version', process.env.COMMIT)
-
-  // Add script to track usage data with Matomo
-  matomo.addScript()
 }
 
 /** On production, adds a breadcrumb to sentry. Needs an object like this:
@@ -1407,6 +1404,9 @@ async function handleJavascriptPort (arg) {
         portuguese: bip39Wordlists.portuguese,
         spanish: bip39Wordlists.spanish
       }
+    }
+    case 'addMatomoScript': {
+      matomo.addScript()
     }
     default: {
       return { error: `No treatment found for Elm port ${arg.data.name}` }

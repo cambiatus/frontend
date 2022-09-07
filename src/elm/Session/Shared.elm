@@ -25,6 +25,7 @@ import Html.Attributes exposing (class, src)
 import Html.Events exposing (onClick)
 import Http
 import I18Next exposing (Translations, initialTranslations)
+import Json.Encode
 import Ports
 import Set exposing (Set)
 import Time exposing (Posix)
@@ -70,6 +71,18 @@ init ({ maybeAccount, endpoints, allowCommunityCreation, tokenContract, communit
     let
         environment =
             Environment.fromUrl url
+
+        addMatomoScriptCmd =
+            Ports.javascriptOut
+                -- We don't need a responseAddress because we don't need a response
+                { responseAddress = ()
+                , responseData = Json.Encode.null
+                , data =
+                    Json.Encode.object
+                        [ ( "name", Json.Encode.string "addMatomoScript" )
+                        ]
+                }
+                |> Ports.javascriptOutCmd (\_ -> [])
     in
     ( { navKey = navKey
       , language =
@@ -106,7 +119,15 @@ init ({ maybeAccount, endpoints, allowCommunityCreation, tokenContract, communit
       , hasSeenSponsorModal = flags.hasSeenSponsorModal
       , bip39 = Bip39NotLoaded
       }
-    , Cmd.none
+    , case environment of
+        Environment.Production ->
+            addMatomoScriptCmd
+
+        Environment.Demo ->
+            addMatomoScriptCmd
+
+        _ ->
+            Cmd.none
     )
 
 
