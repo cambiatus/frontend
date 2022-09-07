@@ -1407,6 +1407,8 @@ async function handleJavascriptPort (arg) {
     }
     case 'addMatomoScript': {
       matomo.addScript()
+
+      return {}
     }
     default: {
       return { error: `No treatment found for Elm port ${arg.data.name}` }
