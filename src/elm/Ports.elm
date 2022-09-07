@@ -167,6 +167,7 @@ port paypalInfo : Value -> Cmd msg
 
 port requestPaypalInfoFromJs : (String -> msg) -> Sub msg
 
+
 {-| Given an auth token, create the absinthe socket to receive subscription data
 -}
 port createAbsintheSocket : String -> Cmd msg
