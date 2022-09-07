@@ -106,12 +106,7 @@ init ({ maybeAccount, endpoints, allowCommunityCreation, tokenContract, communit
       , hasSeenSponsorModal = flags.hasSeenSponsorModal
       , bip39 = Bip39NotLoaded
       }
-    , case environment of
-        Environment.Production ->
-            Ports.addPlausibleScript { domain = url.host, src = "https://plausible.io/js/plausible.js" }
-
-        _ ->
-            Cmd.none
+    , Cmd.none
     )
 
 

@@ -2,7 +2,6 @@ port module Ports exposing
     ( ContributionData(..)
     , JavascriptOut
     , JavascriptOutModel
-    , addPlausibleScript
     , createAbsintheSocket
     , getRecentSearches
     , gotRecentSearches
@@ -167,23 +166,6 @@ port paypalInfo : Value -> Cmd msg
 
 
 port requestPaypalInfoFromJs : (String -> msg) -> Sub msg
-
-
-{-| Add a Plausible script so we can track usage metrics. We have it here so we
-can dynamically tell plausible which community we're in (and if we're not in
-production, we don't even need to include it)
--}
-addPlausibleScript : { domain : String, src : String } -> Cmd msg
-addPlausibleScript { domain, src } =
-    Encode.object
-        [ ( "domain", Encode.string domain )
-        , ( "src", Encode.string src )
-        ]
-        |> addPlausibleScriptPort
-
-
-port addPlausibleScriptPort : Value -> Cmd msg
-
 
 {-| Given an auth token, create the absinthe socket to receive subscription data
 -}
