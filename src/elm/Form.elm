@@ -4,7 +4,7 @@ module Form exposing
     , optional, introspect, list, mapValues, mapOutput, withValidationStrategy, ValidationStrategy(..)
     , textField, richText, toggle, checkbox, radio, select, file, fileMultiple, datePicker, userPicker, userPickerMultiple, arbitrary, arbitraryWith, unsafeArbitrary
     , view, viewWithoutSubmit, Model, init, Msg, update, updateValues, getValue, hasFieldsLoading, msgToString
-    , withDisabled
+    , withDisabled, withShowAllErrors
     , isDisabled, isShowingAllErrors
     , parse
     )
@@ -88,7 +88,7 @@ documentation if you're stuck.
 
 ### Changing attributes and state
 
-@docs withDisabled
+@docs withDisabled, withShowAllErrors
 
 
 ### Checking attributes and state
@@ -1021,6 +1021,26 @@ when you want to disable the form after the user submits it.
 withDisabled : Bool -> Model values -> Model values
 withDisabled disabled (Model model) =
     Model { model | disabled = disabled }
+
+
+{-| Control whether the form should show all errors or not. This is useful when
+you want to show all errors after the user tried to submit the form, and you
+have some custom action that doesn't automatically trigger all of the errors.
+-}
+withShowAllErrors : Bool -> Model values -> Model values
+withShowAllErrors showAllErrors (Model model) =
+    let
+        (ErrorTracking errorTracking) =
+            model.errorTracking
+    in
+    Model
+        { model
+            | errorTracking =
+                ErrorTracking
+                    { errorTracking
+                        | showAllErrors = showAllErrors
+                    }
+        }
 
 
 {-| Checks if the form is disabled. It's useful to disable submit buttons when
