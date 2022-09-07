@@ -890,7 +890,8 @@
         "unitEmpty": "ክፍሎች ባዶ መሆን አይችሉም",
         "unitTooLow": "ክፍሉ በጣም ትንሽ ነዉ, ቢያንስ 1 መሆን አለበት ",
         "unitTooHigh": "በቂ ክፍሎች የሉም",
-        "unitNotOnlyNumbers": "፤አባላት ብቻ ይፈቀዳል"
+        "unitNotOnlyNumbers": "፤አባላት ብቻ ይፈቀዳል",
+        "balanceTooLow": "ለዚህ ግዢ በቂ {{symbol}} የለዎትም። ተጨማሪ {{symbol}} ለማግኘት የንጥሎቹን መጠን ለመቀነስ ወይም ድርጊቶችን ለማጠናቀቅ ይሞክሩ።"
       }
     },
     "delete": "ሰርዝ",

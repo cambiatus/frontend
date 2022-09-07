@@ -823,7 +823,7 @@ view session model =
                                         , symbol = sale.symbol
                                         }
                                         Nothing
-                                        { isDisabled = False }
+                                        { isDisabled = False, communityMinBalance = Nothing }
                                         GotFormInteractionMsgAsGuest
                                     )
                                     model_.form
@@ -926,7 +926,9 @@ view session model =
                                                     (createForm loggedIn.shared.translators
                                                         sale
                                                         maybeBalance
-                                                        { isDisabled = isDisabled }
+                                                        { isDisabled = isDisabled
+                                                        , communityMinBalance = community.minBalance
+                                                        }
                                                         GotFormInteractionMsg
                                                     )
                                                     (Form.withDisabled isDisabled model_.form)
@@ -1069,10 +1071,13 @@ createForm :
             , symbol : Eos.Symbol
         }
     -> Maybe Balance
-    -> { isDisabled : Bool }
+    ->
+        { isDisabled : Bool
+        , communityMinBalance : Maybe Float
+        }
     -> (FormInteractionMsg -> msg)
     -> Form.Form msg FormInput FormOutput
-createForm ({ t, tr } as translators) product maybeBalance { isDisabled } toFormInteractionMsg =
+createForm ({ t, tr } as translators) product maybeBalance { isDisabled, communityMinBalance } toFormInteractionMsg =
     Form.succeed FormOutput
         |> Form.with
             (Form.Text.init
@@ -1130,7 +1135,36 @@ createForm ({ t, tr } as translators) product maybeBalance { isDisabled } toForm
                             >> Form.Validate.validate translators
                     , value = .units
                     , update = \units input -> { input | units = units }
-                    , externalError = always Nothing
+                    , externalError =
+                        \values ->
+                            let
+                                maybeTotalBeingSpent =
+                                    values.units
+                                        |> String.toInt
+                                        |> Maybe.map (\units -> toFloat units * product.price)
+
+                                minBalance =
+                                    Maybe.withDefault 0 communityMinBalance
+
+                                isSpendingTooMuch =
+                                    Maybe.map2
+                                        (\balance totalBeingSpent ->
+                                            balance.asset.amount + minBalance < totalBeingSpent
+                                        )
+                                        maybeBalance
+                                        maybeTotalBeingSpent
+                                        |> Maybe.withDefault False
+                            in
+                            if isSpendingTooMuch then
+                                tr "shop.transfer.errors.balanceTooLow"
+                                    [ ( "symbol"
+                                      , Eos.symbolToSymbolCodeString product.symbol
+                                      )
+                                    ]
+                                    |> Just
+
+                            else
+                                Nothing
                     }
             )
         |> Form.withNoOutput

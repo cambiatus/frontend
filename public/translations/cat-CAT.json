@@ -932,7 +932,8 @@
         "unitEmpty": "La unitat no pot estar buida",
         "unitTooLow": "La unitat és massa baixa, ha de ser com a mínim 1",
         "unitTooHigh": "No hi ha prou unitats disponibles",
-        "unitNotOnlyNumbers": "Només es permeten números"
+        "unitNotOnlyNumbers": "Només es permeten números",
+        "balanceTooLow": "No tens prou {{symbol}} per a aquesta compra. Intenta reduir la quantitat d'elements o completa accions per guanyar més {{symbol}}."
       }
     },
     "delete": "Eliminar",
