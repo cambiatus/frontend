@@ -123,9 +123,6 @@ init ({ maybeAccount, endpoints, allowCommunityCreation, tokenContract, communit
         Environment.Production ->
             addMatomoScriptCmd
 
-        Environment.Demo ->
-            addMatomoScriptCmd
-
         _ ->
             Cmd.none
     )
