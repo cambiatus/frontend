@@ -76,6 +76,7 @@ type DropdownState
 
 type DropZone
     = After Shop.Category.Id
+    | RootAfter Shop.Category.Id
     | OnTopOf Shop.Category.Id
     | FirstChildOf Shop.Category.Id
     | FirstRootPosition
@@ -753,6 +754,9 @@ update msg model loggedIn =
                 Just (After _) ->
                     UR.init model
 
+                Just (RootAfter _) ->
+                    UR.init model
+
                 Just (FirstChildOf _) ->
                     UR.init model
 
@@ -769,6 +773,9 @@ update msg model loggedIn =
                         maybeNewZipper =
                             case dropzone of
                                 After dropzoneId ->
+                                    Utils.Tree.moveZipperToAfter dropzoneId .id childZipper
+
+                                RootAfter dropzoneId ->
                                     Utils.Tree.moveZipperToAfter dropzoneId .id childZipper
 
                                 FirstChildOf parentId ->
@@ -1126,6 +1133,43 @@ handleDndDrop msg loggedIn categories { draggedCategoryId, dropZone } =
                 Nothing ->
                     UR.logImpossible msg
                         ("Dropped category after " ++ Shop.Category.idToString dropzoneId ++ ", but couldn't find previous sibling or parent")
+                        (Just loggedIn.accountName)
+                        { moduleName = "Page.Community.Settings.Shop.Categories", function = "handleDndDrop" }
+                        []
+
+        RootAfter dropzoneId ->
+            let
+                maybePreviousSibling =
+                    categories
+                        |> Utils.Tree.findZipperInForest (\{ id } -> id == dropzoneId)
+                        |> Maybe.map Tree.Zipper.label
+            in
+            case maybePreviousSibling of
+                Just previousSibling ->
+                    let
+                        maxRootPosition =
+                            categories
+                                |> List.map (Tree.label >> .position)
+                                |> List.maximum
+                                |> Maybe.withDefault 0
+
+                        draggedCategoryIsRoot =
+                            Utils.Tree.findZipperInForest (\{ id } -> id == draggedCategoryId) categories
+                                |> Maybe.andThen Tree.Zipper.parent
+                                |> Maybe.Extra.isNothing
+
+                        newPosition =
+                            if draggedCategoryIsRoot then
+                                min maxRootPosition (previousSibling.position + 1)
+
+                            else
+                                previousSibling.position + 1
+                    in
+                    addMutation (Shop.Category.moveToRoot draggedCategoryId newPosition)
+
+                Nothing ->
+                    UR.logImpossible msg
+                        ("Dropped category in root, after " ++ Shop.Category.idToString dropzoneId ++ ", but couldn't find previous sibling")
                         (Just loggedIn.accountName)
                         { moduleName = "Page.Community.Settings.Shop.Categories", function = "handleDndDrop" }
                         []
@@ -1584,8 +1628,7 @@ viewCategoryWithChildren translators model zipper children =
             ]
         , case Tree.Zipper.parent zipper of
             Nothing ->
-                -- TODO
-                text ""
+                dropZoneElement model (RootAfter category.id)
 
             Just _ ->
                 dropZoneElement model (After category.id)
@@ -1600,7 +1643,7 @@ dropZoneElement model target =
                 [ ( "outline-black outline-offset-0", Dnd.getDraggingOverElement model.dnd == Just target )
                 , ( "hidden"
                   , case target of
-                        FirstRootPosition ->
+                        RootAfter _ ->
                             False
 
                         _ ->
