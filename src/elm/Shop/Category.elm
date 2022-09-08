@@ -3,6 +3,7 @@ module Shop.Category exposing
     , Model
     , Tree
     , addChild
+    , addChild2
     , create
     , delete
     , encodeId
@@ -24,6 +25,7 @@ import Graphql.Operation exposing (RootMutation)
 import Graphql.OptionalArgument as OptionalArgument
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet)
 import Json.Encode
+import List.Extra
 import Markdown exposing (Markdown)
 import Maybe.Extra
 import Slug exposing (Slug)
@@ -135,6 +137,36 @@ addChild tree newChildId =
                     Tree.children tree
                         |> List.map (Tree.label >> .id)
                         |> (\childrenIds -> newChildId :: childrenIds)
+                        |> List.indexedMap toSubcategoryInput
+                        |> OptionalArgument.Present
+                , id =
+                    Tree.label tree
+                        |> .id
+                        |> idToInt
+                        |> OptionalArgument.Present
+            }
+        )
+
+
+addChild2 : Tree -> Id -> Int -> SelectionSet decodesTo Cambiatus.Object.Category -> SelectionSet (Maybe decodesTo) RootMutation
+addChild2 tree newChildId newChildPosition =
+    let
+        insertAt : Int -> a -> List a -> List a
+        insertAt position element xs =
+            List.Extra.splitAt position xs
+                |> (\( first, second ) -> first ++ element :: second)
+
+        toSubcategoryInput index categoryId =
+            { id = idToInt categoryId, position = index }
+    in
+    Cambiatus.Mutation.category
+        (\optionals ->
+            { optionals
+                | categories =
+                    Tree.children tree
+                        |> List.map (Tree.label >> .id)
+                        |> List.filter (\id -> id /= newChildId)
+                        |> insertAt newChildPosition newChildId
                         |> List.indexedMap toSubcategoryInput
                         |> OptionalArgument.Present
                 , id =

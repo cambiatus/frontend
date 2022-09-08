@@ -2,6 +2,7 @@ module Utils.Tree exposing
     ( findInForest, findZipperInForest, getAllAncestors
     , toFlatForest, fromFlatForest
     , goUpWithoutChildren, goDownWithoutChildren
+    , moveZipperToAfter
     )
 
 {-| Helper functions that deal with Trees from zwilias/elm-rosetree
@@ -20,6 +21,11 @@ module Utils.Tree exposing
 ## Traversing through the tree
 
 @docs goUpWithoutChildren, goDownWithoutChildren
+
+
+## Rearranging trees/zippers
+
+@docs moveZipperToAfter
 
 -}
 
@@ -98,3 +104,11 @@ goDownWithoutChildren zipper =
 
         Just firstSibling ->
             Just firstSibling
+
+
+moveZipperToAfter : id -> (model -> id) -> Tree.Zipper.Zipper model -> Maybe (Tree.Zipper.Zipper model)
+moveZipperToAfter target toId zipper =
+    zipper
+        |> Tree.Zipper.removeTree
+        |> Maybe.andThen (Tree.Zipper.findFromRoot (\model -> toId model == target))
+        |> Maybe.andThen (Tree.Zipper.append (Tree.Zipper.tree zipper) >> Tree.Zipper.nextSibling)

@@ -15,47 +15,8 @@ all =
         , getAllAncestors
         , toFlatForest
         , fromFlatForest
+        , moveZipperToAfter
         ]
-
-
-firstTree : Tree.Tree Int
-firstTree =
-    Tree.tree 0
-        [ Tree.tree -1
-            [ Tree.tree -10 []
-            , Tree.tree -20 []
-            ]
-        , Tree.tree 1
-            [ Tree.tree 10 []
-            , Tree.tree 20 []
-            ]
-        ]
-
-
-secondTree : Tree.Tree Int
-secondTree =
-    Tree.tree 100
-        [ Tree.tree -100
-            [ Tree.tree -110 []
-            , Tree.tree -120 []
-            ]
-        , Tree.tree 101
-            [ Tree.tree 110 []
-            , Tree.tree 120 []
-            ]
-        ]
-
-
-trees : List (Tree.Tree Int)
-trees =
-    [ firstTree
-    , secondTree
-    ]
-
-
-treesZipper : Tree.Zipper.Zipper Int
-treesZipper =
-    Tree.Zipper.fromForest firstTree [ secondTree ]
 
 
 findInForest : Test
@@ -200,3 +161,203 @@ fromFlatForest =
                     |> Utils.Tree.fromFlatForest
                     |> Expect.equal (Just (Tree.Zipper.fromTree secondTree))
         ]
+
+
+moveZipperToAfter : Test
+moveZipperToAfter =
+    let
+        go :
+            { startingPoint : Int
+            , target : Int
+            , expected : ( Tree.Tree Int, List (Tree.Tree Int) )
+            }
+            -> Expect.Expectation
+        go { startingPoint, target, expected } =
+            case Tree.Zipper.findFromRoot ((==) startingPoint) treesZipper of
+                Nothing ->
+                    Expect.fail ("Could not find starting point: " ++ String.fromInt startingPoint)
+
+                Just zipper ->
+                    case Utils.Tree.moveZipperToAfter target identity zipper of
+                        Nothing ->
+                            Expect.fail "returned Nothing"
+
+                        Just newZipper ->
+                            Expect.all
+                                [ Tree.Zipper.toForest
+                                    >> Expect.equal expected
+                                , Tree.Zipper.label
+                                    >> Expect.equal startingPoint
+                                ]
+                                newZipper
+    in
+    describe "moveZipperToAfter"
+        [ test "can move to after sibling" <|
+            \_ ->
+                go
+                    { startingPoint = 0
+                    , target = 100
+                    , expected = ( secondTree, [ firstTree ] )
+                    }
+        , test "can move to sibling's child" <|
+            \_ ->
+                go
+                    { startingPoint = 0
+                    , target = -100
+                    , expected =
+                        ( Tree.tree 100
+                            [ treeNegative100
+                            , firstTree
+                            , tree101
+                            ]
+                        , []
+                        )
+                    }
+        , test "can move to sibling's grandchild" <|
+            \_ ->
+                go
+                    { startingPoint = 0
+                    , target = 110
+                    , expected =
+                        ( Tree.tree 100
+                            [ treeNegative100
+                            , Tree.tree 101
+                                [ Tree.tree 110 []
+                                , firstTree
+                                , Tree.tree 120 []
+                                ]
+                            ]
+                        , []
+                        )
+                    }
+        , test "can move child to after itself" <|
+            \_ ->
+                go
+                    { startingPoint = -1
+                    , target = 0
+                    , expected =
+                        ( Tree.tree 0 [ tree1 ]
+                        , [ treeNegative1, secondTree ]
+                        )
+                    }
+        , test "can move child to after sibling" <|
+            \_ ->
+                go
+                    { startingPoint = -1
+                    , target = 100
+                    , expected =
+                        ( Tree.tree 0 [ tree1 ]
+                        , [ secondTree, treeNegative1 ]
+                        )
+                    }
+        , test "can move child to sibling's children" <|
+            \_ ->
+                go
+                    { startingPoint = 1
+                    , target = -100
+                    , expected =
+                        ( Tree.tree 0 [ treeNegative1 ]
+                        , [ Tree.tree 100
+                                [ treeNegative100
+                                , tree1
+                                , tree101
+                                ]
+                          ]
+                        )
+                    }
+        , test "can move child to sibling's grandchild" <|
+            \_ ->
+                go
+                    { startingPoint = 1
+                    , target = -110
+                    , expected =
+                        ( Tree.tree 0 [ treeNegative1 ]
+                        , [ Tree.tree 100
+                                [ Tree.tree -100
+                                    [ Tree.tree -110 []
+                                    , tree1
+                                    , Tree.tree -120 []
+                                    ]
+                                , tree101
+                                ]
+                          ]
+                        )
+                    }
+        ]
+
+
+
+-- VALUE HELPERS
+
+
+firstTree : Tree.Tree Int
+firstTree =
+    Tree.tree 0
+        [ treeNegative1
+        , tree1
+        ]
+
+
+secondTree : Tree.Tree Int
+secondTree =
+    Tree.tree 100
+        [ treeNegative100
+        , tree101
+        ]
+
+
+treeNegative1 : Tree.Tree Int
+treeNegative1 =
+    Tree.tree -1
+        [ Tree.tree -10 []
+        , Tree.tree -20 []
+        ]
+
+
+tree1 : Tree.Tree Int
+tree1 =
+    Tree.tree 1
+        [ Tree.tree 10 []
+        , Tree.tree 20 []
+        ]
+
+
+treeNegative100 : Tree.Tree Int
+treeNegative100 =
+    Tree.tree -100
+        [ Tree.tree -110 []
+        , Tree.tree -120 []
+        ]
+
+
+tree101 : Tree.Tree Int
+tree101 =
+    Tree.tree 101
+        [ Tree.tree 110 []
+        , Tree.tree 120 []
+        ]
+
+
+{-|
+
+    [ 0
+        [ -1 [ -10, -20 ]
+        , 1 [ 10, 20 ]
+        ]
+    , 100
+        [ -100 [ -110, -120 ]
+        , 101 [ 110, 120 ]
+        ]
+    ]
+
+-}
+trees : List (Tree.Tree Int)
+trees =
+    [ firstTree
+    , secondTree
+    ]
+
+
+treesZipper : Tree.Zipper.Zipper Int
+treesZipper =
+    Tree.Zipper.fromForest firstTree [ secondTree ]
