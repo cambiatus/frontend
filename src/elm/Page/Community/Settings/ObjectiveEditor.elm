@@ -873,7 +873,7 @@ update msg model loggedIn =
                         Authorized form (EditingObjective objective SavingEdit) ->
                             { model
                                 | status =
-                                    SavingEdit
+                                    Editing
                                         |> EditingObjective objective
                                         |> Authorized (Form.withDisabled False form)
                             }
