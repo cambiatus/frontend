@@ -151,13 +151,14 @@ addChild tree newChildId newChildPosition =
         )
 
 
-moveToRoot : Id -> SelectionSet decodesTo Cambiatus.Object.Category -> SelectionSet (Maybe decodesTo) RootMutation
-moveToRoot (Id id) =
+moveToRoot : Id -> Int -> SelectionSet decodesTo Cambiatus.Object.Category -> SelectionSet (Maybe decodesTo) RootMutation
+moveToRoot (Id id) position =
     Cambiatus.Mutation.category
         (\optionals ->
             { optionals
                 | id = OptionalArgument.Present id
                 , parentId = OptionalArgument.Null
+                , position = OptionalArgument.Present position
             }
         )
 

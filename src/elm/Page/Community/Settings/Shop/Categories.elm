@@ -11,6 +11,7 @@ module Page.Community.Settings.Shop.Categories exposing
 import Api.Graphql.DeleteStatus
 import Browser.Dom
 import Browser.Events
+import Cambiatus.Object
 import Community
 import Dict
 import Dnd
@@ -21,6 +22,7 @@ import Form.RichText
 import Form.Text
 import Form.Validate
 import Graphql.Http
+import Graphql.Operation exposing (RootMutation)
 import Graphql.SelectionSet
 import Html exposing (Html, button, details, div, h2, img, li, menu, p, span, summary, text, ul)
 import Html.Attributes exposing (alt, class, classList, disabled, id, src, style, type_)
@@ -772,6 +774,9 @@ update msg model loggedIn =
                                 FirstChildOf parentId ->
                                     Utils.Tree.moveZipperToFirstChildOf parentId .id childZipper
 
+                                FirstRootPosition ->
+                                    Utils.Tree.moveZipperToFirstRootPosition childZipper
+
                                 _ ->
                                     Debug.todo ""
                     in
@@ -1083,6 +1088,15 @@ handleDndDrop :
     -> UpdateResult
     -> UpdateResult
 handleDndDrop msg loggedIn categories { draggedCategoryId, dropZone } =
+    let
+        addMutation : (Graphql.SelectionSet.SelectionSet () Cambiatus.Object.Category -> Graphql.SelectionSet.SelectionSet (Maybe ()) RootMutation) -> (UpdateResult -> UpdateResult)
+        addMutation mutation =
+            UR.addExt
+                (LoggedIn.mutation loggedIn
+                    (mutation Graphql.SelectionSet.empty)
+                    (CompletedMovingCategory draggedCategoryId dropZone)
+                )
+    in
     case dropZone of
         After dropzoneId ->
             let
@@ -1103,14 +1117,10 @@ handleDndDrop msg loggedIn categories { draggedCategoryId, dropZone } =
             in
             case maybePreviousSiblingAndParent of
                 Just ( previousSibling, parent ) ->
-                    UR.addExt
-                        (LoggedIn.mutation loggedIn
-                            (Shop.Category.addChild parent
-                                draggedCategoryId
-                                (previousSibling.position + 1)
-                                Graphql.SelectionSet.empty
-                            )
-                            (CompletedMovingCategory draggedCategoryId dropZone)
+                    addMutation
+                        (Shop.Category.addChild parent
+                            draggedCategoryId
+                            (previousSibling.position + 1)
                         )
 
                 Nothing ->
@@ -1123,14 +1133,10 @@ handleDndDrop msg loggedIn categories { draggedCategoryId, dropZone } =
         FirstChildOf parent ->
             case Utils.Tree.findZipperInForest (\{ id } -> id == parent) categories of
                 Just parentZipper ->
-                    UR.addExt
-                        (LoggedIn.mutation loggedIn
-                            (Shop.Category.addChild (Tree.Zipper.tree parentZipper)
-                                draggedCategoryId
-                                0
-                                Graphql.SelectionSet.empty
-                            )
-                            (CompletedMovingCategory draggedCategoryId dropZone)
+                    addMutation
+                        (Shop.Category.addChild (Tree.Zipper.tree parentZipper)
+                            draggedCategoryId
+                            0
                         )
 
                 Nothing ->
@@ -1139,6 +1145,9 @@ handleDndDrop msg loggedIn categories { draggedCategoryId, dropZone } =
                         (Just loggedIn.accountName)
                         { moduleName = "Page.Community.Settings.Shop.Categories", function = "handleDndDrop" }
                         []
+
+        FirstRootPosition ->
+            addMutation (Shop.Category.moveToRoot draggedCategoryId 0)
 
         _ ->
             Debug.todo ""
@@ -1591,7 +1600,7 @@ dropZoneElement model target =
                 [ ( "outline-black outline-offset-0", Dnd.getDraggingOverElement model.dnd == Just target )
                 , ( "hidden"
                   , case target of
-                        FirstChildOf _ ->
+                        FirstRootPosition ->
                             False
 
                         _ ->

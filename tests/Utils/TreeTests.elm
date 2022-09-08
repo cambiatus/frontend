@@ -17,6 +17,7 @@ all =
         , fromFlatForest
         , moveZipperToAfter
         , moveZipperToFirstChildOf
+        , moveZipperToFirstRootPosition
         ]
 
 
@@ -375,6 +376,74 @@ moveZipperToFirstChildOf =
                             , tree101
                             ]
                         , []
+                        )
+                    }
+        ]
+
+
+moveZipperToFirstRootPosition : Test
+moveZipperToFirstRootPosition =
+    let
+        go :
+            { startingPoint : Int
+            , expected : ( Tree.Tree Int, List (Tree.Tree Int) )
+            }
+            -> Expect.Expectation
+        go { startingPoint, expected } =
+            case Tree.Zipper.findFromRoot ((==) startingPoint) treesZipper of
+                Nothing ->
+                    Expect.fail ("Could not find starting point: " ++ String.fromInt startingPoint)
+
+                Just zipper ->
+                    case Utils.Tree.moveZipperToFirstRootPosition zipper of
+                        Nothing ->
+                            Expect.fail "returned Nothing"
+
+                        Just newZipper ->
+                            Expect.all
+                                [ Tree.Zipper.toForest
+                                    >> Expect.equal expected
+                                , Tree.Zipper.label
+                                    >> Expect.equal startingPoint
+                                ]
+                                newZipper
+    in
+    describe "moveZipperToFirstRootPosition"
+        [ test "no-op if zipper is already in first root position" <|
+            \_ ->
+                go
+                    { startingPoint = 0
+                    , expected = ( firstTree, [ secondTree ] )
+                    }
+        , test "can move root node to first root position" <|
+            \_ ->
+                go
+                    { startingPoint = 100
+                    , expected = ( secondTree, [ firstTree ] )
+                    }
+        , test "can move child node to first root position" <|
+            \_ ->
+                go
+                    { startingPoint = -1
+                    , expected =
+                        ( treeNegative1
+                        , [ Tree.tree 0 [ tree1 ]
+                          , secondTree
+                          ]
+                        )
+                    }
+        , test "can move grandchild to first root position" <|
+            \_ ->
+                go
+                    { startingPoint = -110
+                    , expected =
+                        ( Tree.tree -110 []
+                        , [ firstTree
+                          , Tree.tree 100
+                                [ Tree.tree -100 [ Tree.tree -120 [] ]
+                                , tree101
+                                ]
+                          ]
                         )
                     }
         ]

@@ -2,7 +2,7 @@ module Utils.Tree exposing
     ( findInForest, findZipperInForest, getAllAncestors
     , toFlatForest, fromFlatForest
     , goUpWithoutChildren, goDownWithoutChildren
-    , moveZipperToAfter, moveZipperToFirstChildOf
+    , moveZipperToAfter, moveZipperToFirstChildOf, moveZipperToFirstRootPosition
     )
 
 {-| Helper functions that deal with Trees from zwilias/elm-rosetree
@@ -25,7 +25,7 @@ module Utils.Tree exposing
 
 ## Rearranging trees/zippers
 
-@docs moveZipperToAfter, moveZipperToFirstChildOf
+@docs moveZipperToAfter, moveZipperToFirstChildOf, moveZipperToFirstRootPosition
 
 -}
 
@@ -122,4 +122,15 @@ moveZipperToFirstChildOf target toId zipper =
         |> Maybe.andThen
             (Tree.Zipper.mapTree (Tree.prependChild (Tree.Zipper.tree zipper))
                 >> Tree.Zipper.firstChild
+            )
+
+
+moveZipperToFirstRootPosition : Tree.Zipper.Zipper model -> Maybe (Tree.Zipper.Zipper model)
+moveZipperToFirstRootPosition zipper =
+    zipper
+        |> Tree.Zipper.removeTree
+        |> Maybe.andThen
+            (Tree.Zipper.root
+                >> Tree.Zipper.prepend (Tree.Zipper.tree zipper)
+                >> Tree.Zipper.previousSibling
             )
