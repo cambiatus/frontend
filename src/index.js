@@ -13,6 +13,7 @@ import './styles/main.css'
 import pdfFonts from './vfs_fonts'
 import { register as registerCustomElements } from './customElements/index'
 import { wordlists as bip39Wordlists } from 'bip39'
+import * as matomo from './utils/matomo'
 
 // =========================================
 // Initial constants
@@ -455,14 +456,6 @@ app.ports.storeHasSeenSponsorModal.subscribe(hasSeenSponsorModal => {
     localData: {},
     level: 'debug'
   })
-})
-
-app.ports.addPlausibleScriptPort.subscribe(({ domain, src }) => {
-  const plausibleScript = document.createElement('script')
-  plausibleScript.setAttribute('src', src)
-  plausibleScript.dataset.domain = domain
-
-  document.head.appendChild(plausibleScript)
 })
 
 // STORE PIN
@@ -1411,6 +1404,11 @@ async function handleJavascriptPort (arg) {
         portuguese: bip39Wordlists.portuguese,
         spanish: bip39Wordlists.spanish
       }
+    }
+    case 'addMatomoScript': {
+      matomo.addScript()
+
+      return {}
     }
     default: {
       return { error: `No treatment found for Elm port ${arg.data.name}` }
