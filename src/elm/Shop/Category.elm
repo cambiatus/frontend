@@ -3,7 +3,6 @@ module Shop.Category exposing
     , Model
     , Tree
     , addChild
-    , addChild2
     , create
     , delete
     , encodeId
@@ -122,34 +121,8 @@ updateMetadata model { metaTitle, metaDescription, metaKeywords } =
         )
 
 
-addChild : Tree -> Id -> SelectionSet decodesTo Cambiatus.Object.Category -> SelectionSet (Maybe decodesTo) RootMutation
-addChild tree newChildId =
-    let
-        toSubcategoryInput index categoryId =
-            { id = idToInt categoryId
-            , position = 0
-            }
-    in
-    Cambiatus.Mutation.category
-        (\optionals ->
-            { optionals
-                | categories =
-                    Tree.children tree
-                        |> List.map (Tree.label >> .id)
-                        |> (\childrenIds -> newChildId :: childrenIds)
-                        |> List.indexedMap toSubcategoryInput
-                        |> OptionalArgument.Present
-                , id =
-                    Tree.label tree
-                        |> .id
-                        |> idToInt
-                        |> OptionalArgument.Present
-            }
-        )
-
-
-addChild2 : Tree -> Id -> Int -> SelectionSet decodesTo Cambiatus.Object.Category -> SelectionSet (Maybe decodesTo) RootMutation
-addChild2 tree newChildId newChildPosition =
+addChild : Tree -> Id -> Int -> SelectionSet decodesTo Cambiatus.Object.Category -> SelectionSet (Maybe decodesTo) RootMutation
+addChild tree newChildId newChildPosition =
     let
         insertAt : Int -> a -> List a -> List a
         insertAt position element xs =

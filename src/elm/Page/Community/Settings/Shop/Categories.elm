@@ -760,7 +760,7 @@ update msg model loggedIn =
                 Nothing ->
                     UR.init model
 
-        CompletedMovingCategory categoryId dropzone (RemoteData.Success (Just parentId)) ->
+        CompletedMovingCategory categoryId dropzone (RemoteData.Success (Just ())) ->
             case getCategoryZipper categoryId of
                 Just childZipper ->
                     let
@@ -768,6 +768,9 @@ update msg model loggedIn =
                             case dropzone of
                                 After dropzoneId ->
                                     Utils.Tree.moveZipperToAfter dropzoneId .id childZipper
+
+                                FirstChildOf parentId ->
+                                    Utils.Tree.moveZipperToFirstChildOf parentId .id childZipper
 
                                 _ ->
                                     Debug.todo ""
@@ -1102,7 +1105,7 @@ handleDndDrop msg loggedIn categories { draggedCategoryId, dropZone } =
                 Just ( previousSibling, parent ) ->
                     UR.addExt
                         (LoggedIn.mutation loggedIn
-                            (Shop.Category.addChild2 parent
+                            (Shop.Category.addChild parent
                                 draggedCategoryId
                                 (previousSibling.position + 1)
                                 Graphql.SelectionSet.empty
@@ -1113,6 +1116,26 @@ handleDndDrop msg loggedIn categories { draggedCategoryId, dropZone } =
                 Nothing ->
                     UR.logImpossible msg
                         ("Dropped category after " ++ Shop.Category.idToString dropzoneId ++ ", but couldn't find previous sibling or parent")
+                        (Just loggedIn.accountName)
+                        { moduleName = "Page.Community.Settings.Shop.Categories", function = "handleDndDrop" }
+                        []
+
+        FirstChildOf parent ->
+            case Utils.Tree.findZipperInForest (\{ id } -> id == parent) categories of
+                Just parentZipper ->
+                    UR.addExt
+                        (LoggedIn.mutation loggedIn
+                            (Shop.Category.addChild (Tree.Zipper.tree parentZipper)
+                                draggedCategoryId
+                                0
+                                Graphql.SelectionSet.empty
+                            )
+                            (CompletedMovingCategory draggedCategoryId dropZone)
+                        )
+
+                Nothing ->
+                    UR.logImpossible msg
+                        ("Dropped category as first child of " ++ Shop.Category.idToString parent ++ ", but couldn't find parent")
                         (Just loggedIn.accountName)
                         { moduleName = "Page.Community.Settings.Shop.Categories", function = "handleDndDrop" }
                         []
@@ -1568,7 +1591,7 @@ dropZoneElement model target =
                 [ ( "outline-black outline-offset-0", Dnd.getDraggingOverElement model.dnd == Just target )
                 , ( "hidden"
                   , case target of
-                        After _ ->
+                        FirstChildOf _ ->
                             False
 
                         _ ->
