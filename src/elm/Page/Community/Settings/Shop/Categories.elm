@@ -77,9 +77,9 @@ type DropdownState
 type DropZone
     = After Shop.Category.Id
     | RootAfter Shop.Category.Id
-    | OnTopOf Shop.Category.Id
     | FirstChildOf Shop.Category.Id
     | FirstRootPosition
+    | OnTopOf Shop.Category.Id
 
 
 init : LoggedIn.Model -> UpdateResult
@@ -784,8 +784,8 @@ update msg model loggedIn =
                                 FirstRootPosition ->
                                     Utils.Tree.moveZipperToFirstRootPosition childZipper
 
-                                _ ->
-                                    Debug.todo ""
+                                OnTopOf parentId ->
+                                    Utils.Tree.moveZipperToLastChildOf parentId .id childZipper
                     in
                     case maybeNewZipper of
                         Just newZipper ->
@@ -1193,8 +1193,30 @@ handleDndDrop msg loggedIn categories { draggedCategoryId, dropZone } =
         FirstRootPosition ->
             addMutation (Shop.Category.moveToRoot draggedCategoryId 0)
 
-        _ ->
-            Debug.todo ""
+        OnTopOf parent ->
+            case Utils.Tree.findZipperInForest (\{ id } -> id == parent) categories of
+                Just parentZipper ->
+                    let
+                        newPosition =
+                            parentZipper
+                                |> Tree.Zipper.children
+                                |> List.map (Tree.label >> .position)
+                                |> List.maximum
+                                |> Maybe.withDefault 0
+                                |> (+) 1
+                    in
+                    addMutation
+                        (Shop.Category.addChild (Tree.Zipper.tree parentZipper)
+                            draggedCategoryId
+                            newPosition
+                        )
+
+                Nothing ->
+                    UR.logImpossible msg
+                        ("Dropped category on top of " ++ Shop.Category.idToString parent ++ ", but couldn't find parent")
+                        (Just loggedIn.accountName)
+                        { moduleName = "Page.Community.Settings.Shop.Categories", function = "handleDndDrop" }
+                        []
 
 
 newDescriptionInputId : Maybe Shop.Category.Id -> String
@@ -1477,64 +1499,17 @@ viewCategoryWithChildren translators model zipper children =
                         actionsDropdown
                         (Tree.Zipper.tree zipper)
 
-        isValidDropzone =
-            case Dnd.getDraggingElement model.dnd of
-                Nothing ->
-                    True
-
-                Just draggingId ->
-                    let
-                        isDraggingChild =
-                            Tree.Zipper.children zipper
-                                |> List.any
-                                    (\child ->
-                                        Tree.label child
-                                            |> .id
-                                            |> (==) draggingId
-                                    )
-
-                        isDraggingItself =
-                            draggingId == category.id
-
-                        isDraggingAncestor =
-                            Tree.Zipper.findFromRoot (\{ id } -> id == draggingId) zipper
-                                |> Maybe.map
-                                    (Tree.Zipper.tree
-                                        >> isAncestorOf category.id
-                                    )
-                                |> Maybe.withDefault False
-                    in
-                    not isDraggingItself && not isDraggingChild && not isDraggingAncestor
-
         isDraggingSomething =
             -- Dnd.getDraggingElement model.dnd
             --     |> Maybe.Extra.isJust
             False
-
-        isDraggingOver =
-            -- case Dnd.getDraggingOverElement model.dnd of
-            --     Nothing ->
-            --         False
-            --     Just (OnTopOf draggingOverId) ->
-            --         draggingOverId == category.id
-            --     Just OnRoot ->
-            --         False
-            False
     in
     div
-        (class "transition-colors rounded-sm"
-            :: classList
-                [ ( "bg-gray-300 rounded-sm cursor-wait", EverySet.member category.id model.deleting )
-                , ( "!bg-green/30", isValidDropzone && isDraggingSomething )
-                , ( "outline-black outline-offset-0", isValidDropzone && isDraggingSomething && isDraggingOver )
-                ]
-            :: (if isValidDropzone then
-                    Dnd.dropZone (OnTopOf category.id) GotDndMsg
-
-                else
-                    []
-               )
-        )
+        [ class "transition-colors rounded-sm"
+        , classList
+            [ ( "bg-gray-300 rounded-sm cursor-wait", EverySet.member category.id model.deleting )
+            ]
+        ]
         [ details
             [ if isOpen then
                 Html.Attributes.attribute "open" "true"
@@ -1573,6 +1548,7 @@ viewCategoryWithChildren translators model zipper children =
                             (Json.Decode.field "button" Json.Decode.int)
                         )
                     :: Dnd.draggable category.id GotDndMsg
+                    ++ dropzoneAttrs model (OnTopOf category.id)
                 )
                 [ div [ class "flex items-center sticky left-0 w-full" ]
                     [ Icons.arrowDown (String.join " " [ "transition-transform", openArrowClass ])
@@ -1635,26 +1611,20 @@ viewCategoryWithChildren translators model zipper children =
         ]
 
 
+dropzoneAttrs : Model -> DropZone -> List (Html.Attribute Msg)
+dropzoneAttrs model dropzone =
+    class "bg-green/30 w-full"
+        :: classList
+            [ ( "outline-black outline-offset-0", Dnd.getDraggingOverElement model.dnd == Just dropzone )
+
+            -- , ( "!h-0", Dnd.getDraggingElement model.dnd == Nothing )
+            ]
+        :: Dnd.dropZone dropzone GotDndMsg
+
+
 dropZoneElement : Model -> DropZone -> Html Msg
-dropZoneElement model target =
-    div
-        (class "h-8 bg-green/30 w-full"
-            :: classList
-                [ ( "outline-black outline-offset-0", Dnd.getDraggingOverElement model.dnd == Just target )
-                , ( "hidden"
-                  , case target of
-                        RootAfter _ ->
-                            False
-
-                        _ ->
-                            True
-                  )
-
-                -- , ( "!h-0", Dnd.getDraggingElement model.dnd == Nothing )
-                ]
-            :: Dnd.dropZone target GotDndMsg
-        )
-        []
+dropZoneElement model dropzone =
+    div (class "h-8" :: dropzoneAttrs model dropzone) []
 
 
 viewAddCategory :

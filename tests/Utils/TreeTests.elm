@@ -17,6 +17,7 @@ all =
         , fromFlatForest
         , moveZipperToAfter
         , moveZipperToFirstChildOf
+        , moveZipperToLastChildOf
         , moveZipperToFirstRootPosition
         ]
 
@@ -356,6 +357,99 @@ moveZipperToFirstChildOf =
                                 [ firstTree
                                 , Tree.tree -110 []
                                 , Tree.tree -120 []
+                                ]
+                            , tree101
+                            ]
+                        , []
+                        )
+                    }
+        , test "can move to node that has no children" <|
+            \_ ->
+                go
+                    { startingPoint = 0
+                    , target = -110
+                    , expected =
+                        ( Tree.tree 100
+                            [ Tree.tree -100
+                                [ Tree.tree -110 [ firstTree ]
+                                , Tree.tree -120 []
+                                ]
+                            , tree101
+                            ]
+                        , []
+                        )
+                    }
+        ]
+
+
+moveZipperToLastChildOf : Test
+moveZipperToLastChildOf =
+    let
+        go :
+            { startingPoint : Int
+            , target : Int
+            , expected : ( Tree.Tree Int, List (Tree.Tree Int) )
+            }
+            -> Expect.Expectation
+        go { startingPoint, target, expected } =
+            case Tree.Zipper.findFromRoot ((==) startingPoint) treesZipper of
+                Nothing ->
+                    Expect.fail ("Could not find starting point: " ++ String.fromInt startingPoint)
+
+                Just zipper ->
+                    case Utils.Tree.moveZipperToLastChildOf target identity zipper of
+                        Nothing ->
+                            Expect.fail "returned Nothing"
+
+                        Just newZipper ->
+                            Expect.all
+                                [ Tree.Zipper.toForest
+                                    >> Expect.equal expected
+                                , Tree.Zipper.label
+                                    >> Expect.equal startingPoint
+                                ]
+                                newZipper
+    in
+    describe "moveZipperToLastChildOf"
+        [ test "can move to next sibling's last child" <|
+            \_ ->
+                go
+                    { startingPoint = 0
+                    , target = 100
+                    , expected =
+                        ( Tree.tree 100
+                            [ treeNegative100
+                            , tree101
+                            , firstTree
+                            ]
+                        , []
+                        )
+                    }
+        , test "can move to previous sibling's last child" <|
+            \_ ->
+                go
+                    { startingPoint = 100
+                    , target = 0
+                    , expected =
+                        ( Tree.tree 0
+                            [ treeNegative1
+                            , tree1
+                            , secondTree
+                            ]
+                        , []
+                        )
+                    }
+        , test "can move to sibling's grandchild" <|
+            \_ ->
+                go
+                    { startingPoint = 0
+                    , target = -100
+                    , expected =
+                        ( Tree.tree 100
+                            [ Tree.tree -100
+                                [ Tree.tree -110 []
+                                , Tree.tree -120 []
+                                , firstTree
                                 ]
                             , tree101
                             ]
