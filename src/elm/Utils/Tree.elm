@@ -1,7 +1,7 @@
 module Utils.Tree exposing
     ( findInForest, findZipperInForest, getAllAncestors
     , toFlatForest, fromFlatForest
-    , goUpWithoutChildren, goDownWithoutChildren
+    , goDownWithoutChildren, goUp, InsertAt(..)
     , moveZipperToAfter, moveZipperToFirstChildOf, moveZipperToLastChildOf, moveZipperToFirstRootPosition
     )
 
@@ -20,7 +20,7 @@ module Utils.Tree exposing
 
 ## Traversing through the tree
 
-@docs goUpWithoutChildren, goDownWithoutChildren
+@docs goDownWithoutChildren, goUp, InsertAt
 
 
 ## Rearranging trees/zippers
@@ -82,19 +82,6 @@ fromFlatForest trees =
             Nothing
 
 
-goUpWithoutChildren : Tree.Zipper.Zipper a -> Maybe (Tree.Zipper.Zipper a)
-goUpWithoutChildren zipper =
-    Tree.Zipper.backward zipper
-        |> Maybe.andThen
-            (\backwardZipper ->
-                if Tree.Zipper.parent zipper == Just backwardZipper then
-                    Tree.Zipper.parent backwardZipper
-
-                else
-                    Just backwardZipper
-            )
-
-
 goDownWithoutChildren : Tree.Zipper.Zipper a -> Maybe (Tree.Zipper.Zipper a)
 goDownWithoutChildren zipper =
     case Tree.Zipper.nextSibling zipper of
@@ -104,6 +91,41 @@ goDownWithoutChildren zipper =
 
         Just firstSibling ->
             Just firstSibling
+
+
+type InsertAt a
+    = FirstRoot
+    | After (Tree.Zipper.Zipper a)
+    | FirstChildOf (Tree.Zipper.Zipper a)
+
+
+goUp : Tree.Zipper.Zipper a -> Maybe (InsertAt a)
+goUp zipper =
+    case Tree.Zipper.previousSibling zipper of
+        Just previousSibling ->
+            previousSibling
+                |> Tree.Zipper.lastDescendant
+                |> FirstChildOf
+                |> Just
+
+        Nothing ->
+            case Tree.Zipper.parent zipper of
+                Just parent ->
+                    case Tree.Zipper.previousSibling parent of
+                        Just previousSibling ->
+                            Just (After previousSibling)
+
+                        Nothing ->
+                            case Tree.Zipper.parent parent of
+                                Just grandParent ->
+                                    Just (FirstChildOf grandParent)
+
+                                Nothing ->
+                                    Just FirstRoot
+
+                Nothing ->
+                    -- There is no previous sibling and no parent, so we are at the first root element
+                    Nothing
 
 
 moveZipperToAfter : id -> (model -> id) -> Tree.Zipper.Zipper model -> Maybe (Tree.Zipper.Zipper model)

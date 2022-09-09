@@ -19,6 +19,7 @@ all =
         , moveZipperToFirstChildOf
         , moveZipperToLastChildOf
         , moveZipperToFirstRootPosition
+        , goUp
         ]
 
 
@@ -539,6 +540,97 @@ moveZipperToFirstRootPosition =
                                 ]
                           ]
                         )
+                    }
+        ]
+
+
+type GoUpResult
+    = FirstRoot
+    | FirstChildOf Int
+    | After Int
+
+
+goUp : Test
+goUp =
+    let
+        go :
+            { target : Int
+            , expected : Maybe GoUpResult
+            }
+            -> Expect.Expectation
+        go { target, expected } =
+            case Tree.Zipper.findFromRoot ((==) target) treesZipper of
+                Nothing ->
+                    Expect.fail ("Could not find starting point: " ++ String.fromInt target)
+
+                Just zipper ->
+                    Utils.Tree.goUp zipper
+                        |> Expect.equal
+                            (case expected of
+                                Just FirstRoot ->
+                                    Utils.Tree.FirstRoot
+                                        |> Just
+
+                                Just (FirstChildOf label) ->
+                                    treesZipper
+                                        |> Tree.Zipper.findFromRoot ((==) label)
+                                        |> Maybe.withDefault treesZipper
+                                        |> Utils.Tree.FirstChildOf
+                                        |> Just
+
+                                Just (After label) ->
+                                    treesZipper
+                                        |> Tree.Zipper.findFromRoot ((==) label)
+                                        |> Maybe.withDefault treesZipper
+                                        |> Utils.Tree.After
+                                        |> Just
+
+                                Nothing ->
+                                    Nothing
+                            )
+    in
+    describe "goUp"
+        [ test "can move up to a previous sibling's child" <|
+            \_ ->
+                go
+                    { target = -20
+                    , expected = Just (FirstChildOf -10)
+                    }
+        , test "can move up to first child" <|
+            \_ ->
+                go
+                    { target = -10
+                    , expected = Just (FirstChildOf 0)
+                    }
+        , test "can move up to first root" <|
+            \_ ->
+                go
+                    { target = -1
+                    , expected = Just FirstRoot
+                    }
+        , test "can not move up if it's the first root category" <|
+            \_ ->
+                go
+                    { target = 0
+                    , expected = Nothing
+                    }
+        , test "can move up to previous sibling's last descendant" <|
+            \_ ->
+                go
+                    { target = 1
+                    , expected = Just (FirstChildOf -20)
+                    }
+        , test "can move up to previous sibling's far last descendant" <|
+            \_ ->
+                go
+                    { target = 100
+                    , expected = Just (FirstChildOf 20)
+                    }
+        , test "can move up to previous sibling's first descendant in root" <|
+            \_ ->
+                go
+                    { target = -100
+                    , expected = Just (After 0)
                     }
         ]
 
