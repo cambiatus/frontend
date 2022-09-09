@@ -7,7 +7,6 @@ module Shop.Category exposing
     , delete
     , encodeId
     , idFromString
-    , idSelectionSet
     , idToInt
     , idToString
     , moveToRoot
