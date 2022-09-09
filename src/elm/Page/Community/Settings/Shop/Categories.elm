@@ -888,33 +888,43 @@ update msg model loggedIn =
                             []
 
         ClickedMoveDown categoryId ->
-            -- case getCategoryZipper categoryId of
-            --     Just zipper ->
-            --         case Utils.Tree.goDownWithoutChildren zipper of
-            --             Nothing ->
-            --                 model
-            --                     |> UR.init
-            --                     |> UR.addExt
-            --                         (LoggedIn.mutation loggedIn
-            --                             (Shop.Category.moveToRoot categoryId
-            --                                 (Graphql.SelectionSet.succeed ())
-            --                             )
-            --                             (CompletedMovingCategoryToRoot categoryId)
-            --                         )
-            --             Just newParentZipper ->
-            --                 model
-            --                     |> UR.init
-            --                     |> UR.addExt
-            --                         (LoggedIn.mutation loggedIn
-            --                             (Shop.Category.addChild (Tree.Zipper.tree newParentZipper)
-            --                                 categoryId
-            --                                 Shop.Category.idSelectionSet
-            --                             )
-            --                             (CompletedMovingCategory categoryId)
-            --                         )
-            --     Nothing ->
-            --         UR.init model
-            Debug.todo ""
+            let
+                maybeCategoriesAndZipper =
+                    Maybe.map2 Tuple.pair
+                        (Community.getField loggedIn.selectedCommunity .shopCategories
+                            |> RemoteData.toMaybe
+                            |> Maybe.map Tuple.second
+                        )
+                        (getCategoryZipper categoryId)
+            in
+            case maybeCategoriesAndZipper of
+                Just ( categories, zipper ) ->
+                    let
+                        maybeDropzone =
+                            Utils.Tree.goDown zipper
+                                |> Maybe.map insertAtToDropzone
+                    in
+                    case maybeDropzone of
+                        Just dropzone ->
+                            model
+                                |> UR.init
+                                |> handleDndDrop msg
+                                    loggedIn
+                                    categories
+                                    { draggedCategoryId = categoryId
+                                    , dropZone = dropzone
+                                    }
+
+                        Nothing ->
+                            UR.init model
+
+                Nothing ->
+                    UR.init model
+                        |> UR.logImpossible msg
+                            "Clicked move down, but couldn't find category or categories weren't loaded"
+                            (Just loggedIn.accountName)
+                            { moduleName = "Page.Community.Settings.Shop.Categories", function = "update" }
+                            []
 
         GotKeywordDndMsg subMsg ->
             case model.categoryMetadataModalState of
@@ -1682,10 +1692,7 @@ viewActions translators { isParentOfNewCategoryForm, isDraggingSomething } model
                         (Tree.Zipper.tree zipper)
 
         canGoDown =
-            not
-                (Maybe.Extra.isNothing (Utils.Tree.goDownWithoutChildren zipper)
-                    && Maybe.Extra.isNothing (Tree.Zipper.parent zipper)
-                )
+            Maybe.Extra.isJust (Utils.Tree.goDown zipper)
 
         canGoUp =
             Maybe.Extra.isJust (Utils.Tree.goUp zipper)

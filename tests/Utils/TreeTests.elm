@@ -20,6 +20,7 @@ all =
         , moveZipperToLastChildOf
         , moveZipperToFirstRootPosition
         , goUp
+        , goDown
         ]
 
 
@@ -631,6 +632,73 @@ goUp =
                 go
                     { target = -100
                     , expected = Just (After 0)
+                    }
+        ]
+
+
+goDown : Test
+goDown =
+    let
+        go :
+            { target : Int
+            , expected : Maybe GoUpResult
+            }
+            -> Expect.Expectation
+        go { target, expected } =
+            case Tree.Zipper.findFromRoot ((==) target) treesZipper of
+                Nothing ->
+                    Expect.fail ("Could not find starting point: " ++ String.fromInt target)
+
+                Just zipper ->
+                    Utils.Tree.goDown zipper
+                        |> Expect.equal
+                            (case expected of
+                                Just FirstRoot ->
+                                    Utils.Tree.FirstRoot
+                                        |> Just
+
+                                Just (FirstChildOf label) ->
+                                    treesZipper
+                                        |> Tree.Zipper.findFromRoot ((==) label)
+                                        |> Maybe.withDefault treesZipper
+                                        |> Utils.Tree.FirstChildOf
+                                        |> Just
+
+                                Just (After label) ->
+                                    treesZipper
+                                        |> Tree.Zipper.findFromRoot ((==) label)
+                                        |> Maybe.withDefault treesZipper
+                                        |> Utils.Tree.After
+                                        |> Just
+
+                                Nothing ->
+                                    Nothing
+                            )
+    in
+    describe "goDown"
+        [ test "can go down to next sibling's first child" <|
+            \_ ->
+                go
+                    { target = 0
+                    , expected = Just (FirstChildOf 100)
+                    }
+        , test "can go down to be parent's next sibling" <|
+            \_ ->
+                go
+                    { target = 1
+                    , expected = Just (After 0)
+                    }
+        , test "can go down to next sibling's first child when next sibling has no children" <|
+            \_ ->
+                go
+                    { target = -10
+                    , expected = Just (FirstChildOf -20)
+                    }
+        , test "can not go down if it's the last root category" <|
+            \_ ->
+                go
+                    { target = 100
+                    , expected = Nothing
                     }
         ]
 

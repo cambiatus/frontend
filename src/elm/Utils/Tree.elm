@@ -1,7 +1,7 @@
 module Utils.Tree exposing
     ( findInForest, findZipperInForest, getAllAncestors
     , toFlatForest, fromFlatForest
-    , goDownWithoutChildren, goUp, InsertAt(..)
+    , goUp, goDown, InsertAt(..)
     , moveZipperToAfter, moveZipperToFirstChildOf, moveZipperToLastChildOf, moveZipperToFirstRootPosition
     )
 
@@ -20,7 +20,7 @@ module Utils.Tree exposing
 
 ## Traversing through the tree
 
-@docs goDownWithoutChildren, goUp, InsertAt
+@docs goUp, goDown, InsertAt
 
 
 ## Rearranging trees/zippers
@@ -82,17 +82,6 @@ fromFlatForest trees =
             Nothing
 
 
-goDownWithoutChildren : Tree.Zipper.Zipper a -> Maybe (Tree.Zipper.Zipper a)
-goDownWithoutChildren zipper =
-    case Tree.Zipper.nextSibling zipper of
-        Nothing ->
-            Tree.Zipper.parent zipper
-                |> Maybe.andThen Tree.Zipper.parent
-
-        Just firstSibling ->
-            Just firstSibling
-
-
 type InsertAt a
     = FirstRoot
     | After (Tree.Zipper.Zipper a)
@@ -125,6 +114,21 @@ goUp zipper =
 
                 Nothing ->
                     -- There is no previous sibling and no parent, so we are at the first root element
+                    Nothing
+
+
+goDown : Tree.Zipper.Zipper a -> Maybe (InsertAt a)
+goDown zipper =
+    case Tree.Zipper.nextSibling zipper of
+        Just nextSibling ->
+            Just (FirstChildOf nextSibling)
+
+        Nothing ->
+            case Tree.Zipper.parent zipper of
+                Just parent ->
+                    Just (After parent)
+
+                Nothing ->
                     Nothing
 
 
