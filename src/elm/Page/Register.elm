@@ -134,6 +134,19 @@ formOutputDecoder =
         ]
 
 
+withShowAllErrors : Bool -> FormModel -> FormModel
+withShowAllErrors showAllErrors formModel =
+    case formModel of
+        NaturalForm form ->
+            NaturalForm (Form.withShowAllErrors showAllErrors form)
+
+        JuridicalForm form ->
+            JuridicalForm (Form.withShowAllErrors showAllErrors form)
+
+        DefaultForm form ->
+            DefaultForm (Form.withShowAllErrors showAllErrors form)
+
+
 type alias SignUpFields =
     { name : String
     , email : String
@@ -619,7 +632,7 @@ update _ msg model ({ shared } as guest) =
                                         Set.insert (Eos.nameToString account)
                                             unavailableAccounts
                                     }
-                                    formModel
+                                    (withShowAllErrors True formModel)
 
                             _ ->
                                 model.status

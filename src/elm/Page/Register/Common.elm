@@ -57,16 +57,18 @@ accountNameField ({ t } as translators) { unavailableAccounts } =
             { parser =
                 Form.Validate.succeed
                     >> Form.Validate.eosName
+                    >> Form.Validate.custom
+                        (\accountName ->
+                            if Set.member (Eos.Account.nameToString accountName) unavailableAccounts then
+                                Err (\translators_ -> translators_.t "error.alreadyTaken")
+
+                            else
+                                Ok accountName
+                        )
                     >> Form.Validate.validate translators
             , value = .account
             , update = \account input -> { input | account = account }
-            , externalError =
-                \{ account } ->
-                    if Set.member account unavailableAccounts then
-                        Just (t "error.alreadyTaken")
-
-                    else
-                        Nothing
+            , externalError = always Nothing
             }
 
 
