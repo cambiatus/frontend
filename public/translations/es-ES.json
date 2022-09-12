@@ -932,7 +932,8 @@
         "unitEmpty": "La unidad no puede estar vacía",
         "unitTooLow": "La unidad es demasiado baja, debe ser al menos 1",
         "unitTooHigh": "No hay suficientes unidades disponibles",
-        "unitNotOnlyNumbers": "Solo se permiten números"
+        "unitNotOnlyNumbers": "Solo se permiten números",
+        "balanceTooLow": "No tienes suficiente {{symbol}} para esta compra. Intenta disminuir la cantidad de elementos o completar acciones para ganar más {{symbol}}."
       }
     },
     "delete": "Eliminar",

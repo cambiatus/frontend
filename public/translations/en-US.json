@@ -929,7 +929,8 @@
         "unitEmpty": "Unit cannot be empty",
         "unitTooLow": "Unit is too low, must be at least 1",
         "unitTooHigh": "Not enough units available",
-        "unitNotOnlyNumbers": "Only numbers are allowed"
+        "unitNotOnlyNumbers": "Only numbers are allowed",
+        "balanceTooLow": "You don't have enough {{symbol}} for this purchase. Try lowering the amount of units or completing actions to earn more {{symbol}}."
       }
     },
     "delete": "Delete",
