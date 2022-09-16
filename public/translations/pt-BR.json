@@ -1390,7 +1390,7 @@
     "no_support": "Sua comunidade não tem suporte a patrocínios ainda",
     "no_support_subtitle": "Fale com o time administrador da comunidade para ativar essa funcionalidade",
     "description": "Permitir aos usuários patrocinarem a comunidade",
-    "sponsor": "Patrocinar",
+    "sponsor": "Apoiar",
     "enter_amount": "Digite o valor que deseja contribuir",
     "select_currency": "Selecione a moeda que deseja usar",
     "amount_too_small": "O valor deve ser ao menos {{minimum}} {{currency}}",
@@ -1432,10 +1432,10 @@
       "default_message": "Sua contribuição está ajudando sua comunidade a ser ainda mais impactante, você é demais!"
     },
     "dashboard_modal": {
-      "title": "Patrocine sua Comunidade",
-      "subtitle": "Agora você pode patrocinar esta comunidade.",
+      "title": "Apoie sua Comunidade",
+      "subtitle": "Agora você pode apoiar esta comunidade.",
       "explanation": "Faça sua contribuição clicando no botão abaixo. Você será redirecionado ao PayPal para completar sua transação.",
-      "sponsor": "Patrocinar {{community_name}}"
+      "sponsor": "Apoiar {{community_name}}"
     }
   },
   "news": {
