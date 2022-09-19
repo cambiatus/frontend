@@ -1454,7 +1454,7 @@ fetchAvailableAnalysis loggedIn maybeCursor =
                         (\claimsFilter ->
                             { claimsFilter
                                 | direction =
-                                    Present Cambiatus.Enum.Direction.Desc
+                                    Present Cambiatus.Enum.Direction.Asc
                             }
                         )
                             |> Cambiatus.InputObject.buildClaimsFilter

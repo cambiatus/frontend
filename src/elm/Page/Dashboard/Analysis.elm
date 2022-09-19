@@ -90,7 +90,7 @@ initModel =
             { user = Form.UserPicker.initSingle { id = "filters-user-picker" }
             , status = All
             }
-    , direction = DESC
+    , direction = ASC
     , tabCounts = { waitingToVote = Nothing, analyzed = Nothing }
     }
 
@@ -778,7 +778,7 @@ update msg model loggedIn =
                 newModel =
                     { model
                         | filters = initFilter
-                        , direction = DESC
+                        , direction = ASC
                         , reloadOnNextQuery = True
                         , status = RemoteData.Loading
                     }
