@@ -1255,10 +1255,25 @@ async function handleJavascriptPort (arg) {
     }
     case 'copyToClipboard': {
       // We might need to want to change the dom before copying contents of the input
-      await new Promise(function (resolve) {
-        window.setTimeout(() => {
-          document.querySelector('#' + arg.data.id).select()
+      await new Promise(function (resolve, reject) {
+        window.setTimeout(async () => {
+          const element = document.getElementById(arg.data.id)
+          if (!element) {
+            reject(new Error('Element not found'))
+            return
+          }
+
+          // The clipboard API is not supported in all browsers
+          if (navigator.clipboard && navigator.clipboard.writeText && element.value) {
+            await navigator.clipboard.writeText(element.value)
+
+            resolve()
+            return
+          }
+
+          element.select()
           document.execCommand('copy')
+
           resolve()
         }, 0)
       })
