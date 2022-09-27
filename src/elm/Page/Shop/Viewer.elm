@@ -1149,7 +1149,7 @@ createForm ({ t, tr } as translators) product maybeBalance { isDisabled, communi
                                 isSpendingTooMuch =
                                     Maybe.map2
                                         (\balance totalBeingSpent ->
-                                            balance.asset.amount + minBalance < totalBeingSpent
+                                            balance.asset.amount - totalBeingSpent < minBalance
                                         )
                                         maybeBalance
                                         maybeTotalBeingSpent
