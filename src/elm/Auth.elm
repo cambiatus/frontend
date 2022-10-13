@@ -2,6 +2,7 @@ module Auth exposing
     ( ExternalMsg(..)
     , Model
     , Msg
+    , Status(..)
     , changeLastKnownPin
     , init
     , jsAddressToMsg
