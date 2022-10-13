@@ -488,6 +488,8 @@ viewExportToSimpleosModal loggedIn model =
                         , a
                             [ class "hover:underline text-orange-300"
                             , Html.Attributes.href "https://eosrio.io/simpleos/"
+                            , Html.Attributes.target "_blank"
+                            , Html.Attributes.rel "noopener"
                             ]
                             [ text "Simpleos" ]
                         ]
