@@ -1,14 +1,18 @@
 module Page.Settings exposing (Model, Msg, init, jsAddressToMsg, msgToString, update, view)
 
+import Auth
 import Cambiatus.Mutation
 import Cambiatus.Object
 import Cambiatus.Object.User
+import Eos.Account
+import Form.Text
 import Form.Toggle
 import Graphql.Http
 import Graphql.OptionalArgument as OptionalArgument
 import Graphql.SelectionSet
 import Html exposing (Html, a, button, div, h2, li, p, span, text, ul)
-import Html.Attributes exposing (class)
+import Html.Attributes exposing (class, tabindex)
+import Html.Attributes.Aria exposing (ariaHidden)
 import Html.Events exposing (onClick)
 import Json.Decode
 import Json.Encode
@@ -31,6 +35,7 @@ import View.Pin
 
 type alias Model =
     { pinInput : View.Pin.Model
+    , isExportToSimpleosModalVisible : Bool
     , isNewPinModalVisible : Bool
     , isDeleteKycModalVisible : Bool
     , claimNotificationStatus : ToggleStatus
@@ -47,6 +52,7 @@ init loggedIn =
     in
     ( { pinInput = pinModel
       , isNewPinModalVisible = False
+      , isExportToSimpleosModalVisible = False
       , isDeleteKycModalVisible = False
       , claimNotificationStatus = NotUpdating
       , transferNotificationStatus = NotUpdating
@@ -88,6 +94,10 @@ type NotificationPreference
 type Msg
     = NoOp
     | ClickedDownloadPdf
+    | ClickedExportToSimpleos
+    | ClickedCopyPrivateKey
+    | CopiedPrivateKey
+    | ClosedExportToSimpleosModal
     | ClickedChangePin
     | ClosedNewPinModal
     | GotPinMsg View.Pin.Msg
@@ -144,6 +154,37 @@ update msg model loggedIn =
                     []
                     model
                     { successMsg = msg, errorMsg = NoOp }
+
+        ClickedExportToSimpleos ->
+            { model | isExportToSimpleosModalVisible = True }
+                |> UR.init
+                |> LoggedIn.withPrivateKey loggedIn
+                    []
+                    model
+                    { successMsg = msg, errorMsg = NoOp }
+
+        ClickedCopyPrivateKey ->
+            model
+                |> UR.init
+                |> UR.addPort
+                    { responseAddress = msg
+                    , responseData = Json.Encode.null
+                    , data =
+                        Json.Encode.object
+                            [ ( "name", Json.Encode.string "copyToClipboard" )
+                            , ( "id", Json.Encode.string "private-key-copy-input" )
+                            ]
+                    }
+
+        CopiedPrivateKey ->
+            { model | isExportToSimpleosModalVisible = False }
+                |> UR.init
+                -- TODO - I18N
+                |> UR.addExt (LoggedIn.ShowFeedback View.Feedback.Success "Copied private key to clipboard")
+
+        ClosedExportToSimpleosModal ->
+            { model | isExportToSimpleosModalVisible = False }
+                |> UR.init
 
         ClickedChangePin ->
             let
@@ -415,7 +456,8 @@ view loggedIn model =
             , div [ class "container mx-auto px-4 mt-6 mb-20" ]
                 ([ viewAccountSettings loggedIn
                  , viewNotificationPreferences loggedIn model
-                 , [ viewNewPinModal loggedIn.shared.translators model
+                 , [ viewExportToSimpleosModal loggedIn model
+                   , viewNewPinModal loggedIn.shared.translators model
                    , viewDeleteKycModal loggedIn.shared.translators model
                    ]
                  ]
@@ -423,6 +465,68 @@ view loggedIn model =
                 )
             ]
     }
+
+
+viewExportToSimpleosModal : LoggedIn.Model -> Model -> Html Msg
+viewExportToSimpleosModal loggedIn model =
+    case loggedIn.auth.status of
+        Auth.WithPrivateKey privateKey ->
+            View.Modal.initWith
+                { closeMsg = ClosedExportToSimpleosModal
+                , isVisible = model.isExportToSimpleosModalVisible
+                }
+                -- TODO - I18N
+                |> View.Modal.withHeader "Exportar para Simpleos"
+                |> View.Modal.withBody
+                    [ p []
+                        -- TODO - I18N
+                        [ text "Essa é sua chave privada, que você pode usar para importar sua conta no "
+                        , a
+                            [ class "hover:underline text-orange-300"
+                            , Html.Attributes.href "https://eosrio.io/simpleos/"
+                            ]
+                            [ text "Simpleos" ]
+                        ]
+                    , div [ class "flex w-full items-center justify-center p-4 bg-gray-200 rounded mt-4 select-all" ] [ text (Eos.Account.privateKeyToString privateKey) ]
+                    , Form.Text.view
+                        (Form.Text.init
+                            { label = ""
+                            , id = "private-key-copy-input"
+                            }
+                            |> Form.Text.withExtraAttrs [ tabindex -1, ariaHidden True ]
+                            |> Form.Text.withContainerAttrs
+                                [ class "h-0 absolute opacity-0 left-[-9999em] !mb-0 overflow-hidden"
+                                , ariaHidden True
+                                ]
+                            |> Form.Text.withInputElement (Form.Text.TextareaInput { submitOnEnter = False })
+                        )
+                        { onChange = \_ -> NoOp
+                        , onBlur = NoOp
+                        , value = Eos.Account.privateKeyToString privateKey
+                        , error = text ""
+                        , hasError = False
+                        , translators = loggedIn.shared.translators
+                        , isRequired = False
+                        }
+                    ]
+                |> View.Modal.withFooter
+                    [ button
+                        [ class "modal-cancel"
+                        , onClick ClosedExportToSimpleosModal
+                        ]
+                        -- TODO - I18N
+                        [ text "Fechar" ]
+                    , button
+                        [ class "modal-accept"
+                        , onClick ClickedCopyPrivateKey
+                        ]
+                        -- TODO - I18N
+                        [ text "Copiar" ]
+                    ]
+                |> View.Modal.toHtml
+
+        Auth.WithoutPrivateKey ->
+            text ""
 
 
 viewNewPinModal : Translation.Translators -> Model -> Html Msg
@@ -483,6 +587,16 @@ viewAccountSettings loggedIn =
                 , onClick ClickedDownloadPdf
                 ]
                 [ text <| t "profile.12words.button" ]
+            ]
+        , viewCardItem
+            -- TODO - I18N
+            [ text "My private key"
+            , button
+                [ class "button button-secondary flex-shrink-0 ml-4"
+                , onClick ClickedExportToSimpleos
+                ]
+                -- TODO - I18N
+                [ text "Export" ]
             ]
         , viewCardItem
             [ text <| t "profile.pin.title"
@@ -672,6 +786,17 @@ jsAddressToMsg addr val =
                 |> Result.map (\_ -> NoOp)
                 |> Result.toMaybe
 
+        "ClickedCopyPrivateKey" :: _ ->
+            case Json.Decode.decodeValue (Json.Decode.field "copied" Json.Decode.bool) val of
+                Ok True ->
+                    Just CopiedPrivateKey
+
+                Ok False ->
+                    Just NoOp
+
+                Err _ ->
+                    Just NoOp
+
         "SubmittedNewPin" :: _ ->
             val
                 |> Json.Decode.decodeValue (Json.Decode.field "addressData" Json.Decode.string)
@@ -690,6 +815,18 @@ msgToString msg =
 
         ClickedDownloadPdf ->
             [ "ClickedDownloadPdf" ]
+
+        ClickedExportToSimpleos ->
+            [ "ClickedExportToSimpleos" ]
+
+        ClickedCopyPrivateKey ->
+            [ "ClickedCopyPrivateKey" ]
+
+        CopiedPrivateKey ->
+            [ "CopiedPrivateKey" ]
+
+        ClosedExportToSimpleosModal ->
+            [ "ClosedExportToSimpleosModal" ]
 
         ClickedChangePin ->
             [ "ClickedChangePin" ]
