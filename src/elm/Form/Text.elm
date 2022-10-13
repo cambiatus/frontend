@@ -477,7 +477,7 @@ viewInput (Options options) ({ onChange, value, hasError, onBlur, translators, i
                                     |> String.right 1
 
                         valueWithoutSeparator =
-                            String.filter (\char -> Char.isDigit char || String.fromChar char == previousDecimalSeparator)
+                            String.filter (\char -> Char.isDigit char || String.fromChar char == previousDecimalSeparator || char == '-')
                                 >> String.replace previousDecimalSeparator "."
                     in
                     ( \v ->
