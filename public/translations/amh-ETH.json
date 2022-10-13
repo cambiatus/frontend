@@ -65,6 +65,8 @@
     "send": "ላክ",
     "add": "ጨምር",
     "close": "ዝጋ",
+    "copy": "ቅዳ",
+    "export": "ወደ ውጪ ላክ",
     "loading": "እየጫነ ነዉ...",
     "try_again": "እንደገና ሞክር",
     "coming_soon": "በቅርብ ይመጣል",
@@ -1137,7 +1139,11 @@
     "account": {
       "title": "ቅንብሮች",
       "account_settings": "መለያ **ማደራጃ**",
-      "notification_settings": "**ኢ-ሜል** ማሳወቂያዎች"
+      "notification_settings": "**ኢ-ሜል** ማሳወቂያዎች",
+      "my_private_key": "የእኔ የግል ቁልፍ",
+      "export_private_key": "የግል ቁልፍ ወደ ውጭ ላክ",
+      "export_private_key_details": "ይህ የእርስዎ የግል ቁልፍ ነው፣ መለያዎን ወደ ለማስገባት ሊጠቀሙበት ይችላሉ ",
+      "copied_private_key": "የግል ቁልፍ ወደ ቅንጥብ ሰሌዳ ተቀድቷል።"
     },
     "community_info": {
       "title": "የማህበረሰብ መረጃ",

@@ -65,6 +65,8 @@
     "send": "Send",
     "add": "Add",
     "close": "Close",
+    "copy": "Copy to clipboard",
+    "export": "Export",
     "loading": "Loading...",
     "try_again": "Try again",
     "coming_soon": "Coming Soon",
@@ -1176,7 +1178,11 @@
     "account": {
       "title": "Settings",
       "account_settings": "Account **settings**",
-      "notification_settings": "**E-mail** notifications"
+      "notification_settings": "**E-mail** notifications",
+      "my_private_key": "My private key",
+      "export_private_key": "Export private key",
+      "export_private_key_details": "This is your private key, which you can use to import your account on ",
+      "copied_private_key": "Private key copied to clipboard"
     },
     "community_info": {
       "title": "Community Information",

@@ -179,8 +179,10 @@ update msg model loggedIn =
         CopiedPrivateKey ->
             { model | isExportToSimpleosModalVisible = False }
                 |> UR.init
-                -- TODO - I18N
-                |> UR.addExt (LoggedIn.ShowFeedback View.Feedback.Success "Copied private key to clipboard")
+                |> UR.addExt
+                    (LoggedIn.ShowFeedback View.Feedback.Success
+                        (loggedIn.shared.translators.t "settings.account.copied_private_key")
+                    )
 
         ClosedExportToSimpleosModal ->
             { model | isExportToSimpleosModalVisible = False }
@@ -471,16 +473,18 @@ viewExportToSimpleosModal : LoggedIn.Model -> Model -> Html Msg
 viewExportToSimpleosModal loggedIn model =
     case loggedIn.auth.status of
         Auth.WithPrivateKey privateKey ->
+            let
+                { t } =
+                    loggedIn.shared.translators
+            in
             View.Modal.initWith
                 { closeMsg = ClosedExportToSimpleosModal
                 , isVisible = model.isExportToSimpleosModalVisible
                 }
-                -- TODO - I18N
-                |> View.Modal.withHeader "Exportar para Simpleos"
+                |> View.Modal.withHeader (t "settings.account.export_private_key")
                 |> View.Modal.withBody
                     [ p []
-                        -- TODO - I18N
-                        [ text "Essa é sua chave privada, que você pode usar para importar sua conta no "
+                        [ text <| t "settings.account.export_private_key_details"
                         , a
                             [ class "hover:underline text-orange-300"
                             , Html.Attributes.href "https://eosrio.io/simpleos/"
@@ -514,14 +518,12 @@ viewExportToSimpleosModal loggedIn model =
                         [ class "modal-cancel"
                         , onClick ClosedExportToSimpleosModal
                         ]
-                        -- TODO - I18N
-                        [ text "Fechar" ]
+                        [ text <| t "menu.close" ]
                     , button
                         [ class "modal-accept"
                         , onClick ClickedCopyPrivateKey
                         ]
-                        -- TODO - I18N
-                        [ text "Copiar" ]
+                        [ text <| t "menu.copy" ]
                     ]
                 |> View.Modal.toHtml
 
@@ -589,14 +591,12 @@ viewAccountSettings loggedIn =
                 [ text <| t "profile.12words.button" ]
             ]
         , viewCardItem
-            -- TODO - I18N
-            [ text "My private key"
+            [ text <| t "settings.account.my_private_key"
             , button
                 [ class "button button-secondary flex-shrink-0 ml-4"
                 , onClick ClickedExportToSimpleos
                 ]
-                -- TODO - I18N
-                [ text "Export" ]
+                [ text <| t "menu.export" ]
             ]
         , viewCardItem
             [ text <| t "profile.pin.title"

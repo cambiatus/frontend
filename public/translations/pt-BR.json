@@ -65,6 +65,8 @@
     "send": "Enviar",
     "add": "Adicionar",
     "close": "Fechar",
+    "copy": "Copiar",
+    "export": "Exportar",
     "loading": "Carregando...",
     "try_again": "Tente novamente",
     "coming_soon": "Em Breve",
@@ -1182,7 +1184,11 @@
     "account": {
       "title": "Configurações",
       "account_settings": "**Configurações** da conta",
-      "notification_settings": "Notificações por **e-mail**"
+      "notification_settings": "Notificações por **e-mail**",
+      "my_private_key": "Minha chave privada",
+      "export_private_key": "Exportar chave privada",
+      "export_private_key_details": "Essa é a sua chave privada, que você pode usar para importar sua conta no ",
+      "copied_private_key": "Chave privada copiada para a área de transferência"
     },
     "community_info": {
       "title": "Informações da Comunidade",

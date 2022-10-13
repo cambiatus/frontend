@@ -65,6 +65,8 @@
     "send": "Enviar",
     "add": "Afegir",
     "close": "Tancar",
+    "copy": "Còpia",
+    "export": "Exporta",
     "loading": "Carregant...",
     "try_again": "Intenta de nou",
     "coming_soon": "Pròximament",
@@ -1178,7 +1180,11 @@
     "account": {
       "title": "Configuració",
       "account_settings": "**Configuració** del compte",
-      "notification_settings": "Notificacions per **correu electrònic**"
+      "notification_settings": "Notificacions per **correu electrònic**",
+      "my_private_key": "La meva clau privada",
+      "export_private_key": "Exporta la clau privada",
+      "export_private_key_details": "Aquesta és la vostra clau privada, que podeu utilitzar per importar el vostre compte al ",
+      "copied_private_key": "S'ha copiat la clau privada al porta-retalls"
     },
     "community_info": {
       "title": "Informació de la Comunitat",
