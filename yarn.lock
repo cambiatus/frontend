@@ -4481,31 +4481,6 @@ elm-hot@^1.1.3:
   resolved "https://registry.yarnpkg.com/elm-hot/-/elm-hot-1.1.3.tgz#8f921ad44afc969933847376262f209e6330b3e2"
   integrity sha512-d2TvJ/jgtYI4z0PmjDinjojJh+i//yJkCeLbC0Ik1UAKl474RV8vEHHC6Wy0DNrvwOIneikutyuGIppeMxeIWA==
 
-elm-review@^2.7.4:
-  version "2.7.4"
-  resolved "https://registry.yarnpkg.com/elm-review/-/elm-review-2.7.4.tgz#a3751bf045d3d20227e10e2f32a5e4265ca813ec"
-  integrity sha512-D6J3Gx1JCuNiTk7QeXbRkywLhEtOWqvZKyZoihxQdYlxUqVICwvQf2qaP0d1QunpQKY22iQQpzyEn0PAczNn7Q==
-  dependencies:
-    chalk "^4.0.0"
-    chokidar "^3.5.2"
-    cross-spawn "^7.0.3"
-    elm-tooling "^1.6.0"
-    fast-levenshtein "^3.0.0"
-    find-up "^4.1.0"
-    folder-hash "^3.3.0"
-    fs-extra "^9.0.0"
-    glob "^7.1.4"
-    got "^11.8.5"
-    minimist "^1.2.0"
-    ora "^5.4.0"
-    path-key "^3.1.1"
-    prompts "^2.2.1"
-    strip-ansi "^6.0.0"
-    temp "^0.9.1"
-    terminal-link "^2.1.1"
-    which "^2.0.2"
-    wrap-ansi "^6.2.0"
-
 elm-review@^2.8.2:
   version "2.8.2"
   resolved "https://registry.yarnpkg.com/elm-review/-/elm-review-2.8.2.tgz#0ad63fac9068908f9093ba99d1428eb9a8ffc197"
