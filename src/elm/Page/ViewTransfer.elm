@@ -1,7 +1,6 @@
 module Page.ViewTransfer exposing (Model, Msg, init, msgToString, update, view)
 
 import Cambiatus.Enum.TransferDirectionValue as TransferDirectionValue exposing (TransferDirectionValue)
-import Cambiatus.Scalar exposing (DateTime(..))
 import Emoji
 import Eos
 import Eos.Explorer
@@ -14,7 +13,7 @@ import Page
 import Profile.Summary
 import RemoteData exposing (RemoteData)
 import Route
-import Session.LoggedIn as LoggedIn exposing (External(..))
+import Session.LoggedIn as LoggedIn exposing (External)
 import Transfer exposing (Transfer, transferQuery)
 import UpdateResult as UR
 import Utils

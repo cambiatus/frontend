@@ -17,7 +17,7 @@ import Form
 import Form.Radio
 import Form.Text
 import Form.Validate
-import Html exposing (Html, br, div, form, span, text)
+import Html exposing (Html, br, div, span, text)
 import Html.Attributes exposing (class, disabled)
 import Http
 import Json.Decode as Decode

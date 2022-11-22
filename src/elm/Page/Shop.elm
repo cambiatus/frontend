@@ -28,12 +28,11 @@ import Icons
 import Json.Encode as Encode
 import List.Extra
 import Markdown
-import Page exposing (Session(..))
-import Profile.EditKycForm exposing (Msg(..))
+import Page
 import Profile.Summary
 import RemoteData exposing (RemoteData)
 import Route
-import Session.LoggedIn as LoggedIn exposing (External(..))
+import Session.LoggedIn as LoggedIn exposing (External)
 import Session.Shared as Shared
 import Shop exposing (Product)
 import Shop.Category

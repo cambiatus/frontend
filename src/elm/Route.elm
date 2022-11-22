@@ -206,8 +206,7 @@ parser url =
                         |> Query.map
                             (Maybe.map
                                 (String.split ","
-                                    >> List.map Shop.Category.idFromString
-                                    >> List.filterMap identity
+                                    >> List.filterMap Shop.Category.idFromString
                                 )
                                 >> Maybe.withDefault []
                             )

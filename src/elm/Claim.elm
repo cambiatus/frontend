@@ -32,7 +32,7 @@ import Cambiatus.Object.Check as Check
 import Cambiatus.Object.Claim as Claim
 import Cambiatus.Object.ClaimConnection
 import Cambiatus.Object.ClaimEdge
-import Cambiatus.Scalar exposing (DateTime(..))
+import Cambiatus.Scalar exposing (DateTime)
 import Date
 import Eos
 import Eos.Account as Eos

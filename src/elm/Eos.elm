@@ -164,15 +164,15 @@ getSymbolFromAssetString s =
         precision =
             assetArr
                 |> List.head
-                |> Maybe.andThen (\amount -> Just (String.split "." amount))
-                |> Maybe.andThen
+                |> Maybe.map (\amount -> String.split "." amount)
+                |> Maybe.map
                     (\amountArr ->
                         case amountArr of
                             [ _, p ] ->
-                                Just (String.length p)
+                                String.length p
 
                             _ ->
-                                Just 0
+                                0
                     )
     in
     case ( symbol, precision ) of

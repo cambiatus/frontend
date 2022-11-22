@@ -23,7 +23,7 @@ import Form.Validate
 import Graphql.Http
 import Graphql.SelectionSet
 import Html exposing (Html, button, details, div, h2, img, li, menu, p, span, summary, text, ul)
-import Html.Attributes exposing (alt, class, classList, disabled, id, src, style, type_)
+import Html.Attributes exposing (alt, class, classList, disabled, src, style, type_)
 import Html.Attributes.Aria exposing (ariaHasPopup, ariaHidden, ariaLabel)
 import Html.Events exposing (onClick)
 import Icons

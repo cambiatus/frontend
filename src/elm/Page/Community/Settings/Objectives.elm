@@ -17,7 +17,7 @@ import Page
 import Profile.Summary
 import RemoteData
 import Route
-import Session.LoggedIn as LoggedIn exposing (External(..))
+import Session.LoggedIn as LoggedIn exposing (External)
 import Time exposing (Posix)
 import UpdateResult as UR
 import Utils

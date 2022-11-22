@@ -12,7 +12,6 @@ module Page.Community.Settings.ActionEditor exposing
 import Action exposing (Action)
 import Browser.Dom
 import Cambiatus.Enum.VerificationType as VerificationType
-import Cambiatus.Scalar exposing (DateTime(..))
 import Community
 import Date
 import Dict

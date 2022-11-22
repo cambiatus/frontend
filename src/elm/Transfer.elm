@@ -26,13 +26,13 @@ import Cambiatus.Object.TransferConnection
 import Cambiatus.Object.TransferEdge
 import Cambiatus.Object.User as User
 import Cambiatus.Query
-import Cambiatus.Scalar exposing (DateTime(..))
+import Cambiatus.Scalar exposing (DateTime)
 import Cambiatus.Subscription as Subscription
 import Eos exposing (symbolToString)
 import Eos.Account as Eos
 import Graphql.Operation exposing (RootQuery)
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
-import Html exposing (Html, a, div, p, span, text)
+import Html exposing (Html, div, p, span, text)
 import Html.Attributes exposing (class, classList)
 import Html.Events exposing (onClick)
 import Json.Encode as Encode exposing (Value)

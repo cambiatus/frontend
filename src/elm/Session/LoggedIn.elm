@@ -55,21 +55,20 @@ import Html.Attributes exposing (alt, class, classList, disabled, src, title, ty
 import Html.Attributes.Aria exposing (ariaHidden, ariaLabel, ariaLive, role)
 import Html.Events exposing (onClick, onMouseEnter)
 import Http
-import I18Next exposing (Delims(..), Translations)
+import I18Next exposing (Translations)
 import Icons
-import Json.Decode as Decode exposing (Value)
+import Json.Decode as Decode
 import Json.Encode as Encode exposing (Value)
 import List.Extra as List
 import Log
 import Markdown
 import Maybe.Extra
-import Notification exposing (Notification)
+import Notification
 import Ports
 import Profile
 import RemoteData exposing (RemoteData)
 import Route exposing (Route)
 import Search exposing (State(..))
-import Session.Guest exposing (Msg(..))
 import Session.Shared as Shared exposing (Shared, Translators)
 import Task
 import Time

@@ -24,7 +24,7 @@ import Page.Register.NaturalForm as NaturalForm
 import RemoteData exposing (RemoteData)
 import Result
 import Route
-import Session.Guest as Guest exposing (External(..))
+import Session.Guest as Guest exposing (External)
 import Session.Shared exposing (Shared, Translators)
 import Set exposing (Set)
 import Task

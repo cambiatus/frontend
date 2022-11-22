@@ -20,7 +20,7 @@ import Form.Text
 import Form.Toggle
 import Form.Validate
 import Graphql.Http
-import Html exposing (Html, div, form, li, p, span, text, ul)
+import Html exposing (Html, div, li, p, span, text, ul)
 import Html.Attributes exposing (class, classList, maxlength)
 import Icons
 import Json.Decode as Decode exposing (Value)

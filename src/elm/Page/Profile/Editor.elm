@@ -15,7 +15,7 @@ import Form.File
 import Form.RichText
 import Form.Text
 import Graphql.Http
-import Html exposing (Html, button, div, form, span, text)
+import Html exposing (Html, button, div, span, text)
 import Html.Attributes exposing (class, type_)
 import Html.Events exposing (onClick)
 import Icons
@@ -25,7 +25,7 @@ import Page
 import Profile
 import RemoteData exposing (RemoteData)
 import Route
-import Session.LoggedIn as LoggedIn exposing (External(..))
+import Session.LoggedIn as LoggedIn exposing (External)
 import Session.Shared exposing (Translators)
 import UpdateResult as UR
 import View.Feedback as Feedback

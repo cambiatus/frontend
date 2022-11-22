@@ -44,7 +44,7 @@ This is how you actually use this component!
 
 import Form.Text
 import Html exposing (Html, button, div)
-import Html.Attributes exposing (class, disabled)
+import Html.Attributes exposing (class)
 import Html.Events
 import Json.Decode
 import Json.Decode.Pipeline as Decode
