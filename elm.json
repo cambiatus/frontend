@@ -9,7 +9,7 @@
             "CurrySoftware/elm-datepicker": "4.0.0",
             "Gizra/elm-all-set": "1.0.1",
             "Gizra/elm-debouncer": "2.0.0",
-            "NeoVier/elm-mask": "2.0.4",
+            "henriquecbuss/elm-mask": "1.0.0",
             "NoRedInk/elm-json-decode-pipeline": "1.0.0",
             "NoRedInk/elm-simple-fuzzy": "1.0.3",
             "billstclair/elm-sha256": "1.0.9",
