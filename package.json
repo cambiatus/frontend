@@ -95,7 +95,7 @@
     "elm": "^0.19.1-5",
     "elm-asset-webpack-loader": "^1.1.1",
     "elm-format": "^0.8.5",
-    "elm-review": "^2.6.1",
+    "elm-review": "^2.8.2",
     "elm-test": "^0.19.1-revision7",
     "elm-webpack-loader": "^6.0.1",
     "eosjs": "^16.0.9",
