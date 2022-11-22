@@ -161,7 +161,7 @@ so we can set the content of an input programmatically.
 toQuillOps : Markdown -> List QuillOp
 toQuillOps (Markdown markdown) =
     Markdown.Parser.parse markdown
-        |> Result.map (List.map quillOpFromMarkdownBlock >> List.concat)
+        |> Result.map (List.concatMap quillOpFromMarkdownBlock)
         |> Result.withDefault []
 
 
@@ -170,12 +170,11 @@ quillOpFromMarkdownBlock block =
     let
         parseList listType children =
             children
-                |> List.map
+                |> List.concatMap
                     (List.map quillOpFromMarkdownBlock
                         >> List.Extra.intercalate [ QuillOp { insert = " ", attributes = [] } ]
                         >> (\line -> line ++ [ QuillOp { insert = "\n", attributes = [ listType ] } ])
                     )
-                |> List.concat
                 |> (\list -> QuillOp { insert = "\n", attributes = [] } :: list)
     in
     case block of
@@ -194,14 +193,12 @@ quillOpFromMarkdownBlock block =
 
         Markdown.Block.Heading headingLevel children ->
             children
-                |> List.map quillOpFromMarkdownInline
-                |> List.concat
+                |> List.concatMap quillOpFromMarkdownInline
                 |> (\l -> l ++ [ QuillOp { insert = "\n", attributes = [ Header (Markdown.Block.headingLevelToInt headingLevel) ] } ])
 
         Markdown.Block.Paragraph children ->
             children
-                |> List.map quillOpFromMarkdownInline
-                |> List.concat
+                |> List.concatMap quillOpFromMarkdownInline
 
         Markdown.Block.HtmlBlock (Markdown.Block.HtmlElement "u" _ children) ->
             -- Parse underlined text
@@ -218,8 +215,7 @@ quillOpFromMarkdownInline inline =
     let
         addFormatting children formatting =
             children
-                |> List.map quillOpFromMarkdownInline
-                |> List.concat
+                |> List.concatMap quillOpFromMarkdownInline
                 |> List.map (\(QuillOp quillOp) -> QuillOp { quillOp | attributes = formatting :: quillOp.attributes })
     in
     case inline of
@@ -679,8 +675,7 @@ removeFormattingFromBlock block =
             blocks
                 |> List.indexedMap
                     (\index blockChild ->
-                        List.map removeFormattingFromBlock blockChild
-                            |> List.filterMap identity
+                        List.filterMap removeFormattingFromBlock blockChild
                             |> List.map (\line -> lineStarter index ++ line)
                             |> String.concat
                     )

@@ -22,9 +22,9 @@ import Form.UserPicker
 import Form.Validate
 import Graphql.Document
 import Html exposing (Html, div, span, text)
-import Html.Attributes exposing (class, disabled, value)
+import Html.Attributes exposing (class, disabled)
 import Http
-import Json.Decode as Decode exposing (Value)
+import Json.Decode as Decode
 import Json.Encode as Encode exposing (Value)
 import List.Extra as LE
 import Log
@@ -33,7 +33,7 @@ import Page
 import Profile
 import RemoteData exposing (RemoteData)
 import Route
-import Session.LoggedIn as LoggedIn exposing (External(..))
+import Session.LoggedIn as LoggedIn exposing (External)
 import Session.Shared exposing (Shared)
 import Token
 import Transfer

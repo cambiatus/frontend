@@ -29,10 +29,10 @@ import Eos.Account
 import Flags exposing (Flags)
 import Graphql.Http
 import Html exposing (Html, a, div, h1, img, nav, p, span, text)
-import Html.Attributes exposing (class, id, src, title)
+import Html.Attributes exposing (class, id, src)
 import Html.Attributes.Aria exposing (ariaHidden, ariaLabelledby)
 import Http
-import I18Next exposing (Delims(..), Translations)
+import I18Next exposing (Translations)
 import Icons
 import Json.Encode exposing (Value)
 import Log

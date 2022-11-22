@@ -34,7 +34,7 @@ import Json.Decode as Decode exposing (Value)
 import Json.Encode as Encode
 import List.Extra as LE
 import Markdown exposing (Markdown)
-import Page exposing (Session(..))
+import Page exposing (Session)
 import Profile
 import Profile.Contact
 import RemoteData exposing (RemoteData)

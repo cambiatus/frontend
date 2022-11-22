@@ -25,7 +25,7 @@ import Form.UserPicker
 import Graphql.Http
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet)
-import Html exposing (Html, a, button, div, h1, h2, p, text, ul)
+import Html exposing (Html, button, div, h1, h2, p, text, ul)
 import Html.Attributes exposing (class, style)
 import Html.Events exposing (onClick)
 import Log
@@ -339,9 +339,7 @@ update msg model ({ shared } as loggedIn) =
 
                         profiles : List Profile.Minimal
                         profiles =
-                            payers
-                                |> List.map toList
-                                |> List.concat
+                            List.concatMap toList payers
                     in
                     { model | autocompleteProfiles = profiles }
                         |> UR.init

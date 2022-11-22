@@ -91,11 +91,7 @@ update config msg model =
                 ( { model | query = Just "", showMenu = True }
                 , Cmd.batch
                     [ cmd
-                    , if config.emptySearch then
-                        queryChangeCmd ""
-
-                      else
-                        Cmd.none
+                    , queryChangeCmd ""
                     ]
                 )
 

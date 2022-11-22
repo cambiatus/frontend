@@ -22,7 +22,7 @@ import Cambiatus.Object.ProductImage
 import Cambiatus.Object.Subdomain as Subdomain
 import Cambiatus.Object.Transfer as Transfer
 import Cambiatus.Query as Query
-import Cambiatus.Scalar exposing (DateTime(..))
+import Cambiatus.Scalar exposing (DateTime)
 import Cambiatus.Union
 import Cambiatus.Union.NotificationType
 import Constants

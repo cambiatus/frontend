@@ -32,7 +32,6 @@ import List.Extra
 import Log
 import Markdown exposing (Markdown)
 import Page
-import Profile.EditKycForm exposing (Msg(..))
 import RemoteData exposing (RemoteData)
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..))

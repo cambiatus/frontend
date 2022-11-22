@@ -5,7 +5,6 @@ module Page.Register.Common exposing
     , phoneNumberField
     )
 
-import Cambiatus.Scalar exposing (Id(..))
 import Eos.Account
 import Form
 import Form.Text

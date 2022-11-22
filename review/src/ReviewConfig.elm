@@ -55,7 +55,6 @@ config =
     , NoExposingEverything.rule
     , NoMissingTypeAnnotation.rule
     , Simplify.defaults
-        |> Simplify.ignoreCaseOfForTypes [ "View.Feedback.Msg", "I18Next.Delims", "Page.Profile.AddKyc.Msg" ]
         |> Simplify.rule
     , NoLeftPizza.rule NoLeftPizza.Redundant
     , UseCamelCase.rule UseCamelCase.default

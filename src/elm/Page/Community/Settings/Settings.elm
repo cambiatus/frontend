@@ -8,7 +8,7 @@ import Maybe.Extra
 import Page
 import RemoteData
 import Route exposing (Route)
-import Session.LoggedIn as LoggedIn exposing (External(..))
+import Session.LoggedIn as LoggedIn exposing (External)
 import Session.Shared exposing (Shared)
 import Task
 import UpdateResult as UR

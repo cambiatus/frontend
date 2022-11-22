@@ -26,7 +26,7 @@ import Html exposing (Html, a, button, div, header, img, text)
 import Html.Attributes exposing (class, classList, src, style, tabindex, type_)
 import Html.Events exposing (onClick, onMouseEnter)
 import Http
-import I18Next exposing (Delims(..), Translations)
+import I18Next exposing (Translations)
 import Icons
 import Json.Encode as Encode
 import Log

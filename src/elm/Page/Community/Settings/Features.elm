@@ -18,7 +18,7 @@ import Maybe.Extra
 import Page
 import Ports
 import RemoteData
-import Session.LoggedIn as LoggedIn exposing (External(..))
+import Session.LoggedIn as LoggedIn exposing (External)
 import Task
 import UpdateResult as UR
 import View.Feedback as Feedback

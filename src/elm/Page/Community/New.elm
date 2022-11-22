@@ -32,7 +32,7 @@ import Markdown exposing (Markdown)
 import Page
 import RemoteData exposing (RemoteData)
 import Route
-import Session.LoggedIn as LoggedIn exposing (External(..))
+import Session.LoggedIn as LoggedIn exposing (External)
 import Session.Shared as Shared
 import Token
 import UpdateResult as UR

@@ -36,7 +36,7 @@ import Kyc
 import List.Extra as List
 import Log
 import Markdown
-import Page exposing (Session(..))
+import Page
 import Profile
 import Profile.Address
 import Profile.Contact as Contact
@@ -137,18 +137,6 @@ type alias ContributionInfo =
 type VerticalAlign
     = Top
     | Center
-
-
-type alias DeleteResult =
-    { result : String
-    , status : String
-    }
-
-
-type alias DeleteKycAndAddressResult =
-    { deleteKyc : Maybe DeleteResult
-    , deleteAddress : Maybe DeleteResult
-    }
 
 
 type alias Network =

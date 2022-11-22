@@ -12,7 +12,7 @@ import pdfDefinition from './scripts/pdfDefinition'
 import './styles/main.css'
 import pdfFonts from './vfs_fonts'
 import { register as registerCustomElements } from './customElements/index'
-import { wordlists as bip39Wordlists } from 'bip39'
+import * as bip39 from 'bip39'
 import * as matomo from './utils/matomo'
 
 // =========================================
@@ -219,9 +219,6 @@ pdfMake.fonts = {
 const { Socket: PhoenixSocket } = require('phoenix')
 
 if (process.env.NODE_ENV === 'development') {
-  window.mnemonic = mnemonic
-  window.ecc = ecc
-  window.bip39 = require('bip39')
   // Transform `Debug.log` output into nice log object with custom formatter
   // (snippet is taken from https://github.com/MattCheely/elm-app-gen/blob/master/generators/app/templates/parcel/app.js)
   const ElmDebugger = require('elm-debug-transformer')
@@ -1414,10 +1411,14 @@ async function handleJavascriptPort (arg) {
       return {}
     }
     case 'getBip39': {
+      const normalize = (wordlist) => {
+        return wordlist.map(word => word.normalize())
+      }
+
       return {
-        english: bip39Wordlists.english,
-        portuguese: bip39Wordlists.portuguese,
-        spanish: bip39Wordlists.spanish
+        english: normalize(bip39.wordlists.english),
+        portuguese: normalize(bip39.wordlists.portuguese),
+        spanish: normalize(bip39.wordlists.spanish)
       }
     }
     case 'addMatomoScript': {

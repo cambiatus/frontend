@@ -31,7 +31,7 @@ import Cambiatus.Object.Role
 import Cambiatus.Object.Subdomain as Subdomain
 import Cambiatus.Object.User as User
 import Cambiatus.Query
-import Cambiatus.Scalar exposing (DateTime(..), Id(..))
+import Cambiatus.Scalar exposing (Id(..))
 import Constants
 import Dict exposing (Dict)
 import Eos exposing (Symbol)

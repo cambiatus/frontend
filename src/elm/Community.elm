@@ -54,7 +54,7 @@ import Cambiatus.Object.Subdomain as Subdomain
 import Cambiatus.Object.Upload as Upload
 import Cambiatus.Object.User as Profile
 import Cambiatus.Query as Query
-import Cambiatus.Scalar exposing (DateTime(..))
+import Cambiatus.Scalar
 import Cambiatus.Subscription as Subscription
 import Community.News
 import Constants

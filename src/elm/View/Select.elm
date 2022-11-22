@@ -356,8 +356,7 @@ update config msg model =
 
         model_ =
             unwrapModel model
-    in
-    let
+
         ( mdl, cmd ) =
             View.Select.Update.update config_ msg_ model_
     in

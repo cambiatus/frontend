@@ -9,13 +9,12 @@ import Graphql.Http
 import Html exposing (Html, div, img, p, text)
 import Html.Attributes exposing (class, src)
 import Html.Events exposing (onClick)
-import I18Next exposing (Delims(..))
 import Log
 import Notification exposing (History, MintData, NotificationType(..), OrderData, TransferData)
 import Page
 import RemoteData exposing (RemoteData)
 import Route
-import Session.LoggedIn as LoggedIn exposing (External(..))
+import Session.LoggedIn as LoggedIn exposing (External)
 import Session.Shared exposing (Shared)
 import UpdateResult as UR
 import Utils
