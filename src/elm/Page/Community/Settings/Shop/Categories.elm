@@ -11,6 +11,7 @@ module Page.Community.Settings.Shop.Categories exposing
 import Api.Graphql.DeleteStatus
 import Browser.Dom
 import Browser.Events
+import Cambiatus.Object
 import Community
 import Dict
 import Dnd
@@ -21,6 +22,7 @@ import Form.RichText
 import Form.Text
 import Form.Validate
 import Graphql.Http
+import Graphql.Operation exposing (RootMutation)
 import Graphql.SelectionSet
 import Html exposing (Html, button, details, div, h2, img, li, menu, p, span, summary, text, ul)
 import Html.Attributes exposing (alt, class, classList, disabled, src, style, type_)
@@ -73,9 +75,11 @@ type DropdownState
 
 
 type DropZone
-    = OnTopOf Shop.Category.Id
-      -- TODO - Add options to select position
-    | OnRoot
+    = After Shop.Category.Id
+    | RootAfter Shop.Category.Id
+    | FirstChildOf Shop.Category.Id
+    | FirstRootPosition
+    | OnTopOf Shop.Category.Id
 
 
 init : LoggedIn.Model -> UpdateResult
@@ -138,8 +142,7 @@ type Msg
     | ClosedMetadataModal
     | GotDndMsg (Dnd.Msg Shop.Category.Id DropZone)
     | DraggedOverCategoryForAWhile Shop.Category.Id
-    | CompletedMovingCategory Shop.Category.Id (RemoteData (Graphql.Http.Error (Maybe Shop.Category.Id)) (Maybe Shop.Category.Id))
-    | CompletedMovingCategoryToRoot Shop.Category.Id (RemoteData (Graphql.Http.Error (Maybe ())) (Maybe ()))
+    | CompletedMovingCategory Shop.Category.Id DropZone (RemoteData (Graphql.Http.Error (Maybe ())) (Maybe ()))
     | ClickedMoveUp Shop.Category.Id
     | ClickedMoveDown Shop.Category.Id
     | GotKeywordDndMsg (Dnd.Msg Int Int)
@@ -734,14 +737,11 @@ update msg model loggedIn =
                 |> UR.fromChild
                     (\newDnd -> { model | dnd = newDnd })
                     GotDndMsg
-                    (updateDnd loggedIn)
+                    (updateDnd msg loggedIn)
                     model
 
         DraggedOverCategoryForAWhile categoryId ->
             case Dnd.getDraggingOverElement model.dnd of
-                Nothing ->
-                    UR.init model
-
                 Just (OnTopOf currentCategoryId) ->
                     if currentCategoryId == categoryId then
                         { model | expandedCategories = EverySet.insert categoryId model.expandedCategories }
@@ -750,47 +750,74 @@ update msg model loggedIn =
                     else
                         UR.init model
 
-                Just OnRoot ->
+                Just (After _) ->
                     UR.init model
 
-        CompletedMovingCategory categoryId (RemoteData.Success (Just parentId)) ->
+                Just (RootAfter _) ->
+                    UR.init model
+
+                Just (FirstChildOf _) ->
+                    UR.init model
+
+                Just FirstRootPosition ->
+                    UR.init model
+
+                Nothing ->
+                    UR.init model
+
+        CompletedMovingCategory categoryId dropzone (RemoteData.Success (Just ())) ->
             case getCategoryZipper categoryId of
                 Just childZipper ->
                     let
-                        zipperWithMovedChild =
-                            moveChild
-                                { childZipper = childZipper
-                                , parentId = parentId
-                                }
+                        maybeNewZipper =
+                            case dropzone of
+                                After dropzoneId ->
+                                    Utils.Tree.moveZipperToAfter dropzoneId .id childZipper
+
+                                RootAfter dropzoneId ->
+                                    Utils.Tree.moveZipperToAfter dropzoneId .id childZipper
+
+                                FirstChildOf parentId ->
+                                    Utils.Tree.moveZipperToFirstChildOf parentId .id childZipper
+
+                                FirstRootPosition ->
+                                    Utils.Tree.moveZipperToFirstRootPosition childZipper
+
+                                OnTopOf parentId ->
+                                    Utils.Tree.moveZipperToLastChildOf parentId .id childZipper
                     in
-                    { model
-                        | expandedCategories =
-                            zipperWithMovedChild
-                                |> Tree.Zipper.findFromRoot (\{ id } -> id == categoryId)
-                                |> Maybe.map
-                                    (Utils.Tree.getAllAncestors
-                                        >> List.foldl
-                                            (Tree.Zipper.label
-                                                >> .id
-                                                >> EverySet.insert
-                                            )
+                    case maybeNewZipper of
+                        Just newZipper ->
+                            { model
+                                | expandedCategories =
+                                    newZipper
+                                        |> Utils.Tree.getAllAncestors
+                                        |> List.foldl
+                                            (Tree.Zipper.label >> .id >> EverySet.insert)
                                             model.expandedCategories
+                            }
+                                |> UR.init
+                                |> UR.addExt
+                                    (newZipper
+                                        |> Utils.Tree.toFlatForest
+                                        |> Community.ShopCategories
+                                        |> LoggedIn.SetCommunityField
                                     )
-                                |> Maybe.withDefault model.expandedCategories
-                    }
-                        |> UR.init
-                        |> UR.addExt
-                            (zipperWithMovedChild
-                                |> Utils.Tree.toFlatForest
-                                |> Community.ShopCategories
-                                |> LoggedIn.SetCommunityField
-                            )
+
+                        Nothing ->
+                            model
+                                |> UR.init
+                                |> UR.logImpossible msg
+                                    "Completed moving category, but couldn't do optimistic update"
+                                    (Just loggedIn.accountName)
+                                    { moduleName = "Page.Community.Settings.Shop.Categories", function = "update" }
+                                    []
 
                 Nothing ->
                     model
                         |> UR.init
 
-        CompletedMovingCategory categoryId (RemoteData.Success Nothing) ->
+        CompletedMovingCategory categoryId _ (RemoteData.Success Nothing) ->
             UR.init model
                 |> UR.logImpossible msg
                     "Got Nothing when trying to move a child category"
@@ -803,7 +830,7 @@ update msg model loggedIn =
                       }
                     ]
 
-        CompletedMovingCategory categoryId (RemoteData.Failure err) ->
+        CompletedMovingCategory categoryId _ (RemoteData.Failure err) ->
             UR.init model
                 |> UR.logGraphqlError msg
                     (Just loggedIn.accountName)
@@ -818,123 +845,86 @@ update msg model loggedIn =
                     err
                 |> UR.addExt (LoggedIn.ShowFeedback View.Feedback.Failure (t "shop.categories.reorder_error"))
 
-        CompletedMovingCategory _ _ ->
-            UR.init model
-
-        CompletedMovingCategoryToRoot categoryId (RemoteData.Success (Just ())) ->
-            case Community.getField loggedIn.selectedCommunity .shopCategories of
-                RemoteData.Success ( _, categories ) ->
-                    case Utils.Tree.findZipperInForest (\{ id } -> id == categoryId) categories of
-                        Nothing ->
-                            UR.init model
-
-                        Just childZipper ->
-                            let
-                                zipperWithMovedChild =
-                                    moveToRoot { childZipper = childZipper }
-                            in
-                            model
-                                |> UR.init
-                                |> UR.addExt
-                                    (zipperWithMovedChild
-                                        |> Utils.Tree.toFlatForest
-                                        |> Community.ShopCategories
-                                        |> LoggedIn.SetCommunityField
-                                    )
-
-                _ ->
-                    UR.init model
-
-        CompletedMovingCategoryToRoot categoryId (RemoteData.Success Nothing) ->
-            UR.init model
-                |> UR.logImpossible msg
-                    "Got Nothing when trying to move a child category to root"
-                    (Just loggedIn.accountName)
-                    { moduleName = "Page.Community.Settings.Shop.Categories"
-                    , function = "update"
-                    }
-                    [ { name = "Category"
-                      , extras = Dict.fromList [ ( "id", Shop.Category.encodeId categoryId ) ]
-                      }
-                    ]
-
-        CompletedMovingCategoryToRoot categoryId (RemoteData.Failure err) ->
-            UR.init model
-                |> UR.logGraphqlError msg
-                    (Just loggedIn.accountName)
-                    "Got an error when trying to move a child category to root"
-                    { moduleName = "Page.Community.Settings.Shop.Categories"
-                    , function = "update"
-                    }
-                    [ { name = "Category"
-                      , extras = Dict.fromList [ ( "id", Shop.Category.encodeId categoryId ) ]
-                      }
-                    ]
-                    err
-                |> UR.addExt (LoggedIn.ShowFeedback View.Feedback.Failure (t "shop.categories.reorder_error"))
-
-        CompletedMovingCategoryToRoot _ _ ->
+        CompletedMovingCategory _ _ _ ->
             UR.init model
 
         ClickedMoveUp categoryId ->
-            case getCategoryZipper categoryId of
-                Just zipper ->
-                    case Utils.Tree.goUpWithoutChildren zipper of
-                        Nothing ->
+            let
+                maybeCategoriesAndZipper =
+                    Maybe.map2 Tuple.pair
+                        (Community.getField loggedIn.selectedCommunity .shopCategories
+                            |> RemoteData.toMaybe
+                            |> Maybe.map Tuple.second
+                        )
+                        (getCategoryZipper categoryId)
+            in
+            case maybeCategoriesAndZipper of
+                Just ( categories, zipper ) ->
+                    let
+                        maybeDropzone =
+                            Utils.Tree.goUp zipper
+                                |> Maybe.map insertAtToDropzone
+                    in
+                    case maybeDropzone of
+                        Just dropzone ->
                             model
                                 |> UR.init
-                                |> UR.addExt
-                                    (LoggedIn.mutation loggedIn
-                                        (Shop.Category.moveToRoot categoryId
-                                            (Graphql.SelectionSet.succeed ())
-                                        )
-                                        (CompletedMovingCategoryToRoot categoryId)
-                                    )
+                                |> handleDndDrop msg
+                                    loggedIn
+                                    categories
+                                    { draggedCategoryId = categoryId
+                                    , dropZone = dropzone
+                                    }
 
-                        Just newParentZipper ->
-                            model
-                                |> UR.init
-                                |> UR.addExt
-                                    (LoggedIn.mutation loggedIn
-                                        (Shop.Category.addChild (Tree.Zipper.tree newParentZipper)
-                                            categoryId
-                                            Shop.Category.idSelectionSet
-                                        )
-                                        (CompletedMovingCategory categoryId)
-                                    )
+                        Nothing ->
+                            UR.init model
 
                 Nothing ->
                     UR.init model
+                        |> UR.logImpossible msg
+                            "Clicked move up, but couldn't find category or categories weren't loaded"
+                            (Just loggedIn.accountName)
+                            { moduleName = "Page.Community.Settings.Shop.Categories", function = "update" }
+                            []
 
         ClickedMoveDown categoryId ->
-            case getCategoryZipper categoryId of
-                Just zipper ->
-                    case Utils.Tree.goDownWithoutChildren zipper of
-                        Nothing ->
+            let
+                maybeCategoriesAndZipper =
+                    Maybe.map2 Tuple.pair
+                        (Community.getField loggedIn.selectedCommunity .shopCategories
+                            |> RemoteData.toMaybe
+                            |> Maybe.map Tuple.second
+                        )
+                        (getCategoryZipper categoryId)
+            in
+            case maybeCategoriesAndZipper of
+                Just ( categories, zipper ) ->
+                    let
+                        maybeDropzone =
+                            Utils.Tree.goDown zipper
+                                |> Maybe.map insertAtToDropzone
+                    in
+                    case maybeDropzone of
+                        Just dropzone ->
                             model
                                 |> UR.init
-                                |> UR.addExt
-                                    (LoggedIn.mutation loggedIn
-                                        (Shop.Category.moveToRoot categoryId
-                                            (Graphql.SelectionSet.succeed ())
-                                        )
-                                        (CompletedMovingCategoryToRoot categoryId)
-                                    )
+                                |> handleDndDrop msg
+                                    loggedIn
+                                    categories
+                                    { draggedCategoryId = categoryId
+                                    , dropZone = dropzone
+                                    }
 
-                        Just newParentZipper ->
-                            model
-                                |> UR.init
-                                |> UR.addExt
-                                    (LoggedIn.mutation loggedIn
-                                        (Shop.Category.addChild (Tree.Zipper.tree newParentZipper)
-                                            categoryId
-                                            Shop.Category.idSelectionSet
-                                        )
-                                        (CompletedMovingCategory categoryId)
-                                    )
+                        Nothing ->
+                            UR.init model
 
                 Nothing ->
                     UR.init model
+                        |> UR.logImpossible msg
+                            "Clicked move down, but couldn't find category or categories weren't loaded"
+                            (Just loggedIn.accountName)
+                            { moduleName = "Page.Community.Settings.Shop.Categories", function = "update" }
+                            []
 
         GotKeywordDndMsg subMsg ->
             case model.categoryMetadataModalState of
@@ -1006,55 +996,198 @@ updateKeywordsDnd ext ur =
             ur
 
 
-updateDnd : LoggedIn.Model -> Dnd.ExtMsg Shop.Category.Id DropZone -> UpdateResult -> UpdateResult
-updateDnd loggedIn ext ur =
+updateDnd : Msg -> LoggedIn.Model -> Dnd.ExtMsg Shop.Category.Id DropZone -> UpdateResult -> UpdateResult
+updateDnd msg loggedIn ext =
     case ext of
         Dnd.Dropped { draggedElement, dropZone } ->
             case Community.getField loggedIn.selectedCommunity .shopCategories of
                 RemoteData.Success ( _, categories ) ->
-                    case dropZone of
-                        OnTopOf parentId ->
-                            case Utils.Tree.findZipperInForest (\{ id } -> id == parentId) categories of
-                                Nothing ->
-                                    ur
-
-                                Just parentZipper ->
-                                    UR.addExt
-                                        (LoggedIn.mutation loggedIn
-                                            (Shop.Category.addChild (Tree.Zipper.tree parentZipper)
-                                                draggedElement
-                                                Shop.Category.idSelectionSet
-                                            )
-                                            (CompletedMovingCategory draggedElement)
-                                        )
-                                        ur
-
-                        OnRoot ->
-                            UR.addExt
-                                (LoggedIn.mutation loggedIn
-                                    (Shop.Category.moveToRoot draggedElement
-                                        (Graphql.SelectionSet.succeed ())
-                                    )
-                                    (CompletedMovingCategoryToRoot draggedElement)
-                                )
-                                ur
+                    handleDndDrop msg
+                        loggedIn
+                        categories
+                        { draggedCategoryId = draggedElement
+                        , dropZone = dropZone
+                        }
 
                 _ ->
-                    ur
+                    UR.logImpossible msg
+                        "Tried reordering categories, but categories weren't loaded"
+                        (Just loggedIn.accountName)
+                        { moduleName = "Page.Community.Settings.Shop.Categories", function = "updateDnd" }
+                        []
 
         Dnd.DraggedOver (OnTopOf categoryId) ->
             let
                 millisToWait =
                     250
             in
-            ur
-                |> UR.addCmd
-                    (Process.sleep millisToWait
-                        |> Task.perform (\_ -> DraggedOverCategoryForAWhile categoryId)
-                    )
+            UR.addCmd
+                (Process.sleep millisToWait
+                    |> Task.perform (\_ -> DraggedOverCategoryForAWhile categoryId)
+                )
 
-        Dnd.DraggedOver OnRoot ->
-            ur
+        Dnd.DraggedOver _ ->
+            -- Debug.todo ""
+            identity
+
+
+handleDndDrop :
+    Msg
+    -> LoggedIn.Model
+    -> List Shop.Category.Tree
+    -> { draggedCategoryId : Shop.Category.Id, dropZone : DropZone }
+    -> UpdateResult
+    -> UpdateResult
+handleDndDrop msg loggedIn categories { draggedCategoryId, dropZone } =
+    let
+        addMutation : (Graphql.SelectionSet.SelectionSet () Cambiatus.Object.Category -> Graphql.SelectionSet.SelectionSet (Maybe ()) RootMutation) -> (UpdateResult -> UpdateResult)
+        addMutation mutation =
+            UR.addExt
+                (LoggedIn.mutation loggedIn
+                    (mutation Graphql.SelectionSet.empty)
+                    (CompletedMovingCategory draggedCategoryId dropZone)
+                )
+    in
+    case dropZone of
+        After dropzoneId ->
+            let
+                maybePreviousSiblingAndParent =
+                    categories
+                        |> Utils.Tree.findZipperInForest (\{ id } -> id == dropzoneId)
+                        |> Maybe.andThen
+                            (\previousSiblingZipper ->
+                                previousSiblingZipper
+                                    |> Tree.Zipper.parent
+                                    |> Maybe.map
+                                        (\parentZipper ->
+                                            ( Tree.Zipper.label previousSiblingZipper
+                                            , Tree.Zipper.tree parentZipper
+                                            )
+                                        )
+                            )
+            in
+            case maybePreviousSiblingAndParent of
+                Just ( previousSibling, parent ) ->
+                    addMutation
+                        (Shop.Category.addChild parent
+                            draggedCategoryId
+                            (previousSibling.position + 1)
+                        )
+
+                Nothing ->
+                    UR.logImpossible msg
+                        ("Dropped category after " ++ Shop.Category.idToString dropzoneId ++ ", but couldn't find previous sibling or parent")
+                        (Just loggedIn.accountName)
+                        { moduleName = "Page.Community.Settings.Shop.Categories", function = "handleDndDrop" }
+                        []
+
+        RootAfter dropzoneId ->
+            let
+                maybePreviousSibling =
+                    categories
+                        |> Utils.Tree.findZipperInForest (\{ id } -> id == dropzoneId)
+                        |> Maybe.map Tree.Zipper.label
+            in
+            case maybePreviousSibling of
+                Just previousSibling ->
+                    let
+                        maxRootPosition =
+                            categories
+                                |> List.map (Tree.label >> .position)
+                                |> List.maximum
+                                |> Maybe.withDefault 0
+
+                        draggedCategoryIsRoot =
+                            Utils.Tree.findZipperInForest (\{ id } -> id == draggedCategoryId) categories
+                                |> Maybe.andThen Tree.Zipper.parent
+                                |> Maybe.Extra.isNothing
+
+                        newPosition =
+                            if draggedCategoryIsRoot then
+                                min maxRootPosition (previousSibling.position + 1)
+
+                            else
+                                previousSibling.position + 1
+                    in
+                    addMutation (Shop.Category.moveToRoot draggedCategoryId newPosition)
+
+                Nothing ->
+                    UR.logImpossible msg
+                        ("Dropped category in root, after " ++ Shop.Category.idToString dropzoneId ++ ", but couldn't find previous sibling")
+                        (Just loggedIn.accountName)
+                        { moduleName = "Page.Community.Settings.Shop.Categories", function = "handleDndDrop" }
+                        []
+
+        FirstChildOf parent ->
+            case Utils.Tree.findZipperInForest (\{ id } -> id == parent) categories of
+                Just parentZipper ->
+                    addMutation
+                        (Shop.Category.addChild (Tree.Zipper.tree parentZipper)
+                            draggedCategoryId
+                            0
+                        )
+
+                Nothing ->
+                    UR.logImpossible msg
+                        ("Dropped category as first child of " ++ Shop.Category.idToString parent ++ ", but couldn't find parent")
+                        (Just loggedIn.accountName)
+                        { moduleName = "Page.Community.Settings.Shop.Categories", function = "handleDndDrop" }
+                        []
+
+        FirstRootPosition ->
+            addMutation (Shop.Category.moveToRoot draggedCategoryId 0)
+
+        OnTopOf parent ->
+            case Utils.Tree.findZipperInForest (\{ id } -> id == parent) categories of
+                Just parentZipper ->
+                    let
+                        newPosition =
+                            parentZipper
+                                |> Tree.Zipper.children
+                                |> List.map (Tree.label >> .position)
+                                |> List.maximum
+                                |> Maybe.withDefault 0
+                                |> (+) 1
+                    in
+                    addMutation
+                        (Shop.Category.addChild (Tree.Zipper.tree parentZipper)
+                            draggedCategoryId
+                            newPosition
+                        )
+
+                Nothing ->
+                    UR.logImpossible msg
+                        ("Dropped category on top of " ++ Shop.Category.idToString parent ++ ", but couldn't find parent")
+                        (Just loggedIn.accountName)
+                        { moduleName = "Page.Community.Settings.Shop.Categories", function = "handleDndDrop" }
+                        []
+
+
+insertAtToDropzone : Utils.Tree.InsertAt Shop.Category.Model -> DropZone
+insertAtToDropzone insertAt =
+    case insertAt of
+        Utils.Tree.FirstRoot ->
+            FirstRootPosition
+
+        Utils.Tree.After parentZipper ->
+            case Tree.Zipper.parent parentZipper of
+                Nothing ->
+                    parentZipper
+                        |> Tree.Zipper.label
+                        |> .id
+                        |> RootAfter
+
+                Just _ ->
+                    parentZipper
+                        |> Tree.Zipper.label
+                        |> .id
+                        |> After
+
+        Utils.Tree.FirstChildOf parentZipper ->
+            parentZipper
+                |> Tree.Zipper.label
+                |> .id
+                |> FirstChildOf
 
 
 newDescriptionInputId : Maybe Shop.Category.Id -> String
@@ -1163,30 +1296,6 @@ viewLoading translators model =
 view_ : Translation.Translators -> Community.Model -> Model -> List Shop.Category.Tree -> Html Msg
 view_ translators community model categories =
     let
-        isDraggingSomething =
-            Maybe.Extra.isJust (Dnd.getDraggingElement model.dnd)
-
-        isDraggingRootCategory =
-            case Dnd.getDraggingElement model.dnd of
-                Nothing ->
-                    False
-
-                Just draggingId ->
-                    categories
-                        |> List.map Tree.label
-                        |> List.any (\tree -> tree.id == draggingId)
-
-        isDraggingOverAddCategory =
-            case Dnd.getDraggingOverElement model.dnd of
-                Nothing ->
-                    False
-
-                Just (OnTopOf _) ->
-                    False
-
-                Just OnRoot ->
-                    True
-
         maybeNewRootCategoryForm =
             case model.newCategoryState of
                 NotEditing ->
@@ -1201,7 +1310,8 @@ view_ translators community model categories =
     in
     viewPageContainer translators
         { children =
-            [ case categories of
+            [ dropZoneElement model FirstRootPosition
+            , case categories of
                 [] ->
                     div []
                         [ img
@@ -1230,21 +1340,6 @@ view_ translators community model categories =
                             )
                             categories
                         )
-            , div
-                (class "w-full rounded-sm transition-all ease-out"
-                    :: classList
-                        [ ( "h-0", not isDraggingSomething )
-                        , ( "bg-green/30 h-8", isDraggingSomething && not isDraggingRootCategory )
-                        , ( "outline-black outline-offset-0", isDraggingSomething && isDraggingOverAddCategory && not isDraggingRootCategory )
-                        ]
-                    :: (if isDraggingRootCategory then
-                            []
-
-                        else
-                            Dnd.dropZone OnRoot GotDndMsg
-                       )
-                )
-                []
             , case maybeNewRootCategoryForm of
                 Nothing ->
                     button
@@ -1358,64 +1453,16 @@ viewCategoryWithChildren translators model zipper children =
                         actionsDropdown
                         (Tree.Zipper.tree zipper)
 
-        isValidDropzone =
-            case Dnd.getDraggingElement model.dnd of
-                Nothing ->
-                    True
-
-                Just draggingId ->
-                    let
-                        isDraggingChild =
-                            Tree.Zipper.children zipper
-                                |> List.any
-                                    (\child ->
-                                        Tree.label child
-                                            |> .id
-                                            |> (==) draggingId
-                                    )
-
-                        isDraggingItself =
-                            draggingId == category.id
-
-                        isDraggingAncestor =
-                            Tree.Zipper.findFromRoot (\{ id } -> id == draggingId) zipper
-                                |> Maybe.map
-                                    (Tree.Zipper.tree
-                                        >> isAncestorOf category.id
-                                    )
-                                |> Maybe.withDefault False
-                    in
-                    not isDraggingItself && not isDraggingChild && not isDraggingAncestor
-
         isDraggingSomething =
             Dnd.getDraggingElement model.dnd
                 |> Maybe.Extra.isJust
-
-        isDraggingOver =
-            case Dnd.getDraggingOverElement model.dnd of
-                Nothing ->
-                    False
-
-                Just (OnTopOf draggingOverId) ->
-                    draggingOverId == category.id
-
-                Just OnRoot ->
-                    False
     in
     div
-        (class "transition-colors rounded-sm"
-            :: classList
-                [ ( "bg-gray-300 rounded-sm cursor-wait", EverySet.member category.id model.deleting )
-                , ( "!bg-green/30", isValidDropzone && isDraggingSomething )
-                , ( "outline-black outline-offset-0", isValidDropzone && isDraggingSomething && isDraggingOver )
-                ]
-            :: (if isValidDropzone then
-                    Dnd.dropZone (OnTopOf category.id) GotDndMsg
-
-                else
-                    []
-               )
-        )
+        [ class "transition-colors rounded-sm"
+        , classList
+            [ ( "bg-gray-300 rounded-sm cursor-wait", EverySet.member category.id model.deleting )
+            ]
+        ]
         [ details
             [ if isOpen then
                 Html.Attributes.attribute "open" "true"
@@ -1429,7 +1476,9 @@ viewCategoryWithChildren translators model zipper children =
                 (class "marker-hidden flex items-center rounded-sm transition-colors cursor-pointer grand-parent focus-ring"
                     :: classList
                         [ ( "!bg-green/20", isParentOfNewCategoryForm )
-                        , ( "focus:bg-orange-100/20 parent-hover:bg-orange-100/20", not isParentOfNewCategoryForm && not isDraggingSomething )
+                        , ( "focus:bg-orange-100/20 parent-hover:bg-orange-100/20"
+                          , not isParentOfNewCategoryForm && not isDraggingSomething
+                          )
                         , ( "bg-orange-100/20", hasActionsMenuOpen )
                         ]
                     :: onClick (ClickedToggleExpandCategory category.id)
@@ -1454,6 +1503,7 @@ viewCategoryWithChildren translators model zipper children =
                             (Json.Decode.field "button" Json.Decode.int)
                         )
                     :: Dnd.draggable category.id GotDndMsg
+                    ++ dropzoneAttrs model (OnTopOf category.id)
                 )
                 [ div [ class "flex items-center sticky left-0 w-full" ]
                     [ Icons.arrowDown (String.join " " [ "transition-transform", openArrowClass ])
@@ -1496,7 +1546,8 @@ viewCategoryWithChildren translators model zipper children =
                     ]
                 ]
             , div [ class "ml-4 mt-2" ]
-                [ ul
+                [ dropZoneElement model (FirstChildOf category.id)
+                , ul
                     [ class "grid gap-y-2"
                     , classList [ ( "mb-2", not (List.isEmpty children) ) ]
                     ]
@@ -1506,7 +1557,30 @@ viewCategoryWithChildren translators model zipper children =
                 [ viewAddCategory translators [ class "w-full" ] model category
                 ]
             ]
+        , case Tree.Zipper.parent zipper of
+            Nothing ->
+                dropZoneElement model (RootAfter category.id)
+
+            Just _ ->
+                dropZoneElement model (After category.id)
         ]
+
+
+dropzoneAttrs : Model -> DropZone -> List (Html.Attribute Msg)
+dropzoneAttrs model dropzone =
+    class "bg-green/30 w-full rounded-sm"
+        :: classList
+            [ ( "outline-black outline-offset-0", Dnd.getDraggingOverElement model.dnd == Just dropzone )
+
+            -- TODO - Figure out UI
+            -- , ( "!h-0", Dnd.getDraggingElement model.dnd == Nothing )
+            ]
+        :: Dnd.dropZone dropzone GotDndMsg
+
+
+dropZoneElement : Model -> DropZone -> Html Msg
+dropZoneElement model dropzone =
+    div (class "h-8 border border-black my-1" :: dropzoneAttrs model dropzone) []
 
 
 viewAddCategory :
@@ -1618,16 +1692,10 @@ viewActions translators { isParentOfNewCategoryForm, isDraggingSomething } model
                         (Tree.Zipper.tree zipper)
 
         canGoDown =
-            not
-                (Maybe.Extra.isNothing (Utils.Tree.goDownWithoutChildren zipper)
-                    && Maybe.Extra.isNothing (Tree.Zipper.parent zipper)
-                )
+            Maybe.Extra.isJust (Utils.Tree.goDown zipper)
 
         canGoUp =
-            not
-                (Maybe.Extra.isNothing (Utils.Tree.goUpWithoutChildren zipper)
-                    && Maybe.Extra.isNothing (Tree.Zipper.parent zipper)
-                )
+            Maybe.Extra.isJust (Utils.Tree.goUp zipper)
 
         buttonClassListsFromParent =
             classList
@@ -2337,58 +2405,6 @@ subscriptions model =
 -- UTILS
 
 
-moveChild :
-    { childZipper : Tree.Zipper.Zipper Shop.Category.Model
-    , parentId : Shop.Category.Id
-    }
-    -> Tree.Zipper.Zipper Shop.Category.Model
-moveChild { childZipper, parentId } =
-    case Tree.Zipper.removeTree childZipper of
-        Nothing ->
-            childZipper
-
-        Just zipperWithoutChild ->
-            case Tree.Zipper.findFromRoot (\{ id } -> id == parentId) zipperWithoutChild of
-                Nothing ->
-                    childZipper
-
-                Just newParentZipper ->
-                    Tree.Zipper.mapTree
-                        (\parentTree ->
-                            parentTree
-                                |> Tree.prependChild (Tree.Zipper.tree childZipper)
-                                |> Tree.mapChildren
-                                    (\newChildren ->
-                                        newChildren
-                                            |> List.sortBy (Tree.label >> .name)
-                                    )
-                        )
-                        newParentZipper
-
-
-moveToRoot :
-    { childZipper : Tree.Zipper.Zipper Shop.Category.Model
-    }
-    -> Tree.Zipper.Zipper Shop.Category.Model
-moveToRoot { childZipper } =
-    let
-        insertNewChild : List Shop.Category.Tree -> List Shop.Category.Tree
-        insertNewChild forest =
-            Tree.Zipper.tree childZipper
-                |> (\newChild -> newChild :: forest)
-    in
-    childZipper
-        |> Tree.Zipper.removeTree
-        |> Maybe.andThen
-            (\zipperWithoutChild ->
-                Utils.Tree.toFlatForest zipperWithoutChild
-                    |> insertNewChild
-                    |> List.sortBy (Tree.label >> .name)
-                    |> Utils.Tree.fromFlatForest
-            )
-        |> Maybe.withDefault childZipper
-
-
 isAncestorOf : Shop.Category.Id -> Shop.Category.Tree -> Bool
 isAncestorOf childId parentTree =
     let
@@ -2496,11 +2512,8 @@ msgToString msg =
         DraggedOverCategoryForAWhile _ ->
             [ "DraggedOverCategoryForAWhile" ]
 
-        CompletedMovingCategory _ r ->
+        CompletedMovingCategory _ _ r ->
             [ "CompletedMovingCategory", UR.remoteDataToString r ]
-
-        CompletedMovingCategoryToRoot _ r ->
-            [ "CompletedMovingCategoryToRoot", UR.remoteDataToString r ]
 
         ClickedMoveUp _ ->
             [ "ClickedMoveUp" ]

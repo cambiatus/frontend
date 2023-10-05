@@ -1,7 +1,8 @@
 module Utils.Tree exposing
     ( findInForest, findZipperInForest, getAllAncestors
     , toFlatForest, fromFlatForest
-    , goUpWithoutChildren, goDownWithoutChildren
+    , goUp, goDown, InsertAt(..)
+    , moveZipperToAfter, moveZipperToFirstChildOf, moveZipperToLastChildOf, moveZipperToFirstRootPosition
     )
 
 {-| Helper functions that deal with Trees from zwilias/elm-rosetree
@@ -19,7 +20,12 @@ module Utils.Tree exposing
 
 ## Traversing through the tree
 
-@docs goUpWithoutChildren, goDownWithoutChildren
+@docs goUp, goDown, InsertAt
+
+
+## Rearranging trees/zippers
+
+@docs moveZipperToAfter, moveZipperToFirstChildOf, moveZipperToLastChildOf, moveZipperToFirstRootPosition
 
 -}
 
@@ -76,25 +82,92 @@ fromFlatForest trees =
             Nothing
 
 
-goUpWithoutChildren : Tree.Zipper.Zipper a -> Maybe (Tree.Zipper.Zipper a)
-goUpWithoutChildren zipper =
-    Tree.Zipper.backward zipper
-        |> Maybe.andThen
-            (\backwardZipper ->
-                if Tree.Zipper.parent zipper == Just backwardZipper then
-                    Tree.Zipper.parent backwardZipper
+type InsertAt a
+    = FirstRoot
+    | After (Tree.Zipper.Zipper a)
+    | FirstChildOf (Tree.Zipper.Zipper a)
 
-                else
-                    Just backwardZipper
+
+goUp : Tree.Zipper.Zipper a -> Maybe (InsertAt a)
+goUp zipper =
+    case Tree.Zipper.previousSibling zipper of
+        Just previousSibling ->
+            previousSibling
+                |> Tree.Zipper.lastDescendant
+                |> FirstChildOf
+                |> Just
+
+        Nothing ->
+            case Tree.Zipper.parent zipper of
+                Just parent ->
+                    case Tree.Zipper.previousSibling parent of
+                        Just previousSibling ->
+                            Just (After previousSibling)
+
+                        Nothing ->
+                            case Tree.Zipper.parent parent of
+                                Just grandParent ->
+                                    Just (FirstChildOf grandParent)
+
+                                Nothing ->
+                                    Just FirstRoot
+
+                Nothing ->
+                    -- There is no previous sibling and no parent, so we are at the first root element
+                    Nothing
+
+
+goDown : Tree.Zipper.Zipper a -> Maybe (InsertAt a)
+goDown zipper =
+    case Tree.Zipper.nextSibling zipper of
+        Just nextSibling ->
+            Just (FirstChildOf nextSibling)
+
+        Nothing ->
+            case Tree.Zipper.parent zipper of
+                Just parent ->
+                    Just (After parent)
+
+                Nothing ->
+                    Nothing
+
+
+moveZipperToAfter : id -> (model -> id) -> Tree.Zipper.Zipper model -> Maybe (Tree.Zipper.Zipper model)
+moveZipperToAfter target toId zipper =
+    zipper
+        |> Tree.Zipper.removeTree
+        |> Maybe.andThen (Tree.Zipper.findFromRoot (\model -> toId model == target))
+        |> Maybe.andThen (Tree.Zipper.append (Tree.Zipper.tree zipper) >> Tree.Zipper.nextSibling)
+
+
+moveZipperToFirstChildOf : id -> (model -> id) -> Tree.Zipper.Zipper model -> Maybe (Tree.Zipper.Zipper model)
+moveZipperToFirstChildOf target toId zipper =
+    zipper
+        |> Tree.Zipper.removeTree
+        |> Maybe.andThen (Tree.Zipper.findFromRoot (\model -> toId model == target))
+        |> Maybe.andThen
+            (Tree.Zipper.mapTree (Tree.prependChild (Tree.Zipper.tree zipper))
+                >> Tree.Zipper.firstChild
             )
 
 
-goDownWithoutChildren : Tree.Zipper.Zipper a -> Maybe (Tree.Zipper.Zipper a)
-goDownWithoutChildren zipper =
-    case Tree.Zipper.nextSibling zipper of
-        Nothing ->
-            Tree.Zipper.parent zipper
-                |> Maybe.andThen Tree.Zipper.parent
+moveZipperToLastChildOf : id -> (model -> id) -> Tree.Zipper.Zipper model -> Maybe (Tree.Zipper.Zipper model)
+moveZipperToLastChildOf target toId zipper =
+    zipper
+        |> Tree.Zipper.removeTree
+        |> Maybe.andThen (Tree.Zipper.findFromRoot (\model -> toId model == target))
+        |> Maybe.andThen
+            (Tree.Zipper.mapTree (Tree.appendChild (Tree.Zipper.tree zipper))
+                >> Tree.Zipper.lastChild
+            )
 
-        Just firstSibling ->
-            Just firstSibling
+
+moveZipperToFirstRootPosition : Tree.Zipper.Zipper model -> Maybe (Tree.Zipper.Zipper model)
+moveZipperToFirstRootPosition zipper =
+    zipper
+        |> Tree.Zipper.removeTree
+        |> Maybe.andThen
+            (Tree.Zipper.root
+                >> Tree.Zipper.prepend (Tree.Zipper.tree zipper)
+                >> Tree.Zipper.previousSibling
+            )

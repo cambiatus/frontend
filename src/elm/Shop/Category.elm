@@ -7,7 +7,6 @@ module Shop.Category exposing
     , delete
     , encodeId
     , idFromString
-    , idSelectionSet
     , idToInt
     , idToString
     , moveToRoot
@@ -24,6 +23,7 @@ import Graphql.Operation exposing (RootMutation)
 import Graphql.OptionalArgument as OptionalArgument
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet)
 import Json.Encode
+import List.Extra
 import Markdown exposing (Markdown)
 import Maybe.Extra
 import Slug exposing (Slug)
@@ -120,13 +120,16 @@ updateMetadata model { metaTitle, metaDescription, metaKeywords } =
         )
 
 
-addChild : Tree -> Id -> SelectionSet decodesTo Cambiatus.Object.Category -> SelectionSet (Maybe decodesTo) RootMutation
-addChild tree newChildId =
+addChild : Tree -> Id -> Int -> SelectionSet decodesTo Cambiatus.Object.Category -> SelectionSet (Maybe decodesTo) RootMutation
+addChild tree newChildId newChildPosition =
     let
+        insertAt : Int -> a -> List a -> List a
+        insertAt position element xs =
+            List.Extra.splitAt position xs
+                |> (\( first, second ) -> first ++ element :: second)
+
         toSubcategoryInput index categoryId =
-            { id = idToInt categoryId
-            , position = 0
-            }
+            { id = idToInt categoryId, position = index }
     in
     Cambiatus.Mutation.category
         (\optionals ->
@@ -134,7 +137,8 @@ addChild tree newChildId =
                 | categories =
                     Tree.children tree
                         |> List.map (Tree.label >> .id)
-                        |> (\childrenIds -> newChildId :: childrenIds)
+                        |> List.filter (\id -> id /= newChildId)
+                        |> insertAt newChildPosition newChildId
                         |> List.indexedMap toSubcategoryInput
                         |> OptionalArgument.Present
                 , id =
@@ -146,13 +150,14 @@ addChild tree newChildId =
         )
 
 
-moveToRoot : Id -> SelectionSet decodesTo Cambiatus.Object.Category -> SelectionSet (Maybe decodesTo) RootMutation
-moveToRoot (Id id) =
+moveToRoot : Id -> Int -> SelectionSet decodesTo Cambiatus.Object.Category -> SelectionSet (Maybe decodesTo) RootMutation
+moveToRoot (Id id) position =
     Cambiatus.Mutation.category
         (\optionals ->
             { optionals
                 | id = OptionalArgument.Present id
                 , parentId = OptionalArgument.Null
+                , position = OptionalArgument.Present position
             }
         )
 
