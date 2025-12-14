@@ -63,7 +63,7 @@ export default () => (
         return
       }
 
-      let wasIntersecting = this.targets.reduce(
+      const wasIntersecting = this.targets.reduce(
         (currObj, currTarget) => {
           const newObject = currObj
           newObject[currTarget.id] = false

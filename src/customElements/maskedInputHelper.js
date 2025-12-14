@@ -79,7 +79,7 @@ export default () => (
       }
 
       this.keyDownListener = (e) => {
-        let originalSelectionStart = targetElement.selectionStart
+        const originalSelectionStart = targetElement.selectionStart
         if (Math.abs(targetElement.selectionStart - previousSelectionStart) < 2 || e.ctrlKey) {
           window.setTimeout(() => {
             if (Math.abs(targetElement.selectionStart - originalSelectionStart) < 2 || e.ctrlKey) {

@@ -1,7 +1,10 @@
 import * as AbsintheSocket from '@absinthe/socket'
 import * as Sentry from '@sentry/browser'
-import Eos from 'eosjs'
-import ecc from 'eosjs-ecc'
+import { Api, JsonRpc } from 'eosjs'
+import { JsSignatureProvider } from 'eosjs/dist/eosjs-jssig'
+import { ecc } from 'eosjs/dist/eosjs-ecc-migration'
+import fetch from 'node-fetch'
+import { TextDecoder, TextEncoder } from 'util'
 import pdfMake from 'pdfmake/build/pdfmake'
 import sjcl from 'sjcl'
 import { Elm } from './elm/Main.elm'
@@ -19,7 +22,8 @@ import * as matomo from './utils/matomo'
 // Initial constants
 // =========================================
 
-let eos = null
+let api = null
+let rpc = null
 const USER_KEY = 'bespiral.user'
 const LANGUAGE_KEY = 'bespiral.language'
 const AUTH_TOKEN = 'bespiral.auth_token'
@@ -28,7 +32,10 @@ const SELECTED_COMMUNITY_KEY = 'bespiral.selected_community'
 const PIN_VISIBILITY_KEY = 'bespiral.pin_visibility'
 const HAS_SEEN_SPONSOR_MODAL_KEY = 'bespiral.has_seen_sponsor_modal'
 const env = process.env.NODE_ENV || 'development'
-const useSubdomain = process.env.USE_SUBDOMAIN === undefined ? true : process.env.USE_SUBDOMAIN !== 'false'
+const useSubdomain =
+  process.env.USE_SUBDOMAIN === undefined
+    ? true
+    : process.env.USE_SUBDOMAIN !== 'false'
 const config = configuration[env]
 
 // =========================================
@@ -146,16 +153,19 @@ const logEvent = (event) => {
 
 const hostnameInfo = () => {
   const environments = ['staging', 'demo']
-  let hostnameParts = window.location.hostname.split('.')
+  const hostnameParts = window.location.hostname.split('.')
 
   // `true` when on `staging.cambiatus.io`, `demo.cambiatus.io` or `cambiatus.io`
-  const isFirstPartEnv = environments.includes(hostnameParts[0]) || window.location.hostname === 'cambiatus.io'
+  const isFirstPartEnv =
+    environments.includes(hostnameParts[0]) ||
+    window.location.hostname === 'cambiatus.io'
 
   if (!isFirstPartEnv) {
     hostnameParts.shift()
   }
 
-  const hostnameEnv = hostnameParts[0] === 'cambiatus' ? 'prod' : hostnameParts[0]
+  const hostnameEnv =
+    hostnameParts[0] === 'cambiatus' ? 'prod' : hostnameParts[0]
   const subdomain = `.${hostnameParts.join('.')}`
 
   return { subdomain, hostnameEnv }
@@ -173,7 +183,9 @@ const cookieKey = (key) => {
 
 const getItem = (key) => {
   if (useSubdomain) {
-    const result = document.cookie.match('(^|[^;]+)\\s*' + cookieKey(key) + '\\s*=\\s*([^;]+)')
+    const result = document.cookie.match(
+      '(^|[^;]+)\\s*' + cookieKey(key) + '\\s*=\\s*([^;]+)'
+    )
     return result ? result.pop() : null
   }
 
@@ -197,7 +209,13 @@ const setItem = (key, value) => {
   }
 }
 
-const storedKeys = [USER_KEY, LANGUAGE_KEY, AUTH_TOKEN, RECENT_SEARCHES, SELECTED_COMMUNITY_KEY]
+const storedKeys = [
+  USER_KEY,
+  LANGUAGE_KEY,
+  AUTH_TOKEN,
+  RECENT_SEARCHES,
+  SELECTED_COMMUNITY_KEY
+]
 
 if (useSubdomain) {
   storedKeys.forEach((key) => {
@@ -233,8 +251,8 @@ if (process.env.NODE_ENV === 'development') {
           supported = true
           return null
         },
-        hasBody: function (obj) { },
-        body: function (obj, config) { }
+        hasBody: function (obj) {},
+        body: function (obj, config) {}
       }
     ]
     console.log('elm-debug-transformer: checking for formatter support.', {})
@@ -262,8 +280,7 @@ function getUserLanguage () {
 }
 
 function canReadClipboard () {
-  return Boolean(navigator.clipboard) &&
-    Boolean(navigator.clipboard.readText)
+  return Boolean(navigator.clipboard) && Boolean(navigator.clipboard.readText)
 }
 
 /** Assumes we already have clipboard permissions */
@@ -301,14 +318,16 @@ function flags () {
   const accountName = (user && user.accountName) || null
 
   if (env !== 'development' && accountName !== null) {
-    Sentry.configureScope((scope) => { scope.setUser({ username: accountName }) })
+    Sentry.configureScope((scope) => {
+      scope.setUser({ username: accountName })
+    })
   }
 
   return {
     endpoints: config.endpoints,
     language: getUserLanguage(),
     version: process.env.COMMIT,
-    accountName: accountName,
+    accountName,
     authToken: getItem(AUTH_TOKEN),
     logo: config.logo,
     logoMobile: config.logoMobile,
@@ -318,10 +337,11 @@ function flags () {
     communityContract: config.communityContract,
     canReadClipboard: canReadClipboard(),
     canShare: Boolean(navigator.share),
-    useSubdomain: useSubdomain,
+    useSubdomain,
     selectedCommunity: getItem(SELECTED_COMMUNITY_KEY),
     pinVisibility: JSON.parse(getItem(PIN_VISIBILITY_KEY)) || false,
-    hasSeenSponsorModal: JSON.parse(getItem(HAS_SEEN_SPONSOR_MODAL_KEY)) || false
+    hasSeenSponsorModal:
+      JSON.parse(getItem(HAS_SEEN_SPONSOR_MODAL_KEY)) || false
   }
 }
 
@@ -362,7 +382,16 @@ app.ports.logEvent.subscribe(logEvent)
 // EOS / Identity functions
 // =========================================
 
-eos = Eos(config.eosOptions)
+// Initialize RPC without signature provider
+rpc = new JsonRpc(config.eosOptions.httpEndpoint, { fetch })
+
+// Initialize API without signature provider initially
+api = new Api({
+  rpc,
+  signatureProvider: new JsSignatureProvider([]),
+  textDecoder: new TextDecoder(),
+  textEncoder: new TextEncoder()
+})
 
 // STORE LANGUAGE
 
@@ -381,7 +410,7 @@ function storeLanguage (lang) {
 }
 
 // STORE RECENT SEARCHES
-app.ports.storeRecentSearches.subscribe(query => {
+app.ports.storeRecentSearches.subscribe((query) => {
   setItem(RECENT_SEARCHES, query)
   addBreadcrumb({
     type: 'info',
@@ -401,13 +430,13 @@ app.ports.getRecentSearches.subscribe(() => {
     type: 'info',
     category: 'getRecentSearches',
     message: 'Got recent searches',
-    data: { recentSearches: recentSearches },
+    data: { recentSearches },
     localData: {},
     level: 'debug'
   })
 })
 
-app.ports.storeAuthToken.subscribe(token => {
+app.ports.storeAuthToken.subscribe((token) => {
   setItem(AUTH_TOKEN, token)
   addBreadcrumb({
     type: 'info',
@@ -419,19 +448,19 @@ app.ports.storeAuthToken.subscribe(token => {
   })
 })
 
-app.ports.storeSelectedCommunitySymbol.subscribe(symbol => {
+app.ports.storeSelectedCommunitySymbol.subscribe((symbol) => {
   setItem(SELECTED_COMMUNITY_KEY, symbol)
   addBreadcrumb({
     type: 'info',
     category: 'storeSelectedCommunitySymbol',
-    message: 'Stored selected community\'s symbol',
+    message: "Stored selected community's symbol",
     data: { symbol },
     localData: {},
     level: 'debug'
   })
 })
 
-app.ports.storePinVisibility.subscribe(pinVisibility => {
+app.ports.storePinVisibility.subscribe((pinVisibility) => {
   setItem(PIN_VISIBILITY_KEY, pinVisibility)
   addBreadcrumb({
     type: 'info',
@@ -443,7 +472,7 @@ app.ports.storePinVisibility.subscribe(pinVisibility => {
   })
 })
 
-app.ports.storeHasSeenSponsorModal.subscribe(hasSeenSponsorModal => {
+app.ports.storeHasSeenSponsorModal.subscribe((hasSeenSponsorModal) => {
   setItem(HAS_SEEN_SPONSOR_MODAL_KEY, hasSeenSponsorModal)
   addBreadcrumb({
     type: 'info',
@@ -464,7 +493,7 @@ function storePin (data, pin) {
 
   const storeData = {
     accountName: data.accountName,
-    encryptedKey: encryptedKey,
+    encryptedKey,
     encryptedKeyIntegrityCheck: hashedKey
   }
 
@@ -497,7 +526,9 @@ function logout () {
     level: 'info'
   })
   if (env !== 'development') {
-    Sentry.configureScope((scope) => { scope.setUser(null) })
+    Sentry.configureScope((scope) => {
+      scope.setUser(null)
+    })
   }
 }
 
@@ -587,12 +618,18 @@ let transferSubscription = null
 let notificationSubscription = null
 let highlightedNewsSubscription = null
 
-let absintheSocket = AbsintheSocket.create(new PhoenixSocket(config.endpoints.socket))
+let absintheSocket = AbsintheSocket.create(
+  new PhoenixSocket(config.endpoints.socket)
+)
 
 app.ports.createAbsintheSocket.subscribe((token) => {
   const oldAbsintheSocket = absintheSocket
 
-  absintheSocket = AbsintheSocket.create(new PhoenixSocket(`${config.endpoints.socket}/websocket?Authorization=Bearer ${token}&vsn=2.0.0`))
+  absintheSocket = AbsintheSocket.create(
+    new PhoenixSocket(
+      `${config.endpoints.socket}/websocket?Authorization=Bearer ${token}&vsn=2.0.0`
+    )
+  )
 
   const resubscribe = (subscription) => {
     if (subscription === null) {
@@ -604,7 +641,7 @@ app.ports.createAbsintheSocket.subscribe((token) => {
     AbsintheSocket.cancel(oldAbsintheSocket, notifier)
 
     const newNotifier = AbsintheSocket.send(absintheSocket, {
-      operation: operation,
+      operation,
       variables: {}
     })
 
@@ -620,12 +657,15 @@ app.ports.createAbsintheSocket.subscribe((token) => {
 async function handleJavascriptPort (arg) {
   switch (arg.data.name) {
     case 'checkAccountAvailability': {
-      return eos.getAccount(arg.data.account)
-        .then(_ => ({ isAvailable: false, error: 'account not available' }))
-        .catch(e => {
+      return rpc
+        .get_account(arg.data.account)
+        .then((_) => ({ isAvailable: false, error: 'account not available' }))
+        .catch((e) => {
           // Invalid name exception
-          if (JSON.parse(e.message).error.code === 3010001) {
+          if (e.json && e.json.error && e.json.error.code === 3010001) {
             return { isAvailable: false, error: e.message }
+          } else if (e.message && e.message.includes('unknown key')) {
+            return { isAvailable: true }
           } else {
             return { isAvailable: true }
           }
@@ -643,7 +683,7 @@ async function handleJavascriptPort (arg) {
           activeKey: publicKey,
           accountName: arg.data.account,
           words: randomWords,
-          privateKey: privateKey
+          privateKey
         }
       }
     }
@@ -656,9 +696,13 @@ async function handleJavascriptPort (arg) {
       } else {
         try {
           const publicKey = ecc.privateToPublic(privateKey)
-          const accounts = await eos.getKeyAccounts(publicKey)
+          const accounts = await rpc.history_get_key_accounts(publicKey)
 
-          if (!accounts || !accounts.account_names || accounts.account_names.length === 0) {
+          if (
+            !accounts ||
+            !accounts.account_names ||
+            accounts.account_names.length === 0
+          ) {
             return { error: 'error.accountNotFound' }
           } else {
             const [accountName] = accounts.account_names
@@ -692,10 +736,19 @@ async function handleJavascriptPort (arg) {
 
       storePin({ accountName, passphrase, privateKey }, pin)
 
-      // Save credentials to EOS
-      eos = Eos(Object.assign(config.eosOptions, { keyProvider: privateKey }))
+      // Save credentials to EOS - create new API instance with signature provider
+      const signatureProvider = new JsSignatureProvider([privateKey])
+      api = new Api({
+        rpc,
+        signatureProvider,
+        textDecoder: new TextDecoder(),
+        textEncoder: new TextEncoder()
+      })
+
       if (env !== 'development') {
-        Sentry.configureScope((scope) => { scope.setUser({ username: accountName }) })
+        Sentry.configureScope((scope) => {
+          scope.setUser({ username: accountName })
+        })
       }
 
       addBreadcrumb({
@@ -740,7 +793,15 @@ async function handleJavascriptPort (arg) {
         try {
           const decryptedKey = sjcl.decrypt(pin, user.encryptedKey)
 
-          eos = Eos(Object.assign(config.eosOptions, { keyProvider: decryptedKey }))
+          // Create new API instance with signature provider
+          const signatureProvider = new JsSignatureProvider([decryptedKey])
+          api = new Api({
+            rpc,
+            signatureProvider,
+            textDecoder: new TextDecoder(),
+            textEncoder: new TextEncoder()
+          })
+
           addBreadcrumb({
             type: 'debug',
             category: 'getPrivateKey',
@@ -776,8 +837,15 @@ async function handleJavascriptPort (arg) {
         level: 'info'
       })
 
-      return eos.transaction({ actions: arg.data.actions })
-        .then(res => {
+      return api
+        .transact(
+          { actions: arg.data.actions },
+          {
+            blocksBehind: 3,
+            expireSeconds: 30
+          }
+        )
+        .then((res) => {
           addBreadcrumb({
             type: 'debug',
             category: 'eosTransaction',
@@ -789,18 +857,17 @@ async function handleJavascriptPort (arg) {
 
           return { transactionId: res.transaction_id }
         })
-        .catch(errorString => {
-          let error
+        .catch((error) => {
           let errorMessage
           try {
-            error = JSON.parse(errorString)
-            try {
-              errorMessage = `[EOS] ${error.error.details[0].message}`
-            } catch {
+            if (error.json && error.json.error && error.json.error.details) {
+              errorMessage = `[EOS] ${error.json.error.details[0].message}`
+            } else if (error.message) {
               errorMessage = `[EOS] ${error.message}`
+            } else {
+              errorMessage = 'Got an error when pushing transaction to EOS'
             }
           } catch {
-            error = errorString
             errorMessage = 'Got an error when pushing transaction to EOS'
           }
 
@@ -810,14 +877,16 @@ async function handleJavascriptPort (arg) {
             user: null,
             message: errorMessage,
             tags: { 'cambiatus.type': 'eos-transaction' },
-            contexts: [{
-              name: 'Eos transaction',
-              extras: {
-                sent: arg.data,
-                response,
-                error
+            contexts: [
+              {
+                name: 'Eos transaction',
+                extras: {
+                  sent: arg.data,
+                  response,
+                  error
+                }
               }
-            }],
+            ],
             localData: {},
             transaction: 'eosTransaction',
             level: 'error'
@@ -843,7 +912,11 @@ async function handleJavascriptPort (arg) {
       return downloadPdf(store.accountName, decryptedPassphrase)
     }
     case 'accountNameToUint64': {
-      return { uint64name: eos.modules.format.encodeName(arg.data.accountName, false) }
+      // In eosjs v22, we need to use the serialize module
+      const { serialize } = require('eosjs')
+      return {
+        uint64name: serialize.nameToUint64(arg.data.accountName)
+      }
     }
     case 'scrollIntoView': {
       // We might be creating the element and scrolling to it at the same time.
@@ -857,7 +930,9 @@ async function handleJavascriptPort (arg) {
     case 'smoothHorizontalScroll': {
       const { containerId, targetId } = arg.data
 
-      const targetLeft = document.getElementById(targetId).getBoundingClientRect().left
+      const targetLeft = document
+        .getElementById(targetId)
+        .getBoundingClientRect().left
       const container = document.getElementById(containerId)
       const offset = targetLeft - container.getBoundingClientRect().left
       container.scrollTo({
@@ -870,7 +945,10 @@ async function handleJavascriptPort (arg) {
     case 'subscribeToNewCommunity': {
       // Cancel existing notifier
       if (newCommunitySubscription && newCommunitySubscription.notifier) {
-        AbsintheSocket.cancel(absintheSocket, newCommunitySubscription.notifier)
+        AbsintheSocket.cancel(
+          absintheSocket,
+          newCommunitySubscription.notifier
+        )
       }
 
       // Create new notifier
@@ -879,7 +957,7 @@ async function handleJavascriptPort (arg) {
         variables: {}
       })
 
-      const onStart = data => {
+      const onStart = (data) => {
         addBreadcrumb({
           type: 'info',
           category: 'subscribeToNewCommunity',
@@ -897,7 +975,7 @@ async function handleJavascriptPort (arg) {
         app.ports.javascriptInPort.send(response)
       }
 
-      const onAbort = data => {
+      const onAbort = (data) => {
         addBreadcrumb({
           type: 'info',
           category: 'subscribeToNewCommunity',
@@ -908,7 +986,7 @@ async function handleJavascriptPort (arg) {
         })
       }
 
-      const onCancel = data => {
+      const onCancel = (data) => {
         addBreadcrumb({
           type: 'info',
           category: 'subscribeToNewCommunity',
@@ -919,7 +997,7 @@ async function handleJavascriptPort (arg) {
         })
       }
 
-      const onError = data => {
+      const onError = (data) => {
         addBreadcrumb({
           type: 'error',
           category: 'subscribeToNewCommunity',
@@ -930,7 +1008,7 @@ async function handleJavascriptPort (arg) {
         })
       }
 
-      const onResult = data => {
+      const onResult = (data) => {
         addBreadcrumb({
           type: 'info',
           category: 'subscribeToNewCommunity',
@@ -978,7 +1056,7 @@ async function handleJavascriptPort (arg) {
         variables: {}
       })
 
-      const onStart = data => {
+      const onStart = (data) => {
         addBreadcrumb({
           type: 'info',
           category: 'subscribeToTransfer',
@@ -996,7 +1074,7 @@ async function handleJavascriptPort (arg) {
         app.ports.javascriptInPort.send(response)
       }
 
-      const onAbort = data => {
+      const onAbort = (data) => {
         addBreadcrumb({
           type: 'info',
           category: 'subscribeToTransfer',
@@ -1007,7 +1085,7 @@ async function handleJavascriptPort (arg) {
         })
       }
 
-      const onCancel = data => {
+      const onCancel = (data) => {
         addBreadcrumb({
           type: 'info',
           category: 'subscribeToTransfer',
@@ -1018,7 +1096,7 @@ async function handleJavascriptPort (arg) {
         })
       }
 
-      const onError = data => {
+      const onError = (data) => {
         addBreadcrumb({
           type: 'error',
           category: 'subscribeToTransfer',
@@ -1029,7 +1107,7 @@ async function handleJavascriptPort (arg) {
         })
       }
 
-      const onResult = data => {
+      const onResult = (data) => {
         addBreadcrumb({
           type: 'info',
           category: 'subscribeToTransfer',
@@ -1043,7 +1121,7 @@ async function handleJavascriptPort (arg) {
           address: arg.responseAddress,
           addressData: arg.responseData,
           state: 'responded',
-          data: data
+          data
         }
         app.ports.javascriptInPort.send(response)
       }
@@ -1069,7 +1147,10 @@ async function handleJavascriptPort (arg) {
     case 'subscribeToUnreadCount': {
       // Cancel existing notifier
       if (notificationSubscription && notificationSubscription.notifier) {
-        AbsintheSocket.cancel(absintheSocket, notificationSubscription.notifier)
+        AbsintheSocket.cancel(
+          absintheSocket,
+          notificationSubscription.notifier
+        )
       }
 
       // Create new notifier
@@ -1078,7 +1159,7 @@ async function handleJavascriptPort (arg) {
         variables: {}
       })
 
-      const onStart = data => {
+      const onStart = (data) => {
         addBreadcrumb({
           type: 'info',
           category: 'subscribeToUnreadCount',
@@ -1089,7 +1170,7 @@ async function handleJavascriptPort (arg) {
         })
       }
 
-      const onAbort = data => {
+      const onAbort = (data) => {
         addBreadcrumb({
           type: 'info',
           category: 'subscribeToUnreadCount',
@@ -1100,7 +1181,7 @@ async function handleJavascriptPort (arg) {
         })
       }
 
-      const onCancel = data => {
+      const onCancel = (data) => {
         addBreadcrumb({
           type: 'info',
           category: 'subscribeToUnreadCount',
@@ -1111,7 +1192,7 @@ async function handleJavascriptPort (arg) {
         })
       }
 
-      const onError = data => {
+      const onError = (data) => {
         addBreadcrumb({
           type: 'error',
           category: 'subscribeToUnreadCount',
@@ -1122,7 +1203,7 @@ async function handleJavascriptPort (arg) {
         })
       }
 
-      const onResult = data => {
+      const onResult = (data) => {
         addBreadcrumb({
           type: 'info',
           category: 'subscribeToUnreadCount',
@@ -1161,7 +1242,10 @@ async function handleJavascriptPort (arg) {
     case 'subscribeToHighlightedNewsChanged': {
       // Cancel existing notifier
       if (highlightedNewsSubscription && highlightedNewsSubscription.notifier) {
-        AbsintheSocket.cancel(absintheSocket, highlightedNewsSubscription.notifier)
+        AbsintheSocket.cancel(
+          absintheSocket,
+          highlightedNewsSubscription.notifier
+        )
       }
 
       // Create new notifier
@@ -1170,7 +1254,7 @@ async function handleJavascriptPort (arg) {
         variables: {}
       })
 
-      const onStart = data => {
+      const onStart = (data) => {
         addBreadcrumb({
           type: 'info',
           category: 'subscribeToHighlightedNewsChanged',
@@ -1181,7 +1265,7 @@ async function handleJavascriptPort (arg) {
         })
       }
 
-      const onAbort = data => {
+      const onAbort = (data) => {
         addBreadcrumb({
           type: 'info',
           category: 'subscribeToHighlightedNewsChanged',
@@ -1192,7 +1276,7 @@ async function handleJavascriptPort (arg) {
         })
       }
 
-      const onCancel = data => {
+      const onCancel = (data) => {
         addBreadcrumb({
           type: 'info',
           category: 'subscribeToHighlightedNewsChanged',
@@ -1203,7 +1287,7 @@ async function handleJavascriptPort (arg) {
         })
       }
 
-      const onError = data => {
+      const onError = (data) => {
         addBreadcrumb({
           type: 'error',
           category: 'subscribeToHighlightedNewsChanged',
@@ -1214,7 +1298,7 @@ async function handleJavascriptPort (arg) {
         })
       }
 
-      const onResult = data => {
+      const onResult = (data) => {
         addBreadcrumb({
           type: 'info',
           category: 'subscribeToHighlightedNewsChanged',
@@ -1261,7 +1345,11 @@ async function handleJavascriptPort (arg) {
           }
 
           // The clipboard API is not supported in all browsers
-          if (navigator.clipboard && navigator.clipboard.writeText && element.value) {
+          if (
+            navigator.clipboard &&
+            navigator.clipboard.writeText &&
+            element.value
+          ) {
             await navigator.clipboard.writeText(element.value)
 
             resolve()
@@ -1290,7 +1378,7 @@ async function handleJavascriptPort (arg) {
               addBreadcrumb({
                 type: 'info',
                 category: 'readClipboard',
-                message: 'Checked for clipboard access, and it\'s denied',
+                message: "Checked for clipboard access, and it's denied",
                 data: {},
                 localData: {},
                 level: 'info'
@@ -1303,7 +1391,7 @@ async function handleJavascriptPort (arg) {
               addBreadcrumb({
                 type: 'info',
                 category: 'readClipboard',
-                message: 'Checked for clipboard access, and it\'s granted',
+                message: "Checked for clipboard access, and it's granted",
                 data: {},
                 localData: {},
                 level: 'info'
@@ -1354,7 +1442,8 @@ async function handleJavascriptPort (arg) {
           addBreadcrumb({
             type: 'info',
             category: 'readClipboard',
-            message: 'The permissions API is not supported by the user\'s browser',
+            message:
+              "The permissions API is not supported by the user's browser",
             data: { permissionError },
             localData: {},
             level: 'info'
@@ -1366,7 +1455,8 @@ async function handleJavascriptPort (arg) {
         addBreadcrumb({
           type: 'info',
           category: 'readClipboard',
-          message: 'clipboard.readText() is not supported by the user\'s browser',
+          message:
+            "clipboard.readText() is not supported by the user's browser",
           data: {},
           localData: {},
           level: 'info'
@@ -1387,10 +1477,9 @@ async function handleJavascriptPort (arg) {
     }
     case 'setFavicon': {
       const { favicon } = arg.data
-      document.head.querySelectorAll('link[rel*=icon]')
-        .forEach((icon) => {
-          icon.href = favicon
-        })
+      document.head.querySelectorAll('link[rel*=icon]').forEach((icon) => {
+        icon.href = favicon
+      })
 
       return {}
     }
@@ -1412,7 +1501,7 @@ async function handleJavascriptPort (arg) {
     }
     case 'getBip39': {
       const normalize = (wordlist) => {
-        return wordlist.map(word => word.normalize())
+        return wordlist.map((word) => word.normalize())
       }
 
       return {

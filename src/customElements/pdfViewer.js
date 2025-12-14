@@ -1,12 +1,12 @@
 /* global HTMLElement, CustomEvent */
 
-import * as pdfjsLib from 'pdfjs-dist/es5/build/pdf'
+import * as pdfjsLib from 'pdfjs-dist'
 
 // If you're updating `pdfjs-dist`, make sure to
-// `cp ./node_modules/pdfjs-dist/es5/build/pdf.worker.min.js ./public`
+// `cp ./node_modules/pdfjs-dist/build/pdf.worker.min.js ./public`
 pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js'
 
-export default (app, config, addBreadcrumb) => (
+export default (app, config, addBreadcrumb) =>
   class PdfViewer extends HTMLElement {
     connectedCallback () {
       if (this.hasChildNodes()) return
@@ -20,11 +20,15 @@ export default (app, config, addBreadcrumb) => (
       this.appendChild(img)
 
       img.addEventListener('load', () => {
-        this.dispatchEvent(new CustomEvent('file-type-discovered', { detail: 'image' }))
+        this.dispatchEvent(
+          new CustomEvent('file-type-discovered', { detail: 'image' })
+        )
       })
 
       img.addEventListener('error', async () => {
-        this.dispatchEvent(new CustomEvent('file-type-discovered', { detail: 'pdf' }))
+        this.dispatchEvent(
+          new CustomEvent('file-type-discovered', { detail: 'pdf' })
+        )
         this.removeChild(img)
         this.appendLoadingImage()
 
@@ -37,7 +41,10 @@ export default (app, config, addBreadcrumb) => (
         const width = this.clientWidth
         const height = this.clientHeight
         const unscaledViewport = firstPage.getViewport({ scale: 1 })
-        const scale = Math.min(height / unscaledViewport.height, width / unscaledViewport.width)
+        const scale = Math.min(
+          height / unscaledViewport.height,
+          width / unscaledViewport.width
+        )
 
         const viewport = firstPage.getViewport({ scale })
         const canvasContext = canvas.getContext('2d')
@@ -59,7 +66,10 @@ export default (app, config, addBreadcrumb) => (
 
       this.appendChild(loadingImg)
 
-      if (this.getAttribute('elm-loading-title') && this.getAttribute('elm-loading-subtitle')) {
+      if (
+        this.getAttribute('elm-loading-title') &&
+        this.getAttribute('elm-loading-subtitle')
+      ) {
         loadingImg.className = 'h-16 mt-8'
 
         const loadingTitle = document.createElement('p')
@@ -85,4 +95,3 @@ export default (app, config, addBreadcrumb) => (
       }
     }
   }
-)
