@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="26px" height="14px" viewBox="0 0 26 14" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <!-- Generator: Sketch 53.2 (72643) - https://sketchapp.com -->
+    <title>Group 3</title>
+    <desc>Created with Sketch.</desc>
+    <g id="----Login-e-Criar-conta" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <g id="INICIAL-&gt;-LOGIN-&gt;-Private-key" transform="translate(-853.000000, -419.000000)">
+            <g id="Group-3" transform="translate(853.000000, 419.000000)">
+                <g id="Group-2" fill="#00BDCD" fill-rule="nonzero">
+                    <path d="M5.10869891,11.8913011 C1.61720816,9.8301147 0,7 0,7 C0,7 4,0 13,0 C14.3045107,0 15.5039752,0.14706466 16.6014388,0.39856122 L15.7519017,1.2480983 C14.8971484,1.0900546 13.9800929,1 13,1 C5,1 1.19995117,7 1.19995117,7 C1.19995117,7 2.71472808,9.3917225 5.84492713,11.1550729 L5.10869891,11.8913011 L5.10869891,11.8913011 L5.10869891,11.8913011 Z" id="eye-hidden-path"></path>
+                    <path d="M9.398561,13.601439 C10.4960246,13.8529356 11.6954892,14.0000001 13,14 C22,13.999999 26,7 26,7 C26,7 24.3827918,4.1698856 20.8913008,2.1086992 L20.1550727,2.8449273 C23.2852719,4.6082776 24.8000488,7 24.8000488,7 C24.8000488,7 21,12.999999 13,13 C12.019907,13.0000001 11.1028515,12.9099455 10.2480981,12.7519019 L9.398561,13.601439 L9.398561,13.601439 L9.398561,13.601439 Z" id="eye-hidden-path"></path>
+                </g>
+                <circle id="Oval" stroke="#00BDCD" cx="13" cy="7" r="3"></circle>
+            </g>
+        </g>
+    </g>
+</svg>

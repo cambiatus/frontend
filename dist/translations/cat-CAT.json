@@ -1,0 +1,1580 @@
+{
+  "bespiral": "Cambiatus",
+  "back": "Torna",
+  "decimal_separator": ",",
+  "thousands_separator": ".",
+  "copied_to_clipboard": "S'ha copiat al porta-retalls",
+  "share": "Compartir",
+  "upload_image": "Toca per fer o seleccionar una foto",
+  "dates": {
+    "today": "Avui",
+    "yesterday": "Ahir",
+    "select": "Selecciona una data",
+    "clear": "Esborra la data"
+  },
+  "loading": {
+    "title": "Espera un moment",
+    "subtitle": "Estem processant la vostra sol·licitud"
+  },
+  "menu": {
+    "title": "Menú",
+    "welcome_to": "Benvingut de nou,",
+    "my_communities": "Benvingut a ",
+    "dashboard": "Inici",
+    "news": "Notícies",
+    "learn": "Aprendre",
+    "shop": "Botiga",
+    "faq": "Preguntes freqüents ",
+    "profile": "Perfil",
+    "invite": "Invitacions",
+    "notifications": "Notificacions",
+    "new_notifications": "Notificacions noves",
+    "previous_notifications": "Notificacions anteriors",
+    "no_notification": "Sense notificacions",
+    "chat_message_notification": "Nou missatge de: {{username}}",
+    "view_all": "Veure-ho tot",
+    "more": "Més",
+    "logout": "Sortir",
+    "search": {
+      "placeholder": "Cerqueu accions, ofertes i persones",
+      "recentlyHeader": "Cercat recentment",
+      "notFoundLabel": "Heu cercat",
+      "notFoundResults": "No s'han trobat resultats",
+      "overviewHeader": "Això és el que hem trobat",
+      "overviewShow": "Espectacle",
+      "overviewFound": "Trobem",
+      "offer": "1 oferta",
+      "offers": "{{count}} ofertes",
+      "offers_title": "Ofertes ({{count}})",
+      "action": "1 acció",
+      "actions": "{{count}} accions",
+      "actions_title": "Accions ({{count}})",
+      "member": "1 membre",
+      "members": "{{count}} membres",
+      "members_title": "Membres ({{count}})",
+      "gain": "Guanyeu"
+    },
+    "explore": "Explorar",
+    "communities": "Comunitats",
+    "welcome_message": "Hola, {{user_name}}",
+    "back_to_dashboard": "Anar a l’inici",
+    "edit": "Editar",
+    "cancel": "Cancel·lar",
+    "save": "Guardar",
+    "create": "Crear",
+    "send": "Enviar",
+    "add": "Afegir",
+    "close": "Tancar",
+    "copy": "Còpia",
+    "export": "Exporta",
+    "loading": "Carregant...",
+    "try_again": "Intenta de nou",
+    "coming_soon": "Pròximament",
+    "my_account": "Meu compte",
+    "languages": "Idiomes",
+    "community_selector": {
+      "title": "Community switch",
+      "body": "Selecciona la teva comunitat"
+    }
+  },
+  "edit": {
+    "input_counter": "{{current}} de {{max}}"
+  },
+  "error": {
+    "validator": {
+      "number": {
+        "positive": "El nombre ha de ser positiu",
+        "negative": "El nombre ha de ser negatiu",
+        "greater_than": "El nombre ha de ser superior a {{base}}",
+        "greater_than_or_equal": "El nombre ha de ser major o igual a {{base}}",
+        "length_greater_than_or_equal": "Trieu almenys {{count}} elements",
+        "lower_than": "El nombre ha de ser inferior a {{base}}",
+        "lower_than_or_equal": "El nombre ha de ser inferior o igual a {{base}}",
+        "is_odd": "El nombre ha de ser imparell"
+      },
+      "date": {
+        "invalid": "Data no vàlida, trieu una data en el futur"
+      },
+      "text": {
+        "only_numbers": "Només es permeten números",
+        "only_letters": "Només es permeten lletres",
+        "exactly": "El text ha de tenir exactament {{base}} caràcters",
+        "longer_than": "El text ha de tenir més de {{base}} caràcters",
+        "shorter_than": "El text ha de tenir menys de {{base}} caràcters"
+      },
+      "enum": {
+        "one_of": "El text ha de ser: [{{base}}]",
+        "none_of": "El text no ha de ser: [{{base}}]"
+      }
+    },
+    "objective": {
+      "invalid_id": "Identificador d'objectius no vàlid "
+    },
+    "clipboard": {
+      "permissionDenied": "Heu de donar-nos permís per enganxar-lo del porta-retalls. Proveu de canviar la configuració del cadenat o del botó d'informació",
+      "paste": {
+        "notSupported": "El vostre navegador no admet enganxar des del porta-retalls, enganxeu-lo manualment"
+      }
+    },
+    "pageNotFound": "Pàgina no trobada!",
+    "required": "Sembla que t’has oblidat de completar això.",
+    "email": "Si us plau, utilitzeu un correu electrònic vàlid.",
+    "tooShort": "Molt curta. Has d’emprar com a mínim {{minLength}} caràcters.",
+    "tooLong": "Molt llarga. Has d’emprar com a màxim {{maxLength}} caràcters.",
+    "invalidChar": "Caràcter no vàlid. Utilitzeu només lletres de l'A a Z i números de l'1 al 5.",
+    "notAllowedChar": "'{{char}}' no està permès. Utilitzeu només lletres de l'A a Z i números de l'1 al 5.",
+    "alreadyTaken": "Ja està en ús. Si et plau, intenta-ho de nou.",
+    "notMember": "Aquest usuari no és membre.",
+    "chooseOrUploadLogo": "Escull o puja el teu propi logotip.",
+    "waitForLogoUpload": "Espereu fins que es carregui el logotip",
+    "invalidSymbol": "Símbol invàlid.",
+    "unknown": "Oh oh. Alguna cosa ha anat malament.",
+    "accountNotFound": "Compte no trobat. Esteu segur que heu creat el vostre compte?",
+    "invalidKey": "Clau no vàlida",
+    "invalidPin": "PIN no vàlid",
+    "unavailablePin": "El PIN no està disponible",
+    "phone": "Utilitzeu un número de telèfon vàlid",
+    "invalid_image_file": "S'ha produït un error en penjar la imatge",
+    "file_upload": "S'ha produït un error en carregar el fitxer",
+    "wait_file_upload": "Si us plau, espereu que es carregui el fitxer",
+    "zipcode": "Codi postal no vàlid",
+    "contracts": {
+      "transfer": {
+        "cannot transfer to self": "No es pot transferir a un mateix",
+        "destination account doesn't exists": "El compte de destinació no existeix",
+        "token with given symbol doesn't exists": "El testimoni amb el símbol donat no existeix",
+        "invalid quantity": "Quantitat no vàlida",
+        "quantity must be positive": "La quantitat ha de ser positiva",
+        "symbol precision mismatch": "Desajust de precisió de símbols",
+        "memo has more than 256 bytes": "La nota té més de 256 símbols",
+        "from account doesn't belong to the community": "Des del compte no pertany a la comunitat",
+        "to account doesn't belong to the community": "El compte no pertany a la comunitat",
+        "The sale creator (to) account doesn't exists": "El compte de creador de venda (a) no existeix",
+        "Can't sale for yourself": "No es pot vendre per vosaltres mateixos",
+        "Can't find any sale with given sale_id": "No trobo cap venda amb sale_id determinat",
+        "Invalid number of units, must be greater than 0": "El nombre d'unitats no vàlid ha de ser superior a 0",
+        "Sale doesn't have that many units available": "La venda no té tantes unitats disponibles",
+        "Amount offered doesn't correspond to expected value": "L'import ofert no correspon al valor esperat",
+        "Quantity must be the same as the sale price": "La quantitat ha de ser la mateixa que el preu de venda",
+        "Can't find community with given Symbol": "No es pot trobar la comunitat amb el símbol donat",
+        "This community don't have objectives enabled.": "Aquesta comunitat no té objectius activats.",
+        "You can't use transfersale to this sale if you aren't part of the community": "No podeu fer servir la venda de transferències a aquesta venda si no formeu part de la comunitat",
+        "Sale creator and sale doesn't match": "El creador de la venda i la venda no coincideixen",
+        "Invalid number of units": "Nombre d'unitats no vàlid",
+        "overdrawn community limit": "Saldo insuficient per fer aquesta transferència"
+      },
+      "verifyclaim": {
+        "Can't vote on already verified claim": "No es pot votar sobre una reclamació ja verificada",
+        "This is action is already completed, can't verify claim": "Aquesta acció ja s'ha completat, no es pot verificar la reclamació",
+        "There are no usages left for this action": "No queden usos per a aquesta acció",
+        "Can't find claim with given claim_id": "No es pot trobar la reclamació amb la reclamació indicada",
+        "Can't find action with given claim_id": "No es pot trobar cap acció amb claim_id donat",
+        "Can't find objective with given claim_id": "No es pot trobar objectiu amb la reclamació_id donada",
+        "Can't find community with given claim_id": "No es pot trobar la comunitat amb l'indicació claim_id",
+        "This community don't have objectives enabled.": "Aquesta comunitat no té objectius activats.",
+        "Verifier is not in the action validator list": "El verificador no es troba a la llista de validadors d'accions",
+        "Deadline exceeded": "S'ha superat el termini",
+        "The verifier cannot check the same claim more than once": "El verificador no pot comprovar la mateixa reclamació més d’una vegada"
+      }
+    }
+  },
+  "auth": {
+    "title": "Utilitzeu la vostra clau privada i el PIN o connecteu-vos per",
+    "loginPin": "Benvingut {{accountName}}, utilitzeu el vostre PIN d'inici de sessió per",
+    "chooseAccount": "Escull un compte",
+    "required": "Autenticació requerida per a aquesta acció",
+    "pin_instr": "6 números",
+    "failed": "L'autenticació ha fallat",
+    "failed_generating_phrase": "S'ha produït un error en iniciar la vostra autenticació",
+    "login": {
+      "modalFormTitle": "Introduïu el PIN",
+      "enterPinToContinue": "Introduïu el PIN de seguretat actual per continuar.",
+      "continue": "Continuar",
+      "loginTab": "Inicieu la sessió",
+      "registerTab": "Crea el teu compte",
+      "privateKeyMode": {
+        "input": {
+          "label": "Clau privada (heu desat en crear el vostre compte)",
+          "tooltip": "També podeu utilitzar les vostres 12 PARAULES",
+          "toggle": "Vull utilitzar les 12 paraules"
+        }
+      },
+      "wordsMode": {
+        "input": {
+          "description": "Escriviu les 12 paraules que heu copiat i enganxat al registre.",
+          "label": "Les vostres 12 paraules",
+          "placeholder": "Escriviu les vostres 12 paraules aquí",
+          "tooltip": "També podeu fer servir la tecla PRIVADA",
+          "toggle": "Vull utilitzar la clau privada",
+          "notPassphraseError": "Introduïu 12 paraules",
+          "notLatinLettersError": "Si us plau, utilitzeu només lletres bàsiques llatines",
+          "atLeastThreeLettersError": "Totes les paraules han de tenir almenys 3 lletres",
+          "invalid_word": "{{word}} no és una paraula vàlida. Comprova les teves 12 paraules i torna-ho a provar.",
+          "invalid_words": "Aquestes paraules no són vàlides: {{words}}. Comprova les teves 12 paraules i torna-ho a provar.",
+          "paste": "Enganxa",
+          "pasted": "Enganxat"
+        }
+      },
+      "submit": "Inicieu la sessió",
+      "submitting": "Inici de sessió...",
+      "register": "Encara no teniu cap compte? ",
+      "registerLink": "Crea ara"
+    },
+    "pin": {
+      "instruction": {
+        "nowCreate": "Genial, ara crea un",
+        "sixDigitPin": "PIN de sis dígits",
+        "thePin": "El PIN",
+        "notPassword": "no és una contrasenya",
+        "eachLogin": "i podeu canviar-lo cada inici de sessió."
+      },
+      "label": "Creeu un nou PIN de sis dígits",
+      "tooltip": "El PIN ha de contenir 6 números, per a la vostra seguretat, introduïu el PIN que creeu cada vegada que el sol·licitem",
+      "toggle": {
+        "show": "Espectacle",
+        "hide": "Amagar"
+      },
+      "shouldHaveSixDigitsError": "El PIN ha de tenir 6 dígits",
+      "pin": "PIN",
+      "confirmPin": "Confirmeu el PIN",
+      "pinCharError": "El PIN ha d’utilitzar només números"
+    },
+    "pinPopup": {
+      "label": "El vostre PIN de sis dígits"
+    },
+    "pinConfirmation": {
+      "label": "Torneu a escriure el PIN",
+      "tooltip": "",
+      "differsFromPinError": "Introduïu el mateix PIN anterior"
+    }
+  },
+  "register": {
+    "registerTab": "Crea el teu compte",
+    "loginTab": "Inicieu la sessió",
+    "form": {
+      "step": "Pas {{stepNum}} de 2",
+      "step1_title": "Informació bàsica",
+      "step2_title": "12 paraules",
+      "name": {
+        "label": "Nom complet",
+        "tooltip": "",
+        "placeholder": "Ex.: Arlene Warren"
+      },
+      "email": {
+        "label": "Email",
+        "tooltip": "",
+        "placeholder": "Ex.: arlene_warren@email.com"
+      },
+      "account": {
+        "label": "Creeu un nom d’usuari amb exactament 12 caràcters (només lletres de la a-z i números de la 1-5)",
+        "tooltip": "El nom d'usuari serà tal com els altres participants el coneixeran a la plataforma, ha de tenir 12 caràcters exactes.",
+        "placeholder": "Ex.: arlenewa1224"
+      },
+      "phone": {
+        "label": "Número de telèfon",
+        "tooltip": "Ex.: 12345678",
+        "placeholder": "Ex.: 12345678"
+      },
+      "street": {
+        "label": "Carrer",
+        "tooltip": "",
+        "placeholder": ""
+      },
+      "number": {
+        "label": "Número",
+        "tooltip": "",
+        "placeholder": ""
+      },
+      "zip": {
+        "label": "Codi ZIP",
+        "tooltip": "",
+        "placeholder": ""
+      },
+      "document": {
+        "type": "Tipus de Document",
+        "cedula_de_identidad": {
+          "label": "número de la Seguretat Social",
+          "placeholder": "introduïu els 9 dígits",
+          "maximum": "10"
+        },
+        "dimex": {
+          "label": "número dimex",
+          "placeholder": "Introduïu els 11 o 12 dígits",
+          "maximum": "12"
+        },
+        "nite": {
+          "label": "número nite",
+          "placeholder": "introduïu els 10 dígits",
+          "maximum": "10"
+        },
+        "errorInvalid": "Utilitzeu un número de document vàlid."
+      },
+      "types": {
+        "natural": "Persona Física",
+        "juridical": "Persona Jurídica"
+      },
+      "accountCharError": "Hem trobat un caràcter invàlid. Utilitza solament lletres i números de 1-5",
+      "pin": "PIN",
+      "confirmPin": "Confirma el teu PIN",
+      "pinCharError": "El teu PIN tan sols ha de contenir números",
+      "pinConfirmError": "Si et plau introdueix el mateix PIN que abans",
+      "checkingAvailability": "Comprovant disponibilitat del compte",
+      "button": "Crea",
+      "company_type": "Tipus d’empresa",
+      "company_name": "Nom de la companyia",
+      "name_example": "Exemple: Cambiatus",
+      "company": {
+        "mipyme": {
+          "name": "MIPYME",
+          "label": "MIPYME",
+          "placeholder": "Introduïu els deu dígits",
+          "maximum": "10"
+        },
+        "gran_empresa": {
+          "label": "Corporació",
+          "name": "Corporació Number",
+          "placeholder": "Introduïu els deu dígits",
+          "maximum": "10"
+        }
+      },
+      "register_tooltip": "Com voleu registrar-vos?",
+      "corporation": "Corporació",
+      "city": "Ciutat",
+      "state": "Estat",
+      "district": "Districte",
+      "select": {
+        "state": "Seleccioneu l'estat",
+        "city": "Seleccioneu la ciutat",
+        "district": "Selecciona el districte"
+      },
+      "error": {
+        "kyc_problem": "No es pot desar el KYC. Comproveu les vostres dades i torneu-ho a provar.",
+        "address_problem": "No es pot desar l'adreça. Comproveu les vostres dades i torneu-ho a provar."
+      }
+    },
+    "login": "Ja tens un compte? ",
+    "authLink": "Inici de sessió",
+    "account_error": {
+      "title": "Oh-oh. Alguna cosa ha sortit malament mentre creàvem el teu compte"
+    },
+    "account_created": {
+      "greet": "Ei {{name}},",
+      "copy": "copieu",
+      "i_saved_words": "He copiat i enganxat en un lloc segur les 12 paraules que va demanar Cambiatus",
+      "words_copied": "es van copiar al porta-retalls",
+      "twelve_words": "Les vostres 12 paraules",
+      "private_key": "La vostra clau privada",
+      "recommendation": "Us recomanem que deseu aquesta informació fent clic al botó següent, si la perds, no podreu tornar a iniciar la sessió al vostre compte",
+      "download": "Crear el meu compte",
+      "instructions": "Copieu i enganxeu les 12 paraules següents a un lloc segur. Només teniu aquesta oportunitat de fer-ho; si heu perdut aquestes paraules, ja no podreu iniciar la sessió al vostre compte."
+    }
+  },
+  "account": {
+    "my_wallet": {
+      "title": "La meva carters",
+      "my_transfers": "Les meves transferències",
+      "transaction_sent": "La teva transacció ha estat enviada amb èxit a la blockchain!",
+      "your_current_balance": "El vostre saldo actual: {{balance}}",
+      "balances": {
+        "current": "Balanç actual",
+        "subtitle": "Veure comunitat",
+        "button": "Enviar"
+      },
+      "transfer": {
+        "title": "Enviant {{symbol}}",
+        "error": "La transferència ha fallat",
+        "send_to": "Enviar a",
+        "send_to_placeholder": "Compte a enviar",
+        "amount": "Import",
+        "amount_placeholder": "0.00",
+        "memo": "Memo (opcional)",
+        "memo_placeholder": "Gràcies pel teu ajut ",
+        "submit": "Enviar"
+      }
+    }
+  },
+  "transfer": {
+    "transfers_latest": "Últimes",
+    "transfers": "transferències",
+    "loading_error": "Alguna cosa ha sortit malament mentre recuperàvem les transferències.",
+    "no_transfers_yet": "Encara no hi ha transferències.",
+    "info": "{{from}} ha transferit {{value}} a {{to}}",
+    "you": "tu",
+    "title": "Transferència",
+    "to_self": "No es pot transferir a si mateix",
+    "no_profile": "Seleccioneu un usuari",
+    "no_amount": "Introduïu un import",
+    "too_much": "No teniu prou {{token}} per transferir tant. Podeu transferir fins a {{max_asset}}",
+    "memo_too_long": "La nota no pot tenir més de {{maxlength}} caràcters",
+    "sent_to": "Enviat a",
+    "received_from": "Rebut de",
+    "direction": {
+      "total": "Direcció de transferència",
+      "both": "Tots dos",
+      "sending": "S'està enviant",
+      "receiving": "Rebent",
+      "other_user": "Usuari que ha enviat o rebut",
+      "user_who_sent": "Usuari que ha enviat",
+      "user_who_received": "Usuari que va rebre"
+    }
+  },
+  "notifications": {
+    "title": "Notificacions",
+    "empty": "Encara no teniu cap notificació",
+    "saleHistory": {
+      "buy": "Vas comprar {{sale}} al {{user}}",
+      "sell": "🎉 {{user}} comprar {{sale}}"
+    },
+    "transfer": {
+      "receive": "Heu rebut {{amount}} de l'usuari {{user}}",
+      "sent": "Heu enviat {{amount}} a {{user}}"
+    },
+    "issue": {
+      "receive": "{{amount}}{{symbol}} s'ha publicat al vostre compte"
+    }
+  },
+  "community": {
+    "title": "Comunitat",
+    "create_button": "Crear comunitat",
+    "not_found": "Comunitat no trobada",
+    "error_loading": "Error en carregar la comunitat",
+    "error_saving": "Error en desar la comunitat",
+    "learn_about": "Vine a conèixer la comunitat {{community_name}}! \n\n{{url}}",
+    "earn": "Guanya {{symbol}}",
+    "share": "Compartir comunitat",
+    "create": {
+      "title": "Crear comunitat",
+      "success": "El perfil s'ha desat correctament",
+      "created": "Comunitat creada amb èxit! És possible que triguem una estona a processar-lo, així que proveu d'accedir-hi en uns segons",
+      "labels": {
+        "title": "Nom",
+        "symbol": "Símbol",
+        "description": "Descripció",
+        "max_supply": "Monedes emeses",
+        "min_balance": "Mínim balanç de monedes",
+        "inviter_reward": "Recompensa per a qui envia invitació ",
+        "invited_reward": "Recompensa per a qui rep invitació ",
+        "currency_name": "Nom de la moneda",
+        "currency_symbol": "Símbol",
+        "upload_icon": "Puja la teva icona "
+      },
+      "tooltips": {
+        "description": "Explica’ns sobre la teva comunitat i sobre el problema que vols resoldre.",
+        "currency_name": "El nom de la moneda de la teva comunitat ha de ser curt, atractiu i fàcil de recordar! Pensa en quelcom relacionat amb el problema que vols resoldre.",
+        "currency_symbol": "El símbol està compost per 3 lletres majúscules que identifiquen la moneda de la teva comunitat.",
+        "invited_reward": "Aquesta és la quantitat de testimoni que rep un usuari quan s’uneix al sistema",
+        "inviter_reward": "Aquesta és la quantitat de fitxes rebudes per convidar un altre usuari"
+      },
+      "cancel": "Cancel·lar",
+      "submit": "Crear"
+    },
+    "edit": {
+      "title": "Editar comunitat",
+      "unauthorized": "No tens autorització per a editar aquesta comunitat",
+      "submit": "Guardar"
+    },
+    "index": {
+      "created_by": "Creada per {{account_name}}",
+      "amount_in_circulation": "{{currency_name}} en circulació",
+      "minimum_balance": "Saldo mínim permès per usuari",
+      "members": "Usuaris actius",
+      "claims": "Reclamacions",
+      "products": "Venda de botigues",
+      "orders": "Compra de botigues",
+      "transfers": "Transaccions",
+      "our_supporters": "Els nostres",
+      "supporters": "Seguidors",
+      "our_messages": "Els nostres",
+      "messages": "Anuncis",
+      "support_us": "recolza’ns",
+      "see_supporters": "Consulteu els darrers membres que ens van donar suport.",
+      "see_all_supporters": "Veure tots els seguidors",
+      "you_can_support": "Podeu contribuir econòmicament al creixement d'aquesta comunitat.",
+      "logo": "Logotip de {{community}}",
+      "about_title": "Sobre la comunitat",
+      "our_numbers": "Els nostres",
+      "numbers": "Números"
+    },
+    "invite": {
+      "title": "Convida als teus amics",
+      "subtitle": "Convida als teus amics a la comunitat {{community_title}}",
+      "label": "Envia aquest URL als teus amics",
+      "submit": "Enviar invitacions",
+      "succeed": "Invitació exitosa",
+      "failed": "Invitació fallida",
+      "copy": "Còpia",
+      "copied": "Copiat!",
+      "kycRequired": "Aquesta comunitat requereix que els seus membres tinguin més informació. Empleneu aquests camps a continuació."
+    },
+    "invitation": {
+      "title": "Et va convidar a formar part de la comunitat",
+      "subtitle": "Voleu unir-vos a",
+      "yes": "Sí, uniu-vos",
+      "no": "No gràcies",
+      "already_member": "Ja ets membre d'aquesta comunitat!",
+      "choose_community_tip": "Sempre podeu triar {{communityTitle}} des del menú desplegable que hi ha al cantó superior esquerre del lloc web.",
+      "modal": {
+        "title": "Atenció",
+        "body": "De debò no vols unir-te a la comunitat?",
+        "yes": "Sí uniu-vos",
+        "no": "No, cancel·la"
+      }
+    },
+    "join": {
+      "title_generic": "Uniu-vos a la comunitat",
+      "title_with_community": "Introduïu {{community_name}}",
+      "member_count": "{{member_count}} membres",
+      "only_invited": "Aquesta comunitat només permet als hostes",
+      "already_member": "Ja sóc membre",
+      "visit_website": "Visiteu el lloc web"
+    },
+    "details": {
+      "creator": "Creador",
+      "supply": "Monedes emeses",
+      "max_supply": "Emissió màxima de monedes"
+    },
+    "objectives": {
+      "title": "Objectius",
+      "disabled_objectives_description": "Els objectius comunitaris estan desactivats",
+      "earn": "Guanyar",
+      "complete_actions": "Completa les accions que la comunitat ha traçat i guanya",
+      "objectives_and": "Objectius i",
+      "actions": "Accions",
+      "visit_community_page": "Visiteu la pàgina de la comunitat per obtenir-ne més informació.",
+      "go_to_community_page": "Visiteu la pàgina de la comunitat",
+      "go_to_action": "Passeu a l'acció {{index}}",
+      "reward": "Recompensa",
+      "claim_count": "Els membres han reclamat aquesta acció",
+      "claim_count_times": "{{count}} vegades",
+      "claim_count_times_singular": "un cop",
+      "share_action": "Vine a ajudar {{community_name}} a assolir el nostre objectiu a {{objective_description}} completant aquesta acció: \n\t{{action_description}} \n\n{{url}}",
+      "empty_dog_alt": "Un gos estirat a terra mirant-te",
+      "empty_title": "De moment, només un gos",
+      "empty_objectives_line_1": "Aquesta comunitat encara no té objectius.",
+      "empty_objectives_line_2": "Torna més tard quan tinguem objectius!",
+      "empty_line_1": "De moment no hi ha accions vinculades a aquest objectiu.",
+      "empty_line_2": "Exploreu altres objectius per poder reclamar accions i guanyar {{symbol}}.",
+      "create_success": "Objectiu creat amb èxit",
+      "title_plural": "Objectius i Accions",
+      "subtitle": "{{objectives}} objectius i {{actions}} accions",
+      "new": "Crear un objectiu nou",
+      "action_count": "{{actions}} accions",
+      "complete": "Completat",
+      "edit": "Edita l'objectiu",
+      "error_loading": "S'ha produït un error en carregar els objectius",
+      "editor": {
+        "not_found": "No trobat",
+        "error": "Ui! Quelcom ha fallat",
+        "description_label": "Quin és el teu objectiu?",
+        "description_placeholder": "Defineix un objectiu que resolgui el problema al que s’enfronta la teva comunitat.",
+        "submit": "Guardar",
+        "mark_as_complete": "Marca com a completat",
+        "error_marking_as_complete": "S'ha produït un error en marcar l'objectiu com a completat",
+        "completed_progress": "{{progress}} de {{total}} accions finalitzades",
+        "completion_text": "Es completaran totes les accions relacionades amb aquest objectiu",
+        "modal": {
+          "title": "Marca l'objectiu com a complet",
+          "body": "No es pot desfer la marca de l’objectiu com a complet. Les accions d'aquest objectiu també es marcaran com a completes i ja no estaran disponibles per a l'anàlisi. Segur que voleu marcar aquest objectiu com a complet?",
+          "confirm": "Sí",
+          "cancel": "No"
+        },
+        "celebration": {
+          "title": "Felicitacions",
+          "completed": "Aquesta comunitat ha complert un objectiu!",
+          "special_moment": "Estem contents de formar part d'aquest moment especial.",
+          "cheers": "Salutacions pel futur!",
+          "return": "Tornar als objectius"
+        }
+      },
+      "disabled": {
+        "description": "Les reclamacions, les accions i els objectius estan desactivats en aquesta comunitat."
+      },
+      "action_completed_notice": "Aquesta acció s'ha completat i no està disponible per a reclamacions noves",
+      "action_automatic_notice": "Aquesta acció no es pot reclamar, rebràs la recompensa automàticament un cop feta l'acció"
+    },
+    "actions": {
+      "title": "Acció",
+      "create_success": "Acció creada amb èxit",
+      "save_success": "L'acció s'ha desat correctament",
+      "last_title": "Darreres accions",
+      "loading_error": "Alguna cosa ha sortit malament mentre recuperàvem les accions.",
+      "no_actions_yet": "Encara no hi ha accions.",
+      "no_transfers_yet": "Encara no hi ha transferència",
+      "reward": "Recompensa",
+      "manually_verified_by": "Manualment verificada per",
+      "aumatically_verified_by": "Automàticament verificada per",
+      "validation_reward": "Recompensa de validació",
+      "validation_reward_none": "Cap",
+      "new": "Crear acció",
+      "description_label": "Quines accions has de promoure per a aconseguir aquest objectiu?",
+      "reward_label": "Els usuaris guanyaran aquesta recompensa en completar l’acció.",
+      "verification_label": "Com serà verificada aquesta acció?",
+      "manually_label": "Manualment",
+      "manually_info": "Selecciona persones que estiguin realment compromeses amb aquestes comunitat.",
+      "manually_reward": "Defineix la recompensa per a verificar",
+      "automatic_analyzers": "Acció automàtica, sense verificadors",
+      "invite_label": "Convidar",
+      "invite_tooltip": "En cas que la persona que vols convidar no tingui un compte a Cambiatus, escriu el seu correu electrònic.",
+      "invite_email_or_username": "Correu electrònic o @usuari",
+      "verifiers": "verificadors",
+      "usages": "{{usages}} accions ({{usagesLeft}} disponibles)",
+      "available_until": "disponible fins ",
+      "or": " o ",
+      "completed": "Completat",
+      "closed": "Tancat",
+      "edit": "Edita l'acció",
+      "proof": {
+        "title": "Aquesta acció requereix proves d’assoliment",
+        "upload": "Prova",
+        "upload_full": "veure prova completa",
+        "upload_hint": "Toca per fer una foto o seleccioneu un fitxer PDF",
+        "code_period_label": "el codi és vàlid per a",
+        "no_upload_error": "Afegiu una foto o un fitxer PDF per confirmar la vostra reclamació.",
+        "time_expired": "El temps per a la reclamació ha caducat."
+      },
+      "form": {
+        "not_found": "Acció no trobada",
+        "description_label": "Descripció",
+        "image_label": "Imatge (opcional)",
+        "image_guidance": "La vostra imatge ha de ser en format horitzontal, com a mínim 400px d'ample i 150px d'alçada per a una millor visualització",
+        "reward_label": "Recompensa",
+        "validity_label": "Tipus de validesa",
+        "validation_on": "La caducitat s'ha activat,",
+        "validation_off": "La caducitat es va desactivar,",
+        "validation_detail": " l'acció estarà disponible fins que no se suprimeixi",
+        "validation_on_detail": " l'acció estarà disponible fins a una data, quantitat o totes dues coses",
+        "verification_label": "Necessita verificació?",
+        "verifiers_label": "Trieu els verificadors",
+        "verifiers_label_count": "Trieu almenys {{count}} verificadors",
+        "remove_verifier": "Elimina",
+        "verifiers_reward_label": "Recompensa per als verificadors",
+        "votes_label": "Nombre mínim de vots",
+        "tooltip_label": "Què es?",
+        "date_validity": "Validesa per data,",
+        "date_validity_details": " l’acció finalitzarà quan arribi a una data concreta",
+        "quantity_validity": "Validesa per quantitat,",
+        "quantity_validity_details": " l’acció finalitzarà quan arribi a un nombre específic d’usos",
+        "no": "No",
+        "yes": "Sí",
+        "automatic": "Automàtic,",
+        "automatic_detail": " acció no reclamable i, per tant, sense la revisió i aprovació d'altres membres",
+        "automatic_tooltip": "Si és necessari connectar una aplicació externa mitjançant API, la persona que administra la comunitat pot contactar amb nosaltres per realitzar aquesta configuració.",
+        "manual": "Manual,",
+        "manual_detail": " recompensa l’usuari només després d’haver-lo revisat per altres",
+        "verifier_placeholder": "Escriviu el nom d’usuari",
+        "verifier_not_found": "No s'ha trobat cap usuari",
+        "unselect_user": "Desseleccioneu {{username}}",
+        "usages_placeholder": "Escriviu un número",
+        "date_label": "Tria la data",
+        "quantity_label": "Tria la quantitat",
+        "proof_validation": "Validació de fotos o PDF",
+        "proof_validation_hint": "Els usuaris han d'enviar una foto realitzant la tasca o un fitxer PDF perquè la reclamació sigui vàlida.",
+        "verification_code": "Codi de verificació",
+        "verification_code_hint": "Els usuaris hauran d’enviar un codi de verificació únic amb la prova perquè la reclamació sigui vàlida.",
+        "verification_instructions": "Escriviu aquí instruccions per als usuaris",
+        "usages_left_label": "Usos restants",
+        "mark_completed": "Marca com a completat",
+        "mark_not_completed": "Reobrir l'acció",
+        "errors": {
+          "description": "La descripció no pot estar buida",
+          "reward": "La recompensa ha de ser superior a 0",
+          "validity": "Cal utilitzar almenys una validesa si es fa servir la validesa",
+          "usage": "La quantitat ha de tenir com a mínim 1",
+          "empty_verifiers": "Necessiteu almenys un verificador si feu servir verificadors",
+          "less_verifiers": "Necessiteu més verificadors per vots suficients",
+          "minvotes": "Cal utilitzar almenys un vot mínim si es fa servir verificadors",
+          "verifier_reward": "La recompensa del verificador ha de tenir com a mínim 0"
+        },
+        "success": "L’activitat s’ha creat correctament.",
+        "error": "L'activitat no es pot crear. Proveu més endavant"
+      }
+    },
+    "verifyClaim": {
+      "error": "S'ha produït un error en intentar processar la convalidació. Torneu-ho a provar més endavant"
+    },
+    "kyc": {
+      "title": "KYC",
+      "dataTitle": "Dades KYC",
+      "info": "La verificació KYC és el procés obligatori d’identificar i verificar la identitat del client quan s’obre un compte i periòdicament amb el temps. Abans d’activar aquesta funció, poseu-vos en contacte amb nosaltres per entendre-ho millor.",
+      "phoneLabel": "Número de telèfon",
+      "restriction": {
+        "title": "Aquesta pàgina està restringida",
+        "description": "Aquesta comunitat requereix més informació dels seus membres. Per tenir accés complet, si us plau, als camps KYC complets del vostre perfil.",
+        "link": "Empleneu les vostres dades de KYC"
+      },
+      "delete": {
+        "label": "Suprimeix",
+        "confirmationHeader": "Suprimiu les vostres dades KYC",
+        "confirmationBody": "Després de suprimir aquestes dades, no podreu participar en algunes comunitats. Confirmes que vols suprimir les teves dades KYC?",
+        "warning": "Important: després de suprimir aquestes dades, no podreu participar en algunes comunitats.",
+        "confirm": "Sí",
+        "cancel": "No",
+        "success": "Les vostres dades KYC s'han suprimit correctament."
+      },
+      "add": {
+        "title": "Afegiu dades KYC",
+        "restricted": "No podeu editar les vostres dades KYC.",
+        "canRemove": "Sempre podeu eliminar aquesta informació del vostre perfil si ho decidiu.",
+        "success": "Les vostres dades KYC s'han desat correctament."
+      }
+    },
+    "thank_you": {
+      "title": "Gràcies!",
+      "all_supporters": "Consulteu la llista de tots els partidaris"
+    }
+  },
+  "profile": {
+    "title": "El meu perfil",
+    "my_transfers": "Les meves transferències",
+    "no_one": "Ningú",
+    "edit_success": "El perfil s'ha desat correctament",
+    "locations": "Localització",
+    "interests": "Interessos",
+    "summary": {
+      "user_summary": "{{user}}: Obriu el resum del perfil",
+      "your_summary": "Tu: Obriu el resum del perfil"
+    },
+    "12words": {
+      "title": "Les meves 12 paraules",
+      "button": "Descarregar"
+    },
+    "pin": {
+      "title": "El meu PIN",
+      "button": "Canviar"
+    },
+    "changePin": "Canvieu el PIN!",
+    "newPin": "Nou PIN de seguretat",
+    "changePinPrompt": "Introduïu el vostre nou PIN de seguretat de 6 dígits.",
+    "history": {
+      "balance": "Saldo total",
+      "transfers_number": "Nombre de transferències",
+      "transfers": "Transferències",
+      "claims_number": "Nombre de reclamacions",
+      "claims": "Reclamacions",
+      "products": "Articles a la botiga",
+      "items": "Articles",
+      "registration_date": "Membre des de",
+      "last_transaction": "Darrera transacció"
+    },
+    "actions": {
+      "edit": "Editar",
+      "viewPrivatekey": "Veure clau privada"
+    },
+    "preferences": {
+      "claim_notification": "Notificació de reclamació",
+      "transfer_notification": "Notificació de transferència",
+      "digest": "Notícies mensuals sobre la comunitat",
+      "error": "S'ha produït un error en desar les preferències"
+    },
+    "edit": {
+      "avatar_section": "Avatar",
+      "general_section": "General",
+      "title": "Edita la teva informació",
+      "labels": {
+        "avatar": "Imatge",
+        "name": "Nom",
+        "email": "Correu electrònic",
+        "localization": "Localització",
+        "interests": "Interessos",
+        "bio": "Biografia",
+        "privateKey": "Clau privada"
+      },
+      "placeholders": {
+        "name": "el teu nom",
+        "email": "el teu correu electrònic",
+        "localization": "on vius?",
+        "interests": "els teus interessos",
+        "bio": "explica’ns més sobre tu!",
+        "privateKey": "Aquesta és la teva clau privada. Si et plau guarda-la bé!"
+      },
+      "push_notifications": "Activeu les notificacions",
+      "submit": "Guardar"
+    },
+    "claims": {
+      "title": "Reclamacions",
+      "not_found": {
+        "title": "Les meves afirmacions",
+        "subtitle": "No s'ha trobat cap usuari"
+      },
+      "empty_results": "Encara no hi ha reclamacions",
+      "good_practices": {
+        "title": "Recordeu si",
+        "once_a_day": "No reivindiqueu la mateixa acció més d'una vegada al mateix dia;",
+        "completed_action": "Reclameu només accions realment realitzades;",
+        "know_the": "Obteniu més informació sobre les",
+        "good_practices": "bones pràctiques de la Comunitat"
+      }
+    },
+    "contributions": {
+      "profile_contributions": "Contribucions de {{profile_name}}",
+      "not_allowed_title": "No podeu veure les contribucions d'altres persones",
+      "not_allowed": "Només els administradors de la comunitat poden veure les contribucions d'altres persones",
+      "no_contributions": "Encara no hi ha contribucions",
+      "pending": "Pendents",
+      "approved": "Aprovat",
+      "failed": "Fracassat"
+    }
+  },
+  "shop": {
+    "filter": "Filtre",
+    "units_label": "Quantes unitats tens en estoc?",
+    "title": "Botiga",
+    "headline": "Ofertes creades amb 💚",
+    "headline_no_emoji": "Ofertes creades amb amor",
+    "subtitle": "Compra i ven a la teva comunitat",
+    "description": "Aquí podeu utilitzar les vostres monedes per comprar productes i serveis, o guanyar monedes venent els vostres productes i serveis",
+    "all_offers": "Totes les ofertes",
+    "my_communities_offers": "La meva comunitat ofereix",
+    "my_offers": "Les meves ofertes",
+    "rate_sale": "Valoració",
+    "messages": "Missatges",
+    "no_answer_yet": "Encara sense resposta",
+    "message_placeholder": "Escriu el teu missatge aquí o envia un missatge directe emprant Whatsapp o xat.",
+    "create_offer": "Crear oferta",
+    "create_new_offer": "Crea un nou",
+    "create_offer_success": "Oferta creada amb èxit",
+    "update_offer_success": "Oferta actualitzada amb èxit",
+    "edit_offer": "Editar oferta",
+    "action_options": "Opcions d'acció",
+    "edit_categories": "Editeu categories d'aquesta oferta",
+    "delete_offer_success": "L’oferta s’ha suprimit correctament",
+    "delete_offer_failure": "S'ha produït un error en eliminar la teva oferta",
+    "unauthorized": "No tens autorització per a editar aquesta venda",
+    "which_community_label": "En quina comunitat vols fer la venda?",
+    "choose_community_label": "Escull una comunitat",
+    "track_stock_label": "Voleu fer un seguiment de les unitats a l'aplicació?",
+    "choose_track_stock_label": "Trieu entre fer un seguiment o no",
+    "track_stock_no": "No",
+    "track_stock_yes": "Sí",
+    "units_available": "Quantitat disponible",
+    "out_of_stock": "fora d'estoc",
+    "offer_action": "{{accountName}} està VENENT",
+    "buy_action": "{{accountName}} està COMPRANT",
+    "buy": "Comprar",
+    "edit": "Edita",
+    "sold_by": "Venut per",
+    "by_user": "Per {{user}}",
+    "by_you": "Per vostè",
+    "free": "Gratis",
+    "sold_out": "Venut",
+    "total_price": "Preu total: {{amount}} {{symbol}}",
+    "enjoy": "Gaudeix",
+    "no_image": "Cap imatge",
+    "subtract_unit": "Resta una unitat",
+    "add_unit": "Afegir una unitat",
+    "filters": {
+      "title": "Filtres",
+      "apply": "Aplicar",
+      "found_single_offer": "Hem trobat **1 oferta**",
+      "found_offers": "Hem trobat **{{count}} ofertes**",
+      "offers": {
+        "label": "Ofertes",
+        "all": "Totes les ofertes",
+        "mine": "Les meves ofertes"
+      },
+      "categories": {
+        "show_all": "Mostra totes les categories",
+        "error_fetching": "S'ha produït un error en obtenir categories"
+      }
+    },
+    "carrousel": {
+      "previous": "Vés a la imatge anterior",
+      "next": "Vés a la imatge següent",
+      "index": "Vés a la imatge {{index}}"
+    },
+    "steps": {
+      "main_information": {
+        "title": "Informació principal",
+        "name_label": "Nom",
+        "name_placeholder": "Nom del producte",
+        "description_label": "Descripció",
+        "description_placeholder": "Descriu completament el teu producte. Ajudarà amb les vendes"
+      },
+      "images": {
+        "title": "Imatges",
+        "guidance": "Afegeix imatges del producte. Podeu afegir més imatges més endavant"
+      },
+      "categories": {
+        "title": "Categories",
+        "guidance": "Podeu seleccionar una o més categories per ajudar els usuaris a trobar aquest producte"
+      },
+      "price_and_inventory": {
+        "title": "Preu i Inventari",
+        "price_label": "Preu",
+        "quantity_label": "Quantitat en estoc",
+        "inventory_management": "Gestió d'inventari",
+        "inventory_management_description": "Si vols desactivar la teva oferta quan no tinguis més unitats en estoc, activa aquesta opció"
+      },
+      "continue": "Continua",
+      "index": "Pas {{current}} de {{total}}",
+      "step_link": "Pas {{index}} - {{step_title}}"
+    },
+    "empty": {
+      "all_title": "On són les ofertes?",
+      "user_title": "No tienes ninguna oferta en esta comunidad",
+      "you_can_offer": "Pots oferir productes, recursos digitals i serveis per guanyar {{symbol}}.",
+      "user_is_not_selling": "{{user}} no ven productes o serveis que coincideixin amb els vostres filtres en aquesta comunitat.",
+      "no_one_is_selling": "Ningú no ven productes o serveis que coincideixin amb els vostres filtres en aquesta comunitat.",
+      "offer_something": "Per què no ofereixes res?",
+      "create_new": "Crear una nova oferta",
+      "no_results_found": "Sense resultats",
+      "clear_filters": "Esborra els filtres"
+    },
+    "transfer": {
+      "units_label": "Trieu la quantitat",
+      "price": "Preu ({{symbol}})",
+      "balance": "Tens {{asset}}",
+      "memo_label": "Comentari (opcional)",
+      "default_memo": "Gràcies per la teva ajuda",
+      "submit": "Compra ara",
+      "success": "Compra satisfactòria!",
+      "contact_seller": "Contacta amb el venedor",
+      "visit_seller": "Visiteu el perfil de {{seller}}",
+      "errors": {
+        "unitEmpty": "La unitat no pot estar buida",
+        "unitTooLow": "La unitat és massa baixa, ha de ser com a mínim 1",
+        "unitTooHigh": "No hi ha prou unitats disponibles",
+        "unitNotOnlyNumbers": "Només es permeten números",
+        "balanceTooLow": "No tens prou {{symbol}} per a aquesta compra. Intenta reduir la quantitat d'elements o completa accions per guanyar més {{symbol}}."
+      }
+    },
+    "delete": "Eliminar",
+    "delete_modal": {
+      "title": "Eliminar",
+      "body": "Estàs segur de que vols eliminar aquest ítem?",
+      "confirm": "Si",
+      "cancel": "No"
+    },
+    "disabled": {
+      "description": "La botiga està desactivada en aquesta comunitat."
+    },
+    "categories": {
+      "admin_page_description": "Afegeix i gestiona les categories que estaran disponibles a la botiga.",
+      "empty": {
+        "title": "Sembla que la teva comunitat no té cap categoria!",
+        "description": "Comenceu creant una categoria nova a continuació"
+      },
+      "add_root": "Afegeix una nova categoria",
+      "add_child": "Afegeix una subcategoria de {{parent_name}}",
+      "click_category_to_edit": "{{category_name}} - feu clic per editar",
+      "actions_for": "Accions per a {{category_name}}",
+      "fields": {
+        "name": "Nom",
+        "slug": "URL Compartit",
+        "description": "Descripció",
+        "image": "Imatge",
+        "meta": {
+          "title": "Títol",
+          "description": "Descripció",
+          "keywords": "Paraules clau"
+        }
+      },
+      "form": {
+        "insert_name": "Introduïu un nom per generar l'URL compartit",
+        "invalid_slug": "URL compartit no vàlid",
+        "invalid_slug_tooltip": "Els caràcters no llatins no s'accepten als URLs. Per generar un URL vàlid, el nom de la categoria ha de tenir almenys un caràcter llatí",
+        "image_guidance": "Preferiu imatges en mode horitzontal amb alta qualitat"
+      },
+      "metadata": {
+        "title": "Contingut compartit",
+        "guidance": "Aquesta informació s'utilitzarà per mostrar més informació en compartir aquesta categoria.",
+        "preview": "Vista prèvia",
+        "preview_text": "Aquesta és una aproximació de com serà el contingut compartit. Pot canviar en funció de la plataforma en què es comparteix l'enllaç."
+      },
+      "delete": {
+        "title": "Suprimeix {{category_name}}",
+        "warning": "Si suprimiu aquesta categoria, totes les seves subcategories també se suprimiran permanentment.",
+        "confirmation": "Esteu segur que voleu suprimir aquesta categoria?"
+      },
+      "actions": {
+        "edit_main_information": "Edita la informació principal",
+        "edit_sharing_data": "Edita les dades per compartir",
+        "move_up": "Moure cap amunt",
+        "move_down": "Moure cap avall",
+        "delete": "Suprimeix"
+      },
+      "create_error": "S'ha produït un error en crear la categoria",
+      "update_error": "S'ha produït un error en actualitzar la categoria",
+      "delete_error": "S'ha produït un error en suprimir la categoria",
+      "reorder_error": "S'ha produït un error en reordenar la categoria"
+    }
+  },
+  "dashboard": {
+    "back": "Tornar",
+    "transfer": "Transferir",
+    "your_balance": "El vostre saldo en {{symbol}}",
+    "how_to_earn": "Com guanyar {{symbol}}",
+    "my_contributions": "Les meves aportacions",
+    "about_community": "Sobre la comunitat",
+    "invite": "Convida els teus amics",
+    "sorry": "ho sentim!",
+    "action_rejected": "S'ha rebutjat la teva acció",
+    "please_try_again": "Si us plau intenta-de nou",
+    "oops": "Ops!",
+    "something_wrong": "Alguna cosa ha anat malament",
+    "do_you_have_qrcode": "tens un codi QR?",
+    "scan": "Escanejar",
+    "or_choose_list": "O escull de la llista",
+    "choose_one_option": "tria una de les opcions",
+    "continue": "Continua",
+    "your_action": "La teva acció:",
+    "add_comment": "Afegeix un comentari",
+    "claim": "Reclamar",
+    "wait_verification": "Espera per la teva verificació",
+    "you_won": "Bones notícies! Vas guanyar:",
+    "you_rejected": "Tu refusar l'acció",
+    "thank_you": "Gràcies per la teva ajuda!",
+    "take_reward": "pren aquesta recompensa per la teva feina",
+    "verification": "verificació",
+    "your_reward": "la teva recompensa",
+    "action": "Acció",
+    "reject": "Rebutjar",
+    "verify": "Verificar",
+    "closed": "tancat",
+    "my_claims": "Les meves reclamacions",
+    "my_offers": "Les meves ofertes",
+    "analysis": {
+      "title": {
+        "1": "Accions",
+        "2": "per a l'anàlisi"
+      },
+      "empty": {
+        "1": "Enhorabona",
+        "2": "Ja no hi ha accions per analitzar"
+      },
+      "analyze_now": "Analitza ara",
+      "count": "Teniu **{{amount}} accions** per analitzar",
+      "error_fetching": "S'ha produït un error en obtenir accions per analitzar-les"
+    },
+    "activities": {
+      "title": "Activitats per a la vostra anàlisi",
+      "no_activities_yet": "Encara no hi ha activitats.."
+    },
+    "check_claim": {
+      "body": "Vols realment reclamar aquesta acció?",
+      "yes": "Sí, reclameu",
+      "no": "No, cancel·la",
+      "success": "Felicitats! Esteu a prop de guanyar el vostre {{symbolCode}}. Estem revisant la vostra acció",
+      "failure": "Alguna cosa no va funcionar correctament mentre intenteu processar la vostra reclamació. Torneu-ho a provar més endavant"
+    }
+  },
+  "all_analysis": {
+    "title": "Totes les accions per a l'anàlisi",
+    "more_details": "Més detalls",
+    "all": "Tot",
+    "approved": "Aprovat",
+    "pending": "Sota Revisió",
+    "disapproved": "Rebutjat",
+    "empty": "Sense resultats, ",
+    "clear_filters": "esborreu els filtres",
+    "show_more": "mostra els següents 16 articles",
+    "error": "S'ha produït un error en carregar les accions",
+    "tabs": {
+      "waiting_vote": "Vot en espera",
+      "analyzed": "Analitzat"
+    },
+    "filter": {
+      "title": "Filtres",
+      "user": "Usuari",
+      "apply": "Aplicar",
+      "status": {
+        "label": "Estat de l’acció",
+        "pending_review": "En revisió (el meu vot està pendent)"
+      },
+      "sort": {
+        "asc": "ASC",
+        "desc": "DESC"
+      }
+    }
+  },
+  "claim": {
+    "title_under_review": {
+      "1": "Reclamació",
+      "2": "pendent",
+      "3": ", els altres membres encara han de votar"
+    },
+    "title_cancelled": {
+      "1": "Reclamació",
+      "2": "anul·lada"
+    },
+    "title_approved": {
+      "1": "Reclamació",
+      "2": "aprovada"
+    },
+    "title_rejected": {
+      "1": "Reclamació",
+      "2": "rebutjat"
+    },
+    "cancelled_voting_bar": "vots pendents",
+    "title_action_completed": "Aquesta reclamació està pendent, però, ja que l'acció s'ha completat, no és possible votar",
+    "title_action_closed": "Aquesta reclamació està pendent, però, ja que l'acció està tancada, no és possible votar",
+    "opened_today": "Obert avui",
+    "day_ago": "Obert fa {{day_count}} die",
+    "days_ago": "Obert fa {{day_count}} dies",
+    "vote": "vot",
+    "votes": "vots",
+    "pending": "Pendent",
+    "cancelled": "Cancel·lat",
+    "disapproved": "Desaprovat",
+    "approved": "Aprovat",
+    "reward": "Has guanyat: {{value}}",
+    "sub_wait_1": "Heu d'esperar, aquesta reclamació està sota revisió d'altres usuaris.",
+    "sub_wait_2": "En acabar, rebràs la teva recompensa.",
+    "objective": "Objectiu",
+    "action": "Acció",
+    "claimer": "Reclamat per",
+    "claimed_today": "Reclamat avui",
+    "claimed_yesterday": "Reclamat ahir",
+    "claimed_on": "Reclamat el {{date}}",
+    "date": "Data de reclamació",
+    "claimer_reward": "Recompensa per l'usuari",
+    "your_reward": "La teva recompensa",
+    "analyst_reward": "Recompensa D’analista",
+    "approved_by": "Aprovat per",
+    "disapproved_by": "Desaprovat per",
+    "pending_vote": "Vot Pendent",
+    "disapprove": "Desaprovar",
+    "approve": "Aprovar",
+    "no_results_found": "Sense resultats",
+    "voteTitle": "Aproveu o rebutgeu aquesta acció?",
+    "attention": "Atenció: ",
+    "cancelled_texts": {
+      "cancelled_claim": "Reclamació cancel·lada",
+      "was_cancelled": "Aquesta reclamació s'ha cancel·lat",
+      "deadline_reached": "L'acció corresponent s'ha completat perquè ha arribat a la data concreta",
+      "usages_reached": "L'acció corresponent s'ha completat perquè ha assolit la quantitat màxima d'ús",
+      "action_completed": "L'equip administratiu de la comunitat va completar l'acció corresponent",
+      "not_available": "Per tant, la reclamació ja no està disponible per votar"
+    },
+    "modal": {
+      "title": "Sota Revisió",
+      "message_disapprove": "Realment voleu rebutjar aquesta reclamació?",
+      "message_approve": "Realment voleu aprovar aquesta reclamació?",
+      "primary_disapprove": "sí, desaproveu",
+      "primary_approve": "sí, aprova",
+      "secondary": "no, cancel·la",
+      "view_details": "Veure Detalls"
+    }
+  },
+  "transfer_result": {
+    "title": "Traspassat",
+    "transfer_success": "Ei, aquesta transferència es va fer amb èxit",
+    "receive_success": "Ei, aquest rebut va tenir èxit",
+    "date": "Data",
+    "message": "Missatge",
+    "community": "Comunitat",
+    "received": "Rebut",
+    "transferred": "Traspassat",
+    "error": {
+      "invalid_id": " no és un ID de transferència vàlid"
+    },
+    "you": "vostè",
+    "my_balance": "El meu balanç",
+    "transaction_id": {
+      "title": "identificador de transacció",
+      "body": "Aquesta identificació garanteix l'autenticitat de la transacció si ambdues parts tenen els mateixos emojis."
+    }
+  },
+  "settings": {
+    "success": "La configuració s'ha desat correctament",
+    "account": {
+      "title": "Configuració",
+      "account_settings": "**Configuració** del compte",
+      "notification_settings": "Notificacions per **correu electrònic**",
+      "my_private_key": "La meva clau privada",
+      "export_private_key": "Exporta la clau privada",
+      "export_private_key_details": "Aquesta és la vostra clau privada, que podeu utilitzar per importar el vostre compte al ",
+      "copied_private_key": "S'ha copiat la clau privada al porta-retalls"
+    },
+    "community_info": {
+      "title": "Informació de la Comunitat",
+      "description": "Logo, nom, descripció, url",
+      "logo": {
+        "title": "Logotip de la comunitat",
+        "guidance": "Orientació sobre la imatge del Logotip",
+        "description": "El fitxer ha de ser en format PNG, JPG o SVG. Ha de mesurar 80px d’amplada i 80px d’alçada per poder-se veure millor a la interfície.",
+        "choose_one": "Trieu un logotip de la llista",
+        "select": "Seleccioneu",
+        "selected": "Seleccionat"
+      },
+      "invitation": {
+        "title": "Accés a la comunitat",
+        "guidance": "Orientació sobre l'Accés a la Comunitat",
+        "description": "Quan la comunitat necessita invitacions, els nous membres només poden accedir mitjançant una invitació."
+      },
+      "cover_photo": {
+        "title": "Imatge de portada de la comunitat",
+        "description": "Assegureu-vos d’afegir una imatge de bona qualitat"
+      },
+      "url": {
+        "title": "URL personalitzat de la comunitat",
+        "guidance": "Orientació sobre l'URL Personalitzat"
+      },
+      "fields": {
+        "name": "Nom de la Comunitat",
+        "description": "Descriviu la comunitat",
+        "website": "Lloc web de la comunitat",
+        "invitation": "Invitació"
+      },
+      "placeholders": {
+        "name": "Doneu un nom a la comunitat",
+        "description": "Digueu alguna cosa sobre la comunitat",
+        "url": "Trieu un URL personalitzat"
+      },
+      "errors": {
+        "logo_upload": "S'ha produït un error en penjar el logotip",
+        "cover_upload": "S'ha produït un error en penjar la imatge de portada",
+        "name": {
+          "blank": "La comunitat necessita un nom"
+        },
+        "description": {
+          "blank": "La comunitat necessita una descripció"
+        },
+        "website": {
+          "invalid": "Introduïu un lloc web vàlid"
+        },
+        "url": {
+          "blank": "La comunitat necessita un URL",
+          "invalid_char": "No utilitzeu caràcters especials",
+          "invalid_case": "Només es permet la minúscula",
+          "too_short": "L'URL ha de tenir com a mínim 2 caràcters",
+          "already_taken": "L'URL que trieu ja s'ha pres"
+        }
+      },
+      "constraints": {
+        "length": "Màxim de 30 caràcters",
+        "characters": "Utilitzeu les lletres de la a la z i els números del 0 al 9.",
+        "donts": "No: utilitzeu paraules dolentes; utilitzeu majúscules; utilitzeu caràcters especials ni lletres amb accents. Per exemple. @!?:; âãá."
+      }
+    },
+    "community_currency": {
+      "title": "Moneda",
+      "decimal_places": "Llocs decimals",
+      "format": "Aquest és l'exemple de la vostra moneda",
+      "supports_decimal_places": "La vostra moneda admet {{amount}} posicions decimals",
+      "token_type": "Tipus",
+      "expiry": "Caducitat",
+      "natural_expiration_period": "Període de caducitat de la persona física",
+      "juridical_expiration_period": "Període de caducitat de la persona jurídica",
+      "renovation_amount": "Import de la renovació",
+      "expiryopts_not_found": "No hem pogut trobar les opcions de caducitat del vostre testimoni",
+      "token_error": "S'ha produït un error en obtenir les dades del testimoni",
+      "seconds": "segons"
+    },
+    "actions": {
+      "title": "Objetius i Ações",
+      "description": ""
+    },
+    "shop": {
+      "categories": {
+        "title": "Categories",
+        "description": "Quins tipus d'articles la gent pot posar a la venda"
+      }
+    },
+    "contacts": {
+      "title": "Contactes de suport",
+      "description": "Correu electrònic, whatsapp, número de telèfon, etc."
+    },
+    "team": {
+      "title": "Temps",
+      "description": "Construcció de temps"
+    },
+    "features": {
+      "title": "Recursos",
+      "description": "Objectius, Accions, Botiga, Patrocini, Anuncis",
+      "enabled": "Activat",
+      "disabled": "Desactivat"
+    }
+  },
+  "payment_history": {
+    "title": "Historial de pagaments",
+    "user": "Usuari",
+    "date": "Data",
+    "more": "Mostra més",
+    "no_transfers_found": "No s'ha trobat transferència segons els vostres criteris.",
+    "pick_date": "Escolliu una data..."
+  },
+  "contact_modal": {
+    "new": "Novetat",
+    "title": "Afegiu el vostre Número de Telèfon",
+    "footer": "Podeu afegir-lo més endavant a l'àrea del perfil"
+  },
+  "contact_form": {
+    "add": "Afegeix contacte",
+    "community_header": "Afegiu els contactes que estaran disponibles com a suport per als membres de la comunitat.",
+    "country": "País",
+    "contact_type": "Tipus de contacte",
+    "error": "S'ha produït un error en afegir el vostre contacte",
+    "submit_multiple": "Desa",
+    "profile_loading_failed": "S'ha produït un error en carregar el vostre perfil",
+    "options": "Opcions de Contacte",
+    "types": {
+      "phone": "Telèfon",
+      "instagram": "Instagram",
+      "telegram": "Telegram",
+      "whatsapp": "Whatsapp",
+      "email": "Correu electrònic",
+      "link": "Enllaç"
+    },
+    "reach_out": {
+      "phone": "Contactar per telèfon",
+      "instagram": "Contactar per Instagram",
+      "telegram": "Contactar per Telegram",
+      "whatsapp": "Contactar per Whatsapp",
+      "email": "Contactar per correu electrònic",
+      "link": "Mireu aquest enllaç"
+    },
+    "phone": {
+      "label": "Número de telèfon (amb DDD)",
+      "placeholder": "Ex.: {{example_number}}",
+      "submit": "Afegiu un Número de Telèfon"
+    },
+    "username": {
+      "label": "Nom d'usuari",
+      "placeholder": "Ex.: cambiatus",
+      "submit": "Afegeix un perfil"
+    },
+    "link": {
+      "label": "Enllaç",
+      "placeholder": "Ex.: https://cambiatus.com",
+      "submit": "Afegeix un Enllaç"
+    },
+    "email": {
+      "label": "Correu electrònic",
+      "placeholder": "Ex.: cambiatus@cambiatus.com",
+      "submit": "Afegir correu electrònic"
+    },
+    "validation": {
+      "phone": {
+        "blank": "Introduïu el vostre número de telèfon",
+        "invalid": "Siusplau introdueixi un número de telèfon vàlid"
+      },
+      "username": {
+        "blank": "Introduïu el nom del vostre perfil",
+        "invalid": "Introduïu un nom de perfil vàlid"
+      },
+      "email": {
+        "blank": "Introduïu el vostre correu electrònic",
+        "invalid": "Introduïu un correu electrònic vàlid"
+      },
+      "link": {
+        "blank": "Introduïu un enllaç",
+        "invalid": "Introduïu un enllaç vàlid"
+      }
+    },
+    "feedback": {
+      "single": {
+        "success": "El vostre contacte s'ha desat correctament",
+        "failure": "S'ha produït un error en intentar desar el contacte"
+      },
+      "multiple": {
+        "success": "Els vostres contactes s'han desat correctament",
+        "failure": "S'ha produït un error en intentar desar els vostres contactes"
+      },
+      "community": {
+        "success": "Els contactes de la comunitat s'han desat correctament",
+        "failure": "S'ha produït un error en intentar desar els contactes de la comunitat"
+      },
+      "delete": {
+        "success": "El contacte s'ha suprimit correctament",
+        "failure": "S'ha produït un error en intentar suprimir el contacte"
+      }
+    },
+    "delete": {
+      "title": "Suprimeix",
+      "body": "Confirmes que vols suprimir la teva informació de contacte?",
+      "cancel": "No",
+      "accept": "Sí"
+    }
+  },
+  "sponsorship": {
+    "title": "Patrocini",
+    "no_support": "La vostra comunitat encara no admet patrocinis",
+    "no_support_subtitle": "Parleu amb l'equip d'administració de la comunitat per activar aquesta funció",
+    "description": "Permet que els usuaris patrocinin la comunitat",
+    "sponsor": "Patrocina",
+    "enter_amount": "Introduïu l'import que voleu contribuir",
+    "select_currency": "Seleccioneu la moneda que vulgueu utilitzar",
+    "amount_too_small": "L'import ha de ser com a mínim d'{{minimum}} {{currency}}",
+    "amount_too_big": "L'import ha de ser màxim d'{{maximum}} {{currency}}",
+    "invalid_amount": "Valor no vàlid",
+    "unknown_error": "S'ha produït un error en processar el vostre pagament",
+    "load_error": "S'ha produït un problema en connectar amb PayPal, torneu-ho a provar més tard",
+    "contribution_error": "S'ha produït un error en preparar la vostra contribució",
+    "guidance": "Orientació",
+    "guidance_description": "Per habilitar aquesta funció, demaneu ajuda al vostre canal d'assistència a Cambiatus Slack",
+    "cards": {
+      "fiat": {
+        "title": "Tipus de monedes acceptades",
+        "description": "Permetre que la comunitat accepti USD o altres monedes fiduciàries mitjançant PayPal",
+        "toggle_label": "Monedes fiduciàries",
+        "settings": "Configuració"
+      },
+      "crypto": {
+        "title": "Altres monedes acceptades",
+        "description": "Permetre que la comunitat accepti criptomonedes",
+        "toggle_label": "Criptomonedes"
+      },
+      "message": {
+        "title": "Missatge \"gràcies\"",
+        "description": "Configureu el missatge \"gràcies\" perquè coincideixi amb la vostra comunitat",
+        "button_label": "Configura el missatge"
+      }
+    },
+    "fiat": {
+      "title": "Fiat diners",
+      "paypal_account": "Compte de PayPal de la comunitat",
+      "paypal_example": "exemple@gmail.com",
+      "how_to_change": "Si necessiteu actualitzar aquest compte, poseu-vos en contacte amb nosaltres a través del canal d'assistència a Slack"
+    },
+    "thank_you_message": {
+      "title": "Títol del missatge",
+      "default_title": "Gràcies per patrocinar {{community}}!",
+      "message": "Missatge",
+      "default_message": "La vostra contribució ajuda la vostra comunitat a ser encara més impactant, sou increïbles!"
+    },
+    "dashboard_modal": {
+      "title": "Patrocina la teva Comunitat",
+      "subtitle": "Ara podeu patrocinar aquesta comunitat.",
+      "explanation": "Feu la vostra contribució fent clic al botó següent. Se us redirigirà a PayPal per completar la transacció.",
+      "sponsor": "Patrocina {{community_name}}"
+    }
+  },
+  "news": {
+    "title": "Anuncis",
+    "description": "Permet que l'equip de la comunitat enviï comunicacions",
+    "create": "Nova comunicació",
+    "community_news": "Anuncis de la comunitat",
+    "got_community_news": "Teniu una nova comunicació de la comunitat:",
+    "read": "Llegeix",
+    "already_read": "Ja llegit",
+    "not_read_yet": "Encara no llegit",
+    "other_news": "altres anuncis",
+    "view_more": "Veure tots els anuncis",
+    "view_more_with_ellipsis": "... Veure més",
+    "edit": "Editar",
+    "copy": "Crear una còpia",
+    "error_fetching": "S'ha produït un error en cercar anuncis de la comunitat",
+    "error_highlighting": "S'ha produït un error en ressaltar la publicació",
+    "highlight": "Ressaltar comunicació",
+    "already_highlighted": "Ja hi ha una comunicació destacada",
+    "saved": "L'anunci s'ha desat correctament",
+    "failed_saving": "S'ha produït un error en desar la versió",
+    "not_found_title": "No s'ha pogut trobar la comunicació",
+    "not_found_description": "Torneu-ho a provar amb una comunicació vàlida",
+    "replace_notice": "En destacar aquesta comunicació, substituirà l'existent",
+    "replace_confirmation": "Esteu segur que voleu destacar-ho?",
+    "created_at": "Creat: ",
+    "scheduled_at": "Programat: ",
+    "scheduled_at_time": " a les {{hour}}:{{minute}}",
+    "edited_by": "Editat per ",
+    "edited_date": " el {{date}}",
+    "reaction": {
+      "choose": "Triar una reacció",
+      "reactions": "{{count}} persones van reaccionar amb",
+      "remove": "Elimina la reacció",
+      "add": "Reacciona amb",
+      "close": "Tanqueu el selector de reacció"
+    },
+    "no_news": {
+      "title": "No hi ha res a veure per aquí",
+      "description": "La teva comunitat encara no ha publicat cap comunicació."
+    },
+    "editor": {
+      "title": "Editor de comunicacions",
+      "field": {
+        "title": "Títol",
+        "description": "Descripció",
+        "publication_mode": "Publicar o programar",
+        "publish_immediately": "Publicar immediatament",
+        "schedule": "Programar publicació",
+        "initial_date": "Data inicial",
+        "time": "Horari"
+      },
+      "error": {
+        "title": "La comunicació necessita un títol",
+        "description": "La comunicació necessita una descripció",
+        "future_date": "La data de programació ha de ser en el futur",
+        "invalid_date": "Data no vàlida",
+        "future_time": "El horari de programació ha de ser en el futur",
+        "invalid_time": "Hora no vàlida"
+      }
+    }
+  },
+  "markdown": {
+    "link_form": {
+      "header": "Afegeix un enllaç",
+      "label": "Text",
+      "url": "Enllaç"
+    },
+    "link_tooltip": {
+      "edit": "Editar",
+      "remove": "Elimina l'enllaç"
+    }
+  },
+  "block_explorer": {
+    "see": "Veure a explorador de blocs"
+  },
+  "currency": {
+    "brl_singular": "Real",
+    "btc_singular": "Bitcoin",
+    "crc_singular": "Colón",
+    "eos_singular": "Eos",
+    "eth_singular": "Ethereum",
+    "usd_singular": "Dòlar",
+    "brl_plural": "Reals",
+    "btc_plural": "Bitcoin",
+    "crc_plural": "Colones",
+    "eos_plural": "Eos",
+    "eth_plural": "Ethereum",
+    "usd_plural": "Dòlars"
+  },
+  "permissions": {
+    "insufficient": {
+      "title": "Acció no permesa",
+      "explanation": "No teniu els permisos necessaris per dur a terme aquesta acció. Poseu-vos en contacte amb els administradors de la comunitat per saber com obtenir més permisos.",
+      "try_again": "Si us plau, torneu-ho a provar quan tingueu prou permisos!",
+      "ok": "Entès"
+    }
+  },
+  "terms_of_conduct": {
+    "title": "Directrius de la comunitat i Codi de conducta {{version}}",
+    "description": "Totes les comunitats digitals creades amb l'aplicació web de Cambiatus es regeixen per les Directrius de la comunitat i el Codi de conducta de Cambiatus.",
+    "to_have_good_experience": "Per tal que continueu tenint una bona experiència amb la comunitat, us recomanem que llegiu les nostres Directrius i Codi de conducta.",
+    "link": "Llegeix les Directrius de la comunitat i el Codi de conducta de Cambiatus {{version}}",
+    "attention": "Caps amunt: ",
+    "not_accepting": "L'incompliment de les Directrius de la comunitat i del Codi de conducta impedeix realitzar activitats dins de la comunitat, com ara comprar, vendre, transferir, convidar amics, etc.",
+    "to_participate": "Perquè pugueu pertànyer i gaudir de totes les activitats que involucren la comunitat, heu d'acceptar les Directrius de la comunitat i el Codi de conducta {{version}}.",
+    "are_you_sure": "Estàs segur que no vols acceptar?",
+    "accept": "Accepto",
+    "deny": "No accepto",
+    "error_accepting": "S'ha produït un error en acceptar el Codi de conducta"
+  },
+  "footer": {
+    "created_with": "Creat amb",
+    "created_by": "per",
+    "created_with_love": "Creat amb amor per Satisfied Vagabonds i Cambiatus",
+    "need_help": "Necessitar ajuda?",
+    "contact_support": "Parleu amb el nostre suport",
+    "choose_contact": "Trieu la manera en què voleu posar-vos en contacte amb la comunitat:",
+    "version": "VERSIÓ {{version}}"
+  },
+  "account_frozen": {
+    "title": "El teu compte està congelat",
+    "why": "No heu acceptat les Directrius de la comunitat i Codi de conducta.",
+    "solve": "Per resoldre aquesta situació i formar part de la comunitat, ",
+    "solve_link": "accepta les Directrius de la comunitat i Codi de conducta."
+  },
+  "form": {
+    "file": {
+      "edit_image": "Editar imatge",
+      "edit_file": "Editar fitxer",
+      "body_image": "Arrossegueu per canviar la posició de la imatge",
+      "body_file": "Suprimiu, substituïu o deseu el fitxer",
+      "delete": "Suprimeix",
+      "open": "Obert",
+      "change": "Reemplaçar",
+      "save": "Guardar"
+    }
+  }
+}

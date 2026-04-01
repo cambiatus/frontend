@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="en" class="h-full">
+    <head>
+        <meta charset="utf-8" />
+        <meta http-equiv="x-ua-compatible" content="ie=edge" />
+        <meta
+            name="viewport"
+            content="width=device-width, initial-scale=1, shrink-to-fit=no"
+        />
+        <!--
+         manifest.json provides metadata used when your web app is added to the
+         homescreen on Android. See https://developers.google.com/web/fundamentals/engage-and-retain/web-app-manifest/
+
+         We first try to get the manifest from our backend, which will populate
+         it with data related to the current community (based on the subdomain
+         the user is at). If it can't find a valid community, it redirects to the
+         manifest file we keep in the `public` folder
+    -->
+        <link rel="manifest" href="/api/manifest" />
+        <link rel="shortcut icon" href="/favicon.ico" />
+        <link
+            rel="apple-touch-icon"
+            sizes="57x57"
+            href="/icons/apple-icon-57x57.png"
+        />
+        <link
+            rel="apple-touch-icon"
+            sizes="60x60"
+            href="/icons/apple-icon-60x60.png"
+        />
+        <link
+            rel="apple-touch-icon"
+            sizes="72x72"
+            href="/icons/apple-icon-72x72.png"
+        />
+        <link
+            rel="apple-touch-icon"
+            sizes="76x76"
+            href="/icons/apple-icon-76x76.png"
+        />
+        <link
+            rel="apple-touch-icon"
+            sizes="114x114"
+            href="/icons/apple-icon-114x114.png"
+        />
+        <link
+            rel="apple-touch-icon"
+            sizes="120x120"
+            href="/icons/apple-icon-120x120.png"
+        />
+        <link
+            rel="apple-touch-icon"
+            sizes="144x144"
+            href="/icons/apple-icon-144x144.png"
+        />
+        <link
+            rel="apple-touch-icon"
+            sizes="152x152"
+            href="/icons/apple-icon-152x152.png"
+        />
+        <link
+            rel="apple-touch-icon"
+            sizes="180x180"
+            href="/icons/apple-icon-180x180.png"
+        />
+        <link
+            rel="icon"
+            type="image/png"
+            sizes="192x192"
+            href="/icons/android-icon-192x192.png"
+        />
+        <link
+            rel="icon"
+            type="image/png"
+            sizes="32x32"
+            href="/icons/favicon-32x32.png"
+        />
+        <link
+            rel="icon"
+            type="image/png"
+            sizes="96x96"
+            href="/icons/favicon-96x96.png"
+        />
+        <link
+            rel="icon"
+            type="image/png"
+            sizes="16x16"
+            href="/icons/favicon-16x16.png"
+        />
+        <meta name="msapplication-TileColor" content="#45469b" />
+        <meta
+            name="msapplication-TileImage"
+            content="/icons/ms-icon-144x144.png"
+        />
+        <meta name="theme-color" content="#45469b" />
+        <link
+            href="https://fonts.googleapis.com/css2?family=Nunito+Sans:ital,wght@0,200;0,300;0,400;0,600;0,700;0,800;0,900;1,200;1,300;1,400;1,600;1,700;1,800;1,900&display=swap"
+            rel="stylesheet"
+        />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+
+        <script src="/env-config.js"></script>
+
+        <!--
+      Open Graph Protocol tags. See https://stackoverflow.com/questions/19778620/provide-an-image-for-whatsapp-link-sharing/43154489#43154489
+      for better explanation on how these work and what each of them does.
+      -->
+        <meta name="twitter:card" content="summary" />
+        <meta name="twitter:site" content="@_cambiatus" />
+        <meta
+            name="description"
+            content="New Organizations. Clear Objectives. Impactful Collaboration."
+        />
+        <meta
+            property="og:description"
+            content="New Organizations. Clear Objectives. Impactful Collaboration."
+        />
+        <meta property="og:type" content="website" />
+        <meta property="og:title" content="Cambiatus" />
+        <meta property="og:image" content="/images/logo-cambiatus.png" />
+
+        <title>Cambiatus</title>
+    </head>
+
+    <body class="flex flex-col h-full">
+        <noscript>
+            <link href="noscript.css" rel="stylesheet" />
+            <div class="container">
+                <h1>Attention</h1>
+                <div class="warning">
+                    <embed class="icon" src="/icons/flag-usa.svg" />
+                    <span class="title"
+                        >JavaScript must be enabled for you to use our platform
+                        in the standard view</span
+                    >
+                    <span class="body">
+                        However, it appears that it is disabled or is not
+                        compatible with your browser. To use the default view,
+                        enable JavaScript by changing your browser options and
+                        try again.
+                    </span>
+                </div>
+                <div class="warning">
+                    <embed class="icon" src="/icons/flag-brazil.svg" />
+                    <span class="title"
+                        >O JavaScript deve estar ativado para que você use nossa
+                        plataforma na visualização padrão</span
+                    >
+                    <span class="body"
+                        >No entanto, parece que ela está desativado ou não é
+                        compatível com o seu navegador. Para usar a visualização
+                        padrão, ative o JavaScript alterando as opções do
+                        navegador e tente novamente.</span
+                    >
+                </div>
+                <div class="warning">
+                    <embed class="icon" src="/icons/flag-spain.svg" />
+                    <span class="title"
+                        >JavaScript debe estar habilitado para que pueda usar
+                        nuestra plataforma en la vista estándar</span
+                    >
+                    <span class="body"
+                        >Sin embargo, parece que está deshabilitado o no es
+                        compatible con su navegador. Para usar la vista
+                        predeterminada, habilite JavaScript cambiando las
+                        opciones de su navegador e intente nuevamente.</span
+                    >
+                </div>
+                <div class="error">
+                    <img src="/images/error.svg" />
+                </div>
+            </div>
+        </noscript>
+        <div id="root">
+            <img class="h-16 mx-auto mt-8" src="/images/loading.svg" alt="" />
+        </div>
+
+        <!-- Vite entry point - loaded as ES module -->
+        <script type="module" src="/src/index.js"></script>
+    </body>
+</html>

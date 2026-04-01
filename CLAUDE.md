@@ -4,12 +4,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Overview
 
-Cambiatus is an Elm-based frontend for a community currency and exchange platform. It uses GraphQL for API communication, Tailwind CSS for styling, and webpack for bundling. The app supports multiple languages via i18next and integrates with EOSIO blockchain functionality.
+Cambiatus is an Elm-based frontend for a community currency and exchange platform. It uses GraphQL for API communication, Tailwind CSS for styling, and Vite for bundling. The app supports multiple languages via i18next and integrates with EOSIO blockchain functionality.
 
 ## Quick Start Commands
 
-- **Development**: `yarn start` - Starts webpack dev server with hot reloading
-- **Build**: `yarn bundle` - Builds production bundle with webpack
+- **Development**: `yarn start` - Starts Vite dev server with HMR (Hot Module Replacement)
+- **Build**: `yarn build` - Builds production bundle with Vite
+- **Preview**: `yarn preview` - Preview production build locally
 - **Type checking (Elm)**: `yarn check-format` - Validates Elm code formatting
 - **Linting (Elm)**: `yarn review` - Runs elm-review for code quality checks
 - **Linting (JS)**: `yarn check-js` - Runs StandardJS linter on JavaScript
@@ -65,11 +66,31 @@ Pages are organized in `src/elm/Page/` with subdirectories for feature areas:
 - **Stylelint** validates CSS compliance
 
 ### JavaScript/Custom Elements
-- **src/scripts/config.js**: Environment configuration (loaded by webpack)
+- **src/scripts/config.js**: Environment configuration (loaded by Vite)
 - **src/scripts/registerServiceWorker.js**: Service worker registration
 - **src/customElements/**: Custom HTML elements and JavaScript utilities
 - **src/utils/**: JavaScript utility functions
 - StandardJS linter enforces JS style
+
+### Build System: Vite
+
+The app uses Vite 2.9+ with vite-plugin-elm for fast, modern builds.
+
+**Configuration:** `vite.config.js` in root
+**Entry point:** `/index.html` (loads `/src/index.js` as ES module)
+**Public assets:** `/public/` (copied automatically to `/dist/`)
+
+**Key features:**
+- Fast HMR for Elm and CSS (typically <1s)
+- Node.js polyfills for eosjs (crypto, buffer, stream, util, process)
+- Automatic code splitting and tree shaking
+- PostCSS + Tailwind CSS v2 (JIT mode)
+- Git hash injection for versioning
+- Manual chunks: vendor-blockchain, vendor-graphql, vendor-ui
+
+**Legacy Webpack:**
+- Webpack config files preserved in `/config/` for rollback
+- Use `yarn start:webpack` or `yarn bundle:webpack` if needed
 
 ### Testing
 - **tests/**: Elm test files using `elm-explorations/test`
@@ -142,11 +163,13 @@ Run `yarn generate-graphql` to regenerate Elm types from GraphQL schema. This ta
 - `dillonkearns/elm-markdown`: Markdown rendering
 
 ### Key JavaScript packages
-- `webpack`, `webpack-dev-server`: Bundling and dev server
-- `elm-webpack-loader`: Elm compilation in webpack
+- `vite`, `vite-plugin-elm`: Bundling and dev server with Elm support
+- `vite-plugin-node-polyfills`: Node.js polyfills for browser (eosjs compatibility)
 - `@tailwindcss/*`: Tailwind CSS plugins
 - `@sentry/browser`: Error reporting
 - `phoenix`: WebSocket support
+- `eosjs`: EOSIO blockchain integration (v22)
+- `@absinthe/socket`: GraphQL subscriptions over Phoenix WebSocket
 
 ## File Reading Tips
 
