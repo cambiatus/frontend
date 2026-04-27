@@ -26,7 +26,7 @@ function textWithFlag (locale, text) {
   }
 }
 
-module.exports = function (words) {
+export default function (words) {
   return {
     pageSize: 'A4',
     pageMargins: [34, 32, 34, 30],

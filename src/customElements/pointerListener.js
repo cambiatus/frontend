@@ -13,7 +13,7 @@ export default () => (
       document.body.appendChild(this.dragImageElement)
 
       this.documentListeners = {
-        'dragover': (e) => {
+        dragover: (e) => {
           if (this.previousX === null || this.previousY === null) {
             this.previousX = e.clientX
             this.previousY = e.clientY
@@ -39,12 +39,12 @@ export default () => (
       }
 
       this.elementListeners = {
-        'dragstart': (e) => {
+        dragstart: (e) => {
           this.dispatchEvent(new CustomEvent('element-dragstart'))
 
           e.dataTransfer.setDragImage(this.dragImageElement, 0, 0)
         },
-        'dragend': () => {
+        dragend: () => {
           this.dispatchEvent(new CustomEvent('element-dragend'))
         }
       }

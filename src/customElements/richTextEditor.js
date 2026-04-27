@@ -25,10 +25,10 @@ export default (app) => (
         {
           modules: {
             toolbar: [
-              [{ 'header': 1 }, { 'header': 2 }],
+              [{ header: 1 }, { header: 2 }],
               ['bold', 'italic', 'strike', 'underline'],
               ['link'],
-              [{ 'list': 'ordered' }, { 'list': 'bullet' }]
+              [{ list: 'ordered' }, { list: 'bullet' }]
             ]
           },
           formats: ['header', 'bold', 'code', 'italic', 'link', 'strike', 'underline', 'list'],

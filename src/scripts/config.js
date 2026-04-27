@@ -96,6 +96,6 @@ const prod = {
 }
 
 export default {
-  development: dev,
+  development: isLocal ? dev : prod,
   production: prod
 }

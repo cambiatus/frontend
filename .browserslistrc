@@ -1,0 +1,7 @@
+# Modern browser support targets
+# This configuration targets modern browsers and reduces polyfill overhead
+
+last 2 major versions
+since 2020
+not dead
+> 1% in US
