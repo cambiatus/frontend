@@ -2,18 +2,49 @@
 
 [![Elm-book deploy status](https://api.netlify.com/api/v1/badges/b6672baa-f08f-4a9b-8318-bb2f45c780ea/deploy-status)](https://cambiatus-elm-book.netlify.app/)
 
-This project is bootstrapped with [Create Elm App](https://github.com/halfzebra/create-elm-app).
-
+This project uses [Vite](https://vitejs.dev/) as the build tool and [Elm](https://elm-lang.org/) as the main language.
 
 You must have yarn installed to develop or build.
 
 
-## Development
+## Local development with backend
+
+To run the frontend against a local Phoenix backend (instead of staging):
+
+**Prerequisites:** the backend repo must be cloned, migrated, and seeded — see its README.
+
+**Step 1** — install dependencies:
+```
+yarn install
+```
+
+**Step 2** — start the backend (in the backend repo):
+```
+mix phx.server
+```
+The backend listens on `http://localhost:4000`.
+
+**Step 3** — start the frontend:
+```
+USE_SUBDOMAIN=false yarn start
+```
+The `USE_SUBDOMAIN=false` flag switches auth storage from cookies (subdomain-scoped) to localStorage and enables `public/env-config.js`, which points the app at `localhost:4000`.
+
+Open `http://localhost:3000` in your browser.
+
+### Subdomain-based local dev (advanced)
+
+Modern browsers resolve `*.localhost` to `127.0.0.1` without any `/etc/hosts` changes. You can access the app at `http://cambiatus.staging.localhost:3000` and the frontend will detect the community slug (`cambiatus`) and environment (`staging`) from the subdomain automatically. Auth tokens are stored as cookies scoped to `.staging.localhost`.
+
+
+## Development (against staging backend)
 
 ```
 yarn install
 yarn start
 ```
+
+This connects to `https://staging.cambiatus.io` by default (no local backend needed).
 
 To update the GraphQL Elm files, run:
 
@@ -47,9 +78,16 @@ yarn build
 
 ## Configurations
 
-Our app have a somewhat complex configuration stack, allowing the app to run without any changes, connecting to the staging environmnent. Here is an outline of all the configuration files and how the interact:
+The app has a layered configuration stack:
 
-- `src/scripts/config.js` is the bottom level config. All the defaults are stored here for `DEV` and `PROD` environments.
-- `env-config.js` is the config for the dev/prod/demo servers. This file overwrites the defaults from the `config.js` above. Currently, this file _is not used_ in the local dev environment, on the localhost it won't be loaded correctly. In the repo, this file contains the data for the Staging server (in Demo it will be different, in a dedicated server for a community it will be different, etc.).
-- `src/elm/Flags.elm` is the Elm configuration file. We start our Elm app and send a port with all that comes from `src/scripts/config.js`. Since we need to decode JSON values on Elm, it comes with some default values so the app won't fail to load, we default it to some values specified there.
+- `public/env-config.js` — runtime config loaded via `<script>` tag before the app starts. Sets `window._env_` with API URLs, feature flags, and keys. **In local dev this file points to `localhost:4000`.** On deployed environments (staging, demo, production) this file is replaced server-side with environment-specific values.
+- `src/scripts/config.js` — build-time defaults. When `window._env_` is present (i.e. `env-config.js` loaded), these are overridden by it. When absent (no `env-config.js`), falls back to hardcoded staging URLs.
+- `src/elm/Flags.elm` — Elm entrypoint for configuration. Receives the resolved config as flags from `src/index.js` and decodes it into typed values.
 
+### Build system
+
+The app uses Vite 2.9 with `vite-plugin-elm` for Elm compilation. Key notes:
+
+- `@sentry/browser` is stubbed to a no-op in development (`src/scripts/sentry-stub.js`) to avoid a `var global` conflict in its pre-bundled output. Sentry is only initialised in production builds.
+- Node.js polyfills (`crypto`, `buffer`, `stream`, `util`, `process`) are injected via `vite-plugin-node-polyfills` for `eosjs` compatibility.
+- The legacy Webpack setup is still present under `scripts/` and `config/` and can be used via `yarn start:webpack` if needed.
