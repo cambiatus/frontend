@@ -26,8 +26,9 @@ import Graphql.Http
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet)
 import Html exposing (Html, button, div, h1, h2, p, text, ul)
-import Html.Attributes exposing (class, style)
+import Html.Attributes exposing (class, disabled, style)
 import Html.Events exposing (onClick)
+import List.Extra
 import Log
 import Markdown exposing (Markdown)
 import Page
@@ -100,6 +101,7 @@ type alias Model =
     , recipientProfile : Profile.Minimal
     , incomingTransfers : Maybe (List Transfer)
     , incomingTransfersPageInfo : Maybe Api.Relay.PageInfo
+    , isLoadingTransfers : Bool
     , autocompleteProfiles : List Profile.Minimal
     , autocompleteSelectedProfile : Maybe Profile.Minimal
     , userPicker : Form.UserPicker.SinglePickerModel
@@ -253,6 +255,7 @@ init recipientAccountName loggedIn =
             , recipientProfile = recipientProfile
             , incomingTransfers = Nothing
             , incomingTransfersPageInfo = Nothing
+            , isLoadingTransfers = False
             , autocompleteProfiles = []
             , autocompleteSelectedProfile = Nothing
             , userPicker = Form.UserPicker.initSingle { id = "user-picker" }
@@ -316,7 +319,7 @@ update msg model ({ shared } as loggedIn) =
             UR.init model
 
         CompletedLoadCommunity community ->
-            model
+            { model | isLoadingTransfers = True }
                 |> UR.init
                 |> UR.addExt (fetchProfileWithTransfers loggedIn community model)
 
@@ -381,7 +384,9 @@ update msg model ({ shared } as loggedIn) =
                         newIncomingTransfers =
                             case model.incomingTransfers of
                                 Just transfers ->
-                                    transfers ++ getTransfers profile.transfers
+                                    -- Dedup by transfer id: guards against a double "show more"
+                                    -- fetch and any boundary-row overlap from the relay cursor.
+                                    List.Extra.uniqueBy .id (transfers ++ getTransfers profile.transfers)
 
                                 Nothing ->
                                     getTransfers profile.transfers
@@ -392,17 +397,18 @@ update msg model ({ shared } as loggedIn) =
                                 , recipientProfile = recipientProfile
                                 , incomingTransfers = Just newIncomingTransfers
                                 , incomingTransfersPageInfo = pageInfo
+                                , isLoadingTransfers = False
                             }
                     in
                     newModel
                         |> UR.init
 
                 Nothing ->
-                    model
+                    { model | isLoadingTransfers = False }
                         |> UR.init
 
         RecipientProfileWithTransfersLoaded (RemoteData.Failure err) ->
-            { model | queryStatus = Failed err }
+            { model | queryStatus = Failed err, isLoadingTransfers = False }
                 |> UR.init
                 |> UR.logGraphqlError msg
                     (Just loggedIn.accountName)
@@ -412,23 +418,30 @@ update msg model ({ shared } as loggedIn) =
                     err
 
         RecipientProfileWithTransfersLoaded _ ->
-            UR.init model
+            { model | isLoadingTransfers = False }
+                |> UR.init
 
         ShowMore ->
-            case loggedIn.selectedCommunity of
-                RemoteData.Success community ->
-                    model
-                        |> UR.init
-                        |> UR.addExt (fetchProfileWithTransfers loggedIn community model)
+            if model.isLoadingTransfers then
+                -- A fetch is already in flight; ignore repeat clicks so we don't
+                -- re-request the same cursor and append a duplicate page.
+                UR.init model
 
-                _ ->
-                    model
-                        |> UR.init
-                        |> UR.logImpossible msg
-                            "Clicked show more, but community wasn't loaded"
-                            (Just loggedIn.accountName)
-                            { moduleName = "Page.PaymentHistory", function = "update" }
-                            []
+            else
+                case loggedIn.selectedCommunity of
+                    RemoteData.Success community ->
+                        { model | isLoadingTransfers = True }
+                            |> UR.init
+                            |> UR.addExt (fetchProfileWithTransfers loggedIn community model)
+
+                    _ ->
+                        model
+                            |> UR.init
+                            |> UR.logImpossible msg
+                                "Clicked show more, but community wasn't loaded"
+                                (Just loggedIn.accountName)
+                                { moduleName = "Page.PaymentHistory", function = "update" }
+                                []
 
         GotUserPickerMsg subMsg ->
             let
@@ -460,6 +473,7 @@ update msg model ({ shared } as loggedIn) =
                                         { modelWithUserPicker
                                             | incomingTransfers = Nothing
                                             , incomingTransfersPageInfo = Nothing
+                                            , isLoadingTransfers = True
                                         }
                                 in
                                 ( newModel_
@@ -521,6 +535,7 @@ update msg model ({ shared } as loggedIn) =
                                         { modelWithDatePicker
                                             | incomingTransfers = Nothing
                                             , incomingTransfersPageInfo = Nothing
+                                            , isLoadingTransfers = True
                                         }
                                 in
                                 ( newModel_
@@ -708,7 +723,7 @@ viewTransfers shared model =
 
 
 viewPagination : Shared -> Model -> Html Msg
-viewPagination shared { incomingTransfersPageInfo } =
+viewPagination shared { incomingTransfersPageInfo, isLoadingTransfers } =
     case incomingTransfersPageInfo of
         Just pi ->
             if pi.hasNextPage then
@@ -716,8 +731,16 @@ viewPagination shared { incomingTransfersPageInfo } =
                     [ button
                         [ class "button m-auto button-primary w-full sm:w-40"
                         , onClick ShowMore
+                        , disabled isLoadingTransfers
                         ]
-                        [ text (shared.translators.t "payment_history.more") ]
+                        [ text
+                            (if isLoadingTransfers then
+                                shared.translators.t "menu.loading"
+
+                             else
+                                shared.translators.t "payment_history.more"
+                            )
+                        ]
                     ]
 
             else
