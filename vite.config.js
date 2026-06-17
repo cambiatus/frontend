@@ -42,6 +42,9 @@ export default defineConfig({
 
   build: {
     outDir: "dist",
+    // Emit hashed JS/CSS under /static/ instead of the default /assets/, which
+    // nginx proxies to the backend in production.
+    assetsDir: "static",
     sourcemap: true,
     // Increase chunk size warning limit for Elm apps
     chunkSizeWarningLimit: 1000,
