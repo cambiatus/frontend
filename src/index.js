@@ -13,7 +13,6 @@ import pdfDefinition from "./scripts/pdfDefinition";
 import "./styles/main.css";
 import pdfFonts from "./vfs_fonts";
 import { register as registerCustomElements } from "./customElements/index";
-import * as bip39 from "bip39";
 import * as matomo from "./utils/matomo";
 import { Socket as PhoenixSocket } from "phoenix";
 import * as ElmDebugger from "elm-debug-transformer";
@@ -1506,9 +1505,9 @@ async function handleJavascriptPort(arg) {
       };
 
       return {
-        english: normalize(bip39.wordlists.english),
-        portuguese: normalize(bip39.wordlists.portuguese),
-        spanish: normalize(bip39.wordlists.spanish),
+        english: normalize(mnemonic.wordlists.english),
+        portuguese: normalize(mnemonic.wordlists.portuguese),
+        spanish: normalize(mnemonic.wordlists.spanish),
       };
     }
     case "addMatomoScript": {
