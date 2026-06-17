@@ -62,8 +62,8 @@ name =
 subdomain :
     SelectionSet decodesTo Cambiatus.Object.Subdomain
     -> SelectionSet (Maybe decodesTo) Cambiatus.Object.CommunityPreview
-subdomain object_ =
-    Object.selectionForCompositeField "subdomain" [] object_ (identity >> Decode.nullable)
+subdomain object____ =
+    Object.selectionForCompositeField "subdomain" [] object____ (Basics.identity >> Decode.nullable)
 
 
 symbol : SelectionSet String Cambiatus.Object.CommunityPreview
@@ -74,8 +74,8 @@ symbol =
 uploads :
     SelectionSet decodesTo Cambiatus.Object.Upload
     -> SelectionSet (List decodesTo) Cambiatus.Object.CommunityPreview
-uploads object_ =
-    Object.selectionForCompositeField "uploads" [] object_ (identity >> Decode.list)
+uploads object____ =
+    Object.selectionForCompositeField "uploads" [] object____ (Basics.identity >> Decode.list)
 
 
 website : SelectionSet (Maybe String) Cambiatus.Object.CommunityPreview

@@ -22,8 +22,8 @@ import Json.Decode as Decode
 country :
     SelectionSet decodesTo Cambiatus.Object.Country
     -> SelectionSet (Maybe decodesTo) Cambiatus.Object.KycData
-country object_ =
-    Object.selectionForCompositeField "country" [] object_ (identity >> Decode.nullable)
+country object____ =
+    Object.selectionForCompositeField "country" [] object____ (Basics.identity >> Decode.nullable)
 
 
 document : SelectionSet String Cambiatus.Object.KycData

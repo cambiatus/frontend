@@ -10,7 +10,7 @@ import Json.Decode as Decode exposing (Decoder)
 {-| Action verification types
 
   - Automatic - An action that is verified automatically
-  - Claimable - An action that needs be mannually verified
+  - Claimable - An action that needs be manually verified
 
 -}
 type VerificationType
@@ -43,8 +43,8 @@ decoder =
 {-| Convert from the union type representing the Enum to a string that the GraphQL server will recognize.
 -}
 toString : VerificationType -> String
-toString enum =
-    case enum of
+toString enum____ =
+    case enum____ of
         Automatic ->
             "AUTOMATIC"
 
@@ -64,8 +64,8 @@ This can be useful for generating Strings to use for <select> menus to check whi
 
 -}
 fromString : String -> Maybe VerificationType
-fromString enumString =
-    case enumString of
+fromString enumString____ =
+    case enumString____ of
         "AUTOMATIC" ->
             Just Automatic
 

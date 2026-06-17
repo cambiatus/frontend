@@ -27,16 +27,16 @@ actions :
     (ActionsOptionalArguments -> ActionsOptionalArguments)
     -> SelectionSet decodesTo Cambiatus.Object.Action
     -> SelectionSet (List decodesTo) Cambiatus.Object.SearchResult
-actions fillInOptionals object_ =
+actions fillInOptionals____ object____ =
     let
-        filledInOptionals =
-            fillInOptionals { query = Absent }
+        filledInOptionals____ =
+            fillInOptionals____ { query = Absent }
 
-        optionalArgs =
-            [ Argument.optional "query" filledInOptionals.query Encode.string ]
-                |> List.filterMap identity
+        optionalArgs____ =
+            [ Argument.optional "query" filledInOptionals____.query Encode.string ]
+                |> List.filterMap Basics.identity
     in
-    Object.selectionForCompositeField "actions" optionalArgs object_ (identity >> Decode.list)
+    Object.selectionForCompositeField "actions" optionalArgs____ object____ (Basics.identity >> Decode.list)
 
 
 type alias MembersOptionalArguments =
@@ -47,16 +47,16 @@ members :
     (MembersOptionalArguments -> MembersOptionalArguments)
     -> SelectionSet decodesTo Cambiatus.Object.User
     -> SelectionSet (List decodesTo) Cambiatus.Object.SearchResult
-members fillInOptionals object_ =
+members fillInOptionals____ object____ =
     let
-        filledInOptionals =
-            fillInOptionals { filters = Absent }
+        filledInOptionals____ =
+            fillInOptionals____ { filters = Absent }
 
-        optionalArgs =
-            [ Argument.optional "filters" filledInOptionals.filters Cambiatus.InputObject.encodeMembersFilterInput ]
-                |> List.filterMap identity
+        optionalArgs____ =
+            [ Argument.optional "filters" filledInOptionals____.filters Cambiatus.InputObject.encodeMembersFilterInput ]
+                |> List.filterMap Basics.identity
     in
-    Object.selectionForCompositeField "members" optionalArgs object_ (identity >> Decode.list)
+    Object.selectionForCompositeField "members" optionalArgs____ object____ (Basics.identity >> Decode.list)
 
 
 type alias ProductsOptionalArguments =
@@ -67,13 +67,13 @@ products :
     (ProductsOptionalArguments -> ProductsOptionalArguments)
     -> SelectionSet decodesTo Cambiatus.Object.Product
     -> SelectionSet (List decodesTo) Cambiatus.Object.SearchResult
-products fillInOptionals object_ =
+products fillInOptionals____ object____ =
     let
-        filledInOptionals =
-            fillInOptionals { query = Absent }
+        filledInOptionals____ =
+            fillInOptionals____ { query = Absent }
 
-        optionalArgs =
-            [ Argument.optional "query" filledInOptionals.query Encode.string ]
-                |> List.filterMap identity
+        optionalArgs____ =
+            [ Argument.optional "query" filledInOptionals____.query Encode.string ]
+                |> List.filterMap Basics.identity
     in
-    Object.selectionForCompositeField "products" optionalArgs object_ (identity >> Decode.list)
+    Object.selectionForCompositeField "products" optionalArgs____ object____ (Basics.identity >> Decode.list)

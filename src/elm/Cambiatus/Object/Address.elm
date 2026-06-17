@@ -22,22 +22,22 @@ import Json.Decode as Decode
 city :
     SelectionSet decodesTo Cambiatus.Object.City
     -> SelectionSet decodesTo Cambiatus.Object.Address
-city object_ =
-    Object.selectionForCompositeField "city" [] object_ identity
+city object____ =
+    Object.selectionForCompositeField "city" [] object____ Basics.identity
 
 
 country :
     SelectionSet decodesTo Cambiatus.Object.Country
     -> SelectionSet decodesTo Cambiatus.Object.Address
-country object_ =
-    Object.selectionForCompositeField "country" [] object_ identity
+country object____ =
+    Object.selectionForCompositeField "country" [] object____ Basics.identity
 
 
 neighborhood :
     SelectionSet decodesTo Cambiatus.Object.Neighborhood
     -> SelectionSet decodesTo Cambiatus.Object.Address
-neighborhood object_ =
-    Object.selectionForCompositeField "neighborhood" [] object_ identity
+neighborhood object____ =
+    Object.selectionForCompositeField "neighborhood" [] object____ Basics.identity
 
 
 number : SelectionSet (Maybe String) Cambiatus.Object.Address
@@ -48,8 +48,8 @@ number =
 state :
     SelectionSet decodesTo Cambiatus.Object.State
     -> SelectionSet decodesTo Cambiatus.Object.Address
-state object_ =
-    Object.selectionForCompositeField "state" [] object_ identity
+state object____ =
+    Object.selectionForCompositeField "state" [] object____ Basics.identity
 
 
 street : SelectionSet String Cambiatus.Object.Address

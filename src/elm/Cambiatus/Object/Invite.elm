@@ -22,12 +22,12 @@ import Json.Decode as Decode
 communityPreview :
     SelectionSet decodesTo Cambiatus.Object.CommunityPreview
     -> SelectionSet decodesTo Cambiatus.Object.Invite
-communityPreview object_ =
-    Object.selectionForCompositeField "communityPreview" [] object_ identity
+communityPreview object____ =
+    Object.selectionForCompositeField "communityPreview" [] object____ Basics.identity
 
 
 creator :
     SelectionSet decodesTo Cambiatus.Object.User
     -> SelectionSet decodesTo Cambiatus.Object.Invite
-creator object_ =
-    Object.selectionForCompositeField "creator" [] object_ identity
+creator object____ =
+    Object.selectionForCompositeField "creator" [] object____ Basics.identity

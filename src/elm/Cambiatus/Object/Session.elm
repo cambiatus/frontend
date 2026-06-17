@@ -27,5 +27,5 @@ token =
 user :
     SelectionSet decodesTo Cambiatus.Object.User
     -> SelectionSet decodesTo Cambiatus.Object.Session
-user object_ =
-    Object.selectionForCompositeField "user" [] object_ identity
+user object____ =
+    Object.selectionForCompositeField "user" [] object____ Basics.identity

@@ -33,8 +33,8 @@ autoInvite =
 categories :
     SelectionSet decodesTo Cambiatus.Object.Category
     -> SelectionSet (List decodesTo) Cambiatus.Object.Community
-categories object_ =
-    Object.selectionForCompositeField "categories" [] object_ (identity >> Decode.list)
+categories object____ =
+    Object.selectionForCompositeField "categories" [] object____ (Basics.identity >> Decode.list)
 
 
 claimCount : SelectionSet Int Cambiatus.Object.Community
@@ -45,15 +45,15 @@ claimCount =
 contacts :
     SelectionSet decodesTo Cambiatus.Object.Contact
     -> SelectionSet (List decodesTo) Cambiatus.Object.Community
-contacts object_ =
-    Object.selectionForCompositeField "contacts" [] object_ (identity >> Decode.list)
+contacts object____ =
+    Object.selectionForCompositeField "contacts" [] object____ (Basics.identity >> Decode.list)
 
 
 contributionConfiguration :
     SelectionSet decodesTo Cambiatus.Object.ContributionConfig
     -> SelectionSet (Maybe decodesTo) Cambiatus.Object.Community
-contributionConfiguration object_ =
-    Object.selectionForCompositeField "contributionConfiguration" [] object_ (identity >> Decode.nullable)
+contributionConfiguration object____ =
+    Object.selectionForCompositeField "contributionConfiguration" [] object____ (Basics.identity >> Decode.nullable)
 
 
 type alias ContributionsOptionalArguments =
@@ -66,16 +66,16 @@ contributions :
     (ContributionsOptionalArguments -> ContributionsOptionalArguments)
     -> SelectionSet decodesTo Cambiatus.Object.Contribution
     -> SelectionSet (List decodesTo) Cambiatus.Object.Community
-contributions fillInOptionals object_ =
+contributions fillInOptionals____ object____ =
     let
-        filledInOptionals =
-            fillInOptionals { status = Absent }
+        filledInOptionals____ =
+            fillInOptionals____ { status = Absent }
 
-        optionalArgs =
-            [ Argument.optional "status" filledInOptionals.status (Encode.enum Cambiatus.Enum.ContributionStatusType.toString) ]
-                |> List.filterMap identity
+        optionalArgs____ =
+            [ Argument.optional "status" filledInOptionals____.status (Encode.enum Cambiatus.Enum.ContributionStatusType.toString) ]
+                |> List.filterMap Basics.identity
     in
-    Object.selectionForCompositeField "contributions" optionalArgs object_ (identity >> Decode.list)
+    Object.selectionForCompositeField "contributions" optionalArgs____ object____ (Basics.identity >> Decode.list)
 
 
 createdAt : SelectionSet Cambiatus.ScalarCodecs.DateTime Cambiatus.Object.Community
@@ -131,8 +131,8 @@ hasShop =
 highlightedNews :
     SelectionSet decodesTo Cambiatus.Object.News
     -> SelectionSet (Maybe decodesTo) Cambiatus.Object.Community
-highlightedNews object_ =
-    Object.selectionForCompositeField "highlightedNews" [] object_ (identity >> Decode.nullable)
+highlightedNews object____ =
+    Object.selectionForCompositeField "highlightedNews" [] object____ (Basics.identity >> Decode.nullable)
 
 
 invitedReward : SelectionSet Float Cambiatus.Object.Community
@@ -168,8 +168,8 @@ memberCount =
 members :
     SelectionSet decodesTo Cambiatus.Object.User
     -> SelectionSet (List decodesTo) Cambiatus.Object.Community
-members object_ =
-    Object.selectionForCompositeField "members" [] object_ (identity >> Decode.list)
+members object____ =
+    Object.selectionForCompositeField "members" [] object____ (Basics.identity >> Decode.list)
 
 
 minBalance : SelectionSet (Maybe Float) Cambiatus.Object.Community
@@ -180,8 +180,8 @@ minBalance =
 mints :
     SelectionSet decodesTo Cambiatus.Object.Mint
     -> SelectionSet (List decodesTo) Cambiatus.Object.Community
-mints object_ =
-    Object.selectionForCompositeField "mints" [] object_ (identity >> Decode.list)
+mints object____ =
+    Object.selectionForCompositeField "mints" [] object____ (Basics.identity >> Decode.list)
 
 
 name : SelectionSet String Cambiatus.Object.Community
@@ -192,15 +192,15 @@ name =
 news :
     SelectionSet decodesTo Cambiatus.Object.News
     -> SelectionSet (List decodesTo) Cambiatus.Object.Community
-news object_ =
-    Object.selectionForCompositeField "news" [] object_ (identity >> Decode.list)
+news object____ =
+    Object.selectionForCompositeField "news" [] object____ (Basics.identity >> Decode.list)
 
 
 objectives :
     SelectionSet decodesTo Cambiatus.Object.Objective
     -> SelectionSet (List decodesTo) Cambiatus.Object.Community
-objectives object_ =
-    Object.selectionForCompositeField "objectives" [] object_ (identity >> Decode.list)
+objectives object____ =
+    Object.selectionForCompositeField "objectives" [] object____ (Basics.identity >> Decode.list)
 
 
 orderCount : SelectionSet Int Cambiatus.Object.Community
@@ -211,8 +211,8 @@ orderCount =
 orders :
     SelectionSet decodesTo Cambiatus.Object.Order
     -> SelectionSet (List decodesTo) Cambiatus.Object.Community
-orders object_ =
-    Object.selectionForCompositeField "orders" [] object_ (identity >> Decode.list)
+orders object____ =
+    Object.selectionForCompositeField "orders" [] object____ (Basics.identity >> Decode.list)
 
 
 productCount : SelectionSet Int Cambiatus.Object.Community
@@ -223,15 +223,22 @@ productCount =
 rewards :
     SelectionSet decodesTo Cambiatus.Object.Reward
     -> SelectionSet (List decodesTo) Cambiatus.Object.Community
-rewards object_ =
-    Object.selectionForCompositeField "rewards" [] object_ (identity >> Decode.list)
+rewards object____ =
+    Object.selectionForCompositeField "rewards" [] object____ (Basics.identity >> Decode.list)
+
+
+roles :
+    SelectionSet decodesTo Cambiatus.Object.Role
+    -> SelectionSet (List decodesTo) Cambiatus.Object.Community
+roles object____ =
+    Object.selectionForCompositeField "roles" [] object____ (Basics.identity >> Decode.list)
 
 
 subdomain :
     SelectionSet decodesTo Cambiatus.Object.Subdomain
     -> SelectionSet (Maybe decodesTo) Cambiatus.Object.Community
-subdomain object_ =
-    Object.selectionForCompositeField "subdomain" [] object_ (identity >> Decode.nullable)
+subdomain object____ =
+    Object.selectionForCompositeField "subdomain" [] object____ (Basics.identity >> Decode.nullable)
 
 
 supply : SelectionSet (Maybe Float) Cambiatus.Object.Community
@@ -261,16 +268,16 @@ transfers :
     (TransfersOptionalArguments -> TransfersOptionalArguments)
     -> SelectionSet decodesTo Cambiatus.Object.TransferConnection
     -> SelectionSet (Maybe decodesTo) Cambiatus.Object.Community
-transfers fillInOptionals object_ =
+transfers fillInOptionals____ object____ =
     let
-        filledInOptionals =
-            fillInOptionals { after = Absent, before = Absent, first = Absent, last = Absent }
+        filledInOptionals____ =
+            fillInOptionals____ { after = Absent, before = Absent, first = Absent, last = Absent }
 
-        optionalArgs =
-            [ Argument.optional "after" filledInOptionals.after Encode.string, Argument.optional "before" filledInOptionals.before Encode.string, Argument.optional "first" filledInOptionals.first Encode.int, Argument.optional "last" filledInOptionals.last Encode.int ]
-                |> List.filterMap identity
+        optionalArgs____ =
+            [ Argument.optional "after" filledInOptionals____.after Encode.string, Argument.optional "before" filledInOptionals____.before Encode.string, Argument.optional "first" filledInOptionals____.first Encode.int, Argument.optional "last" filledInOptionals____.last Encode.int ]
+                |> List.filterMap Basics.identity
     in
-    Object.selectionForCompositeField "transfers" optionalArgs object_ (identity >> Decode.nullable)
+    Object.selectionForCompositeField "transfers" optionalArgs____ object____ (Basics.identity >> Decode.nullable)
 
 
 type_ : SelectionSet (Maybe String) Cambiatus.Object.Community
@@ -281,8 +288,8 @@ type_ =
 uploads :
     SelectionSet decodesTo Cambiatus.Object.Upload
     -> SelectionSet (List decodesTo) Cambiatus.Object.Community
-uploads object_ =
-    Object.selectionForCompositeField "uploads" [] object_ (identity >> Decode.list)
+uploads object____ =
+    Object.selectionForCompositeField "uploads" [] object____ (Basics.identity >> Decode.list)
 
 
 {-| List of users that are claim validators
@@ -290,8 +297,8 @@ uploads object_ =
 validators :
     SelectionSet decodesTo Cambiatus.Object.User
     -> SelectionSet (List decodesTo) Cambiatus.Object.Community
-validators object_ =
-    Object.selectionForCompositeField "validators" [] object_ (identity >> Decode.list)
+validators object____ =
+    Object.selectionForCompositeField "validators" [] object____ (Basics.identity >> Decode.list)
 
 
 website : SelectionSet (Maybe String) Cambiatus.Object.Community

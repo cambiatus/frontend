@@ -37,15 +37,15 @@ insertedAt =
 reactions :
     SelectionSet decodesTo Cambiatus.Object.ReactionType
     -> SelectionSet (List decodesTo) Cambiatus.Object.News
-reactions object_ =
-    Object.selectionForCompositeField "reactions" [] object_ (identity >> Decode.list)
+reactions object____ =
+    Object.selectionForCompositeField "reactions" [] object____ (Basics.identity >> Decode.list)
 
 
 receipt :
     SelectionSet decodesTo Cambiatus.Object.NewsReceipt
     -> SelectionSet (Maybe decodesTo) Cambiatus.Object.News
-receipt object_ =
-    Object.selectionForCompositeField "receipt" [] object_ (identity >> Decode.nullable)
+receipt object____ =
+    Object.selectionForCompositeField "receipt" [] object____ (Basics.identity >> Decode.nullable)
 
 
 scheduling : SelectionSet (Maybe Cambiatus.ScalarCodecs.DateTime) Cambiatus.Object.News
@@ -66,12 +66,12 @@ updatedAt =
 user :
     SelectionSet decodesTo Cambiatus.Object.User
     -> SelectionSet decodesTo Cambiatus.Object.News
-user object_ =
-    Object.selectionForCompositeField "user" [] object_ identity
+user object____ =
+    Object.selectionForCompositeField "user" [] object____ Basics.identity
 
 
 versions :
     SelectionSet decodesTo Cambiatus.Object.NewsVersion
     -> SelectionSet (List decodesTo) Cambiatus.Object.News
-versions object_ =
-    Object.selectionForCompositeField "versions" [] object_ (identity >> Decode.list)
+versions object____ =
+    Object.selectionForCompositeField "versions" [] object____ (Basics.identity >> Decode.list)

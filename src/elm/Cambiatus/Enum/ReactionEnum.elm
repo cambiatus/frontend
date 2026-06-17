@@ -69,8 +69,8 @@ decoder =
 {-| Convert from the union type representing the Enum to a string that the GraphQL server will recognize.
 -}
 toString : ReactionEnum -> String
-toString enum =
-    case enum of
+toString enum____ =
+    case enum____ of
         ClappingHands ->
             "CLAPPING_HANDS"
 
@@ -114,8 +114,8 @@ This can be useful for generating Strings to use for <select> menus to check whi
 
 -}
 fromString : String -> Maybe ReactionEnum
-fromString enumString =
-    case enumString of
+fromString enumString____ =
+    case enumString____ of
         "CLAPPING_HANDS" ->
             Just ClappingHands
 

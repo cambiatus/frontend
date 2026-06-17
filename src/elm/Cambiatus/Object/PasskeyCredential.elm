@@ -2,7 +2,7 @@
 -- https://github.com/dillonkearns/elm-graphql
 
 
-module Cambiatus.Object.State exposing (..)
+module Cambiatus.Object.PasskeyCredential exposing (..)
 
 import Cambiatus.InputObject
 import Cambiatus.Interface
@@ -19,18 +19,21 @@ import Graphql.SelectionSet exposing (SelectionSet)
 import Json.Decode as Decode
 
 
-cities :
-    SelectionSet decodesTo Cambiatus.Object.City
-    -> SelectionSet (List decodesTo) Cambiatus.Object.State
-cities object____ =
-    Object.selectionForCompositeField "cities" [] object____ (Basics.identity >> Decode.list)
-
-
-id : SelectionSet Cambiatus.ScalarCodecs.Id Cambiatus.Object.State
+id : SelectionSet Cambiatus.ScalarCodecs.Id Cambiatus.Object.PasskeyCredential
 id =
     Object.selectionForField "ScalarCodecs.Id" "id" [] (Cambiatus.ScalarCodecs.codecs |> Cambiatus.Scalar.unwrapCodecs |> .codecId |> .decoder)
 
 
-name : SelectionSet String Cambiatus.Object.State
-name =
-    Object.selectionForField "String" "name" [] Decode.string
+insertedAt : SelectionSet Cambiatus.ScalarCodecs.NaiveDateTime Cambiatus.Object.PasskeyCredential
+insertedAt =
+    Object.selectionForField "ScalarCodecs.NaiveDateTime" "insertedAt" [] (Cambiatus.ScalarCodecs.codecs |> Cambiatus.Scalar.unwrapCodecs |> .codecNaiveDateTime |> .decoder)
+
+
+label : SelectionSet (Maybe String) Cambiatus.Object.PasskeyCredential
+label =
+    Object.selectionForField "(Maybe String)" "label" [] (Decode.string |> Decode.nullable)
+
+
+status : SelectionSet String Cambiatus.Object.PasskeyCredential
+status =
+    Object.selectionForField "String" "status" [] Decode.string

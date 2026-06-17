@@ -27,23 +27,23 @@ actions :
     (ActionsOptionalArguments -> ActionsOptionalArguments)
     -> SelectionSet decodesTo Cambiatus.Object.Action
     -> SelectionSet (List decodesTo) Cambiatus.Object.Objective
-actions fillInOptionals object_ =
+actions fillInOptionals____ object____ =
     let
-        filledInOptionals =
-            fillInOptionals { input = Absent }
+        filledInOptionals____ =
+            fillInOptionals____ { input = Absent }
 
-        optionalArgs =
-            [ Argument.optional "input" filledInOptionals.input Cambiatus.InputObject.encodeActionsInput ]
-                |> List.filterMap identity
+        optionalArgs____ =
+            [ Argument.optional "input" filledInOptionals____.input Cambiatus.InputObject.encodeActionsInput ]
+                |> List.filterMap Basics.identity
     in
-    Object.selectionForCompositeField "actions" optionalArgs object_ (identity >> Decode.list)
+    Object.selectionForCompositeField "actions" optionalArgs____ object____ (Basics.identity >> Decode.list)
 
 
 community :
     SelectionSet decodesTo Cambiatus.Object.Community
     -> SelectionSet decodesTo Cambiatus.Object.Objective
-community object_ =
-    Object.selectionForCompositeField "community" [] object_ identity
+community object____ =
+    Object.selectionForCompositeField "community" [] object____ Basics.identity
 
 
 completedAt : SelectionSet (Maybe Cambiatus.ScalarCodecs.NaiveDateTime) Cambiatus.Object.Objective
@@ -74,8 +74,8 @@ createdTx =
 creator :
     SelectionSet decodesTo Cambiatus.Object.User
     -> SelectionSet decodesTo Cambiatus.Object.Objective
-creator object_ =
-    Object.selectionForCompositeField "creator" [] object_ identity
+creator object____ =
+    Object.selectionForCompositeField "creator" [] object____ Basics.identity
 
 
 creatorId : SelectionSet String Cambiatus.Object.Objective

@@ -31,11 +31,11 @@ type alias Fragments decodesTo =
 fragments :
     Fragments decodesTo
     -> SelectionSet decodesTo Cambiatus.Union.NotificationType
-fragments selections =
+fragments selections____ =
     Object.exhaustiveFragmentSelection
-        [ Object.buildFragment "Mint" selections.onMint
-        , Object.buildFragment "Order" selections.onOrder
-        , Object.buildFragment "Transfer" selections.onTransfer
+        [ Object.buildFragment "Mint" selections____.onMint
+        , Object.buildFragment "Order" selections____.onOrder
+        , Object.buildFragment "Transfer" selections____.onTransfer
         ]
 
 

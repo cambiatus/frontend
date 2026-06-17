@@ -2,7 +2,7 @@
 -- https://github.com/dillonkearns/elm-graphql
 
 
-module Cambiatus.Object.State exposing (..)
+module Cambiatus.Object.EncryptedMnemonicResult exposing (..)
 
 import Cambiatus.InputObject
 import Cambiatus.Interface
@@ -19,18 +19,11 @@ import Graphql.SelectionSet exposing (SelectionSet)
 import Json.Decode as Decode
 
 
-cities :
-    SelectionSet decodesTo Cambiatus.Object.City
-    -> SelectionSet (List decodesTo) Cambiatus.Object.State
-cities object____ =
-    Object.selectionForCompositeField "cities" [] object____ (Basics.identity >> Decode.list)
+encryptedMnemonic : SelectionSet String Cambiatus.Object.EncryptedMnemonicResult
+encryptedMnemonic =
+    Object.selectionForField "String" "encryptedMnemonic" [] Decode.string
 
 
-id : SelectionSet Cambiatus.ScalarCodecs.Id Cambiatus.Object.State
-id =
-    Object.selectionForField "ScalarCodecs.Id" "id" [] (Cambiatus.ScalarCodecs.codecs |> Cambiatus.Scalar.unwrapCodecs |> .codecId |> .decoder)
-
-
-name : SelectionSet String Cambiatus.Object.State
-name =
-    Object.selectionForField "String" "name" [] Decode.string
+mnemonicNonce : SelectionSet String Cambiatus.Object.EncryptedMnemonicResult
+mnemonicNonce =
+    Object.selectionForField "String" "mnemonicNonce" [] Decode.string

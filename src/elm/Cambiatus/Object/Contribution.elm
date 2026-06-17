@@ -30,8 +30,8 @@ amount =
 community :
     SelectionSet decodesTo Cambiatus.Object.Community
     -> SelectionSet decodesTo Cambiatus.Object.Contribution
-community object_ =
-    Object.selectionForCompositeField "community" [] object_ identity
+community object____ =
+    Object.selectionForCompositeField "community" [] object____ Basics.identity
 
 
 currency : SelectionSet Cambiatus.Enum.CurrencyType.CurrencyType Cambiatus.Object.Contribution
@@ -67,5 +67,5 @@ updatedAt =
 user :
     SelectionSet decodesTo Cambiatus.Object.User
     -> SelectionSet decodesTo Cambiatus.Object.Contribution
-user object_ =
-    Object.selectionForCompositeField "user" [] object_ identity
+user object____ =
+    Object.selectionForCompositeField "user" [] object____ Basics.identity

@@ -22,15 +22,15 @@ import Json.Decode as Decode
 categories :
     SelectionSet decodesTo Cambiatus.Object.Category
     -> SelectionSet (List decodesTo) Cambiatus.Object.Product
-categories object_ =
-    Object.selectionForCompositeField "categories" [] object_ (identity >> Decode.list)
+categories object____ =
+    Object.selectionForCompositeField "categories" [] object____ (Basics.identity >> Decode.list)
 
 
 community :
     SelectionSet decodesTo Cambiatus.Object.Community
     -> SelectionSet decodesTo Cambiatus.Object.Product
-community object_ =
-    Object.selectionForCompositeField "community" [] object_ identity
+community object____ =
+    Object.selectionForCompositeField "community" [] object____ Basics.identity
 
 
 communityId : SelectionSet String Cambiatus.Object.Product
@@ -41,8 +41,8 @@ communityId =
 creator :
     SelectionSet decodesTo Cambiatus.Object.User
     -> SelectionSet decodesTo Cambiatus.Object.Product
-creator object_ =
-    Object.selectionForCompositeField "creator" [] object_ identity
+creator object____ =
+    Object.selectionForCompositeField "creator" [] object____ Basics.identity
 
 
 creatorId : SelectionSet String Cambiatus.Object.Product
@@ -63,8 +63,8 @@ id =
 images :
     SelectionSet decodesTo Cambiatus.Object.ProductImage
     -> SelectionSet (List decodesTo) Cambiatus.Object.Product
-images object_ =
-    Object.selectionForCompositeField "images" [] object_ (identity >> Decode.list)
+images object____ =
+    Object.selectionForCompositeField "images" [] object____ (Basics.identity >> Decode.list)
 
 
 insertedAt : SelectionSet Cambiatus.ScalarCodecs.NaiveDateTime Cambiatus.Object.Product
@@ -75,8 +75,8 @@ insertedAt =
 orders :
     SelectionSet decodesTo Cambiatus.Object.Order
     -> SelectionSet (List decodesTo) Cambiatus.Object.Product
-orders object_ =
-    Object.selectionForCompositeField "orders" [] object_ (identity >> Decode.list)
+orders object____ =
+    Object.selectionForCompositeField "orders" [] object____ (Basics.identity >> Decode.list)
 
 
 price : SelectionSet Float Cambiatus.Object.Product
