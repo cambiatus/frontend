@@ -27,5 +27,5 @@ cursor =
 node :
     SelectionSet decodesTo Cambiatus.Object.Claim
     -> SelectionSet (Maybe decodesTo) Cambiatus.Object.ClaimEdge
-node object_ =
-    Object.selectionForCompositeField "node" [] object_ (identity >> Decode.nullable)
+node object____ =
+    Object.selectionForCompositeField "node" [] object____ (Basics.identity >> Decode.nullable)

@@ -27,8 +27,8 @@ import Json.Decode as Decode exposing (Decoder)
 acceptTerms :
     SelectionSet decodesTo Cambiatus.Object.User
     -> SelectionSet (Maybe decodesTo) RootMutation
-acceptTerms object_ =
-    Object.selectionForCompositeField "acceptTerms" [] object_ (identity >> Decode.nullable)
+acceptTerms object____ =
+    Object.selectionForCompositeField "acceptTerms" [] object____ (Basics.identity >> Decode.nullable)
 
 
 type alias AddCommunityPhotosRequiredArguments =
@@ -43,8 +43,8 @@ addCommunityPhotos :
     AddCommunityPhotosRequiredArguments
     -> SelectionSet decodesTo Cambiatus.Object.Community
     -> SelectionSet (Maybe decodesTo) RootMutation
-addCommunityPhotos requiredArgs object_ =
-    Object.selectionForCompositeField "addCommunityPhotos" [ Argument.required "symbol" requiredArgs.symbol Encode.string, Argument.required "urls" requiredArgs.urls (Encode.string |> Encode.list) ] object_ (identity >> Decode.nullable)
+addCommunityPhotos requiredArgs____ object____ =
+    Object.selectionForCompositeField "addCommunityPhotos" [ Argument.required "symbol" requiredArgs____.symbol Encode.string, Argument.required "urls" requiredArgs____.urls (Encode.string |> Encode.list) ] object____ (Basics.identity >> Decode.nullable)
 
 
 type alias CategoryOptionalArguments =
@@ -73,16 +73,16 @@ category :
     (CategoryOptionalArguments -> CategoryOptionalArguments)
     -> SelectionSet decodesTo Cambiatus.Object.Category
     -> SelectionSet (Maybe decodesTo) RootMutation
-category fillInOptionals object_ =
+category fillInOptionals____ object____ =
     let
-        filledInOptionals =
-            fillInOptionals { categories = Absent, description = Absent, iconUri = Absent, id = Absent, imageUri = Absent, metaDescription = Absent, metaKeywords = Absent, metaTitle = Absent, name = Absent, parentId = Absent, position = Absent, slug = Absent }
+        filledInOptionals____ =
+            fillInOptionals____ { categories = Absent, description = Absent, iconUri = Absent, id = Absent, imageUri = Absent, metaDescription = Absent, metaKeywords = Absent, metaTitle = Absent, name = Absent, parentId = Absent, position = Absent, slug = Absent }
 
-        optionalArgs =
-            [ Argument.optional "categories" filledInOptionals.categories (Cambiatus.InputObject.encodeSubcategoryInput |> Encode.list), Argument.optional "description" filledInOptionals.description Encode.string, Argument.optional "iconUri" filledInOptionals.iconUri Encode.string, Argument.optional "id" filledInOptionals.id Encode.int, Argument.optional "imageUri" filledInOptionals.imageUri Encode.string, Argument.optional "metaDescription" filledInOptionals.metaDescription Encode.string, Argument.optional "metaKeywords" filledInOptionals.metaKeywords Encode.string, Argument.optional "metaTitle" filledInOptionals.metaTitle Encode.string, Argument.optional "name" filledInOptionals.name Encode.string, Argument.optional "parentId" filledInOptionals.parentId Encode.int, Argument.optional "position" filledInOptionals.position Encode.int, Argument.optional "slug" filledInOptionals.slug Encode.string ]
-                |> List.filterMap identity
+        optionalArgs____ =
+            [ Argument.optional "categories" filledInOptionals____.categories (Cambiatus.InputObject.encodeSubcategoryInput |> Encode.list), Argument.optional "description" filledInOptionals____.description Encode.string, Argument.optional "iconUri" filledInOptionals____.iconUri Encode.string, Argument.optional "id" filledInOptionals____.id Encode.int, Argument.optional "imageUri" filledInOptionals____.imageUri Encode.string, Argument.optional "metaDescription" filledInOptionals____.metaDescription Encode.string, Argument.optional "metaKeywords" filledInOptionals____.metaKeywords Encode.string, Argument.optional "metaTitle" filledInOptionals____.metaTitle Encode.string, Argument.optional "name" filledInOptionals____.name Encode.string, Argument.optional "parentId" filledInOptionals____.parentId Encode.int, Argument.optional "position" filledInOptionals____.position Encode.int, Argument.optional "slug" filledInOptionals____.slug Encode.string ]
+                |> List.filterMap Basics.identity
     in
-    Object.selectionForCompositeField "category" optionalArgs object_ (identity >> Decode.nullable)
+    Object.selectionForCompositeField "category" optionalArgs____ object____ (Basics.identity >> Decode.nullable)
 
 
 type alias CommunityRequiredArguments =
@@ -95,8 +95,8 @@ community :
     CommunityRequiredArguments
     -> SelectionSet decodesTo Cambiatus.Object.Community
     -> SelectionSet (Maybe decodesTo) RootMutation
-community requiredArgs object_ =
-    Object.selectionForCompositeField "community" [ Argument.required "input" requiredArgs.input Cambiatus.InputObject.encodeCommunityUpdateInput ] object_ (identity >> Decode.nullable)
+community requiredArgs____ object____ =
+    Object.selectionForCompositeField "community" [ Argument.required "input" requiredArgs____.input Cambiatus.InputObject.encodeCommunityUpdateInput ] object____ (Basics.identity >> Decode.nullable)
 
 
 type alias CompleteObjectiveRequiredArguments =
@@ -109,8 +109,8 @@ completeObjective :
     CompleteObjectiveRequiredArguments
     -> SelectionSet decodesTo Cambiatus.Object.Objective
     -> SelectionSet (Maybe decodesTo) RootMutation
-completeObjective requiredArgs object_ =
-    Object.selectionForCompositeField "completeObjective" [ Argument.required "id" requiredArgs.id Encode.int ] object_ (identity >> Decode.nullable)
+completeObjective requiredArgs____ object____ =
+    Object.selectionForCompositeField "completeObjective" [ Argument.required "id" requiredArgs____.id Encode.int ] object____ (Basics.identity >> Decode.nullable)
 
 
 type alias ContributionRequiredArguments =
@@ -125,8 +125,8 @@ contribution :
     ContributionRequiredArguments
     -> SelectionSet decodesTo Cambiatus.Object.Contribution
     -> SelectionSet (Maybe decodesTo) RootMutation
-contribution requiredArgs object_ =
-    Object.selectionForCompositeField "contribution" [ Argument.required "amount" requiredArgs.amount Encode.float, Argument.required "currency" requiredArgs.currency (Encode.enum Cambiatus.Enum.CurrencyType.toString) ] object_ (identity >> Decode.nullable)
+contribution requiredArgs____ object____ =
+    Object.selectionForCompositeField "contribution" [ Argument.required "amount" requiredArgs____.amount Encode.float, Argument.required "currency" requiredArgs____.currency (Encode.enum Cambiatus.Enum.CurrencyType.toString) ] object____ (Basics.identity >> Decode.nullable)
 
 
 {-| [Auth required] A mutation to delete user's address data
@@ -134,8 +134,8 @@ contribution requiredArgs object_ =
 deleteAddress :
     SelectionSet decodesTo Cambiatus.Object.DeleteStatus
     -> SelectionSet (Maybe decodesTo) RootMutation
-deleteAddress object_ =
-    Object.selectionForCompositeField "deleteAddress" [] object_ (identity >> Decode.nullable)
+deleteAddress object____ =
+    Object.selectionForCompositeField "deleteAddress" [] object____ (Basics.identity >> Decode.nullable)
 
 
 type alias DeleteCategoryRequiredArguments =
@@ -148,8 +148,8 @@ deleteCategory :
     DeleteCategoryRequiredArguments
     -> SelectionSet decodesTo Cambiatus.Object.DeleteStatus
     -> SelectionSet (Maybe decodesTo) RootMutation
-deleteCategory requiredArgs object_ =
-    Object.selectionForCompositeField "deleteCategory" [ Argument.required "id" requiredArgs.id Encode.int ] object_ (identity >> Decode.nullable)
+deleteCategory requiredArgs____ object____ =
+    Object.selectionForCompositeField "deleteCategory" [ Argument.required "id" requiredArgs____.id Encode.int ] object____ (Basics.identity >> Decode.nullable)
 
 
 {-| [Auth required] A mutation to delete user's kyc data
@@ -157,8 +157,8 @@ deleteCategory requiredArgs object_ =
 deleteKyc :
     SelectionSet decodesTo Cambiatus.Object.DeleteStatus
     -> SelectionSet (Maybe decodesTo) RootMutation
-deleteKyc object_ =
-    Object.selectionForCompositeField "deleteKyc" [] object_ (identity >> Decode.nullable)
+deleteKyc object____ =
+    Object.selectionForCompositeField "deleteKyc" [] object____ (Basics.identity >> Decode.nullable)
 
 
 type alias DeleteNewsRequiredArguments =
@@ -171,8 +171,8 @@ deleteNews :
     DeleteNewsRequiredArguments
     -> SelectionSet decodesTo Cambiatus.Object.DeleteStatus
     -> SelectionSet (Maybe decodesTo) RootMutation
-deleteNews requiredArgs object_ =
-    Object.selectionForCompositeField "deleteNews" [ Argument.required "newsId" requiredArgs.newsId Encode.int ] object_ (identity >> Decode.nullable)
+deleteNews requiredArgs____ object____ =
+    Object.selectionForCompositeField "deleteNews" [ Argument.required "newsId" requiredArgs____.newsId Encode.int ] object____ (Basics.identity >> Decode.nullable)
 
 
 type alias DeleteProductRequiredArguments =
@@ -185,8 +185,8 @@ deleteProduct :
     DeleteProductRequiredArguments
     -> SelectionSet decodesTo Cambiatus.Object.DeleteStatus
     -> SelectionSet (Maybe decodesTo) RootMutation
-deleteProduct requiredArgs object_ =
-    Object.selectionForCompositeField "deleteProduct" [ Argument.required "id" requiredArgs.id Encode.int ] object_ (identity >> Decode.nullable)
+deleteProduct requiredArgs____ object____ =
+    Object.selectionForCompositeField "deleteProduct" [ Argument.required "id" requiredArgs____.id Encode.int ] object____ (Basics.identity >> Decode.nullable)
 
 
 type alias GenAuthRequiredArguments =
@@ -199,8 +199,8 @@ genAuth :
     GenAuthRequiredArguments
     -> SelectionSet decodesTo Cambiatus.Object.Request
     -> SelectionSet decodesTo RootMutation
-genAuth requiredArgs object_ =
-    Object.selectionForCompositeField "genAuth" [ Argument.required "account" requiredArgs.account Encode.string ] object_ identity
+genAuth requiredArgs____ object____ =
+    Object.selectionForCompositeField "genAuth" [ Argument.required "account" requiredArgs____.account Encode.string ] object____ Basics.identity
 
 
 type alias HighlightedNewsOptionalArguments =
@@ -213,16 +213,16 @@ highlightedNews :
     (HighlightedNewsOptionalArguments -> HighlightedNewsOptionalArguments)
     -> SelectionSet decodesTo Cambiatus.Object.Community
     -> SelectionSet (Maybe decodesTo) RootMutation
-highlightedNews fillInOptionals object_ =
+highlightedNews fillInOptionals____ object____ =
     let
-        filledInOptionals =
-            fillInOptionals { newsId = Absent }
+        filledInOptionals____ =
+            fillInOptionals____ { newsId = Absent }
 
-        optionalArgs =
-            [ Argument.optional "newsId" filledInOptionals.newsId Encode.int ]
-                |> List.filterMap identity
+        optionalArgs____ =
+            [ Argument.optional "newsId" filledInOptionals____.newsId Encode.int ]
+                |> List.filterMap Basics.identity
     in
-    Object.selectionForCompositeField "highlightedNews" optionalArgs object_ (identity >> Decode.nullable)
+    Object.selectionForCompositeField "highlightedNews" optionalArgs____ object____ (Basics.identity >> Decode.nullable)
 
 
 type alias NewsOptionalArguments =
@@ -244,16 +244,96 @@ news :
     -> NewsRequiredArguments
     -> SelectionSet decodesTo Cambiatus.Object.News
     -> SelectionSet (Maybe decodesTo) RootMutation
-news fillInOptionals requiredArgs object_ =
+news fillInOptionals____ requiredArgs____ object____ =
     let
-        filledInOptionals =
-            fillInOptionals { id = Absent, scheduling = Absent }
+        filledInOptionals____ =
+            fillInOptionals____ { id = Absent, scheduling = Absent }
 
-        optionalArgs =
-            [ Argument.optional "id" filledInOptionals.id Encode.int, Argument.optional "scheduling" filledInOptionals.scheduling (Cambiatus.ScalarCodecs.codecs |> Cambiatus.Scalar.unwrapEncoder .codecDateTime) ]
-                |> List.filterMap identity
+        optionalArgs____ =
+            [ Argument.optional "id" filledInOptionals____.id Encode.int, Argument.optional "scheduling" filledInOptionals____.scheduling (Cambiatus.ScalarCodecs.codecs |> Cambiatus.Scalar.unwrapEncoder .codecDateTime) ]
+                |> List.filterMap Basics.identity
     in
-    Object.selectionForCompositeField "news" (optionalArgs ++ [ Argument.required "description" requiredArgs.description Encode.string, Argument.required "title" requiredArgs.title Encode.string ]) object_ (identity >> Decode.nullable)
+    Object.selectionForCompositeField "news" (optionalArgs____ ++ [ Argument.required "description" requiredArgs____.description Encode.string, Argument.required "title" requiredArgs____.title Encode.string ]) object____ (Basics.identity >> Decode.nullable)
+
+
+type alias PasskeyRegisterBeginRequiredArguments =
+    { account : String }
+
+
+{-| Begin passkey registration — returns a challenge and existing credential IDs to exclude
+-}
+passkeyRegisterBegin :
+    PasskeyRegisterBeginRequiredArguments
+    -> SelectionSet decodesTo Cambiatus.Object.PasskeyRegistrationChallenge
+    -> SelectionSet decodesTo RootMutation
+passkeyRegisterBegin requiredArgs____ object____ =
+    Object.selectionForCompositeField "passkeyRegisterBegin" [ Argument.required "account" requiredArgs____.account Encode.string ] object____ Basics.identity
+
+
+type alias PasskeyRegisterCompleteOptionalArguments =
+    { authenticatorAttachment : OptionalArgument String
+    , label : OptionalArgument String
+    }
+
+
+type alias PasskeyRegisterCompleteRequiredArguments =
+    { account : String
+    , attestationObject : String
+    , clientDataJson : String
+    , credentialId : String
+    }
+
+
+{-| Complete passkey registration — stores the credential as pending\_encryption
+-}
+passkeyRegisterComplete :
+    (PasskeyRegisterCompleteOptionalArguments -> PasskeyRegisterCompleteOptionalArguments)
+    -> PasskeyRegisterCompleteRequiredArguments
+    -> SelectionSet decodesTo Cambiatus.Object.PasskeyCredential
+    -> SelectionSet decodesTo RootMutation
+passkeyRegisterComplete fillInOptionals____ requiredArgs____ object____ =
+    let
+        filledInOptionals____ =
+            fillInOptionals____ { authenticatorAttachment = Absent, label = Absent }
+
+        optionalArgs____ =
+            [ Argument.optional "authenticatorAttachment" filledInOptionals____.authenticatorAttachment Encode.string, Argument.optional "label" filledInOptionals____.label Encode.string ]
+                |> List.filterMap Basics.identity
+    in
+    Object.selectionForCompositeField "passkeyRegisterComplete" (optionalArgs____ ++ [ Argument.required "account" requiredArgs____.account Encode.string, Argument.required "attestationObject" requiredArgs____.attestationObject Encode.string, Argument.required "clientDataJson" requiredArgs____.clientDataJson Encode.string, Argument.required "credentialId" requiredArgs____.credentialId Encode.string ]) object____ Basics.identity
+
+
+type alias PasskeySignInBeginRequiredArguments =
+    { account : String }
+
+
+{-| Begin passkey sign-in — returns a challenge and the account's active credential IDs
+-}
+passkeySignInBegin :
+    PasskeySignInBeginRequiredArguments
+    -> SelectionSet decodesTo Cambiatus.Object.PasskeyAssertionChallenge
+    -> SelectionSet decodesTo RootMutation
+passkeySignInBegin requiredArgs____ object____ =
+    Object.selectionForCompositeField "passkeySignInBegin" [ Argument.required "account" requiredArgs____.account Encode.string ] object____ Basics.identity
+
+
+type alias PasskeySignInCompleteRequiredArguments =
+    { account : String
+    , authenticatorData : String
+    , clientDataJson : String
+    , credentialId : String
+    , signature : String
+    }
+
+
+{-| Complete passkey sign-in — verifies assertion and returns a session token
+-}
+passkeySignInComplete :
+    PasskeySignInCompleteRequiredArguments
+    -> SelectionSet decodesTo Cambiatus.Object.Session
+    -> SelectionSet decodesTo RootMutation
+passkeySignInComplete requiredArgs____ object____ =
+    Object.selectionForCompositeField "passkeySignInComplete" [ Argument.required "account" requiredArgs____.account Encode.string, Argument.required "authenticatorData" requiredArgs____.authenticatorData Encode.string, Argument.required "clientDataJson" requiredArgs____.clientDataJson Encode.string, Argument.required "credentialId" requiredArgs____.credentialId Encode.string, Argument.required "signature" requiredArgs____.signature Encode.string ] object____ Basics.identity
 
 
 type alias PreferenceOptionalArguments =
@@ -270,16 +350,16 @@ preference :
     (PreferenceOptionalArguments -> PreferenceOptionalArguments)
     -> SelectionSet decodesTo Cambiatus.Object.User
     -> SelectionSet (Maybe decodesTo) RootMutation
-preference fillInOptionals object_ =
+preference fillInOptionals____ object____ =
     let
-        filledInOptionals =
-            fillInOptionals { claimNotification = Absent, digest = Absent, language = Absent, transferNotification = Absent }
+        filledInOptionals____ =
+            fillInOptionals____ { claimNotification = Absent, digest = Absent, language = Absent, transferNotification = Absent }
 
-        optionalArgs =
-            [ Argument.optional "claimNotification" filledInOptionals.claimNotification Encode.bool, Argument.optional "digest" filledInOptionals.digest Encode.bool, Argument.optional "language" filledInOptionals.language (Encode.enum Cambiatus.Enum.Language.toString), Argument.optional "transferNotification" filledInOptionals.transferNotification Encode.bool ]
-                |> List.filterMap identity
+        optionalArgs____ =
+            [ Argument.optional "claimNotification" filledInOptionals____.claimNotification Encode.bool, Argument.optional "digest" filledInOptionals____.digest Encode.bool, Argument.optional "language" filledInOptionals____.language (Encode.enum Cambiatus.Enum.Language.toString), Argument.optional "transferNotification" filledInOptionals____.transferNotification Encode.bool ]
+                |> List.filterMap Basics.identity
     in
-    Object.selectionForCompositeField "preference" optionalArgs object_ (identity >> Decode.nullable)
+    Object.selectionForCompositeField "preference" optionalArgs____ object____ (Basics.identity >> Decode.nullable)
 
 
 type alias ProductOptionalArguments =
@@ -303,16 +383,16 @@ product :
     (ProductOptionalArguments -> ProductOptionalArguments)
     -> SelectionSet decodesTo Cambiatus.Object.Product
     -> SelectionSet (Maybe decodesTo) RootMutation
-product fillInOptionals object_ =
+product fillInOptionals____ object____ =
     let
-        filledInOptionals =
-            fillInOptionals { categories = Absent, description = Absent, id = Absent, images = Absent, price = Absent, title = Absent, trackStock = Absent, units = Absent }
+        filledInOptionals____ =
+            fillInOptionals____ { categories = Absent, description = Absent, id = Absent, images = Absent, price = Absent, title = Absent, trackStock = Absent, units = Absent }
 
-        optionalArgs =
-            [ Argument.optional "categories" filledInOptionals.categories (Encode.int |> Encode.list), Argument.optional "description" filledInOptionals.description Encode.string, Argument.optional "id" filledInOptionals.id Encode.int, Argument.optional "images" filledInOptionals.images (Encode.string |> Encode.list), Argument.optional "price" filledInOptionals.price Encode.float, Argument.optional "title" filledInOptionals.title Encode.string, Argument.optional "trackStock" filledInOptionals.trackStock Encode.bool, Argument.optional "units" filledInOptionals.units Encode.int ]
-                |> List.filterMap identity
+        optionalArgs____ =
+            [ Argument.optional "categories" filledInOptionals____.categories (Encode.int |> Encode.list), Argument.optional "description" filledInOptionals____.description Encode.string, Argument.optional "id" filledInOptionals____.id Encode.int, Argument.optional "images" filledInOptionals____.images (Encode.string |> Encode.list), Argument.optional "price" filledInOptionals____.price Encode.float, Argument.optional "title" filledInOptionals____.title Encode.string, Argument.optional "trackStock" filledInOptionals____.trackStock Encode.bool, Argument.optional "units" filledInOptionals____.units Encode.int ]
+                |> List.filterMap Basics.identity
     in
-    Object.selectionForCompositeField "product" optionalArgs object_ (identity >> Decode.nullable)
+    Object.selectionForCompositeField "product" optionalArgs____ object____ (Basics.identity >> Decode.nullable)
 
 
 type alias ReactToNewsRequiredArguments =
@@ -327,8 +407,8 @@ reactToNews :
     ReactToNewsRequiredArguments
     -> SelectionSet decodesTo Cambiatus.Object.NewsReceipt
     -> SelectionSet (Maybe decodesTo) RootMutation
-reactToNews requiredArgs object_ =
-    Object.selectionForCompositeField "reactToNews" [ Argument.required "newsId" requiredArgs.newsId Encode.int, Argument.required "reactions" requiredArgs.reactions (Encode.enum Cambiatus.Enum.ReactionEnum.toString |> Encode.list) ] object_ (identity >> Decode.nullable)
+reactToNews requiredArgs____ object____ =
+    Object.selectionForCompositeField "reactToNews" [ Argument.required "newsId" requiredArgs____.newsId Encode.int, Argument.required "reactions" requiredArgs____.reactions (Encode.enum Cambiatus.Enum.ReactionEnum.toString |> Encode.list) ] object____ (Basics.identity >> Decode.nullable)
 
 
 type alias ReadRequiredArguments =
@@ -341,8 +421,8 @@ read :
     ReadRequiredArguments
     -> SelectionSet decodesTo Cambiatus.Object.NewsReceipt
     -> SelectionSet (Maybe decodesTo) RootMutation
-read requiredArgs object_ =
-    Object.selectionForCompositeField "read" [ Argument.required "newsId" requiredArgs.newsId Encode.int ] object_ (identity >> Decode.nullable)
+read requiredArgs____ object____ =
+    Object.selectionForCompositeField "read" [ Argument.required "newsId" requiredArgs____.newsId Encode.int ] object____ (Basics.identity >> Decode.nullable)
 
 
 type alias ReadNotificationRequiredArguments =
@@ -355,8 +435,8 @@ readNotification :
     ReadNotificationRequiredArguments
     -> SelectionSet decodesTo Cambiatus.Object.NotificationHistory
     -> SelectionSet decodesTo RootMutation
-readNotification requiredArgs object_ =
-    Object.selectionForCompositeField "readNotification" [ Argument.required "input" requiredArgs.input Cambiatus.InputObject.encodeReadNotificationInput ] object_ identity
+readNotification requiredArgs____ object____ =
+    Object.selectionForCompositeField "readNotification" [ Argument.required "input" requiredArgs____.input Cambiatus.InputObject.encodeReadNotificationInput ] object____ Basics.identity
 
 
 type alias RegisterPushRequiredArguments =
@@ -369,8 +449,8 @@ registerPush :
     RegisterPushRequiredArguments
     -> SelectionSet decodesTo Cambiatus.Object.PushSubscription
     -> SelectionSet decodesTo RootMutation
-registerPush requiredArgs object_ =
-    Object.selectionForCompositeField "registerPush" [ Argument.required "input" requiredArgs.input Cambiatus.InputObject.encodePushSubscriptionInput ] object_ identity
+registerPush requiredArgs____ object____ =
+    Object.selectionForCompositeField "registerPush" [ Argument.required "input" requiredArgs____.input Cambiatus.InputObject.encodePushSubscriptionInput ] object____ Basics.identity
 
 
 type alias SignInOptionalArguments =
@@ -393,16 +473,16 @@ signIn :
     -> SignInRequiredArguments
     -> SelectionSet decodesTo Cambiatus.Object.Session
     -> SelectionSet decodesTo RootMutation
-signIn fillInOptionals requiredArgs object_ =
+signIn fillInOptionals____ requiredArgs____ object____ =
     let
-        filledInOptionals =
-            fillInOptionals { invitationId = Absent }
+        filledInOptionals____ =
+            fillInOptionals____ { invitationId = Absent }
 
-        optionalArgs =
-            [ Argument.optional "invitationId" filledInOptionals.invitationId Encode.string ]
-                |> List.filterMap identity
+        optionalArgs____ =
+            [ Argument.optional "invitationId" filledInOptionals____.invitationId Encode.string ]
+                |> List.filterMap Basics.identity
     in
-    Object.selectionForCompositeField "signIn" (optionalArgs ++ [ Argument.required "account" requiredArgs.account Encode.string, Argument.required "password" requiredArgs.password Encode.string ]) object_ identity
+    Object.selectionForCompositeField "signIn" (optionalArgs____ ++ [ Argument.required "account" requiredArgs____.account Encode.string, Argument.required "password" requiredArgs____.password Encode.string ]) object____ Basics.identity
 
 
 type alias SignUpOptionalArguments =
@@ -438,16 +518,33 @@ signUp :
     -> SignUpRequiredArguments
     -> SelectionSet decodesTo Cambiatus.Object.Session
     -> SelectionSet decodesTo RootMutation
-signUp fillInOptionals requiredArgs object_ =
+signUp fillInOptionals____ requiredArgs____ object____ =
     let
-        filledInOptionals =
-            fillInOptionals { address = Absent, invitationId = Absent, kyc = Absent }
+        filledInOptionals____ =
+            fillInOptionals____ { address = Absent, invitationId = Absent, kyc = Absent }
 
-        optionalArgs =
-            [ Argument.optional "address" filledInOptionals.address Cambiatus.InputObject.encodeAddressUpdateInput, Argument.optional "invitationId" filledInOptionals.invitationId Encode.string, Argument.optional "kyc" filledInOptionals.kyc Cambiatus.InputObject.encodeKycDataUpdateInput ]
-                |> List.filterMap identity
+        optionalArgs____ =
+            [ Argument.optional "address" filledInOptionals____.address Cambiatus.InputObject.encodeAddressUpdateInput, Argument.optional "invitationId" filledInOptionals____.invitationId Encode.string, Argument.optional "kyc" filledInOptionals____.kyc Cambiatus.InputObject.encodeKycDataUpdateInput ]
+                |> List.filterMap Basics.identity
     in
-    Object.selectionForCompositeField "signUp" (optionalArgs ++ [ Argument.required "account" requiredArgs.account Encode.string, Argument.required "email" requiredArgs.email Encode.string, Argument.required "name" requiredArgs.name Encode.string, Argument.required "publicKey" requiredArgs.publicKey Encode.string, Argument.required "userType" requiredArgs.userType Encode.string ]) object_ identity
+    Object.selectionForCompositeField "signUp" (optionalArgs____ ++ [ Argument.required "account" requiredArgs____.account Encode.string, Argument.required "email" requiredArgs____.email Encode.string, Argument.required "name" requiredArgs____.name Encode.string, Argument.required "publicKey" requiredArgs____.publicKey Encode.string, Argument.required "userType" requiredArgs____.userType Encode.string ]) object____ Basics.identity
+
+
+type alias StoreEncryptedMnemonicRequiredArguments =
+    { credentialId : Cambiatus.ScalarCodecs.Id
+    , encryptedMnemonic : String
+    , mnemonicNonce : String
+    }
+
+
+{-| [Auth required] Store the encrypted mnemonic blob for a credential — transitions it to active
+-}
+storeEncryptedMnemonic :
+    StoreEncryptedMnemonicRequiredArguments
+    -> SelectionSet decodesTo Cambiatus.Object.PasskeyCredential
+    -> SelectionSet decodesTo RootMutation
+storeEncryptedMnemonic requiredArgs____ object____ =
+    Object.selectionForCompositeField "storeEncryptedMnemonic" [ Argument.required "credentialId" requiredArgs____.credentialId (Cambiatus.ScalarCodecs.codecs |> Cambiatus.Scalar.unwrapEncoder .codecId), Argument.required "encryptedMnemonic" requiredArgs____.encryptedMnemonic Encode.string, Argument.required "mnemonicNonce" requiredArgs____.mnemonicNonce Encode.string ] object____ Basics.identity
 
 
 type alias UpsertAddressRequiredArguments =
@@ -460,8 +557,8 @@ upsertAddress :
     UpsertAddressRequiredArguments
     -> SelectionSet decodesTo Cambiatus.Object.Address
     -> SelectionSet (Maybe decodesTo) RootMutation
-upsertAddress requiredArgs object_ =
-    Object.selectionForCompositeField "upsertAddress" [ Argument.required "input" requiredArgs.input Cambiatus.InputObject.encodeAddressUpdateInput ] object_ (identity >> Decode.nullable)
+upsertAddress requiredArgs____ object____ =
+    Object.selectionForCompositeField "upsertAddress" [ Argument.required "input" requiredArgs____.input Cambiatus.InputObject.encodeAddressUpdateInput ] object____ (Basics.identity >> Decode.nullable)
 
 
 type alias UpsertKycRequiredArguments =
@@ -474,8 +571,8 @@ upsertKyc :
     UpsertKycRequiredArguments
     -> SelectionSet decodesTo Cambiatus.Object.KycData
     -> SelectionSet (Maybe decodesTo) RootMutation
-upsertKyc requiredArgs object_ =
-    Object.selectionForCompositeField "upsertKyc" [ Argument.required "input" requiredArgs.input Cambiatus.InputObject.encodeKycDataUpdateInput ] object_ (identity >> Decode.nullable)
+upsertKyc requiredArgs____ object____ =
+    Object.selectionForCompositeField "upsertKyc" [ Argument.required "input" requiredArgs____.input Cambiatus.InputObject.encodeKycDataUpdateInput ] object____ (Basics.identity >> Decode.nullable)
 
 
 type alias UserRequiredArguments =
@@ -488,5 +585,5 @@ user :
     UserRequiredArguments
     -> SelectionSet decodesTo Cambiatus.Object.User
     -> SelectionSet (Maybe decodesTo) RootMutation
-user requiredArgs object_ =
-    Object.selectionForCompositeField "user" [ Argument.required "input" requiredArgs.input Cambiatus.InputObject.encodeUserUpdateInput ] object_ (identity >> Decode.nullable)
+user requiredArgs____ object____ =
+    Object.selectionForCompositeField "user" [ Argument.required "input" requiredArgs____.input Cambiatus.InputObject.encodeUserUpdateInput ] object____ (Basics.identity >> Decode.nullable)

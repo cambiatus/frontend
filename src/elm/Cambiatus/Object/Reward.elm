@@ -22,12 +22,12 @@ import Json.Decode as Decode
 action :
     SelectionSet decodesTo Cambiatus.Object.Action
     -> SelectionSet decodesTo Cambiatus.Object.Reward
-action object_ =
-    Object.selectionForCompositeField "action" [] object_ identity
+action object____ =
+    Object.selectionForCompositeField "action" [] object____ Basics.identity
 
 
 receiver :
     SelectionSet decodesTo Cambiatus.Object.User
     -> SelectionSet decodesTo Cambiatus.Object.Reward
-receiver object_ =
-    Object.selectionForCompositeField "receiver" [] object_ identity
+receiver object____ =
+    Object.selectionForCompositeField "receiver" [] object____ Basics.identity

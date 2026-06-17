@@ -22,8 +22,8 @@ import Json.Decode as Decode
 categories :
     SelectionSet decodesTo Cambiatus.Object.Category
     -> SelectionSet (Maybe (List decodesTo)) Cambiatus.Object.Category
-categories object_ =
-    Object.selectionForCompositeField "categories" [] object_ (identity >> Decode.list >> Decode.nullable)
+categories object____ =
+    Object.selectionForCompositeField "categories" [] object____ (Basics.identity >> Decode.list >> Decode.nullable)
 
 
 description : SelectionSet String Cambiatus.Object.Category
@@ -74,8 +74,8 @@ name =
 parent :
     SelectionSet decodesTo Cambiatus.Object.Category
     -> SelectionSet (Maybe decodesTo) Cambiatus.Object.Category
-parent object_ =
-    Object.selectionForCompositeField "parent" [] object_ (identity >> Decode.nullable)
+parent object____ =
+    Object.selectionForCompositeField "parent" [] object____ (Basics.identity >> Decode.nullable)
 
 
 position : SelectionSet Int Cambiatus.Object.Category
@@ -86,8 +86,8 @@ position =
 products :
     SelectionSet decodesTo Cambiatus.Object.Product
     -> SelectionSet (Maybe (List decodesTo)) Cambiatus.Object.Category
-products object_ =
-    Object.selectionForCompositeField "products" [] object_ (identity >> Decode.list >> Decode.nullable)
+products object____ =
+    Object.selectionForCompositeField "products" [] object____ (Basics.identity >> Decode.list >> Decode.nullable)
 
 
 slug : SelectionSet (Maybe String) Cambiatus.Object.Category

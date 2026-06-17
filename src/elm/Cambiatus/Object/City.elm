@@ -32,5 +32,5 @@ name =
 neighborhoods :
     SelectionSet decodesTo Cambiatus.Object.Neighborhood
     -> SelectionSet (List decodesTo) Cambiatus.Object.City
-neighborhoods object_ =
-    Object.selectionForCompositeField "neighborhoods" [] object_ (identity >> Decode.list)
+neighborhoods object____ =
+    Object.selectionForCompositeField "neighborhoods" [] object____ (Basics.identity >> Decode.list)

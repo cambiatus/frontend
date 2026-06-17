@@ -27,8 +27,8 @@ amount =
 community :
     SelectionSet decodesTo Cambiatus.Object.Community
     -> SelectionSet decodesTo Cambiatus.Object.Transfer
-community object_ =
-    Object.selectionForCompositeField "community" [] object_ identity
+community object____ =
+    Object.selectionForCompositeField "community" [] object____ Basics.identity
 
 
 communityId : SelectionSet String Cambiatus.Object.Transfer
@@ -59,8 +59,8 @@ createdTx =
 from :
     SelectionSet decodesTo Cambiatus.Object.User
     -> SelectionSet decodesTo Cambiatus.Object.Transfer
-from object_ =
-    Object.selectionForCompositeField "from" [] object_ identity
+from object____ =
+    Object.selectionForCompositeField "from" [] object____ Basics.identity
 
 
 fromId : SelectionSet String Cambiatus.Object.Transfer
@@ -81,8 +81,8 @@ memo =
 to :
     SelectionSet decodesTo Cambiatus.Object.User
     -> SelectionSet decodesTo Cambiatus.Object.Transfer
-to object_ =
-    Object.selectionForCompositeField "to" [] object_ identity
+to object____ =
+    Object.selectionForCompositeField "to" [] object____ Basics.identity
 
 
 toId : SelectionSet String Cambiatus.Object.Transfer

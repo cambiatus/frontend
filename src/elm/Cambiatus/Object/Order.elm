@@ -47,8 +47,8 @@ createdTx =
 from :
     SelectionSet decodesTo Cambiatus.Object.User
     -> SelectionSet decodesTo Cambiatus.Object.Order
-from object_ =
-    Object.selectionForCompositeField "from" [] object_ identity
+from object____ =
+    Object.selectionForCompositeField "from" [] object____ Basics.identity
 
 
 fromId : SelectionSet String Cambiatus.Object.Order
@@ -64,8 +64,8 @@ id =
 product :
     SelectionSet decodesTo Cambiatus.Object.Product
     -> SelectionSet decodesTo Cambiatus.Object.Order
-product object_ =
-    Object.selectionForCompositeField "product" [] object_ identity
+product object____ =
+    Object.selectionForCompositeField "product" [] object____ Basics.identity
 
 
 productId : SelectionSet Int Cambiatus.Object.Order
@@ -76,8 +76,8 @@ productId =
 to :
     SelectionSet decodesTo Cambiatus.Object.User
     -> SelectionSet decodesTo Cambiatus.Object.Order
-to object_ =
-    Object.selectionForCompositeField "to" [] object_ identity
+to object____ =
+    Object.selectionForCompositeField "to" [] object____ Basics.identity
 
 
 toId : SelectionSet String Cambiatus.Object.Order

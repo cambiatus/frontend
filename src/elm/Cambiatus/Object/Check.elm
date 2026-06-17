@@ -22,8 +22,8 @@ import Json.Decode as Decode
 claim :
     SelectionSet decodesTo Cambiatus.Object.Claim
     -> SelectionSet decodesTo Cambiatus.Object.Check
-claim object_ =
-    Object.selectionForCompositeField "claim" [] object_ identity
+claim object____ =
+    Object.selectionForCompositeField "claim" [] object____ Basics.identity
 
 
 createdAt : SelectionSet Cambiatus.ScalarCodecs.DateTime Cambiatus.Object.Check
@@ -54,5 +54,5 @@ isVerified =
 validator :
     SelectionSet decodesTo Cambiatus.Object.User
     -> SelectionSet decodesTo Cambiatus.Object.Check
-validator object_ =
-    Object.selectionForCompositeField "validator" [] object_ identity
+validator object____ =
+    Object.selectionForCompositeField "validator" [] object____ Basics.identity

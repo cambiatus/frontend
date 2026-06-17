@@ -65,6 +65,10 @@ type DeleteStatus
     = DeleteStatus
 
 
+type EncryptedMnemonicResult
+    = EncryptedMnemonicResult
+
+
 type Exists
     = Exists
 
@@ -115,6 +119,18 @@ type Order
 
 type PageInfo
     = PageInfo
+
+
+type PasskeyAssertionChallenge
+    = PasskeyAssertionChallenge
+
+
+type PasskeyCredential
+    = PasskeyCredential
+
+
+type PasskeyRegistrationChallenge
+    = PasskeyRegistrationChallenge
 
 
 type Product

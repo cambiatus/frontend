@@ -37,15 +37,15 @@ isRead =
 payload :
     SelectionSet decodesTo Cambiatus.Union.NotificationType
     -> SelectionSet decodesTo Cambiatus.Object.NotificationHistory
-payload object_ =
-    Object.selectionForCompositeField "payload" [] object_ identity
+payload object____ =
+    Object.selectionForCompositeField "payload" [] object____ Basics.identity
 
 
 recipient :
     SelectionSet decodesTo Cambiatus.Object.User
     -> SelectionSet decodesTo Cambiatus.Object.NotificationHistory
-recipient object_ =
-    Object.selectionForCompositeField "recipient" [] object_ identity
+recipient object____ =
+    Object.selectionForCompositeField "recipient" [] object____ Basics.identity
 
 
 recipientId : SelectionSet String Cambiatus.Object.NotificationHistory

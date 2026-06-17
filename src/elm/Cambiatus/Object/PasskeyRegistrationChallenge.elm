@@ -2,7 +2,7 @@
 -- https://github.com/dillonkearns/elm-graphql
 
 
-module Cambiatus.Object.State exposing (..)
+module Cambiatus.Object.PasskeyRegistrationChallenge exposing (..)
 
 import Cambiatus.InputObject
 import Cambiatus.Interface
@@ -19,18 +19,11 @@ import Graphql.SelectionSet exposing (SelectionSet)
 import Json.Decode as Decode
 
 
-cities :
-    SelectionSet decodesTo Cambiatus.Object.City
-    -> SelectionSet (List decodesTo) Cambiatus.Object.State
-cities object____ =
-    Object.selectionForCompositeField "cities" [] object____ (Basics.identity >> Decode.list)
+challenge : SelectionSet String Cambiatus.Object.PasskeyRegistrationChallenge
+challenge =
+    Object.selectionForField "String" "challenge" [] Decode.string
 
 
-id : SelectionSet Cambiatus.ScalarCodecs.Id Cambiatus.Object.State
-id =
-    Object.selectionForField "ScalarCodecs.Id" "id" [] (Cambiatus.ScalarCodecs.codecs |> Cambiatus.Scalar.unwrapCodecs |> .codecId |> .decoder)
-
-
-name : SelectionSet String Cambiatus.Object.State
-name =
-    Object.selectionForField "String" "name" [] Decode.string
+excludeCredentialIds : SelectionSet (List String) Cambiatus.Object.PasskeyRegistrationChallenge
+excludeCredentialIds =
+    Object.selectionForField "(List String)" "excludeCredentialIds" [] (Decode.string |> Decode.list)

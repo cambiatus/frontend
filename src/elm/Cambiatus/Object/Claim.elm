@@ -23,8 +23,8 @@ import Json.Decode as Decode
 action :
     SelectionSet decodesTo Cambiatus.Object.Action
     -> SelectionSet decodesTo Cambiatus.Object.Claim
-action object_ =
-    Object.selectionForCompositeField "action" [] object_ identity
+action object____ =
+    Object.selectionForCompositeField "action" [] object____ Basics.identity
 
 
 type alias ChecksOptionalArguments =
@@ -35,23 +35,23 @@ checks :
     (ChecksOptionalArguments -> ChecksOptionalArguments)
     -> SelectionSet decodesTo Cambiatus.Object.Check
     -> SelectionSet (List decodesTo) Cambiatus.Object.Claim
-checks fillInOptionals object_ =
+checks fillInOptionals____ object____ =
     let
-        filledInOptionals =
-            fillInOptionals { input = Absent }
+        filledInOptionals____ =
+            fillInOptionals____ { input = Absent }
 
-        optionalArgs =
-            [ Argument.optional "input" filledInOptionals.input Cambiatus.InputObject.encodeChecksInput ]
-                |> List.filterMap identity
+        optionalArgs____ =
+            [ Argument.optional "input" filledInOptionals____.input Cambiatus.InputObject.encodeChecksInput ]
+                |> List.filterMap Basics.identity
     in
-    Object.selectionForCompositeField "checks" optionalArgs object_ (identity >> Decode.list)
+    Object.selectionForCompositeField "checks" optionalArgs____ object____ (Basics.identity >> Decode.list)
 
 
 claimer :
     SelectionSet decodesTo Cambiatus.Object.User
     -> SelectionSet decodesTo Cambiatus.Object.Claim
-claimer object_ =
-    Object.selectionForCompositeField "claimer" [] object_ identity
+claimer object____ =
+    Object.selectionForCompositeField "claimer" [] object____ Basics.identity
 
 
 createdAt : SelectionSet Cambiatus.ScalarCodecs.DateTime Cambiatus.Object.Claim

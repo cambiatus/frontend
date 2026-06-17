@@ -24,8 +24,8 @@ import Json.Decode as Decode exposing (Decoder)
 highlightedNews :
     SelectionSet decodesTo Cambiatus.Object.News
     -> SelectionSet (Maybe decodesTo) RootSubscription
-highlightedNews object_ =
-    Object.selectionForCompositeField "highlightedNews" [] object_ (identity >> Decode.nullable)
+highlightedNews object____ =
+    Object.selectionForCompositeField "highlightedNews" [] object____ (Basics.identity >> Decode.nullable)
 
 
 type alias NewcommunityRequiredArguments =
@@ -38,8 +38,8 @@ newcommunity :
     NewcommunityRequiredArguments
     -> SelectionSet decodesTo Cambiatus.Object.Community
     -> SelectionSet decodesTo RootSubscription
-newcommunity requiredArgs object_ =
-    Object.selectionForCompositeField "newcommunity" [ Argument.required "input" requiredArgs.input Cambiatus.InputObject.encodeNewCommunityInput ] object_ identity
+newcommunity requiredArgs____ object____ =
+    Object.selectionForCompositeField "newcommunity" [ Argument.required "input" requiredArgs____.input Cambiatus.InputObject.encodeNewCommunityInput ] object____ Basics.identity
 
 
 type alias TransfersucceedRequiredArguments =
@@ -50,8 +50,8 @@ transfersucceed :
     TransfersucceedRequiredArguments
     -> SelectionSet decodesTo Cambiatus.Object.Transfer
     -> SelectionSet decodesTo RootSubscription
-transfersucceed requiredArgs object_ =
-    Object.selectionForCompositeField "transfersucceed" [ Argument.required "input" requiredArgs.input Cambiatus.InputObject.encodeTransferSucceedInput ] object_ identity
+transfersucceed requiredArgs____ object____ =
+    Object.selectionForCompositeField "transfersucceed" [ Argument.required "input" requiredArgs____.input Cambiatus.InputObject.encodeTransferSucceedInput ] object____ Basics.identity
 
 
 type alias UnreadsRequiredArguments =
@@ -64,5 +64,5 @@ unreads :
     UnreadsRequiredArguments
     -> SelectionSet decodesTo Cambiatus.Object.UnreadNotifications
     -> SelectionSet decodesTo RootSubscription
-unreads requiredArgs object_ =
-    Object.selectionForCompositeField "unreads" [ Argument.required "input" requiredArgs.input Cambiatus.InputObject.encodeUnreadNotificationsSubscriptionInput ] object_ identity
+unreads requiredArgs____ object____ =
+    Object.selectionForCompositeField "unreads" [ Argument.required "input" requiredArgs____.input Cambiatus.InputObject.encodeUnreadNotificationsSubscriptionInput ] object____ Basics.identity

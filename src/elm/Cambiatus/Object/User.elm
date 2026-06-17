@@ -29,8 +29,8 @@ account =
 address :
     SelectionSet decodesTo Cambiatus.Object.Address
     -> SelectionSet (Maybe decodesTo) Cambiatus.Object.User
-address object_ =
-    Object.selectionForCompositeField "address" [] object_ (identity >> Decode.nullable)
+address object____ =
+    Object.selectionForCompositeField "address" [] object____ (Basics.identity >> Decode.nullable)
 
 
 analysisCount : SelectionSet Int Cambiatus.Object.User
@@ -76,30 +76,30 @@ claims :
     (ClaimsOptionalArguments -> ClaimsOptionalArguments)
     -> SelectionSet decodesTo Cambiatus.Object.Claim
     -> SelectionSet (List decodesTo) Cambiatus.Object.User
-claims fillInOptionals object_ =
+claims fillInOptionals____ object____ =
     let
-        filledInOptionals =
-            fillInOptionals { communityId = Absent }
+        filledInOptionals____ =
+            fillInOptionals____ { communityId = Absent }
 
-        optionalArgs =
-            [ Argument.optional "communityId" filledInOptionals.communityId Encode.string ]
-                |> List.filterMap identity
+        optionalArgs____ =
+            [ Argument.optional "communityId" filledInOptionals____.communityId Encode.string ]
+                |> List.filterMap Basics.identity
     in
-    Object.selectionForCompositeField "claims" optionalArgs object_ (identity >> Decode.list)
+    Object.selectionForCompositeField "claims" optionalArgs____ object____ (Basics.identity >> Decode.list)
 
 
 communities :
     SelectionSet decodesTo Cambiatus.Object.Community
     -> SelectionSet (List decodesTo) Cambiatus.Object.User
-communities object_ =
-    Object.selectionForCompositeField "communities" [] object_ (identity >> Decode.list)
+communities object____ =
+    Object.selectionForCompositeField "communities" [] object____ (Basics.identity >> Decode.list)
 
 
 contacts :
     SelectionSet decodesTo Cambiatus.Object.Contact
     -> SelectionSet (List decodesTo) Cambiatus.Object.User
-contacts object_ =
-    Object.selectionForCompositeField "contacts" [] object_ (identity >> Decode.list)
+contacts object____ =
+    Object.selectionForCompositeField "contacts" [] object____ (Basics.identity >> Decode.list)
 
 
 type alias ContributionCountOptionalArguments =
@@ -114,16 +114,16 @@ type alias ContributionCountOptionalArguments =
 contributionCount :
     (ContributionCountOptionalArguments -> ContributionCountOptionalArguments)
     -> SelectionSet Int Cambiatus.Object.User
-contributionCount fillInOptionals =
+contributionCount fillInOptionals____ =
     let
-        filledInOptionals =
-            fillInOptionals { communityId = Absent }
+        filledInOptionals____ =
+            fillInOptionals____ { communityId = Absent }
 
-        optionalArgs =
-            [ Argument.optional "communityId" filledInOptionals.communityId Encode.string ]
-                |> List.filterMap identity
+        optionalArgs____ =
+            [ Argument.optional "communityId" filledInOptionals____.communityId Encode.string ]
+                |> List.filterMap Basics.identity
     in
-    Object.selectionForField "Int" "contributionCount" optionalArgs Decode.int
+    Object.selectionForField "Int" "contributionCount" optionalArgs____ Decode.int
 
 
 type alias ContributionsOptionalArguments =
@@ -136,16 +136,16 @@ contributions :
     (ContributionsOptionalArguments -> ContributionsOptionalArguments)
     -> SelectionSet decodesTo Cambiatus.Object.Contribution
     -> SelectionSet (List decodesTo) Cambiatus.Object.User
-contributions fillInOptionals object_ =
+contributions fillInOptionals____ object____ =
     let
-        filledInOptionals =
-            fillInOptionals { communityId = Absent, status = Absent }
+        filledInOptionals____ =
+            fillInOptionals____ { communityId = Absent, status = Absent }
 
-        optionalArgs =
-            [ Argument.optional "communityId" filledInOptionals.communityId Encode.string, Argument.optional "status" filledInOptionals.status (Encode.enum Cambiatus.Enum.ContributionStatusType.toString) ]
-                |> List.filterMap identity
+        optionalArgs____ =
+            [ Argument.optional "communityId" filledInOptionals____.communityId Encode.string, Argument.optional "status" filledInOptionals____.status (Encode.enum Cambiatus.Enum.ContributionStatusType.toString) ]
+                |> List.filterMap Basics.identity
     in
-    Object.selectionForCompositeField "contributions" optionalArgs object_ (identity >> Decode.list)
+    Object.selectionForCompositeField "contributions" optionalArgs____ object____ (Basics.identity >> Decode.list)
 
 
 createdAt : SelectionSet (Maybe String) Cambiatus.Object.User
@@ -183,8 +183,8 @@ getPayersByAccount :
     GetPayersByAccountRequiredArguments
     -> SelectionSet decodesTo Cambiatus.Object.User
     -> SelectionSet (Maybe (List (Maybe decodesTo))) Cambiatus.Object.User
-getPayersByAccount requiredArgs object_ =
-    Object.selectionForCompositeField "getPayersByAccount" [ Argument.required "account" requiredArgs.account Encode.string ] object_ (identity >> Decode.nullable >> Decode.list >> Decode.nullable)
+getPayersByAccount requiredArgs____ object____ =
+    Object.selectionForCompositeField "getPayersByAccount" [ Argument.required "account" requiredArgs____.account Encode.string ] object____ (Basics.identity >> Decode.nullable >> Decode.list >> Decode.nullable)
 
 
 interests : SelectionSet (Maybe String) Cambiatus.Object.User
@@ -195,13 +195,18 @@ interests =
 kyc :
     SelectionSet decodesTo Cambiatus.Object.KycData
     -> SelectionSet (Maybe decodesTo) Cambiatus.Object.User
-kyc object_ =
-    Object.selectionForCompositeField "kyc" [] object_ (identity >> Decode.nullable)
+kyc object____ =
+    Object.selectionForCompositeField "kyc" [] object____ (Basics.identity >> Decode.nullable)
 
 
 language : SelectionSet (Maybe Cambiatus.Enum.Language.Language) Cambiatus.Object.User
 language =
     Object.selectionForField "(Maybe Enum.Language.Language)" "language" [] (Cambiatus.Enum.Language.decoder |> Decode.nullable)
+
+
+lastSeen : SelectionSet (Maybe Cambiatus.ScalarCodecs.DateTime) Cambiatus.Object.User
+lastSeen =
+    Object.selectionForField "(Maybe ScalarCodecs.DateTime)" "lastSeen" [] (Cambiatus.ScalarCodecs.codecs |> Cambiatus.Scalar.unwrapCodecs |> .codecDateTime |> .decoder |> Decode.nullable)
 
 
 latestAcceptedTerms : SelectionSet (Maybe Cambiatus.ScalarCodecs.NaiveDateTime) Cambiatus.Object.User
@@ -227,22 +232,22 @@ name =
 network :
     SelectionSet decodesTo Cambiatus.Object.Network
     -> SelectionSet (Maybe (List (Maybe decodesTo))) Cambiatus.Object.User
-network object_ =
-    Object.selectionForCompositeField "network" [] object_ (identity >> Decode.nullable >> Decode.list >> Decode.nullable)
+network object____ =
+    Object.selectionForCompositeField "network" [] object____ (Basics.identity >> Decode.nullable >> Decode.list >> Decode.nullable)
 
 
 products :
     SelectionSet decodesTo Cambiatus.Object.Product
     -> SelectionSet (List (Maybe decodesTo)) Cambiatus.Object.User
-products object_ =
-    Object.selectionForCompositeField "products" [] object_ (identity >> Decode.nullable >> Decode.list)
+products object____ =
+    Object.selectionForCompositeField "products" [] object____ (Basics.identity >> Decode.nullable >> Decode.list)
 
 
 roles :
     SelectionSet decodesTo Cambiatus.Object.Role
     -> SelectionSet (List decodesTo) Cambiatus.Object.User
-roles object_ =
-    Object.selectionForCompositeField "roles" [] object_ (identity >> Decode.list)
+roles object____ =
+    Object.selectionForCompositeField "roles" [] object____ (Basics.identity >> Decode.list)
 
 
 transferNotification : SelectionSet Bool Cambiatus.Object.User
@@ -268,13 +273,13 @@ transfers :
     (TransfersOptionalArguments -> TransfersOptionalArguments)
     -> SelectionSet decodesTo Cambiatus.Object.TransferConnection
     -> SelectionSet (Maybe decodesTo) Cambiatus.Object.User
-transfers fillInOptionals object_ =
+transfers fillInOptionals____ object____ =
     let
-        filledInOptionals =
-            fillInOptionals { after = Absent, before = Absent, filter = Absent, first = Absent, last = Absent }
+        filledInOptionals____ =
+            fillInOptionals____ { after = Absent, before = Absent, filter = Absent, first = Absent, last = Absent }
 
-        optionalArgs =
-            [ Argument.optional "after" filledInOptionals.after Encode.string, Argument.optional "before" filledInOptionals.before Encode.string, Argument.optional "filter" filledInOptionals.filter Cambiatus.InputObject.encodeTransferFilter, Argument.optional "first" filledInOptionals.first Encode.int, Argument.optional "last" filledInOptionals.last Encode.int ]
-                |> List.filterMap identity
+        optionalArgs____ =
+            [ Argument.optional "after" filledInOptionals____.after Encode.string, Argument.optional "before" filledInOptionals____.before Encode.string, Argument.optional "filter" filledInOptionals____.filter Cambiatus.InputObject.encodeTransferFilter, Argument.optional "first" filledInOptionals____.first Encode.int, Argument.optional "last" filledInOptionals____.last Encode.int ]
+                |> List.filterMap Basics.identity
     in
-    Object.selectionForCompositeField "transfers" optionalArgs object_ (identity >> Decode.nullable)
+    Object.selectionForCompositeField "transfers" optionalArgs____ object____ (Basics.identity >> Decode.nullable)

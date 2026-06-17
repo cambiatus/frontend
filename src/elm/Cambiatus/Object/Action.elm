@@ -28,23 +28,23 @@ type alias ClaimCountOptionalArguments =
 claimCount :
     (ClaimCountOptionalArguments -> ClaimCountOptionalArguments)
     -> SelectionSet Int Cambiatus.Object.Action
-claimCount fillInOptionals =
+claimCount fillInOptionals____ =
     let
-        filledInOptionals =
-            fillInOptionals { status = Absent }
+        filledInOptionals____ =
+            fillInOptionals____ { status = Absent }
 
-        optionalArgs =
-            [ Argument.optional "status" filledInOptionals.status (Encode.enum Cambiatus.Enum.ClaimStatus.toString) ]
-                |> List.filterMap identity
+        optionalArgs____ =
+            [ Argument.optional "status" filledInOptionals____.status (Encode.enum Cambiatus.Enum.ClaimStatus.toString) ]
+                |> List.filterMap Basics.identity
     in
-    Object.selectionForField "Int" "claimCount" optionalArgs Decode.int
+    Object.selectionForField "Int" "claimCount" optionalArgs____ Decode.int
 
 
 claims :
     SelectionSet decodesTo Cambiatus.Object.Claim
     -> SelectionSet (List decodesTo) Cambiatus.Object.Action
-claims object_ =
-    Object.selectionForCompositeField "claims" [] object_ (identity >> Decode.list)
+claims object____ =
+    Object.selectionForCompositeField "claims" [] object____ (Basics.identity >> Decode.list)
 
 
 createdAt : SelectionSet Cambiatus.ScalarCodecs.DateTime Cambiatus.Object.Action
@@ -70,8 +70,8 @@ createdTx =
 creator :
     SelectionSet decodesTo Cambiatus.Object.User
     -> SelectionSet decodesTo Cambiatus.Object.Action
-creator object_ =
-    Object.selectionForCompositeField "creator" [] object_ identity
+creator object____ =
+    Object.selectionForCompositeField "creator" [] object____ Basics.identity
 
 
 creatorId : SelectionSet String Cambiatus.Object.Action
@@ -117,8 +117,8 @@ isCompleted =
 objective :
     SelectionSet decodesTo Cambiatus.Object.Objective
     -> SelectionSet decodesTo Cambiatus.Object.Action
-objective object_ =
-    Object.selectionForCompositeField "objective" [] object_ identity
+objective object____ =
+    Object.selectionForCompositeField "objective" [] object____ Basics.identity
 
 
 photoProofInstructions : SelectionSet (Maybe String) Cambiatus.Object.Action
@@ -149,8 +149,8 @@ usagesLeft =
 validators :
     SelectionSet decodesTo Cambiatus.Object.User
     -> SelectionSet (List decodesTo) Cambiatus.Object.Action
-validators object_ =
-    Object.selectionForCompositeField "validators" [] object_ (identity >> Decode.list)
+validators object____ =
+    Object.selectionForCompositeField "validators" [] object____ (Basics.identity >> Decode.list)
 
 
 verificationType : SelectionSet Cambiatus.Enum.VerificationType.VerificationType Cambiatus.Object.Action

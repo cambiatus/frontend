@@ -22,15 +22,15 @@ import Json.Decode as Decode
 account :
     SelectionSet decodesTo Cambiatus.Object.User
     -> SelectionSet (Maybe decodesTo) Cambiatus.Object.Network
-account object_ =
-    Object.selectionForCompositeField "account" [] object_ (identity >> Decode.nullable)
+account object____ =
+    Object.selectionForCompositeField "account" [] object____ (Basics.identity >> Decode.nullable)
 
 
 community :
     SelectionSet decodesTo Cambiatus.Object.Community
     -> SelectionSet decodesTo Cambiatus.Object.Network
-community object_ =
-    Object.selectionForCompositeField "community" [] object_ identity
+community object____ =
+    Object.selectionForCompositeField "community" [] object____ Basics.identity
 
 
 communityId : SelectionSet String Cambiatus.Object.Network

@@ -22,8 +22,8 @@ import Json.Decode as Decode
 community :
     SelectionSet decodesTo Cambiatus.Object.Community
     -> SelectionSet decodesTo Cambiatus.Object.Mint
-community object_ =
-    Object.selectionForCompositeField "community" [] object_ identity
+community object____ =
+    Object.selectionForCompositeField "community" [] object____ Basics.identity
 
 
 createdAt : SelectionSet Cambiatus.ScalarCodecs.DateTime Cambiatus.Object.Mint
@@ -59,5 +59,5 @@ quantity =
 to :
     SelectionSet decodesTo Cambiatus.Object.User
     -> SelectionSet decodesTo Cambiatus.Object.Mint
-to object_ =
-    Object.selectionForCompositeField "to" [] object_ identity
+to object____ =
+    Object.selectionForCompositeField "to" [] object____ Basics.identity
