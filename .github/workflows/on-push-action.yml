@@ -13,7 +13,7 @@ jobs:
           node-version: 20.x
 
       - name: Get deps
-        run: yarn install --production
+        run: yarn install --frozen-lockfile
 
       - name: Add `node_modules/.bin` to PATH
         run: echo $(yarn bin) >> $GITHUB_PATH
@@ -36,4 +36,4 @@ jobs:
         run: yarn build
 
       - name: Check elm-book
-        run: cd elm-book && yarn install --production && yarn elm-review && yarn elm-format --validate ./src/elm && yarn build
+        run: cd elm-book && yarn install --frozen-lockfile && yarn elm-review && yarn elm-format --validate ./src/elm && yarn build
