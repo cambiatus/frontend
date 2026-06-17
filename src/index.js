@@ -675,7 +675,7 @@ async function handleJavascriptPort(arg) {
     case "generateKeys": {
       const userLang = getUserLanguage();
       const [randomWords, hexRandomWords] = mnemonic.generateRandom(userLang);
-      const privateKey = ecc.seedPrivate(hexRandomWords);
+      const privateKey = mnemonic.seedPrivate(hexRandomWords);
       const publicKey = ecc.privateToPublic(privateKey);
 
       return {
@@ -690,7 +690,7 @@ async function handleJavascriptPort(arg) {
     }
     case "getAccountFrom12Words": {
       const { passphrase } = arg.data;
-      const privateKey = ecc.seedPrivate(mnemonic.toSeedHex(passphrase));
+      const privateKey = mnemonic.seedPrivate(mnemonic.toSeedHex(passphrase));
 
       if (!ecc.isValidPrivate(privateKey)) {
         return { error: "error.invalidKey" };
