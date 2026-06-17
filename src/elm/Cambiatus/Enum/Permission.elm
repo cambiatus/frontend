@@ -9,6 +9,7 @@ import Json.Decode as Decode exposing (Decoder)
 
 {-| Permissions a role can have
 
+  - Admin - Role permission that grants full administrative access to the community
   - Award - Role permission that allows to award rewards on community actions
   - Claim - Role permission that allows to claim actions
   - Invite - Role permission that allows to create invitations to the community
@@ -19,7 +20,8 @@ import Json.Decode as Decode exposing (Decoder)
 
 -}
 type Permission
-    = Award
+    = Admin
+    | Award
     | Claim
     | Invite
     | Order
@@ -30,7 +32,7 @@ type Permission
 
 list : List Permission
 list =
-    [ Award, Claim, Invite, Order, Sell, Transfer, Verify ]
+    [ Admin, Award, Claim, Invite, Order, Sell, Transfer, Verify ]
 
 
 decoder : Decoder Permission
@@ -39,6 +41,9 @@ decoder =
         |> Decode.andThen
             (\string ->
                 case string of
+                    "ADMIN" ->
+                        Decode.succeed Admin
+
                     "AWARD" ->
                         Decode.succeed Award
 
@@ -70,6 +75,9 @@ decoder =
 toString : Permission -> String
 toString enum =
     case enum of
+        Admin ->
+            "ADMIN"
+
         Award ->
             "AWARD"
 
@@ -106,6 +114,9 @@ This can be useful for generating Strings to use for <select> menus to check whi
 fromString : String -> Maybe Permission
 fromString enumString =
     case enumString of
+        "ADMIN" ->
+            Just Admin
+
         "AWARD" ->
             Just Award
 
