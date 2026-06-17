@@ -1,6 +1,14 @@
 import * as bip39 from 'bip39'
 import { sha256, PrivateKey } from 'eosjs/dist/eosjs-key-conversions'
 import { KeyType, privateKeyToString } from 'eosjs/dist/eosjs-numeric'
+import english from 'bip39/src/wordlists/english.json'
+import portuguese from 'bip39/src/wordlists/portuguese.json'
+import spanish from 'bip39/src/wordlists/spanish.json'
+
+// bip39 loads its wordlist JSONs through try/catch require()s (see bip39
+// src/_wordlists.js), which the production bundler drops — so bip39.wordlists.*
+// is undefined in the browser. Import the JSONs directly so they're bundled.
+const wordlists = { english, portuguese, spanish }
 
 /***
  * Generates a random mnemonic
@@ -8,11 +16,11 @@ import { KeyType, privateKeyToString } from 'eosjs/dist/eosjs-numeric'
  * @returns {[string,string]}
  */
 function generateRandom (userLocale) {
-  let wordlist = bip39.wordlists.english
+  let wordlist = wordlists.english
   if (userLocale.toLowerCase().startsWith('es')) {
-    wordlist = bip39.wordlists.spanish
+    wordlist = wordlists.spanish
   } else if (userLocale.toLowerCase().startsWith('pt')) {
-    wordlist = bip39.wordlists.portuguese
+    wordlist = wordlists.portuguese
   }
 
   const strength = undefined
@@ -53,4 +61,5 @@ export default {
   generateRandom,
   toSeedHex,
   seedPrivate,
+  wordlists,
 }
