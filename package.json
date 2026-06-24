@@ -68,7 +68,7 @@
     "eslint": "^8.57.0",
     "eslint-plugin-html": "^7.1.0",
     "html-webpack-plugin": "^5.6.0",
-    "http-proxy-middleware": "^2.0.6",
+    "http-proxy-middleware": "^2.0.10",
     "mini-css-extract-plugin": "^2.8.1",
     "minimist": "^1.2.8",
     "postcss-flexbugs-fixes": "^5.0.2",
