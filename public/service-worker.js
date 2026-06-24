@@ -1,32 +1,41 @@
-var CACHE_NAME = 'bes-site-cache-v1-hotfix'
+/* global self, caches */
 
-// See https://github.com/cambiatus/frontend/issues/252 for the details
-var urlsToCache = []
-self.caches.delete('bes-site-cache-v1')
+// Self-healing service worker. See https://github.com/cambiatus/frontend/issues/252
+//
+// Old versions precached the app shell. After a deploy the hashed asset names
+// change, so a client serving the stale cached index.html requested JS that no
+// longer existed (404) and froze on the splash screen — most visibly in Safari.
+// This SW caches nothing, purges every previous cache, takes control of open
+// tabs immediately, and reloads any window still running the stale bundle, so
+// users recover automatically without clearing site data by hand.
 
-// install event handler here setup our local landscape
 self.addEventListener('install', function (event) {
+  // Replace the old SW as soon as this one installs.
   self.skipWaiting()
+})
+
+self.addEventListener('activate', function (event) {
   event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then(function (cache) {
-        return cache.addAll(urlsToCache)
+    (async function () {
+      // Drop every cache left behind by any previous SW version.
+      const names = await caches.keys()
+      await Promise.all(names.map(function (name) { return caches.delete(name) }))
+
+      // Control already-open tabs without waiting for a reload.
+      await self.clients.claim()
+
+      // Reload any window still showing the stale, frozen bundle so it fetches
+      // the live assets from the network.
+      const windows = await self.clients.matchAll({ type: 'window' })
+      windows.forEach(function (client) {
+        if ('navigate' in client) { client.navigate(client.url) }
       })
+    })()
   )
 })
 
-/* global self, caches, fetch  */
-// fetch handler
-self.addEventListener('fetch', function (event) {
-  event.respondWith(
-    caches.match(event.request).then(function (response) {
-      if (response) {
-        return response
-      }
-      return fetch(event.request)
-    })
-  )
-})
+// No fetch handler: never serve app assets from cache. Requests go straight to
+// the network (HTTP caching still applies); the SW exists only for push.
 
 // Configure push eventListener to handle C2DM messages
 self.addEventListener('push', function (event) {
