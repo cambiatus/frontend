@@ -1,7 +1,5 @@
 # Cambiatus frontend
 
-[![Elm-book deploy status](https://api.netlify.com/api/v1/badges/b6672baa-f08f-4a9b-8318-bb2f45c780ea/deploy-status)](https://cambiatus-elm-book.netlify.app/)
-
 This project uses [Vite](https://vitejs.dev/) as the build tool and [Elm](https://elm-lang.org/) as the main language.
 
 You must have yarn installed to develop or build.
@@ -75,6 +73,13 @@ elm-analyse -p 3001 -s   # show extended analyse in the browser on `localhost:30
 yarn install
 yarn build
 ```
+
+## Deployment
+
+Production is a static Vite bundle **built in CI and served by nginx off the EC2 box**
+(not Netlify). See [`DEPLOYMENT.md`](./DEPLOYMENT.md): `gh workflow run "Build static
+frontend"` → `gh run download -n frontend-static` → `./deploy.sh app.cambiatus.io
+frontend-static.tar.gz`.
 
 ## Configurations
 
