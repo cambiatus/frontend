@@ -1,0 +1,39 @@
+name: Build static frontend
+
+# Builds the static Vite bundle in CI and publishes it as an artifact, so prod
+# never builds on the box (the server carried a 950M dev checkout just to serve a
+# ~17M static tree). Deploy stays local:
+#   gh run download -n frontend-static            # -> frontend-static.tar.gz
+#   ./deploy.sh app.cambiatus.io frontend-static.tar.gz
+#
+# The bundle is environment-agnostic — runtime config (API/chain URLs) comes from
+# env-config.js, which deploy.sh overlays from the server's prod copy. See DEPLOYMENT.md.
+
+on:
+  workflow_dispatch: {}
+  push:
+    tags: ['v*']
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+          cache: yarn
+
+      - run: yarn install --frozen-lockfile
+
+      - run: yarn build            # vite build -> dist/
+
+      - name: Package static tree
+        run: tar -czf frontend-static.tar.gz -C dist .
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: frontend-static
+          path: frontend-static.tar.gz
+          retention-days: 14
