@@ -358,21 +358,21 @@ profileToForm { name, email, bio, localization, avatar, interests, contacts } =
 
 viewProfileNameTag :
     Translation.Translators
-    -> { showBg : Bool }
+    -> { showBg : Bool, showYou : Bool }
     -> Eos.Name
     -> { profile | account : Eos.Name, name : Maybe String }
     -> Html msg
-viewProfileNameTag shared { showBg } loggedInAccount profile =
+viewProfileNameTag shared { showBg, showYou } loggedInAccount profile =
     p
         [ class "py-1 px-3 uppercase font-bold text-xs text-center truncate"
         , classList [ ( "bg-black text-white rounded-label", showBg ) ]
         ]
-        [ viewProfileName shared loggedInAccount profile ]
+        [ viewProfileName shared showYou loggedInAccount profile ]
 
 
-viewProfileName : Translation.Translators -> Eos.Name -> { profile | account : Eos.Name, name : Maybe String } -> Html msg
-viewProfileName translators loggedInAccount profile =
-    if profile.account == loggedInAccount then
+viewProfileName : Translation.Translators -> Bool -> Eos.Name -> { profile | account : Eos.Name, name : Maybe String } -> Html msg
+viewProfileName translators showYou loggedInAccount profile =
+    if showYou && profile.account == loggedInAccount then
         text (translators.t "transfer_result.you")
 
     else

@@ -242,6 +242,7 @@ viewTransferCard loggedIn transfer transferDirection profileSummaries profileSum
         viewSummary profile summary =
             summary
                 |> Profile.Summary.withNameBg False
+                |> Profile.Summary.withoutYouLabel
                 |> Profile.Summary.withRelativeSelector "#content-container"
                 |> Profile.Summary.view loggedIn.shared.translators loggedIn.accountName profile
                 |> Html.map (profileSummaryToMsg (profile == leftProfile))
