@@ -14,6 +14,7 @@ module Profile.Summary exposing
     , withRelativeSelector
     , withScrollSelector
     , withoutName
+    , withoutYouLabel
     )
 
 import Avatar
@@ -44,6 +45,7 @@ type alias Model =
     , scrollSelector : Maybe String
     , showNameTag : Bool
     , showNameTagBg : Bool
+    , showYouLabel : Bool
     , extraAttrs : List (Html.Attribute Msg)
     }
 
@@ -62,6 +64,7 @@ init isLarge =
     , scrollSelector = Nothing
     , showNameTag = True
     , showNameTagBg = True
+    , showYouLabel = True
     , extraAttrs = []
     }
 
@@ -129,6 +132,11 @@ withoutName model =
     { model | showNameTag = False }
 
 
+withoutYouLabel : Model -> Model
+withoutYouLabel model =
+    { model | showYouLabel = False }
+
+
 withImageSize : String -> Model -> Model
 withImageSize imageSize model =
     { model | imageSize = imageSize }
@@ -177,7 +185,7 @@ viewUserNameTag translators loggedInAccount profile model =
     if model.showNameTag then
         div [ class "mt-2 w-20", ariaHidden True ]
             [ Profile.viewProfileNameTag translators
-                { showBg = model.showNameTagBg }
+                { showBg = model.showNameTagBg, showYou = model.showYouLabel }
                 loggedInAccount
                 profile
             ]
