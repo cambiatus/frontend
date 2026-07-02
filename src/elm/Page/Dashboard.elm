@@ -197,8 +197,12 @@ view ({ shared } as loggedIn) model =
 
                 ( RemoteData.Success (Just balance), RemoteData.Success community ) ->
                     let
+                        -- Validators of some action's explicit list, plus
+                        -- holders of the Verify permission, who can vote on
+                        -- claims of role-based actions (empty validator list)
                         isValidator =
                             List.any ((==) loggedIn.accountName) community.validators
+                                || List.member Permission.Verify (LoggedIn.permissions loggedIn)
                     in
                     div []
                         [ div [ class "container mx-auto my-8 px-4 lg:grid lg:grid-cols-3 lg:gap-7" ]

@@ -1,6 +1,7 @@
 module ClaimTests exposing (all)
 
 import Action
+import Cambiatus.Enum.Permission as Permission
 import Claim
 import Expect
 import Test exposing (..)
@@ -32,10 +33,14 @@ isValidated =
 
 isVotable : Test
 isVotable =
-    fuzz3 Fuzz.claim Fuzz.name Fuzz.time "isVotable" <|
-        \fuzzClaim fuzzName fuzzTime ->
-            List.any (\v -> v.account == fuzzName) fuzzClaim.action.validators
+    fuzz3 Fuzz.claim Fuzz.name (Fuzz.pair Fuzz.permissions Fuzz.time) "isVotable" <|
+        \fuzzClaim fuzzName ( fuzzPermissions, fuzzTime ) ->
+            (List.any (\v -> v.account == fuzzName) fuzzClaim.action.validators
+                || (List.isEmpty fuzzClaim.action.validators
+                        && List.member Permission.Verify fuzzPermissions
+                   )
+            )
                 && not (Claim.isValidated fuzzClaim fuzzName)
                 && not (Action.isClosed fuzzClaim.action fuzzTime)
                 && not fuzzClaim.action.isCompleted
-                |> Expect.equal (Claim.isVotable fuzzClaim fuzzName fuzzTime)
+                |> Expect.equal (Claim.isVotable fuzzClaim fuzzName fuzzPermissions fuzzTime)
