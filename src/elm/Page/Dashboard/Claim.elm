@@ -135,7 +135,7 @@ view ({ shared } as loggedIn) model =
 
                                 _ ->
                                     if
-                                        Claim.isVotable claim loggedIn.accountName shared.now
+                                        Claim.isVotable claim loggedIn.accountName (LoggedIn.permissions loggedIn) shared.now
                                             && not model.isValidated
                                     then
                                         viewVoteButtons loggedIn claim.id model.claimModalStatus

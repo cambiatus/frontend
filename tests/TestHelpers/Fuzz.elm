@@ -11,6 +11,8 @@ module TestHelpers.Fuzz exposing
     , maybeDateTime
     , name
     , nite
+    , pair
+    , permissions
     , phone
     , time
     , updateTokenData
@@ -18,6 +20,7 @@ module TestHelpers.Fuzz exposing
 
 import Action
 import Avatar
+import Cambiatus.Enum.Permission as Permission exposing (Permission)
 import Cambiatus.Scalar
 import Claim
 import Community
@@ -40,6 +43,11 @@ time =
     Fuzz.custom Random.time Shrink.time
 
 
+pair : Fuzzer a -> Fuzzer b -> Fuzzer ( a, b )
+pair fuzzerA fuzzerB =
+    Fuzz.tuple ( fuzzerA, fuzzerB )
+
+
 maybeDateTime : Fuzzer (Maybe Cambiatus.Scalar.DateTime)
 maybeDateTime =
     Fuzz.custom (Random.maybe Random.dateTime) (Shrink.maybe Shrink.dateTime)
@@ -58,6 +66,14 @@ avatar =
 name : Fuzzer Eos.Name
 name =
     Fuzz.custom Random.name Shrink.noShrink
+
+
+permissions : Fuzzer (List Permission)
+permissions =
+    Permission.list
+        |> List.map Fuzz.constant
+        |> Fuzz.oneOf
+        |> Fuzz.list
 
 
 

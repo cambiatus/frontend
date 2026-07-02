@@ -18,6 +18,7 @@ module Session.LoggedIn exposing
     , maybeInitWith
     , msgToString
     , mutation
+    , permissions
     , profile
     , query
     , subscriptions
@@ -2887,13 +2888,13 @@ withPrivateKey model requiredPermissions subModel subMsg successfulUR =
 {-| Determines if a profile has a set of permissions
 -}
 hasPermissions : Profile.Model -> List Permission -> Bool
-hasPermissions profile_ permissions =
+hasPermissions profile_ requiredPermissions =
     let
         allPermissions =
             List.concatMap .permissions profile_.roles
     in
     List.all (\permission -> List.member permission allPermissions)
-        permissions
+        requiredPermissions
 
 
 withPrivateKeyInternal : Msg msg -> Model -> List Permission -> (Eos.PrivateKey -> UpdateResult msg) -> UpdateResult msg
@@ -3097,6 +3098,15 @@ codeOfConductVersion =
 profile : Model -> Maybe Profile.Model
 profile model =
     RemoteData.toMaybe model.profile
+
+
+{-| All the permissions the logged in user has, through their roles
+-}
+permissions : Model -> List Permission
+permissions model =
+    profile model
+        |> Maybe.map (.roles >> List.concatMap .permissions)
+        |> Maybe.withDefault []
 
 
 isAccount : Eos.Name -> Model -> Bool

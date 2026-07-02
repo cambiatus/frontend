@@ -27,6 +27,7 @@ module Claim exposing
 import Action exposing (Action)
 import Api.Relay as Relay
 import Cambiatus.Enum.ClaimStatus as ClaimStatus
+import Cambiatus.Enum.Permission as Permission exposing (Permission)
 import Cambiatus.Object
 import Cambiatus.Object.Check as Check
 import Cambiatus.Object.Claim as Claim
@@ -110,9 +111,22 @@ isValidator accountName claim =
             (\v -> v.account == accountName)
 
 
-isVotable : Model -> Eos.Name -> Time.Posix -> Bool
-isVotable claim accountName now =
+{-| Whether the user is authorized to vote on the claim. For actions with an
+explicit validator list, only members of that list can vote. For role-based
+actions (empty validator list), anyone holding the `Verify` permission can
+vote — mirroring the contract's `has_permission(…, verify)` check.
+-}
+canVote : Eos.Name -> List Permission -> Model -> Bool
+canVote accountName permissions claim =
     isValidator accountName claim
+        || (List.isEmpty claim.action.validators
+                && List.member Permission.Verify permissions
+           )
+
+
+isVotable : Model -> Eos.Name -> List Permission -> Time.Posix -> Bool
+isVotable claim accountName permissions now =
+    canVote accountName permissions claim
         && not (isValidated claim accountName)
         && not (Action.isClosed claim.action now)
         && not claim.action.isCompleted
@@ -532,12 +546,7 @@ viewClaimCard attributes loggedIn profileSummaries claim =
 
                 _ ->
                     viewVotingProgress loggedIn.shared completionStatus
-            , if
-                isValidated claim loggedIn.accountName
-                    || not (isValidator loggedIn.accountName claim)
-                    || claim.action.isCompleted
-                    || Action.isClosed claim.action loggedIn.shared.now
-              then
+            , if not (isVotable claim loggedIn.accountName (LoggedIn.permissions loggedIn) loggedIn.shared.now) then
                 button
                     [ class "button button-secondary w-full font-semibold mb-2"
                     , Utils.onClickNoBubble (GotExternalMsg OpenClaimModal)
@@ -1022,7 +1031,7 @@ viewClaimModal ({ shared, accountName } as loggedIn) profileSummaries claim =
 
         footer =
             div [ class "block w-full my-4 sm:w-1/2 sm:mx-auto" ]
-                [ if isVotable claim accountName shared.now then
+                [ if isVotable claim accountName (LoggedIn.permissions loggedIn) shared.now then
                     div [ class "flex space-x-4" ]
                         [ button
                             [ class "w-full button button-danger"
@@ -1109,7 +1118,7 @@ viewPhotoModal loggedIn claim =
             ]
 
         withPhotoModalFooter =
-            if isVotable claim loggedIn.accountName loggedIn.shared.now then
+            if isVotable claim loggedIn.accountName (LoggedIn.permissions loggedIn) loggedIn.shared.now then
                 Modal.withFooter
                     [ button
                         [ class "modal-cancel"
