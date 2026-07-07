@@ -197,12 +197,29 @@ view ({ shared } as loggedIn) model =
 
                 ( RemoteData.Success (Just balance), RemoteData.Success community ) ->
                     let
-                        -- Validators of some action's explicit list, plus
-                        -- holders of the Verify permission, who can vote on
-                        -- claims of role-based actions (empty validator list)
-                        isValidator =
+                        -- Validators on some action's explicit list always see
+                        -- their analysis card. Holders of the Verify permission
+                        -- can also vote on claims of role-based actions (empty
+                        -- validator list), but the default `member` role carries
+                        -- Verify for the whole community — so only surface the card
+                        -- to them when they actually have votable claims waiting,
+                        -- instead of showing an empty analysis card to everyone.
+                        isExplicitValidator =
                             List.any ((==) loggedIn.accountName) community.validators
-                                || List.member Permission.Verify (LoggedIn.permissions loggedIn)
+
+                        hasVerifyPermission =
+                            List.member Permission.Verify (LoggedIn.permissions loggedIn)
+
+                        hasAvailableClaims =
+                            case model.analysis of
+                                LoadedGraphql { count } _ ->
+                                    count > 0
+
+                                _ ->
+                                    False
+
+                        isValidator =
+                            isExplicitValidator || (hasVerifyPermission && hasAvailableClaims)
                     in
                     div []
                         [ div [ class "container mx-auto my-8 px-4 lg:grid lg:grid-cols-3 lg:gap-7" ]
