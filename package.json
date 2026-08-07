@@ -118,7 +118,7 @@
     "pdfjs-dist": "^4.5.0",
     "pdfmake": "^0.2.20",
     "phoenix": "^1.8.2",
-    "postcss": "^8.4.38",
+    "postcss": "^8.5.23",
     "postcss-cli": "^11.0.1",
     "postcss-focus-visible": "^10.0.1",
     "postcss-import": "^16.1.0",
