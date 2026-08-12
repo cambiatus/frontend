@@ -76,7 +76,13 @@ export default defineConfig({
   },
 
   define: {
-    global: "globalThis",
+    // NOTE: do NOT define `global` here. Vite's `define` is a plain text
+    // replacement, not scope-aware, so it rewrites *local bindings* named
+    // `global` too. pdfmake's `ShapingPlan.prototype.add(arg, global)` then
+    // has its default-arg assignment `global = true` retargeted at the
+    // node-polyfill shim binding -> "TypeError: Assignment to constant
+    // variable." when downloading the 12-words PDF. vite-plugin-node-polyfills
+    // already injects a scope-aware `global` shim for the deps that need it.
     "process.env.NODE_ENV": JSON.stringify(
       process.env.NODE_ENV || "development",
     ),
