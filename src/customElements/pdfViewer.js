@@ -32,7 +32,6 @@ export default (app, config, addBreadcrumb) =>
       if (this._renderedUrl === url && this.hasChildNodes()) return
 
       this._renderedUrl = url
-      this._childClass = childClass
       this.clearChildren()
 
       const img = document.createElement('img')
@@ -82,15 +81,17 @@ export default (app, config, addBreadcrumb) =>
 
         await firstPage.render(renderContext).promise
 
+        // Check again: a render can take a while, and `clearChildren` nulls
+        // `removeLoadingImage` out from under us if the url changed meanwhile.
+        if (this._renderedUrl !== url) return
+
         this.removeLoadingImage()
         this.appendChild(canvas)
       })
     }
 
     clearChildren () {
-      if (this.removeLoadingImage) {
-        this.removeLoadingImage = null
-      }
+      this.removeLoadingImage = null
       while (this.firstChild) {
         this.removeChild(this.firstChild)
       }
