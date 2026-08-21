@@ -130,6 +130,7 @@ type Model
         , numberOfEntriesLoading : Int
         , aspectRatio : Maybe Float
         , openImageCropperIndex : Maybe Int
+        , nextUploadId : Int
         }
 
 
@@ -142,6 +143,7 @@ type MultipleModel
         , numberOfEntriesLoading : Int
         , aspectRatio : Maybe Float
         , openImageCropperIndex : Maybe Int
+        , nextUploadId : Int
         }
 
 
@@ -154,15 +156,24 @@ type SingleModel
         , isSavingExistingImage : Bool
         , aspectRatio : Maybe Float
         , isImageCropperOpen : Bool
+        , nextUploadId : Int
         }
 
 
-{-| This is what we use to represent a file
+{-| This is what we use to represent a file.
+
+`uploadId` identifies the upload currently in flight for this entry, if any.
+Upload responses are matched back to their entry by this id instead of by the
+entry's position, because positions shift (deleting an entry, replacing one) and
+a second upload can be started for an entry before the first one answers. Without
+it, a late response lands on whatever now sits at the index it was fired with.
+
 -}
 type alias Entry =
     { fileType : FileTypeStatus
     , url : UrlStatus
     , imageCropper : ImageCropper
+    , uploadId : Maybe Int
     }
 
 
@@ -283,12 +294,14 @@ initSingle { fileUrl, aspectRatio } =
                                     { aspectRatio = validAspectRatio }
                                         |> View.ImageCropper.init
                                         |> WithImageCropper
+                        , uploadId = Nothing
                         }
                     )
         , isEntryLoading = False
         , isSavingExistingImage = False
         , aspectRatio = aspectRatio
         , isImageCropperOpen = False
+        , nextUploadId = 0
         }
 
 
@@ -318,6 +331,7 @@ initMultiple { fileUrls, aspectRatio } =
                                 { aspectRatio = validAspectRatio }
                                     |> View.ImageCropper.init
                                     |> WithImageCropper
+                    , uploadId = Nothing
                     }
                 )
                 fileUrls
@@ -325,6 +339,7 @@ initMultiple { fileUrls, aspectRatio } =
         , isSavingExistingImage = False
         , aspectRatio = aspectRatio
         , openImageCropperIndex = Nothing
+        , nextUploadId = 0
         }
 
 
@@ -563,7 +578,12 @@ update shared msg (Model model) =
                     case
                         files
                             |> List.head
-                            |> Maybe.andThen (entryFromFile { aspectRatio = model.aspectRatio })
+                            |> Maybe.andThen
+                                (entryFromFile
+                                    { aspectRatio = model.aspectRatio
+                                    , uploadId = model.nextUploadId
+                                    }
+                                )
                     of
                         Just newEntry ->
                             { model
@@ -572,10 +592,11 @@ update shared msg (Model model) =
                                         |> Just
                                         |> SingleEntry
                                 , numberOfEntriesLoading = 1
+                                , nextUploadId = model.nextUploadId + 1
                             }
                                 |> Model
                                 |> UR.init
-                                |> UR.addCmd (uploadEntry shared 0 newEntry)
+                                |> UR.addCmd (uploadEntry shared model.nextUploadId newEntry)
                                 |> UR.addExt (SetLoadingState True)
 
                         Nothing ->
@@ -592,24 +613,31 @@ update shared msg (Model model) =
                     let
                         newEntries : List Entry
                         newEntries =
-                            List.filterMap
-                                (entryFromFile { aspectRatio = model.aspectRatio })
-                                files
+                            files
+                                |> List.indexedMap
+                                    (\index file ->
+                                        entryFromFile
+                                            { aspectRatio = model.aspectRatio
+                                            , uploadId = model.nextUploadId + index
+                                            }
+                                            file
+                                    )
+                                |> List.filterMap identity
 
                         uploadNewEntries : Cmd Msg
                         uploadNewEntries =
                             newEntries
-                                |> List.indexedMap
-                                    (\index entry ->
-                                        uploadEntry shared
-                                            (index + List.length entries)
-                                            entry
+                                |> List.filterMap
+                                    (\entry ->
+                                        Maybe.map (\uploadId -> uploadEntry shared uploadId entry)
+                                            entry.uploadId
                                     )
                                 |> Cmd.batch
                     in
                     { model
                         | entries = MultipleEntries (entries ++ newEntries)
                         , numberOfEntriesLoading = model.numberOfEntriesLoading + List.length newEntries
+                        , nextUploadId = model.nextUploadId + List.length files
                     }
                         |> Model
                         |> UR.init
@@ -617,14 +645,14 @@ update shared msg (Model model) =
                         |> UR.addExt (SetLoadingState True)
 
         RequestedReplaceFile file ->
-            case entryFromFile { aspectRatio = model.aspectRatio } file of
+            case entryFromFile { aspectRatio = model.aspectRatio, uploadId = model.nextUploadId } file of
                 Just newEntry ->
                     let
                         ( newEntries, uploadEntryCmd, succeeded ) =
                             case model.entries of
                                 SingleEntry _ ->
                                     ( SingleEntry (Just newEntry)
-                                    , uploadEntry shared 0 newEntry
+                                    , uploadEntry shared model.nextUploadId newEntry
                                     , True
                                     )
 
@@ -634,7 +662,7 @@ update shared msg (Model model) =
                                             ( entries
                                                 |> List.Extra.setAt index newEntry
                                                 |> MultipleEntries
-                                            , uploadEntry shared index newEntry
+                                            , uploadEntry shared model.nextUploadId newEntry
                                             , True
                                             )
 
@@ -656,6 +684,12 @@ update shared msg (Model model) =
 
                             else
                                 model.numberOfEntriesLoading
+                        , nextUploadId =
+                            if succeeded then
+                                model.nextUploadId + 1
+
+                            else
+                                model.nextUploadId
                     }
                         |> Model
                         |> UR.init
@@ -672,7 +706,7 @@ update shared msg (Model model) =
                             { moduleName = "Form.File", function = "update" }
                             []
 
-        CompletedUploadingFile index result ->
+        CompletedUploadingFile uploadId result ->
             let
                 maybeSetLoadingStateAsFalse =
                     if model.numberOfEntriesLoading == 1 then
@@ -680,68 +714,87 @@ update shared msg (Model model) =
 
                     else
                         identity
-            in
-            { model
-                | entries =
-                    case model.entries of
-                        SingleEntry previousEntry ->
-                            let
-                                newUrlStatus =
-                                    updateUrlStatusWithResult result (Maybe.map .url previousEntry)
-                            in
-                            { fileType = LoadingFileType
-                            , url = newUrlStatus
-                            , imageCropper =
-                                case previousEntry of
-                                    Nothing ->
-                                        WithoutImageCropper
 
-                                    Just previous ->
-                                        imageCropperFromPreviousEntry
-                                            { previous = previous.url
-                                            , new = newUrlStatus
-                                            , previousImageCropper = previous.imageCropper
-                                            }
+                ownsThisUpload : Entry -> Bool
+                ownsThisUpload entry =
+                    entry.uploadId == Just uploadId
+
+                applyResult : Entry -> Entry
+                applyResult previousEntry =
+                    let
+                        newUrlStatus =
+                            updateUrlStatusWithResult result (Just previousEntry.url)
+                    in
+                    { fileType = LoadingFileType
+                    , url = newUrlStatus
+                    , uploadId = Nothing
+                    , imageCropper =
+                        imageCropperFromPreviousEntry
+                            { previous = previousEntry.url
+                            , new = newUrlStatus
+                            , previousImageCropper = previousEntry.imageCropper
                             }
-                                |> Just
-                                |> SingleEntry
+                    }
+
+                -- No entry claims this upload, so it was deleted or superseded by
+                -- a newer upload while this one was in flight. Drop the result:
+                -- writing it would either resurrect a deleted entry or overwrite
+                -- the newer upload's url with this stale one.
+                isStale : Bool
+                isStale =
+                    case model.entries of
+                        SingleEntry maybeEntry ->
+                            maybeEntry
+                                |> Maybe.map ownsThisUpload
+                                |> Maybe.withDefault False
+                                |> not
 
                         MultipleEntries entries ->
-                            entries
-                                |> List.Extra.updateAt index
-                                    (\previousEntry ->
-                                        let
-                                            newUrlStatus =
-                                                updateUrlStatusWithResult result (Just previousEntry.url)
-                                        in
-                                        { fileType = LoadingFileType
-                                        , url = newUrlStatus
-                                        , imageCropper =
-                                            imageCropperFromPreviousEntry
-                                                { previous = previousEntry.url
-                                                , new = newUrlStatus
-                                                , previousImageCropper = previousEntry.imageCropper
-                                                }
-                                        }
-                                    )
-                                |> MultipleEntries
-                , openImageCropperIndex =
-                    case model.entries of
-                        SingleEntry _ ->
-                            if model.isSavingExistingImage then
-                                Nothing
+                            not (List.any ownsThisUpload entries)
+            in
+            if isStale then
+                { model | numberOfEntriesLoading = model.numberOfEntriesLoading - 1 }
+                    |> Model
+                    |> UR.init
+                    |> maybeSetLoadingStateAsFalse
 
-                            else
-                                Just 0
+            else
+                { model
+                    | entries =
+                        case model.entries of
+                            SingleEntry maybeEntry ->
+                                maybeEntry
+                                    |> Maybe.map applyResult
+                                    |> SingleEntry
 
-                        MultipleEntries _ ->
-                            model.openImageCropperIndex
-                , isSavingExistingImage = False
-                , numberOfEntriesLoading = model.numberOfEntriesLoading - 1
-            }
-                |> Model
-                |> UR.init
-                |> maybeSetLoadingStateAsFalse
+                            MultipleEntries entries ->
+                                entries
+                                    |> List.map
+                                        (\entry ->
+                                            if ownsThisUpload entry then
+                                                applyResult entry
+
+                                            else
+                                                entry
+                                        )
+                                    |> MultipleEntries
+                    , openImageCropperIndex =
+                        case model.entries of
+                            SingleEntry _ ->
+                                if model.isSavingExistingImage then
+                                    Nothing
+
+                                else
+                                    Just 0
+
+                            MultipleEntries _ ->
+                                model.openImageCropperIndex
+                    , isSavingExistingImage = False
+                    , numberOfEntriesLoading = model.numberOfEntriesLoading - 1
+                }
+                    |> Model
+                    |> UR.init
+                    |> maybeSetLoadingStateAsFalse
 
         ClickedEntry index ->
             { model | openImageCropperIndex = Just index }
@@ -921,15 +974,18 @@ update shared msg (Model model) =
         ClickedSaveEntry ->
             let
                 updateEntry : Int -> Entry -> ( Entry, Cmd Msg )
-                updateEntry index entry =
+                updateEntry uploadId entry =
                     let
                         fromOriginalAndCropped : { original : String, cropped : File } -> ( Entry, Cmd Msg )
                         fromOriginalAndCropped data =
                             let
                                 newEntry =
-                                    { entry | url = LoadingWithCropped data }
+                                    { entry
+                                        | url = LoadingWithCropped data
+                                        , uploadId = Just uploadId
+                                    }
                             in
-                            ( newEntry, uploadEntry shared index newEntry )
+                            ( newEntry, uploadEntry shared uploadId newEntry )
                     in
                     case entry.url of
                         LoadedWithCropped data ->
@@ -962,7 +1018,7 @@ update shared msg (Model model) =
                 SingleEntry (Just entry) ->
                     let
                         ( newEntry, cmd ) =
-                            updateEntry 0 entry
+                            updateEntry model.nextUploadId entry
                     in
                     { model
                         | openImageCropperIndex = Nothing
@@ -971,6 +1027,7 @@ update shared msg (Model model) =
                                 |> Just
                                 |> SingleEntry
                         , isSavingExistingImage = True
+                        , nextUploadId = model.nextUploadId + 1
                     }
                         |> Model
                         |> UR.init
@@ -991,13 +1048,14 @@ update shared msg (Model model) =
                                 Just entry ->
                                     let
                                         ( newEntry, cmd ) =
-                                            updateEntry openImageCropperIndex entry
+                                            updateEntry model.nextUploadId entry
                                     in
                                     { model
                                         | openImageCropperIndex = Nothing
                                         , entries =
                                             List.Extra.setAt openImageCropperIndex newEntry entries
                                                 |> MultipleEntries
+                                        , nextUploadId = model.nextUploadId + 1
                                     }
                                         |> Model
                                         |> UR.init
@@ -1670,8 +1728,8 @@ fileTypeFromPdfViewerFileType fileType =
             Image
 
 
-entryFromFile : { aspectRatio : Maybe Float } -> File -> Maybe Entry
-entryFromFile { aspectRatio } file =
+entryFromFile : { aspectRatio : Maybe Float, uploadId : Int } -> File -> Maybe Entry
+entryFromFile { aspectRatio, uploadId } file =
     file
         |> File.mime
         |> fileTypeFromString
@@ -1679,6 +1737,7 @@ entryFromFile { aspectRatio } file =
             (\fileType ->
                 { fileType = LoadedFileType fileType
                 , url = Loading file
+                , uploadId = Just uploadId
                 , imageCropper =
                     case aspectRatio of
                         Nothing ->
@@ -1702,19 +1761,19 @@ uploadEntry :
     -> Int
     -> Entry
     -> Cmd Msg
-uploadEntry shared index entry =
+uploadEntry shared uploadId entry =
     case entry.url of
         Loading file ->
-            Api.uploadImage shared file (CompletedUploadingFile index)
+            Api.uploadImage shared file (CompletedUploadingFile uploadId)
 
         Loaded _ ->
             Cmd.none
 
         LoadedWithCropped { cropped } ->
-            Api.uploadImage shared cropped (CompletedUploadingFile index)
+            Api.uploadImage shared cropped (CompletedUploadingFile uploadId)
 
         LoadingWithCropped { cropped } ->
-            Api.uploadImage shared cropped (CompletedUploadingFile index)
+            Api.uploadImage shared cropped (CompletedUploadingFile uploadId)
 
         LoadedWithCroppedUploaded _ ->
             Cmd.none
@@ -1809,6 +1868,7 @@ fromMultipleModel (MultipleModel model) =
         , isSavingExistingImage = model.isSavingExistingImage
         , aspectRatio = model.aspectRatio
         , openImageCropperIndex = model.openImageCropperIndex
+        , nextUploadId = model.nextUploadId
         }
 
 
@@ -1829,6 +1889,7 @@ toMultipleModel (Model model) =
         , isSavingExistingImage = model.isSavingExistingImage
         , aspectRatio = model.aspectRatio
         , openImageCropperIndex = model.openImageCropperIndex
+        , nextUploadId = model.nextUploadId
         }
 
 
@@ -1850,6 +1911,7 @@ fromSingleModel (SingleModel model) =
 
             else
                 Nothing
+        , nextUploadId = model.nextUploadId
         }
 
 
@@ -1867,6 +1929,7 @@ toSingleModel (Model model) =
         , isSavingExistingImage = model.isSavingExistingImage
         , aspectRatio = model.aspectRatio
         , isImageCropperOpen = Maybe.Extra.isJust model.openImageCropperIndex
+        , nextUploadId = model.nextUploadId
         }
 
 
