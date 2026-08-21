@@ -1,4 +1,4 @@
-/* global HTMLElement */
+/* global HTMLElement, MutationObserver, ResizeObserver */
 
 export default () => (
   class MasonryLayout extends HTMLElement {
@@ -9,27 +9,47 @@ export default () => (
         }
       }
 
+      // A child's height decides its row span, so re-measure whenever a child
+      // is added (Elm appending a page of results) or changes height (an image
+      // finishing loading, a pdf swapping its canvas in). This used to be a
+      // `DOMNodeInserted` listener plus one-shot `load` listeners on the images
+      // present at connect time. Mutation Events were removed in Chrome 127, so
+      // appended children stopped being measured at all; and the `load`
+      // listeners never matched anything, because a parent connects before its
+      // children, so `<pdf-viewer>` had not created its `<img>` yet.
+      this.childObserver = new ResizeObserver(entries => {
+        for (const entry of entries) {
+          this.resizeItem(entry.target)
+        }
+      })
+
+      this.observeChildren = () => {
+        for (const child of this.children) {
+          this.childObserver.observe(child)
+        }
+      }
+
+      this.childListObserver = new MutationObserver(() => {
+        this.observeChildren()
+        this.resizeItems()
+      })
+
       if (this.getAttribute('elm-transition-with-parent') === 'true') {
         this.transitionWithParent()
       } else {
         this.resizeItems()
       }
 
-      this.querySelectorAll('img').forEach((image) =>
-        image.addEventListener('load', () => this.resizeItems()))
+      this.observeChildren()
+      this.childListObserver.observe(this, { childList: true })
 
       window.addEventListener('resize', this.resizeItems)
-
-      this.domNodeListener = (e) => {
-        this.resizeItem(e.target)
-      }
-
-      this.addEventListener('DOMNodeInserted', this.domNodeListener)
     }
 
     disconnectedCallback () {
       window.removeEventListener('resize', this.resizeItems)
-      this.removeEventListener('DOMNodeInserted', this.domNodeListener)
+      this.childListObserver.disconnect()
+      this.childObserver.disconnect()
     }
 
     transitionWithParent () {
@@ -70,8 +90,14 @@ export default () => (
       const marginBottom = parseInt(window.getComputedStyle(item).getPropertyValue('margin-bottom'))
 
       const rowSpan = Math.ceil((currentHeight + rowGap + marginBottom) / (rowHeight + rowGap))
+      const gridRowEnd = 'span ' + rowSpan
 
-      item.style.gridRowEnd = 'span ' + rowSpan
+      // Only write when it actually changes: this runs from a ResizeObserver,
+      // and an unconditional write on every callback is how those turn into
+      // loops.
+      if (item.style.gridRowEnd !== gridRowEnd) {
+        item.style.gridRowEnd = gridRowEnd
+      }
     }
   }
 )
