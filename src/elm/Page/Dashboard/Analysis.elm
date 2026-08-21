@@ -221,12 +221,14 @@ viewContent : LoggedIn.Model -> LoadedModel -> Model -> List (Html Msg)
 viewContent loggedIn { claims, profileSummaries, pageInfo } model =
     let
         viewClaim profileSummary claimIndex claim =
-            Claim.viewClaimCard [ class "w-full self-start" ] loggedIn profileSummary claim
+            ( String.fromInt claim.id
+            , Claim.viewClaimCard [ class "w-full self-start" ] loggedIn profileSummary claim
                 |> Html.map (ClaimMsg claimIndex)
+            )
     in
     [ div [ class "container mx-auto px-4 mb-10" ]
         (if List.length claims > 0 then
-            [ View.Components.masonryLayout [ View.Components.Sm ]
+            [ View.Components.keyedMasonryLayout [ View.Components.Sm ]
                 { transitionWithParent = False }
                 [ class "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-4 mb-4 sm:auto-rows-[5px]" ]
                 (List.map3 viewClaim
