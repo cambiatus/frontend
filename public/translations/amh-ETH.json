@@ -1113,7 +1113,18 @@
       "primary_approve": "አዎ, ይጽደቅ",
       "secondary": "አይደለም,ተዉ ",
       "view_details": "ዝርዝሮችን ይመልከቱ"
-    }
+    },
+    "requires_photo": "ፎቶ ያስፈልጋል",
+    "requires_code": "ኮድ ያስፈልጋል",
+    "votes_to_settle": "ለመወሰን {{count}} ድምጾች",
+    "available_until": "እስከ {{date}} ድረስ ይገኛል",
+    "usages_left": "ከ{{total}} ውስጥ {{left}} አጠቃቀም ቀርቷል",
+    "objective_completed_notice": "ተጠባቂ ዉጤት ተጠናቋል",
+    "claimer_history": "በዚህ ተግባር ላይ",
+    "first_time_claiming": "ይህ አባል ይህን ተግባር ሲጠይቅ ለመጀመሪያ ጊዜ ነው።",
+    "claimed_before": "ይህ አባል ይህን ተግባር ከዚህ በፊት {{count}} ጊዜ ጠይቋል።",
+    "claimed_before_breakdown": "{{approved}} ጸድቀዋል፣ {{rejected}} ተቀባይነት አላገኙም፣ {{pending}} በመጠባበቅ ላይ",
+    "view_claimer_profile": "የጠያቂውን መገለጫ ይመልከቱ"
   },
   "transfer_result": {
     "title": "ተላለፏል",

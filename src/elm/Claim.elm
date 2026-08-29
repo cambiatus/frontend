@@ -3,6 +3,7 @@ module Claim exposing
     , ClaimId
     , ClaimProfileSummaries
     , ClaimStatus(..)
+    , ClaimerActionHistory
     , ModalStatus(..)
     , Model
     , Msg(..)
@@ -33,6 +34,7 @@ import Cambiatus.Object.Check as Check
 import Cambiatus.Object.Claim as Claim
 import Cambiatus.Object.ClaimConnection
 import Cambiatus.Object.ClaimEdge
+import Cambiatus.Object.ClaimerActionHistory as ClaimerActionHistory
 import Cambiatus.Scalar exposing (DateTime)
 import Date
 import Eos
@@ -66,6 +68,20 @@ type alias Model =
     , createdAt : DateTime
     , proofPhoto : Maybe String
     , proofCode : Maybe String
+    , claimerActionHistory : ClaimerActionHistory
+    }
+
+
+{-| How often this claim's claimer has claimed this very action, this claim
+included. Community-wide reputation says nothing about whether someone is
+working through an action for the first time or the twentieth, which is what a
+reviewer wants to know.
+-}
+type alias ClaimerActionHistory =
+    { total : Int
+    , approved : Int
+    , rejected : Int
+    , pending : Int
     }
 
 
@@ -210,6 +226,15 @@ claimEdgeSelectionSet now =
         |> with (Cambiatus.Object.ClaimEdge.node (selectionSet now))
 
 
+claimerActionHistorySelectionSet : SelectionSet ClaimerActionHistory Cambiatus.Object.ClaimerActionHistory
+claimerActionHistorySelectionSet =
+    SelectionSet.succeed ClaimerActionHistory
+        |> with ClaimerActionHistory.total
+        |> with ClaimerActionHistory.approved
+        |> with ClaimerActionHistory.rejected
+        |> with ClaimerActionHistory.pending
+
+
 selectionSet : Time.Posix -> SelectionSet Model Cambiatus.Object.Claim
 selectionSet now =
     SelectionSet.succeed Model
@@ -221,6 +246,7 @@ selectionSet now =
         |> with Claim.createdAt
         |> with (SelectionSet.map emptyStringToNothing Claim.proofPhoto)
         |> with (SelectionSet.map emptyStringToNothing Claim.proofCode)
+        |> with (Claim.claimerActionHistory claimerActionHistorySelectionSet)
         |> SelectionSet.map
             (\claim ->
                 case claim.status of

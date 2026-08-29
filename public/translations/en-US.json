@@ -1152,7 +1152,18 @@
       "primary_approve": "yes, approve",
       "secondary": "no, cancel",
       "view_details": "View Details"
-    }
+    },
+    "requires_photo": "Photo required",
+    "requires_code": "Code required",
+    "votes_to_settle": "{{count}} votes to settle",
+    "available_until": "Available until {{date}}",
+    "usages_left": "{{left}} of {{total}} uses left",
+    "objective_completed_notice": "Objective completed",
+    "claimer_history": "On this action",
+    "first_time_claiming": "First time this member claims this action.",
+    "claimed_before": "This member has claimed this action {{count}} time(s) before.",
+    "claimed_before_breakdown": "{{approved}} approved, {{rejected}} rejected, {{pending}} pending",
+    "view_claimer_profile": "View claimer profile"
   },
   "transfer_result": {
     "title": "Transferred",

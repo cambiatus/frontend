@@ -2,7 +2,7 @@ module Action exposing
     ( Action, Objective
     , Id, encodeId, idFromInt, idFromString, idToInt, idToString
     , ObjectiveId, encodeObjectiveId, objectiveIdSelectionSet, objectiveIdFromInt, objectiveIdToInt
-    , isClosed, isPastDeadline
+    , isClosed, isPastDeadline, isObjectiveClosed
     , selectionSet, completeObjectiveSelectionSet, updateAction
     , ClaimingStatus, notClaiming, startClaiming, Msg, update, ExternalMsg(..), msgToString, jsAddressToMsg
     , viewCard, viewClaimModal
@@ -31,7 +31,7 @@ module Action exposing
 
 ## Helper functions
 
-@docs isClosed, isPastDeadline
+@docs isClosed, isPastDeadline, isObjectiveClosed
 
 
 ## GraphQL & EOS
@@ -574,7 +574,7 @@ viewCard loggedIn { containerAttrs, position, toMsg } action =
             loggedIn.shared.translators
 
         canBeClaimed =
-            isClaimable action && not (isClosed action loggedIn.shared.now) && not action.isCompleted
+            isClaimable action && isOpenForNewClaims action loggedIn.shared.now
     in
     li (class "bg-white rounded self-start w-full flex-shrink-0" :: containerAttrs)
         [ case action.image of
@@ -598,7 +598,7 @@ viewCard loggedIn { containerAttrs, position, toMsg } action =
             [ div [ class "flex mb-6" ]
                 [ case position of
                     Nothing ->
-                        if not (isClosed action loggedIn.shared.now) && not action.isCompleted then
+                        if isOpenForNewClaims action loggedIn.shared.now then
                             Icons.flag "w-8 text-green fill-current"
 
                         else
@@ -643,7 +643,7 @@ viewCard loggedIn { containerAttrs, position, toMsg } action =
                         ]
                     ]
                 ]
-            , if isClosed action loggedIn.shared.now || action.isCompleted then
+            , if not (isOpenForNewClaims action loggedIn.shared.now) then
                 viewNotAbleToClaimNotice (t "community.objectives.action_completed_notice")
 
               else if not (isClaimable action) then
@@ -1233,6 +1233,36 @@ isClosed : Action -> Time.Posix -> Bool
 isClosed action now =
     isPastDeadline action now
         || (action.usages > 0 && action.usagesLeft == 0)
+
+
+{-| Whether the objective holding this action has been completed.
+
+The contract has no idea this concept exists — `cambiatus.cm`'s objective table
+has no completion column, and `claimaction` only ever inspects the action — so
+completing an objective closes its actions on chain one `upsertaction` at a time.
+An action that pass missed stays claimable forever, which is why closing an
+objective is not enough on its own to keep it out of the UI.
+
+-}
+isObjectiveClosed : Action -> Bool
+isObjectiveClosed action =
+    action.objective.isCompleted
+
+
+{-| Whether a fresh claim on this action would still be accepted: the action is
+open on chain AND its objective is still live.
+
+This is deliberately not folded into [`isClosed`](#isClosed), which also decides
+whether an _existing_ claim can still be voted on. A claim filed before its
+objective was completed still has to reach a verdict, so closing the objective
+must stop new claims without stranding the ones already open.
+
+-}
+isOpenForNewClaims : Action -> Time.Posix -> Bool
+isOpenForNewClaims action now =
+    not (isClosed action now)
+        && not action.isCompleted
+        && not (isObjectiveClosed action)
 
 
 shareActionButtonId : Id -> String

@@ -1154,7 +1154,18 @@
       "primary_approve": "sí, aprova",
       "secondary": "no, cancel·la",
       "view_details": "Veure Detalls"
-    }
+    },
+    "requires_photo": "Foto obligatòria",
+    "requires_code": "Codi obligatori",
+    "votes_to_settle": "{{count}} vots per decidir",
+    "available_until": "Disponible fins al {{date}}",
+    "usages_left": "{{left}} de {{total}} usos restants",
+    "objective_completed_notice": "Objectiu completat",
+    "claimer_history": "En aquesta acció",
+    "first_time_claiming": "És la primera vegada que aquest membre reclama aquesta acció.",
+    "claimed_before": "Aquest membre ja ha reclamat aquesta acció {{count}} vegada(es) abans.",
+    "claimed_before_breakdown": "{{approved}} aprovades, {{rejected}} rebutjades, {{pending}} pendents",
+    "view_claimer_profile": "Veure el perfil del reclamant"
   },
   "transfer_result": {
     "title": "Traspassat",

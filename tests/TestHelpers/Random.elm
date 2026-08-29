@@ -316,6 +316,15 @@ action =
 -- CLAIM
 
 
+claimerActionHistory : Random.Generator Claim.ClaimerActionHistory
+claimerActionHistory =
+    Random.constant Claim.ClaimerActionHistory
+        |> with (Random.int 1 20)
+        |> with (Random.int 0 20)
+        |> with (Random.int 0 20)
+        |> with (Random.int 0 20)
+
+
 claim : Random.Generator Claim.Model
 claim =
     let
@@ -334,6 +343,7 @@ claim =
         |> with dateTime
         |> with (maybe string)
         |> with (maybe string)
+        |> with claimerActionHistory
         |> Random.map
             (\claim_ ->
                 { claim_

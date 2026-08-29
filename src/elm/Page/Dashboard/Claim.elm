@@ -9,7 +9,7 @@ import Eos
 import Eos.Account as Eos
 import Eos.EosError as EosError
 import Graphql.Http
-import Html exposing (Html, button, div, h3, p, span, strong, text)
+import Html exposing (Html, a, button, div, h3, p, span, strong, text)
 import Html.Attributes exposing (class, classList, disabled)
 import Html.Events exposing (onClick)
 import Json.Decode as Decode exposing (Value)
@@ -21,6 +21,7 @@ import Page
 import Profile
 import Profile.Summary
 import RemoteData exposing (RemoteData)
+import Route
 import Session.LoggedIn as LoggedIn
 import Session.Shared exposing (Shared, Translators)
 import Strftime
@@ -115,12 +116,17 @@ view ({ shared } as loggedIn) model =
                     Loaded claim profileSummaries ->
                         div [ class "bg-gray-100" ]
                             [ Page.viewHeader loggedIn title
-                            , div [ class "mt-10 mb-8 flex items-center justify-center" ]
+                            , div [ class "mt-10 mb-8 flex flex-col items-center justify-center" ]
                                 [ Profile.Summary.view shared.translators
                                     loggedIn.accountName
                                     claim.claimer
                                     profileSummaries.claimer
                                     |> Html.map (GotProfileSummaryMsg ClaimerSummary)
+                                , a
+                                    [ class "button button-secondary mt-4 px-6"
+                                    , Route.href (Route.Profile claim.claimer.account)
+                                    ]
+                                    [ text (t "claim.view_claimer_profile") ]
                                 ]
                             , div [ class "mx-auto container px-4" ]
                                 [ viewTitle shared model claim
@@ -290,6 +296,107 @@ viewTitle shared _ claim =
         ]
 
 
+{-| What the action demands of a claimer, and how long it runs for. A reviewer
+judging a photo needs to know what proof was asked for in the first place — an
+action with no photo requirement explains an empty proof section far better than
+a missing image does.
+-}
+viewActionRequirements : Shared -> Action.Action -> Html msg
+viewActionRequirements shared action =
+    let
+        { t, tr } =
+            shared.translators
+
+        tag content =
+            div [ class "tag bg-gray-100 text-gray-900" ] [ text content ]
+
+        requirements =
+            List.filterMap identity
+                [ if action.hasProofPhoto then
+                    Just (t "claim.requires_photo")
+
+                  else
+                    Nothing
+                , if action.hasProofCode then
+                    Just (t "claim.requires_code")
+
+                  else
+                    Nothing
+                , Just
+                    (tr "claim.votes_to_settle"
+                        [ ( "count", String.fromInt (action.verifications // 2 + 1) ) ]
+                    )
+                , case action.deadline of
+                    Just deadline ->
+                        Just
+                            (tr "claim.available_until"
+                                [ ( "date"
+                                  , deadline
+                                        |> Utils.fromDateTime
+                                        |> Strftime.format "%d %b %Y" shared.timezone
+                                  )
+                                ]
+                            )
+
+                    Nothing ->
+                        Nothing
+                , if action.usages > 0 then
+                    Just
+                        (tr "claim.usages_left"
+                            [ ( "left", String.fromInt action.usagesLeft )
+                            , ( "total", String.fromInt action.usages )
+                            ]
+                        )
+
+                  else
+                    Nothing
+                ]
+    in
+    div [ class "flex flex-wrap gap-2 mb-2" ] (List.map tag requirements)
+
+
+{-| This claimer's record on this same action. The claim being reviewed is part
+of the tally, so anything past the first one is a repeat worth surfacing.
+-}
+viewClaimerHistory : Shared -> Claim.Model -> Html msg
+viewClaimerHistory shared claim =
+    let
+        { t, tr } =
+            shared.translators
+
+        history =
+            claim.claimerActionHistory
+
+        previous =
+            max (history.total - 1) 0
+    in
+    if previous == 0 then
+        div [ class "mb-8" ]
+            [ p [ class "label" ] [ text (t "claim.claimer_history") ]
+            , p [] [ text (t "claim.first_time_claiming") ]
+            ]
+
+    else
+        div [ class "mb-8" ]
+            [ p [ class "label" ] [ text (t "claim.claimer_history") ]
+            , p []
+                [ text
+                    (tr "claim.claimed_before"
+                        [ ( "count", String.fromInt previous ) ]
+                    )
+                ]
+            , p [ class "text-sm text-gray-900 mt-1" ]
+                [ text
+                    (tr "claim.claimed_before_breakdown"
+                        [ ( "approved", String.fromInt history.approved )
+                        , ( "rejected", String.fromInt history.rejected )
+                        , ( "pending", String.fromInt history.pending )
+                        ]
+                    )
+                ]
+            ]
+
+
 viewDetails : LoggedIn.Model -> Model -> Claim.Model -> Html msg
 viewDetails { shared } _ claim =
     let
@@ -316,9 +423,20 @@ viewDetails { shared } _ claim =
         , div [ class "mb-8" ]
             [ p [ class "label" ] [ text_ "claim.action" ]
             , Markdown.view [ class "mb-2" ] claim.action.description
+            , viewActionRequirements shared claim.action
             , if claim.action.isCompleted then
                 div [ class "flex mb-2" ]
                     [ div [ class "tag bg-green" ] [ text_ "community.actions.completed" ]
+                    ]
+
+              else if Action.isObjectiveClosed claim.action then
+                -- The chain never rejects this on its own: an objective's
+                -- completion is app-only state, so an action left behind by one
+                -- keeps taking claims. Say so rather than showing nothing.
+                div [ class "flex mb-2" ]
+                    [ div
+                        [ class "tag bg-gray-500 text-red" ]
+                        [ text_ "claim.objective_completed_notice" ]
                     ]
 
               else if Action.isClosed claim.action shared.now then
@@ -331,6 +449,7 @@ viewDetails { shared } _ claim =
               else
                 text ""
             ]
+        , viewClaimerHistory shared claim
         , div [ class "mb-8" ]
             [ div
                 [ class "flex justify-between lg:justify-start" ]
