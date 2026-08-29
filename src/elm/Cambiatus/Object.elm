@@ -37,10 +37,6 @@ type ClaimEdge
     = ClaimEdge
 
 
-type ClaimerActionHistory
-    = ClaimerActionHistory
-
-
 type Community
     = Community
 

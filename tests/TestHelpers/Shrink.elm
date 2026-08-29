@@ -154,15 +154,6 @@ claimCheck check =
         |> andMap (minimalProfile check.validator)
 
 
-claimerActionHistory : Shrinker Claim.ClaimerActionHistory
-claimerActionHistory history =
-    noShrink Claim.ClaimerActionHistory
-        |> andMap (int history.total)
-        |> andMap (int history.approved)
-        |> andMap (int history.rejected)
-        |> andMap (int history.pending)
-
-
 claim : Shrinker Claim.Model
 claim claim_ =
     noShrink Claim.Model
@@ -174,7 +165,6 @@ claim claim_ =
         |> andMap (dateTime claim_.createdAt)
         |> andMap (maybe string claim_.proofPhoto)
         |> andMap (maybe string claim_.proofCode)
-        |> andMap (claimerActionHistory claim_.claimerActionHistory)
 
 
 

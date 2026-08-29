@@ -1155,18 +1155,7 @@
       "primary_approve": "sí, aprobar",
       "secondary": "no, cancelar",
       "view_details": "Ver Detalles"
-    },
-    "requires_photo": "Foto obligatoria",
-    "requires_code": "Código obligatorio",
-    "votes_to_settle": "{{count}} votos para decidir",
-    "available_until": "Disponible hasta {{date}}",
-    "usages_left": "{{left}} de {{total}} usos restantes",
-    "objective_completed_notice": "Objetivo completado",
-    "claimer_history": "En esta acción",
-    "first_time_claiming": "Es la primera vez que este miembro reclama esta acción.",
-    "claimed_before": "Este miembro ya ha reclamado esta acción {{count}} vez(ces) antes.",
-    "claimed_before_breakdown": "{{approved}} aprobadas, {{rejected}} rechazadas, {{pending}} pendientes",
-    "view_claimer_profile": "Ver perfil del reclamante"
+    }
   },
   "transfer_result": {
     "title": "Transferida",

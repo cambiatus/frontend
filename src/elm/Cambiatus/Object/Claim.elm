@@ -54,13 +54,6 @@ claimer object____ =
     Object.selectionForCompositeField "claimer" [] object____ Basics.identity
 
 
-claimerActionHistory :
-    SelectionSet decodesTo Cambiatus.Object.ClaimerActionHistory
-    -> SelectionSet decodesTo Cambiatus.Object.Claim
-claimerActionHistory object____ =
-    Object.selectionForCompositeField "claimerActionHistory" [] object____ Basics.identity
-
-
 createdAt : SelectionSet Cambiatus.ScalarCodecs.DateTime Cambiatus.Object.Claim
 createdAt =
     Object.selectionForField "ScalarCodecs.DateTime" "createdAt" [] (Cambiatus.ScalarCodecs.codecs |> Cambiatus.Scalar.unwrapCodecs |> .codecDateTime |> .decoder)
