@@ -134,7 +134,12 @@ searchResultSelectionSet queryString =
                         }
                     )
                     products
-            , actions = actions
+            , -- Search is the one place that renders an action card without ever
+              -- looking at the objective it belongs to, which is how completed
+              -- objectives kept handing out claimable actions for years. The
+              -- backend filters these out now; this keeps the client honest
+              -- against an older backend too.
+              actions = List.filter (not << Action.isObjectiveClosed) actions
             , members = members
             }
         )
