@@ -34,14 +34,15 @@ through `Request.toMsg`.
 import Cambiatus.Query
 import Graphql.Http
 import Graphql.Operation exposing (RootQuery)
-import Graphql.OptionalArgument exposing (OptionalArgument(..))
+import Graphql.OptionalArgument as OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet exposing (SelectionSet)
 import Html exposing (Html, div, span, text)
 import Html.Attributes exposing (class)
 import Process
-import Profile.Location as Location exposing (Country(..), Locality)
+import Profile.Location as Location exposing (Country, Locality)
 import RemoteData exposing (RemoteData)
 import Task
+import UpdateResult as UR
 import View.Components
 import View.Select
 
@@ -159,8 +160,8 @@ isBairros kind =
             False
 
 
-{-| "{município} – {UF}" for Brazil, "{cantón} – {provincia}" for Costa Rica, and
-just the name for bairros and distritos
+{-| A município or cantón with its state or province, and just the name for
+bairros and distritos
 -}
 rowLabel : Kind -> Locality -> String
 rowLabel kind locality =
@@ -169,15 +170,7 @@ rowLabel kind locality =
             locality.name
 
         Municipalities country ->
-            case ( country, locality.stateCode ) of
-                ( CostaRica, Just code ) ->
-                    locality.name ++ " – " ++ Location.provinceName code
-
-                ( _, Just code ) ->
-                    locality.name ++ " – " ++ code
-
-                ( _, Nothing ) ->
-                    locality.name
+            Location.municipalityRow country locality
 
 
 viewRow : Kind -> Locality -> Html Never
@@ -247,19 +240,18 @@ update config msg (Model model) =
 
                     else
                         model.counter
+
+                debounce =
+                    if queryChanged then
+                        Process.sleep debounceMillis
+                            |> Task.perform (\_ -> DebounceElapsed counter)
+
+                    else
+                        Cmd.none
             in
             { unchanged
                 | model = Model { model | selectState = newState, counter = counter }
-                , cmd =
-                    Cmd.batch
-                        [ cmd
-                        , if queryChanged then
-                            Process.sleep debounceMillis
-                                |> Task.perform (\_ -> DebounceElapsed counter)
-
-                          else
-                            Cmd.none
-                        ]
+                , cmd = Cmd.batch [ cmd, debounce ]
             }
 
         SelectedLocality locality ->
@@ -286,47 +278,47 @@ update config msg (Model model) =
                             { unchanged | model = Model { model | options = [] } }
 
         GotOptions counter result ->
+            let
+                showOptions options =
+                    { unchanged
+                        | model =
+                            Model
+                                { model
+                                    | options = options
+                                    , availability = settleAvailability model.availability options
+                                }
+                    }
+            in
             if counter /= model.counter then
                 unchanged
 
             else
                 case result of
                     RemoteData.Success options ->
-                        { unchanged
-                            | model =
-                                Model
-                                    { model
-                                        | options = options
-                                        , availability =
-                                            if model.availability == Unknown then
-                                                if List.isEmpty options then
-                                                    Unavailable
-
-                                                else
-                                                    Available
-
-                                            else
-                                                model.availability
-                                    }
-                        }
+                        showOptions options
 
                     RemoteData.Failure _ ->
-                        { unchanged
-                            | model =
-                                Model
-                                    { model
-                                        | options = []
-                                        , availability =
-                                            if model.availability == Unknown then
-                                                Unavailable
-
-                                            else
-                                                model.availability
-                                    }
-                        }
+                        showOptions []
 
                     _ ->
                         unchanged
+
+
+{-| The first answer decides whether there is a list to choose from (none, or
+one that couldn't be loaded, means there isn't); later searches don't change it
+-}
+settleAvailability : Availability -> List Locality -> Availability
+settleAvailability current options =
+    case current of
+        Unknown ->
+            if List.isEmpty options then
+                Unavailable
+
+            else
+                Available
+
+        _ ->
+            current
 
 
 {-| A município needs two letters to search (a UF is two); a list of bairros
@@ -359,14 +351,14 @@ request kind counter maybeQuery =
             case kind of
                 Municipalities country ->
                     { optionals
-                        | query = fromMaybe maybeQuery
-                        , country = fromMaybe (Location.countryCode country)
+                        | query = OptionalArgument.fromMaybe maybeQuery
+                        , country = OptionalArgument.fromMaybe (Location.countryCode country)
                         , first = Present 10
                     }
 
                 Bairros { municipalityId } ->
                     { optionals
-                        | query = fromMaybe maybeQuery
+                        | query = OptionalArgument.fromMaybe maybeQuery
                         , kind = Present "bairro"
                         , municipalityId = Present municipalityId
                         , first = Present 50
@@ -375,16 +367,6 @@ request kind counter maybeQuery =
     { selectionSet = Cambiatus.Query.localities fill Location.localitySelectionSet
     , toMsg = GotOptions counter
     }
-
-
-fromMaybe : Maybe a -> OptionalArgument a
-fromMaybe maybe =
-    case maybe of
-        Just value ->
-            Present value
-
-        Nothing ->
-            Absent
 
 
 msgToString : Msg -> List String
@@ -406,4 +388,4 @@ msgToString msg =
             [ "DebounceElapsed" ]
 
         GotOptions _ result ->
-            [ "GotOptions", RemoteData.toMaybe result |> Maybe.map (always "Success") |> Maybe.withDefault "Failure" ]
+            [ "GotOptions", UR.remoteDataToString result ]

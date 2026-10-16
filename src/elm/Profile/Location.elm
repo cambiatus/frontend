@@ -1,7 +1,7 @@
 module Profile.Location exposing
     ( Locality, localitySelectionSet
     , Country(..), countryCode
-    , Place, emptyPlace, placeFromSaved, previewLabel, provinceName
+    , Place, emptyPlace, placeFromSaved, isPicked, previewLabel, municipalityRow
     , cleanText, BairroTextError(..), validateBairroText
     , Address, emptyAddress, isAddressEmpty, AddressError(..), validateAddress, looksLikeAddress
     , Saved, EditorData, editorSelectionSet
@@ -25,7 +25,7 @@ editor.
 # The place a member picks
 
 @docs Country, countryCode
-@docs Place, emptyPlace, placeFromSaved, previewLabel, provinceName
+@docs Place, emptyPlace, placeFromSaved, isPicked, previewLabel, municipalityRow
 
 
 # Typed bairros
@@ -60,7 +60,7 @@ import Cambiatus.Query
 import Eos
 import Eos.Account
 import Graphql.Operation exposing (RootQuery)
-import Graphql.OptionalArgument exposing (OptionalArgument(..))
+import Graphql.OptionalArgument as OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Regex
 
@@ -187,6 +187,14 @@ placeFromSaved { storedText, saved } =
                 { emptyPlace | country = Other, otherText = cleanText storedText }
 
 
+{-| Whether the place is a picked município or cantón, the only kind of place a
+delivery address can be filed under
+-}
+isPicked : Place -> Bool
+isPicked place =
+    place.country /= Other && place.municipality /= Nothing
+
+
 {-| The line that will show on the member's profile, the same text the backend
 composes from the same pick
 -}
@@ -194,29 +202,23 @@ previewLabel : Place -> Maybe String
 previewLabel place =
     case place.country of
         Other ->
-            Just (cleanText place.otherText)
-                |> keepNonEmpty
+            nonEmptyText place.otherText
 
         _ ->
             place.municipality
                 |> Maybe.map
                     (\municipality ->
                         let
+                            stateCode =
+                                Maybe.withDefault "" municipality.stateCode
+
                             base =
                                 case place.country of
                                     CostaRica ->
-                                        municipality.name
-                                            ++ " - "
-                                            ++ (municipality.stateCode
-                                                    |> Maybe.map provinceName
-                                                    |> Maybe.withDefault ""
-                                               )
-                                            ++ ", Costa Rica"
+                                        municipality.name ++ " - " ++ provinceName stateCode ++ ", Costa Rica"
 
                                     _ ->
-                                        municipality.name
-                                            ++ " - "
-                                            ++ Maybe.withDefault "" municipality.stateCode
+                                        municipality.name ++ " - " ++ stateCode
 
                             bairroName =
                                 case place.bairro of
@@ -224,8 +226,7 @@ previewLabel place =
                                         Just bairro.name
 
                                     Nothing ->
-                                        Just (cleanText place.bairroText)
-                                            |> keepNonEmpty
+                                        nonEmptyText place.bairroText
                         in
                         case bairroName of
                             Just name ->
@@ -234,6 +235,22 @@ previewLabel place =
                             Nothing ->
                                 base
                     )
+
+
+{-| How a município or cantón shows in a list: "{município} – {UF}" for Brazil,
+"{cantón} – {provincia}" for Costa Rica
+-}
+municipalityRow : Country -> Locality -> String
+municipalityRow country municipality =
+    case ( country, municipality.stateCode ) of
+        ( CostaRica, Just code ) ->
+            municipality.name ++ " – " ++ provinceName code
+
+        ( _, Just code ) ->
+            municipality.name ++ " – " ++ code
+
+        ( _, Nothing ) ->
+            municipality.name
 
 
 {-| Costa Rica's province from the code `localities` sends as `stateCode`
@@ -270,14 +287,16 @@ provinceName code =
 -- TYPED BAIRROS
 
 
-keepNonEmpty : Maybe String -> Maybe String
-keepNonEmpty maybeText =
-    case maybeText of
-        Just "" ->
+{-| The cleaned text, or `Nothing` when nothing is left of it
+-}
+nonEmptyText : String -> Maybe String
+nonEmptyText text =
+    case cleanText text of
+        "" ->
             Nothing
 
-        other ->
-            other
+        cleaned ->
+            Just cleaned
 
 
 {-| Trims and collapses every run of whitespace to one space, as the backend does
@@ -425,9 +444,6 @@ validateAddress country address =
         normalized =
             normalizeAddress address
 
-        digitsOnly =
-            String.all Char.isDigit normalized.postalCode
-
         expectedLength =
             case country of
                 CostaRica ->
@@ -436,41 +452,46 @@ validateAddress country address =
                 _ ->
                     8
 
+        postalCodeValid =
+            String.all Char.isDigit normalized.postalCode
+                && (String.length normalized.postalCode == expectedLength)
+
         errors =
             List.filterMap identity
-                [ if normalized.street == "" then
-                    Just StreetRequired
-
-                  else
-                    Nothing
-                , if country /= CostaRica && normalized.number == "" then
-                    Just NumberRequired
-
-                  else
-                    Nothing
-                , if normalized.postalCode /= "" && not (digitsOnly && String.length normalized.postalCode == expectedLength) then
-                    Just PostalCodeInvalid
-
-                  else
-                    Nothing
+                [ errorIf (normalized.street == "") StreetRequired
+                , errorIf (country /= CostaRica && normalized.number == "") NumberRequired
+                , errorIf (normalized.postalCode /= "" && not postalCodeValid) PostalCodeInvalid
                 ]
     in
     if isAddressEmpty address then
         Ok Nothing
 
     else if List.isEmpty errors then
-        Ok
-            (Just
-                (if country == CostaRica then
-                    { normalized | number = "", complement = "" }
-
-                 else
-                    normalized
-                )
-            )
+        Ok (Just (dropUnusedFields country normalized))
 
     else
         Err errors
+
+
+errorIf : Bool -> AddressError -> Maybe AddressError
+errorIf condition error =
+    if condition then
+        Just error
+
+    else
+        Nothing
+
+
+{-| A Costa Rica address has no number or complement: the otras señas say it all
+-}
+dropUnusedFields : Country -> Address -> Address
+dropUnusedFields country address =
+    case country of
+        CostaRica ->
+            { address | number = "", complement = "" }
+
+        _ ->
+            address
 
 
 
@@ -595,137 +616,99 @@ saveFields :
     -> SaveFields
 saveFields { original, current } =
     let
-        placeChanged =
-            placeKey original.place /= placeKey current.place
+        currentKey =
+            placeKey current.place
 
-        isPicked =
-            (placeKey current.place).kind == PickedPlace
+        placeChanged =
+            placeKey original.place /= currentKey
 
         addressChanged =
-            isPicked && normalizeAddress original.address /= normalizeAddress current.address
+            normalizeAddress original.address /= normalizeAddress current.address
 
-        sendPickerFields =
-            isPicked && (placeChanged || addressChanged)
-
-        locationText =
+        legacyLocation text =
             if placeChanged then
-                case (placeKey current.place).kind of
-                    OtherPlace ->
-                        Present (placeKey current.place).text
+                { noSaveFields | location = Present text }
 
-                    EmptyPlace ->
-                        Present ""
+            else
+                noSaveFields
+    in
+    case currentKey of
+        NoPlace ->
+            legacyLocation ""
 
-                    PickedPlace ->
+        OtherPlace text ->
+            legacyLocation text
+
+        PickedPlace picked ->
+            if placeChanged || addressChanged then
+                { location = Absent
+                , locationMunicipalityId = Present picked.municipalityId
+                , locationBairroId = OptionalArgument.fromMaybe picked.bairroId
+                , locationBairroText = optionalText picked.bairroText
+                , deliveryAddress =
+                    if not addressChanged then
                         Absent
 
-            else
-                Absent
-    in
-    { location = locationText
-    , locationMunicipalityId =
-        if sendPickerFields then
-            current.place.municipality
-                |> Maybe.map (.id >> Present)
-                |> Maybe.withDefault Absent
+                    else if isAddressEmpty current.address then
+                        Null
 
-        else
-            Absent
-    , locationBairroId =
-        if sendPickerFields then
-            current.place.bairro
-                |> Maybe.map (.id >> Present)
-                |> Maybe.withDefault Absent
-
-        else
-            Absent
-    , locationBairroText =
-        if sendPickerFields && current.place.bairro == Nothing && cleanText current.place.bairroText /= "" then
-            Present (cleanText current.place.bairroText)
-
-        else
-            Absent
-    , deliveryAddress =
-        if addressChanged then
-            if isAddressEmpty current.address then
-                Null
+                    else
+                        Present (toInput current.place.country current.address)
+                }
 
             else
-                Present (toInput current.place.country current.address)
-
-        else
-            Absent
-    }
+                noSaveFields
 
 
 toInput : Country -> Address -> Cambiatus.InputObject.DeliveryAddressInput
 toInput country address =
     let
-        normalized =
-            normalizeAddress address
-
-        optional value =
-            if value == "" then
-                Absent
-
-            else
-                Present value
+        toSend =
+            dropUnusedFields country (normalizeAddress address)
     in
-    { street = normalized.street
-    , number =
-        if country == CostaRica then
-            Absent
-
-        else
-            optional normalized.number
-    , complement =
-        if country == CostaRica then
-            Absent
-
-        else
-            optional normalized.complement
-    , postalCode = optional normalized.postalCode
+    { street = toSend.street
+    , number = optionalText toSend.number
+    , complement = optionalText toSend.complement
+    , postalCode = optionalText toSend.postalCode
     }
 
 
-type PlaceKind
-    = EmptyPlace
-    | OtherPlace
-    | PickedPlace
+optionalText : String -> OptionalArgument String
+optionalText value =
+    if value == "" then
+        Absent
+
+    else
+        Present value
 
 
 {-| What identifies a place, ignoring everything that doesn't change what is saved
 -}
-type alias PlaceKey =
-    { kind : PlaceKind
-    , text : String
-    , ids : List Int
-    }
+type PlaceKey
+    = NoPlace
+    | OtherPlace String
+    | PickedPlace { municipalityId : Int, bairroId : Maybe Int, bairroText : String }
 
 
 placeKey : Place -> PlaceKey
 placeKey place =
-    case place.country of
-        Other ->
-            case cleanText place.otherText of
-                "" ->
-                    { kind = EmptyPlace, text = "", ids = [] }
+    case ( place.country, place.municipality ) of
+        ( Other, _ ) ->
+            nonEmptyText place.otherText
+                |> Maybe.map OtherPlace
+                |> Maybe.withDefault NoPlace
 
-                text ->
-                    { kind = OtherPlace, text = text, ids = [] }
+        ( _, Nothing ) ->
+            NoPlace
 
-        _ ->
-            case place.municipality of
-                Nothing ->
-                    { kind = EmptyPlace, text = "", ids = [] }
+        ( _, Just municipality ) ->
+            PickedPlace
+                { municipalityId = municipality.id
+                , bairroId = Maybe.map .id place.bairro
+                , bairroText =
+                    if place.bairro == Nothing then
+                        cleanText place.bairroText
 
-                Just municipality ->
-                    { kind = PickedPlace
-                    , text =
-                        if place.bairro == Nothing then
-                            cleanText place.bairroText
-
-                        else
-                            ""
-                    , ids = municipality.id :: (place.bairro |> Maybe.map (.id >> List.singleton) |> Maybe.withDefault [])
-                    }
+                    else
+                        ""
+                }

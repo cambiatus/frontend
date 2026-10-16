@@ -296,17 +296,15 @@ view loggedIn model =
                     Page.fullPageGraphQLError (t "profile.title") e
 
                 RemoteData.Success profile ->
-                    case model.editorData of
-                        RemoteData.Failure e ->
+                    case ( model.editorData, model.form ) of
+                        ( RemoteData.Failure e, _ ) ->
                             Page.fullPageGraphQLError (t "profile.title") e
 
-                        _ ->
-                            case model.form of
-                                Loading ->
-                                    Page.fullPageLoading loggedIn.shared
+                        ( _, Loading ) ->
+                            Page.fullPageLoading loggedIn.shared
 
-                                Loaded loaded ->
-                                    view_ loggedIn loaded profile
+                        ( _, Loaded loaded ) ->
+                            view_ loggedIn loaded profile
     in
     { title = title
     , content = content
@@ -365,9 +363,6 @@ viewPlaceSection translators state =
     let
         { place } =
             state
-
-        isCostaRica =
-            place.country == CostaRica
     in
     div [ class "mb-10" ]
         [ div [ class "flex flex-wrap items-center gap-x-3 gap-y-1 mb-4" ]
@@ -417,7 +412,7 @@ viewPlaceSection translators state =
                       else
                         text ""
                     ]
-        , viewPreview translators isCostaRica place
+        , viewPreview translators place
         ]
 
 
@@ -547,7 +542,7 @@ viewMunicipality translators state =
             viewChosen
                 { id = "location-municipality-chosen"
                 , label = label
-                , value = municipalityRow state.place.country municipality
+                , value = Location.municipalityRow state.place.country municipality
                 , changeLabel = tl translators "change"
                 , onChange = ClickedChangeMunicipality
                 }
@@ -566,19 +561,6 @@ viewMunicipality translators state =
                 }
                 state.municipalityPicker
                 |> Html.map GotMunicipalityPickerMsg
-
-
-municipalityRow : Country -> Locality -> String
-municipalityRow country municipality =
-    case ( country, municipality.stateCode ) of
-        ( CostaRica, Just code ) ->
-            municipality.name ++ " – " ++ Location.provinceName code
-
-        ( _, Just code ) ->
-            municipality.name ++ " – " ++ code
-
-        ( _, Nothing ) ->
-            municipality.name
 
 
 viewBairro : Translators -> LocationState -> Html Msg
@@ -686,8 +668,8 @@ viewBairro translators state =
                             ]
 
 
-viewPreview : Translators -> Bool -> Place -> Html Msg
-viewPreview translators _ place =
+viewPreview : Translators -> Place -> Html Msg
+viewPreview translators place =
     case Location.previewLabel place of
         Just label ->
             div [ class "flex flex-wrap items-center justify-between gap-x-4 gap-y-2 p-4 rounded bg-gray-100" ]
@@ -711,7 +693,7 @@ viewAddressSection : Translators -> LocationState -> Html Msg
 viewAddressSection translators state =
     let
         isPicked =
-            state.place.country /= Other && state.place.municipality /= Nothing
+            Location.isPicked state.place
 
         isCostaRica =
             state.place.country == CostaRica
@@ -1019,7 +1001,7 @@ update msg model loggedIn =
 
                         Just location ->
                             if hasLocationErrors location then
-                                { model | form = Loaded { loaded | location = Just { location | showErrors = True } } }
+                                setLocation { location | showErrors = True } model
                                     |> UR.init
 
                             else
@@ -1087,7 +1069,7 @@ update msg model loggedIn =
 
         GotMunicipalityPickerMsg subMsg ->
             withLocation model
-                (\loaded location ->
+                (\location ->
                     let
                         result =
                             LocalityPicker.update (pickerConfig loggedIn.shared.translators) subMsg location.municipalityPicker
@@ -1103,7 +1085,7 @@ update msg model loggedIn =
                                 Nothing ->
                                     ( withPicker, Nothing )
                     in
-                    { model | form = Loaded { loaded | location = Just newLocation } }
+                    setLocation newLocation model
                         |> UR.init
                         |> UR.addCmd (Cmd.map GotMunicipalityPickerMsg result.cmd)
                         |> addPickerRequest loggedIn GotMunicipalityPickerMsg result.request
@@ -1112,7 +1094,7 @@ update msg model loggedIn =
 
         GotBairroPickerMsg subMsg ->
             withLocation model
-                (\loaded location ->
+                (\location ->
                     case location.bairroPicker of
                         Nothing ->
                             UR.init model
@@ -1128,16 +1110,12 @@ update msg model loggedIn =
                                 newLocation =
                                     case result.selected of
                                         Just bairro ->
-                                            let
-                                                place =
-                                                    withPicker.place
-                                            in
-                                            { withPicker | place = { place | bairro = Just bairro, bairroText = "" } }
+                                            mapPlace (\place -> { place | bairro = Just bairro, bairroText = "" }) withPicker
 
                                         Nothing ->
                                             withPicker
                             in
-                            { model | form = Loaded { loaded | location = Just newLocation } }
+                            setLocation newLocation model
                                 |> UR.init
                                 |> UR.addCmd (Cmd.map GotBairroPickerMsg result.cmd)
                                 |> addPickerRequest loggedIn GotBairroPickerMsg result.request
@@ -1149,11 +1127,8 @@ update msg model loggedIn =
         ClickedChangeBairro ->
             updateLocation model
                 (\location ->
-                    let
-                        place =
-                            location.place
-                    in
-                    { location | place = { place | bairro = Nothing, bairroText = "" }, typingBairro = False }
+                    { location | typingBairro = False }
+                        |> mapPlace (\place -> { place | bairro = Nothing, bairroText = "" })
                 )
 
         ClickedBairroNotListed ->
@@ -1162,93 +1137,34 @@ update msg model loggedIn =
         ClickedBackToList ->
             updateLocation model
                 (\location ->
-                    let
-                        place =
-                            location.place
-                    in
-                    { location | typingBairro = False, place = { place | bairroText = "" } }
+                    { location | typingBairro = False }
+                        |> mapPlace (\place -> { place | bairroText = "" })
                 )
 
         ClickedClearPlace ->
             updateLocation model (\location -> resetPlace location.place.country location)
 
         ChangedBairroText text ->
-            updateLocation model
-                (\location ->
-                    let
-                        place =
-                            location.place
-                    in
-                    { location | place = { place | bairroText = text } }
-                )
+            updateLocation model (mapPlace (\place -> { place | bairroText = text }))
 
         ChangedOtherText text ->
-            updateLocation model
-                (\location ->
-                    let
-                        place =
-                            location.place
-                    in
-                    { location | place = { place | otherText = text } }
-                )
+            updateLocation model (mapPlace (\place -> { place | otherText = text }))
 
         ChangedAddress field text ->
-            updateLocation model
-                (\location ->
-                    let
-                        address =
-                            location.address
-                    in
-                    { location
-                        | address =
-                            case field of
-                                Street ->
-                                    { address | street = text }
-
-                                Number ->
-                                    { address | number = text }
-
-                                Complement ->
-                                    { address | complement = text }
-
-                                PostalCode ->
-                                    { address | postalCode = text }
-                    }
-                )
+            updateLocation model (\location -> { location | address = setAddressField field text location.address })
 
         ToggledFeedback ->
-            updateLocation model
-                (\location ->
-                    let
-                        feedback =
-                            location.feedback
-                    in
-                    { location | feedback = { feedback | isOpen = not feedback.isOpen, status = Writing } }
-                )
+            updateLocation model (mapFeedback (\feedback -> { feedback | isOpen = not feedback.isOpen, status = Writing }))
 
         ChangedFeedbackKind kind ->
-            updateLocation model
-                (\location ->
-                    let
-                        feedback =
-                            location.feedback
-                    in
-                    { location | feedback = { feedback | kind = kind } }
-                )
+            updateLocation model (mapFeedback (\feedback -> { feedback | kind = kind }))
 
         ChangedFeedbackBody body ->
-            updateLocation model
-                (\location ->
-                    let
-                        feedback =
-                            location.feedback
-                    in
-                    { location | feedback = { feedback | body = body } }
-                )
+            updateLocation model (mapFeedback (\feedback -> { feedback | body = body }))
 
         ClickedSendFeedback ->
             withLocation model
-                (\loaded location ->
+                (\location ->
                     let
                         feedback =
                             location.feedback
@@ -1257,7 +1173,7 @@ update msg model loggedIn =
                         UR.init model
 
                     else
-                        { model | form = Loaded { loaded | location = Just { location | feedback = { feedback | status = Sending } } } }
+                        setLocation { location | feedback = { feedback | status = Sending } } model
                             |> UR.init
                             |> UR.addExt
                                 (LoggedIn.mutation loggedIn
@@ -1276,23 +1192,21 @@ update msg model loggedIn =
 
         GotFeedbackResult result ->
             updateLocation model
-                (\location ->
-                    let
-                        feedback =
-                            location.feedback
-                    in
-                    case result of
-                        RemoteData.Success (Just True) ->
-                            { location | feedback = { feedback | status = Sent, isOpen = False, body = "" } }
+                (mapFeedback
+                    (\feedback ->
+                        case result of
+                            RemoteData.Success (Just True) ->
+                                { feedback | status = Sent, isOpen = False, body = "" }
 
-                        RemoteData.Success _ ->
-                            { location | feedback = { feedback | status = FailedToSend } }
+                            RemoteData.Success _ ->
+                                { feedback | status = FailedToSend }
 
-                        RemoteData.Failure _ ->
-                            { location | feedback = { feedback | status = FailedToSend } }
+                            RemoteData.Failure _ ->
+                                { feedback | status = FailedToSend }
 
-                        _ ->
-                            location
+                            _ ->
+                                feedback
+                    )
                 )
 
 
@@ -1404,30 +1318,21 @@ newMunicipalityPicker country =
 
 bairroPickerFor : Country -> Locality -> ( Maybe LocalityPicker.Model, Maybe LocalityPicker.Request )
 bairroPickerFor country municipality =
-    let
-        ( picker, request ) =
-            LocalityPicker.init
-                { id = "location-bairro-input"
-                , kind = LocalityPicker.Bairros { country = country, municipalityId = municipality.id }
-                }
-    in
-    ( Just picker, request )
+    LocalityPicker.init
+        { id = "location-bairro-input"
+        , kind = LocalityPicker.Bairros { country = country, municipalityId = municipality.id }
+        }
+        |> Tuple.mapFirst Just
 
 
 selectMunicipality : Locality -> LocationState -> ( LocationState, Maybe LocalityPicker.Request )
 selectMunicipality municipality location =
     let
-        place =
-            location.place
-
         ( bairroPicker, request ) =
-            bairroPickerFor place.country municipality
+            bairroPickerFor location.place.country municipality
     in
-    ( { location
-        | place = { place | municipality = Just municipality, bairro = Nothing, bairroText = "" }
-        , bairroPicker = bairroPicker
-        , typingBairro = False
-      }
+    ( { location | bairroPicker = bairroPicker, typingBairro = False }
+        |> mapPlace (\place -> { place | municipality = Just municipality, bairro = Nothing, bairroText = "" })
     , request
     )
 
@@ -1470,13 +1375,13 @@ addPickerRequest loggedIn toMsg maybeRequest ur =
                 ur
 
 
-withLocation : Model -> (LoadedForm -> LocationState -> UpdateResult) -> UpdateResult
+withLocation : Model -> (LocationState -> UpdateResult) -> UpdateResult
 withLocation model fn =
     case model.form of
-        Loaded ({ location } as loaded) ->
+        Loaded { location } ->
             case location of
                 Just locationState ->
-                    fn loaded locationState
+                    fn locationState
 
                 Nothing ->
                     UR.init model
@@ -1485,13 +1390,45 @@ withLocation model fn =
             UR.init model
 
 
+setLocation : LocationState -> Model -> Model
+setLocation location model =
+    case model.form of
+        Loaded loaded ->
+            { model | form = Loaded { loaded | location = Just location } }
+
+        Loading ->
+            model
+
+
 updateLocation : Model -> (LocationState -> LocationState) -> UpdateResult
 updateLocation model fn =
-    withLocation model
-        (\loaded location ->
-            { model | form = Loaded { loaded | location = Just (fn location) } }
-                |> UR.init
-        )
+    withLocation model (\location -> UR.init (setLocation (fn location) model))
+
+
+mapPlace : (Place -> Place) -> LocationState -> LocationState
+mapPlace fn location =
+    { location | place = fn location.place }
+
+
+mapFeedback : (FeedbackState -> FeedbackState) -> LocationState -> LocationState
+mapFeedback fn location =
+    { location | feedback = fn location.feedback }
+
+
+setAddressField : AddressField -> String -> Address -> Address
+setAddressField field text address =
+    case field of
+        Street ->
+            { address | street = text }
+
+        Number ->
+            { address | number = text }
+
+        Complement ->
+            { address | complement = text }
+
+        PostalCode ->
+            { address | postalCode = text }
 
 
 {-| Whether something the member typed in the place or the address would be refused
@@ -1500,27 +1437,22 @@ hasLocationErrors : LocationState -> Bool
 hasLocationErrors { place, address } =
     let
         bairroInvalid =
-            case Location.validateBairroText place.bairroText of
+            case ( place.bairro, Location.validateBairroText place.bairroText ) of
+                ( Nothing, Err _ ) ->
+                    True
+
+                _ ->
+                    False
+
+        addressInvalid =
+            case Location.validateAddress place.country address of
                 Ok _ ->
                     False
 
                 Err _ ->
-                    place.bairro == Nothing
-
-        isPicked =
-            place.country /= Other && place.municipality /= Nothing
-
-        addressInvalid =
-            isPicked
-                && (case Location.validateAddress place.country address of
-                        Ok _ ->
-                            False
-
-                        Err _ ->
-                            True
-                   )
+                    True
     in
-    (isPicked && bairroInvalid) || addressInvalid
+    Location.isPicked place && (bairroInvalid || addressInvalid)
 
 
 receiveBroadcast : LoggedIn.BroadcastMsg -> Maybe Msg
