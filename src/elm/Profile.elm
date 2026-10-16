@@ -9,6 +9,7 @@ module Profile exposing
     , contributionsQuery
     , minimalSelectionSet
     , mutation
+    , mutationWith
     , profileToForm
     , query
     , selectionSet
@@ -46,6 +47,7 @@ import Kyc exposing (ProfileKyc)
 import Markdown exposing (Markdown)
 import Profile.Address as Address exposing (Address)
 import Profile.Contact as Contact
+import Profile.Location as Location
 import Time
 import Translation
 import Utils
@@ -216,6 +218,14 @@ query account =
 
 mutation : ProfileForm -> SelectionSet (Maybe Model) RootMutation
 mutation form =
+    mutationWith (Location.legacySaveFields form.localization) form
+
+
+{-| Saves the profile with the given place and address fields. The form's
+`localization` is ignored: `fields` decides what is sent as `location`.
+-}
+mutationWith : Location.SaveFields -> ProfileForm -> SelectionSet (Maybe Model) RootMutation
+mutationWith fields form =
     let
         interestString =
             form.interest
@@ -242,7 +252,11 @@ mutation form =
             , contacts = Present (List.map (Contact.unwrap >> contactInput) form.contacts)
             , digest = Absent
             , interests = Present interestString
-            , location = Present form.localization
+            , location = fields.location
+            , locationMunicipalityId = fields.locationMunicipalityId
+            , locationBairroId = fields.locationBairroId
+            , locationBairroText = fields.locationBairroText
+            , deliveryAddress = fields.deliveryAddress
             , avatar = avatarInput
             , transferNotification = Absent
             }

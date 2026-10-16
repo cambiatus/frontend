@@ -270,6 +270,48 @@ encodeCountryInput input____ =
         [ ( "name", Encode.string input____.name |> Just ) ]
 
 
+buildDeliveryAddressInput :
+    DeliveryAddressInputRequiredFields
+    -> (DeliveryAddressInputOptionalFields -> DeliveryAddressInputOptionalFields)
+    -> DeliveryAddressInput
+buildDeliveryAddressInput required____ fillOptionals____ =
+    let
+        optionals____ =
+            fillOptionals____
+                { complement = Absent, number = Absent, postalCode = Absent }
+    in
+    { complement = optionals____.complement, number = optionals____.number, postalCode = optionals____.postalCode, street = required____.street }
+
+
+type alias DeliveryAddressInputRequiredFields =
+    { street : String }
+
+
+type alias DeliveryAddressInputOptionalFields =
+    { complement : OptionalArgument String
+    , number : OptionalArgument String
+    , postalCode : OptionalArgument String
+    }
+
+
+{-| Type for the DeliveryAddressInput input object.
+-}
+type alias DeliveryAddressInput =
+    { complement : OptionalArgument String
+    , number : OptionalArgument String
+    , postalCode : OptionalArgument String
+    , street : String
+    }
+
+
+{-| Encode a DeliveryAddressInput into a value that can be used as an argument.
+-}
+encodeDeliveryAddressInput : DeliveryAddressInput -> Value
+encodeDeliveryAddressInput input____ =
+    Encode.maybeObject
+        [ ( "complement", Encode.string |> Encode.optional input____.complement ), ( "number", Encode.string |> Encode.optional input____.number ), ( "postalCode", Encode.string |> Encode.optional input____.postalCode ), ( "street", Encode.string input____.street |> Just ) ]
+
+
 buildKycDataUpdateInput :
     KycDataUpdateInputRequiredFields
     -> KycDataUpdateInput
@@ -460,6 +502,39 @@ encodeReadNotificationInput input____ =
         [ ( "id", Encode.int input____.id |> Just ) ]
 
 
+buildReleaseFeedbackInput :
+    ReleaseFeedbackInputRequiredFields
+    -> ReleaseFeedbackInput
+buildReleaseFeedbackInput required____ =
+    { body = required____.body, key = required____.key, kind = required____.kind, path = required____.path }
+
+
+type alias ReleaseFeedbackInputRequiredFields =
+    { body : String
+    , key : String
+    , kind : String
+    , path : String
+    }
+
+
+{-| Type for the ReleaseFeedbackInput input object.
+-}
+type alias ReleaseFeedbackInput =
+    { body : String
+    , key : String
+    , kind : String
+    , path : String
+    }
+
+
+{-| Encode a ReleaseFeedbackInput into a value that can be used as an argument.
+-}
+encodeReleaseFeedbackInput : ReleaseFeedbackInput -> Value
+encodeReleaseFeedbackInput input____ =
+    Encode.maybeObject
+        [ ( "body", Encode.string input____.body |> Just ), ( "key", Encode.string input____.key |> Just ), ( "kind", Encode.string input____.kind |> Just ), ( "path", Encode.string input____.path |> Just ) ]
+
+
 buildSubcategoryInput :
     SubcategoryInputRequiredFields
     -> SubcategoryInput
@@ -622,9 +697,9 @@ buildUserUpdateInput fillOptionals____ =
     let
         optionals____ =
             fillOptionals____
-                { avatar = Absent, bio = Absent, claimNotification = Absent, contacts = Absent, digest = Absent, email = Absent, interests = Absent, location = Absent, name = Absent, transferNotification = Absent }
+                { avatar = Absent, bio = Absent, claimNotification = Absent, contacts = Absent, deliveryAddress = Absent, digest = Absent, email = Absent, interests = Absent, location = Absent, locationBairroId = Absent, locationBairroText = Absent, locationMunicipalityId = Absent, name = Absent, transferNotification = Absent }
     in
-    { avatar = optionals____.avatar, bio = optionals____.bio, claimNotification = optionals____.claimNotification, contacts = optionals____.contacts, digest = optionals____.digest, email = optionals____.email, interests = optionals____.interests, location = optionals____.location, name = optionals____.name, transferNotification = optionals____.transferNotification }
+    { avatar = optionals____.avatar, bio = optionals____.bio, claimNotification = optionals____.claimNotification, contacts = optionals____.contacts, deliveryAddress = optionals____.deliveryAddress, digest = optionals____.digest, email = optionals____.email, interests = optionals____.interests, location = optionals____.location, locationBairroId = optionals____.locationBairroId, locationBairroText = optionals____.locationBairroText, locationMunicipalityId = optionals____.locationMunicipalityId, name = optionals____.name, transferNotification = optionals____.transferNotification }
 
 
 type alias UserUpdateInputOptionalFields =
@@ -632,10 +707,14 @@ type alias UserUpdateInputOptionalFields =
     , bio : OptionalArgument String
     , claimNotification : OptionalArgument Bool
     , contacts : OptionalArgument (List ContactInput)
+    , deliveryAddress : OptionalArgument DeliveryAddressInput
     , digest : OptionalArgument Bool
     , email : OptionalArgument String
     , interests : OptionalArgument String
     , location : OptionalArgument String
+    , locationBairroId : OptionalArgument Int
+    , locationBairroText : OptionalArgument String
+    , locationMunicipalityId : OptionalArgument Int
     , name : OptionalArgument String
     , transferNotification : OptionalArgument Bool
     }
@@ -648,10 +727,14 @@ type alias UserUpdateInput =
     , bio : OptionalArgument String
     , claimNotification : OptionalArgument Bool
     , contacts : OptionalArgument (List ContactInput)
+    , deliveryAddress : OptionalArgument DeliveryAddressInput
     , digest : OptionalArgument Bool
     , email : OptionalArgument String
     , interests : OptionalArgument String
     , location : OptionalArgument String
+    , locationBairroId : OptionalArgument Int
+    , locationBairroText : OptionalArgument String
+    , locationMunicipalityId : OptionalArgument Int
     , name : OptionalArgument String
     , transferNotification : OptionalArgument Bool
     }
@@ -662,4 +745,4 @@ type alias UserUpdateInput =
 encodeUserUpdateInput : UserUpdateInput -> Value
 encodeUserUpdateInput input____ =
     Encode.maybeObject
-        [ ( "avatar", Encode.string |> Encode.optional input____.avatar ), ( "bio", Encode.string |> Encode.optional input____.bio ), ( "claimNotification", Encode.bool |> Encode.optional input____.claimNotification ), ( "contacts", (encodeContactInput |> Encode.list) |> Encode.optional input____.contacts ), ( "digest", Encode.bool |> Encode.optional input____.digest ), ( "email", Encode.string |> Encode.optional input____.email ), ( "interests", Encode.string |> Encode.optional input____.interests ), ( "location", Encode.string |> Encode.optional input____.location ), ( "name", Encode.string |> Encode.optional input____.name ), ( "transferNotification", Encode.bool |> Encode.optional input____.transferNotification ) ]
+        [ ( "avatar", Encode.string |> Encode.optional input____.avatar ), ( "bio", Encode.string |> Encode.optional input____.bio ), ( "claimNotification", Encode.bool |> Encode.optional input____.claimNotification ), ( "contacts", (encodeContactInput |> Encode.list) |> Encode.optional input____.contacts ), ( "deliveryAddress", encodeDeliveryAddressInput |> Encode.optional input____.deliveryAddress ), ( "digest", Encode.bool |> Encode.optional input____.digest ), ( "email", Encode.string |> Encode.optional input____.email ), ( "interests", Encode.string |> Encode.optional input____.interests ), ( "location", Encode.string |> Encode.optional input____.location ), ( "locationBairroId", Encode.int |> Encode.optional input____.locationBairroId ), ( "locationBairroText", Encode.string |> Encode.optional input____.locationBairroText ), ( "locationMunicipalityId", Encode.int |> Encode.optional input____.locationMunicipalityId ), ( "name", Encode.string |> Encode.optional input____.name ), ( "transferNotification", Encode.bool |> Encode.optional input____.transferNotification ) ]
