@@ -309,16 +309,8 @@ type Page
     | News (Maybe Int)
     | CommunityAbout
     | CommunityObjectives
-    | CommunitySettings
-    | CommunitySettingsInfo
-    | CommunitySettingsNews
-    | CommunitySettingsNewsEditor
-    | CommunitySettingsCurrency
-    | CommunitySettingsFeatures
     | CommunityEditor
     | CommunitySelector
-    | CommunitySettingsObjectiveEditor
-    | CommunitySettingsActionEditor
     | Claim
     | Notification
     | Settings
@@ -435,7 +427,7 @@ viewHelper pageMsg page profile_ ({ shared } as model) content =
 
                             showHighlightedNews =
                                 not (Maybe.Extra.isJust news.receipt)
-                                    && not (isAdminPage page)
+                                    && (page /= AdminMoved)
                                     && not isInNewsPage
                                     && not (List.member page [ Join, Invite ])
                         in
@@ -1145,20 +1137,6 @@ isActive page route =
 
         _ ->
             False
-
-
-isAdminPage : Page -> Bool
-isAdminPage page =
-    List.member page
-        [ CommunitySettings
-        , CommunitySettingsInfo
-        , CommunitySettingsNews
-        , CommunitySettingsNewsEditor
-        , CommunitySettingsCurrency
-        , CommunitySettingsFeatures
-        , CommunitySettingsObjectiveEditor
-        , CommunitySettingsActionEditor
-        ]
 
 
 viewFooter : Model -> Html (Msg externalMsg)

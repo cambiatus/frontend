@@ -27,8 +27,6 @@ module Form.Toggle exposing
 
 @docs withTooltip
 
-@docs StatusText
-
 
 ## Adding attributes
 

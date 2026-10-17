@@ -432,9 +432,6 @@ viewInput (Options options) ({ onChange, value, hasError, onBlur, translators, i
                 TextareaInput _ ->
                     ( Html.textarea, class "" )
 
-        paddedTimeValue =
-            value
-
         ( beforeRenderingValue, beforeChangeEvent, maskHelper ) =
             case options.mask of
                 Just (NumberMask decimalDigits) ->
@@ -493,7 +490,7 @@ viewInput (Options options) ({ onChange, value, hasError, onBlur, translators, i
                 :: class "w-full input peer"
                 :: classList [ ( "with-error", hasError ) ]
                 :: disabled options.disabled
-                :: Html.Attributes.value (beforeRenderingValue paddedTimeValue)
+                :: Html.Attributes.value (beforeRenderingValue value)
                 :: placeholder (Maybe.withDefault "" options.placeholder)
                 :: typeAttr
                 :: required isRequired
