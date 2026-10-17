@@ -38,9 +38,9 @@ loginUrl apiUrl =
 viewContent : Translation.Translators -> String -> Html msg
 viewContent { t } url =
     div [ class "container mx-auto px-4 py-16 md:py-24 flex flex-col items-center text-center" ]
-        [ h1 [ class "text-2xl font-bold text-black" ] [ text (t "admin_moved.title") ]
-        , p [ class "mt-4 max-w-md text-gray-900" ] [ text (t "admin_moved.body") ]
-        , p [ class "mt-2 max-w-md text-gray-900" ] [ text (t "admin_moved.login_hint") ]
+        [ h1 [ class "text-2xl leading-tight font-bold text-black" ] [ text (t "admin_moved.title") ]
+        , p [ class "mt-4 max-w-md text-gray-333" ] [ text (t "admin_moved.body") ]
+        , p [ class "mt-2 max-w-md text-gray-700" ] [ text (t "admin_moved.login_hint") ]
 
         -- target "_self" is required: without it Elm routes this same-host URL inside
         -- the SPA (Not Found) instead of loading the Phoenix login page.
