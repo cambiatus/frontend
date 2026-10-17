@@ -450,6 +450,7 @@ app.ports.storeAuthToken.subscribe((token) => {
 
 app.ports.storeSelectedCommunitySymbol.subscribe((symbol) => {
   setItem(SELECTED_COMMUNITY_KEY, symbol);
+  joinPresence();
   addBreadcrumb({
     type: "info",
     category: "storeSelectedCommunitySymbol",
@@ -516,6 +517,7 @@ function storePin(data, pin) {
 function logout() {
   removeItem(USER_KEY);
   removeItem(AUTH_TOKEN);
+  leavePresence();
 
   addBreadcrumb({
     type: "info",
@@ -652,7 +654,36 @@ app.ports.createAbsintheSocket.subscribe((token) => {
   resubscribe(transferSubscription);
   resubscribe(notificationSubscription);
   resubscribe(highlightedNewsSubscription);
+
+  joinPresence();
 });
+
+// Tells the backend this member is online in the Elm app, so LiveView can show it. The
+// channel rides the socket Absinthe already uses (its token authenticates the join) and
+// is left on logout; a new socket (token change) or community switch rejoins.
+let presenceChannel = null;
+
+function leavePresence() {
+  if (presenceChannel !== null) {
+    presenceChannel.leave();
+    presenceChannel = null;
+  }
+}
+
+function joinPresence() {
+  leavePresence();
+
+  const symbol = getItem(SELECTED_COMMUNITY_KEY);
+  if (!getItem(AUTH_TOKEN) || !symbol) {
+    return;
+  }
+
+  presenceChannel = absintheSocket.phoenixSocket.channel("elm_presence", {
+    symbol,
+  });
+  // A refused join (not a member) must not be retried forever
+  presenceChannel.join().receive("error", leavePresence);
+}
 
 async function handleJavascriptPort(arg) {
   switch (arg.data.name) {
