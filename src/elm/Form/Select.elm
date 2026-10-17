@@ -1,7 +1,7 @@
 module Form.Select exposing
     ( init, Options
     , withOption, withOptions
-    , withDisabled, withContainerAttrs, withLabelAttrs
+    , withDisabled, withContainerAttrs
     , getId, getOptionToString
     , view
     , map
@@ -30,7 +30,7 @@ module Form.Select exposing
 
 ## Adding attributes
 
-@docs withDisabled, withContainerAttrs, withLabelAttrs
+@docs withDisabled, withContainerAttrs
 
 
 # Getters
@@ -143,11 +143,6 @@ withDisabled disabled (Options options) =
 withContainerAttrs : List (Html.Attribute msg) -> Options option msg -> Options option msg
 withContainerAttrs attrs (Options options) =
     Options { options | containerAttrs = options.containerAttrs ++ attrs }
-
-
-withLabelAttrs : List (Html.Attribute msg) -> Options option msg -> Options option msg
-withLabelAttrs attrs (Options options) =
-    Options { options | labelAttrs = options.labelAttrs ++ attrs }
 
 
 

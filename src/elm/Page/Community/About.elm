@@ -1,6 +1,5 @@
 module Page.Community.About exposing (Model, Msg, init, jsAddressToMsg, msgToString, receiveBroadcast, update, view)
 
-import Avatar
 import Browser.Dom
 import Community
 import Community.News
@@ -15,10 +14,8 @@ import Http
 import Icons
 import Json.Decode as Decode
 import Json.Encode as Encode
-import List.Extra
 import Log
 import Markdown
-import Maybe.Extra
 import Page
 import RemoteData exposing (RemoteData)
 import Route
@@ -48,7 +45,6 @@ init loggedIn =
         |> UR.init
         |> UR.addCmd (LoggedIn.maybeInitWith CompletedLoadCommunity .selectedCommunity loggedIn)
         |> UR.addExt (LoggedIn.RequestedCommunityField Community.UploadsField)
-        |> UR.addExt (LoggedIn.RequestedCommunityField Community.ContributionsField)
         |> UR.addExt (LoggedIn.RequestedCommunityField Community.NewsField)
         |> UR.addCmd (Browser.Dom.setViewport 0 0 |> Task.attempt (\_ -> NoOp))
 
@@ -199,14 +195,9 @@ view loggedIn model =
                     , div [ class "container mx-auto px-4 py-10" ]
                         [ div
                             [ class "grid grid-cols-1 lg:grid-cols-3 gap-6"
-                            , classList [ ( "lg:grid-cols-6", not (showSupportersCard community) && not (showNewsCard community) ) ]
+                            , classList [ ( "lg:grid-cols-6", not (showNewsCard community) ) ]
                             ]
                             [ viewCommunityCard loggedIn.shared community
-                            , if showSupportersCard community then
-                                viewSupportersCard loggedIn.shared.translators community
-
-                              else
-                                text ""
                             , if showNewsCard community then
                                 viewNewsCard loggedIn.shared community
 
@@ -287,11 +278,8 @@ viewCommunityCard : Shared -> Community.Model -> Html Msg
 viewCommunityCard ({ translators } as shared) community =
     div
         [ classList
-            [ ( "lg:col-start-2 lg:col-span-4", not (showSupportersCard community) && not (showNewsCard community) )
-            , ( "lg:col-span-2"
-              , xor (not <| showSupportersCard community)
-                    (not <| showNewsCard community)
-              )
+            [ ( "lg:col-start-2 lg:col-span-4", not (showNewsCard community) )
+            , ( "lg:col-span-2", showNewsCard community )
             ]
         ]
         -- We need some hidden text so the cards are aligned on desktop
@@ -422,78 +410,6 @@ viewCommunityCard ({ translators } as shared) community =
         ]
 
 
-viewSupportersCard : Translation.Translators -> Community.Model -> Html Msg
-viewSupportersCard { t } community =
-    let
-        compareAvatars first second =
-            case ( Avatar.toMaybeString first, Avatar.toMaybeString second ) of
-                ( Just _, Just _ ) ->
-                    EQ
-
-                ( Just _, Nothing ) ->
-                    LT
-
-                ( Nothing, Just _ ) ->
-                    GT
-
-                ( Nothing, Nothing ) ->
-                    EQ
-
-        viewLoading =
-            List.range 0 4
-                |> List.map
-                    (\index ->
-                        div
-                            [ class "w-14 h-14 rounded-full -mr-2 border border-white bg-gray-300 animate-skeleton-loading last:mr-0"
-                            , style "animation-delay" (String.fromInt (index * 100) ++ "ms")
-                            ]
-                            []
-                    )
-    in
-    div []
-        [ h2
-            [ ariaLabel (t "community.index.our_supporters" ++ " " ++ t "community.index.supporters")
-            ]
-            [ span [ ariaHidden True ] [ text <| t "community.index.our_supporters" ]
-            , text " "
-            , span [ class "font-bold", ariaHidden True ] [ text <| t "community.index.supporters" ]
-            ]
-        , div [ class "bg-white rounded px-4 pt-4 pb-6 mt-4" ]
-            [ p [] [ text <| t "community.index.you_can_support" ]
-            , a
-                [ class "button button-primary w-full mt-6"
-                , Route.href Route.CommunitySponsor
-                ]
-                [ text <| t "community.index.support_us" ]
-            , p [ class "mt-8 text-center" ] [ text <| t "community.index.see_supporters" ]
-            , div [ class "flex flex-wrap mt-4 justify-center" ]
-                (case community.contributions of
-                    RemoteData.Success contributions ->
-                        contributions
-                            |> List.map (.user >> .avatar)
-                            |> List.Extra.unique
-                            |> List.sortWith compareAvatars
-                            |> List.take 5
-                            |> List.map (\avatar -> Avatar.view avatar "w-14 h-14 object-cover rounded-full -mr-2 border border-white last:mr-0")
-
-                    RemoteData.Loading ->
-                        viewLoading
-
-                    RemoteData.NotAsked ->
-                        viewLoading
-
-                    RemoteData.Failure _ ->
-                        []
-                )
-            , a
-                [ class "button button-secondary w-full mt-4"
-                , Route.href Route.CommunitySupporters
-                ]
-                [ text <| t "community.index.see_all_supporters" ]
-            ]
-        ]
-
-
 viewNewsCard : Shared -> Community.Model -> Html Msg
 viewNewsCard ({ translators } as shared) community =
     let
@@ -586,13 +502,6 @@ viewStatsCard translators { number, description, imgSrc, imgClass } =
                 [ text description ]
             ]
         ]
-
-
-showSupportersCard : Community.Model -> Bool
-showSupportersCard community =
-    community.contributionConfiguration
-        |> Maybe.andThen .paypalAccount
-        |> Maybe.Extra.isJust
 
 
 showNewsCard : Community.Model -> Bool

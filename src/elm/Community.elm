@@ -1,8 +1,6 @@
 module Community exposing
     ( Balance
     , CommunityPreview
-    , Contribution
-    , ContributionConfiguration
     , CreateCommunityData
     , CreateCommunityDataInput
     , Field(..)
@@ -17,7 +15,6 @@ module Community exposing
     , communityPreviewSymbolQuery
     , createCommunityData
     , createCommunityDataDecoder
-    , currencyTranslationKey
     , domainAvailableQuery
     , encodeCreateCommunityData
     , fieldSelectionSet
@@ -35,13 +32,9 @@ module Community exposing
     )
 
 import Action exposing (Action)
-import Cambiatus.Enum.ContributionStatusType
-import Cambiatus.Enum.CurrencyType
 import Cambiatus.Object
 import Cambiatus.Object.Community as Community
 import Cambiatus.Object.CommunityPreview as CommunityPreview
-import Cambiatus.Object.Contribution
-import Cambiatus.Object.ContributionConfig
 import Cambiatus.Object.Exists
 import Cambiatus.Object.Invite as Invite
 import Cambiatus.Object.Objective as Objective
@@ -49,7 +42,6 @@ import Cambiatus.Object.Subdomain as Subdomain
 import Cambiatus.Object.Upload as Upload
 import Cambiatus.Object.User as Profile
 import Cambiatus.Query as Query
-import Cambiatus.Scalar
 import Cambiatus.Subscription as Subscription
 import Community.News
 import Constants
@@ -62,7 +54,6 @@ import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Html exposing (Html, div, img, span, text)
 import Html.Attributes exposing (class, classList, src)
-import Iso8601
 import Json.Decode as Decode exposing (Decoder)
 import Json.Decode.Pipeline exposing (required)
 import Json.Encode as Encode exposing (Value)
@@ -112,8 +103,6 @@ type alias Model =
     , productCount : Int
     , orderCount : Int
     , members : List Profile.Minimal
-    , contributions : RemoteData (Graphql.Http.Error (List Contribution)) (List Contribution)
-    , contributionConfiguration : Maybe ContributionConfiguration
     , news : RemoteData (Graphql.Http.Error (List Community.News.Model)) (List Community.News.Model)
     , highlightedNews : Maybe Community.News.Model
     , objectives : RemoteData (Graphql.Http.Error (List Objective)) (List Objective)
@@ -161,8 +150,7 @@ variants they can use to do so:
 
 -}
 type Field
-    = ContributionsField
-    | ObjectivesField
+    = ObjectivesField
     | UploadsField
     | MembersField
     | NewsField
@@ -175,8 +163,7 @@ constructor's name should be the name of the field followed by `Value`, and
 should hold the actual value of that field (e.g. `ObjectivesValue (List Objetive)`).
 -}
 type FieldValue
-    = ContributionsValue (List Contribution)
-    | ObjectivesValue (List Objective)
+    = ObjectivesValue (List Objective)
     | UploadsValue (List String)
     | MembersValue (List Profile.Minimal)
     | NewsValue (List Community.News.Model)
@@ -210,9 +197,6 @@ getField remoteDataModel accessor =
 setFieldValue : FieldValue -> Model -> Model
 setFieldValue fieldValue model =
     case fieldValue of
-        ContributionsValue contributions ->
-            { model | contributions = RemoteData.Success contributions }
-
         ObjectivesValue objectives ->
             { model | objectives = RemoteData.Success objectives }
 
@@ -232,9 +216,6 @@ setFieldValue fieldValue model =
 setFieldAsLoading : Field -> Model -> Model
 setFieldAsLoading field model =
     case field of
-        ContributionsField ->
-            { model | contributions = RemoteData.Loading }
-
         ObjectivesField ->
             { model | objectives = RemoteData.Loading }
 
@@ -254,9 +235,6 @@ setFieldAsLoading field model =
 isFieldLoading : Field -> Model -> Bool
 isFieldLoading field model =
     case field of
-        ContributionsField ->
-            RemoteData.isLoading model.contributions
-
         ObjectivesField ->
             RemoteData.isLoading model.objectives
 
@@ -276,11 +254,6 @@ isFieldLoading field model =
 maybeFieldValue : Field -> Model -> Maybe FieldValue
 maybeFieldValue field model =
     case field of
-        ContributionsField ->
-            model.contributions
-                |> RemoteData.toMaybe
-                |> Maybe.map ContributionsValue
-
         ObjectivesField ->
             model.objectives
                 |> RemoteData.toMaybe
@@ -354,8 +327,6 @@ communitySelectionSet =
         |> with Community.orderCount
         |> with (Community.members Profile.minimalSelectionSet)
         |> SelectionSet.hardcoded RemoteData.NotAsked
-        |> with (Community.contributionConfiguration contributionConfigurationSelectionSet)
-        |> SelectionSet.hardcoded RemoteData.NotAsked
         |> with (Community.highlightedNews Community.News.selectionSet)
         |> SelectionSet.hardcoded RemoteData.NotAsked
         |> with Community.hasObjectives
@@ -400,12 +371,6 @@ newCommunitySubscription symbol =
 selectionSetForField : Field -> SelectionSet FieldValue Cambiatus.Object.Community
 selectionSetForField field =
     case field of
-        ContributionsField ->
-            Community.contributions
-                (\optionals -> { optionals | status = Present Cambiatus.Enum.ContributionStatusType.Created })
-                contributionSelectionSet
-                |> SelectionSet.map ContributionsValue
-
         ObjectivesField ->
             Community.objectives objectiveSelectionSet
                 |> SelectionSet.map ObjectivesValue
@@ -477,83 +442,6 @@ objectiveSelectionSet =
         |> with (Objective.actions identity Action.selectionSet)
         |> with (Objective.community communitiesSelectionSet)
         |> with Objective.isCompleted
-
-
-
--- CONTRIBUTION
-
-
-type alias Contribution =
-    { user : Profile.Minimal
-    , amount : Float
-    , currency : Cambiatus.Enum.CurrencyType.CurrencyType
-    , id : String
-    , insertedAt : Posix
-    }
-
-
-type alias ContributionConfiguration =
-    { acceptedCurrencies : List Cambiatus.Enum.CurrencyType.CurrencyType
-    , paypalAccount : Maybe String
-    , thankYouDescription : Maybe Markdown
-    , thankYouTitle : Maybe String
-    }
-
-
-contributionSelectionSet : SelectionSet Contribution Cambiatus.Object.Contribution
-contributionSelectionSet =
-    SelectionSet.succeed Contribution
-        |> with (Cambiatus.Object.Contribution.user Profile.minimalSelectionSet)
-        |> with Cambiatus.Object.Contribution.amount
-        |> with Cambiatus.Object.Contribution.currency
-        |> with Cambiatus.Object.Contribution.id
-        |> with
-            (Cambiatus.Object.Contribution.insertedAt
-                |> SelectionSet.map
-                    (\(Cambiatus.Scalar.NaiveDateTime naiveDateTime) ->
-                        Iso8601.toTime naiveDateTime
-                            |> Result.withDefault (Time.millisToPosix 0)
-                    )
-            )
-
-
-contributionConfigurationSelectionSet : SelectionSet ContributionConfiguration Cambiatus.Object.ContributionConfig
-contributionConfigurationSelectionSet =
-    SelectionSet.succeed ContributionConfiguration
-        |> with Cambiatus.Object.ContributionConfig.acceptedCurrencies
-        |> with Cambiatus.Object.ContributionConfig.paypalAccount
-        |> with (Markdown.maybeSelectionSet Cambiatus.Object.ContributionConfig.thankYouDescription)
-        |> with Cambiatus.Object.ContributionConfig.thankYouTitle
-
-
-currencyTranslationKey : { contribution | amount : Float, currency : Cambiatus.Enum.CurrencyType.CurrencyType } -> String
-currencyTranslationKey { amount, currency } =
-    let
-        baseTranslation =
-            case currency of
-                Cambiatus.Enum.CurrencyType.Brl ->
-                    "currency.brl"
-
-                Cambiatus.Enum.CurrencyType.Btc ->
-                    "currency.btc"
-
-                Cambiatus.Enum.CurrencyType.Crc ->
-                    "currency.crc"
-
-                Cambiatus.Enum.CurrencyType.Eos ->
-                    "currency.eos"
-
-                Cambiatus.Enum.CurrencyType.Eth ->
-                    "currency.eth"
-
-                Cambiatus.Enum.CurrencyType.Usd ->
-                    "currency.usd"
-    in
-    if amount == 1 then
-        baseTranslation ++ "_singular"
-
-    else
-        baseTranslation ++ "_plural"
 
 
 

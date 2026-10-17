@@ -3,7 +3,6 @@ import focusTrap from './focusTrap'
 import infiniteList from './infiniteList'
 import keyListener from './keyListener'
 import maskedInputHelper from './maskedInputHelper'
-import paypalButtons from './paypalButtons'
 import richTextEditor from './richTextEditor'
 import dateFormatter from './dateFormatter'
 import dialogBubble from './dialogBubble'
@@ -21,7 +20,6 @@ const customElements = {
   'infinite-list': infiniteList,
   'key-listener': keyListener,
   'masked-input-helper': maskedInputHelper,
-  'paypal-buttons': paypalButtons,
   'pdf-viewer': pdfViewer,
   'richtext-editor': richTextEditor,
   'intersection-observer': intersectionObserverElement,

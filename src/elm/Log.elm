@@ -80,7 +80,6 @@ type EventType
     | UnknownError
     | JsonValue
     | UnsupportedFeature
-    | PaypalError
 
 
 {-| Defines the possible tags. Tags are used to search for events on Sentry.
@@ -650,9 +649,6 @@ encodeTag tag =
 
                         UnsupportedFeature ->
                             "unsupported feature"
-
-                        PaypalError ->
-                            "paypal error"
             in
             ( "cambiatus.type", Encode.string value )
 

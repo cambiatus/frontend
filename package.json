@@ -88,7 +88,6 @@
   "dependencies": {
     "@absinthe/socket": "^0.2.1",
     "@dillonkearns/elm-graphql": "^4.0.3",
-    "@paypal/paypal-js": "^4.0.6",
     "@sentry/browser": "5.4.0",
     "@tailwindcss/forms": "^0.4.0",
     "@tailwindcss/line-clamp": "^0.3.1",

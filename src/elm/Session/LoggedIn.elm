@@ -228,7 +228,6 @@ type alias Model =
     , profile : RemoteData (Graphql.Http.Error (Maybe Profile.Model)) Profile.Model
     , showInsufficientPermissionsModal : Bool
     , selectedCommunity : RemoteData (Graphql.Http.Error (Maybe Community.Model)) Community.Model
-    , contributionCount : RemoteData (Graphql.Http.Error (Maybe Int)) Int
     , showUserNav : Bool
     , showLanguageItems : Bool
     , showNotificationModal : Bool
@@ -272,7 +271,6 @@ initModel shared lastKnownPin maybePrivateKey_ accountName authToken =
       , profile = RemoteData.Loading
       , showInsufficientPermissionsModal = False
       , selectedCommunity = RemoteData.Loading
-      , contributionCount = RemoteData.NotAsked
       , showUserNav = False
       , showLanguageItems = False
       , showNotificationModal = False
@@ -317,14 +315,8 @@ type Page
     | CommunitySettingsNewsEditor
     | CommunitySettingsCurrency
     | CommunitySettingsFeatures
-    | CommunitySettingsSponsorship
-    | CommunitySettingsSponsorshipFiat
-    | CommunitySettingsSponsorshipThankYouMessage
     | CommunityEditor
     | CommunitySelector
-    | CommunityThankYou
-    | CommunitySponsor
-    | CommunitySupporters
     | CommunitySettingsObjectiveEditor
     | CommunitySettingsActionEditor
     | Claim
@@ -335,7 +327,6 @@ type Page
     | ShopViewer
     | Profile
     | ProfilePublic
-    | ProfileContributions
     | ProfileEditor
     | ProfileAddKyc
     | ProfileClaims
@@ -1165,9 +1156,6 @@ isAdminPage page =
         , CommunitySettingsNewsEditor
         , CommunitySettingsCurrency
         , CommunitySettingsFeatures
-        , CommunitySettingsSponsorship
-        , CommunitySettingsSponsorshipFiat
-        , CommunitySettingsSponsorshipThankYouMessage
         , CommunitySettingsObjectiveEditor
         , CommunitySettingsActionEditor
         ]
@@ -1593,9 +1581,6 @@ mapMsg mapFn msg =
         GotTimeInternal time ->
             GotTimeInternal time
 
-        CompletedLoadContributionCount result ->
-            CompletedLoadContributionCount result
-
         ClickedReadHighlightedNews ->
             ClickedReadHighlightedNews
 
@@ -1998,7 +1983,6 @@ type Msg externalMsg
     | ClickedNavLink
     | ClosedSearch
     | GotTimeInternal Time.Posix
-    | CompletedLoadContributionCount (RemoteData (Graphql.Http.Error (Maybe Int)) (Maybe Int))
     | ClickedReadHighlightedNews
     | ClosedHighlightedNews
     | ReceivedNewHighlightedNews Value
@@ -2217,11 +2201,6 @@ update msg model =
                                     comm
                                     newModel.queuedCommunityFields
                            )
-
-                queryForContributionCount =
-                    internalQuery newModel
-                        (Profile.contributionCountQuery community.symbol model.accountName)
-                        CompletedLoadContributionCount
             in
             { newModel
                 | selectedCommunity = RemoteData.Success newCommunity
@@ -2258,7 +2237,6 @@ update msg model =
                         (Community.fieldsSelectionSet community.symbol newModel.queuedCommunityFields)
                         (CompletedLoadCommunityFields newCommunity)
                     )
-                |> UR.addCmd queryForContributionCount
                 |> UR.addBreadcrumb
                     { type_ = Log.DefaultBreadcrumb
                     , category = msg
@@ -2522,37 +2500,6 @@ update msg model =
 
                 RemoteData.Loading ->
                     UR.init model
-
-        CompletedLoadContributionCount (RemoteData.Success (Just contributionCount)) ->
-            { model | contributionCount = RemoteData.Success contributionCount }
-                |> UR.init
-
-        CompletedLoadContributionCount (RemoteData.Success Nothing) ->
-            { model | contributionCount = RemoteData.Success 0 }
-                |> UR.init
-                |> UR.logImpossible msg
-                    "Got contribution count successfully, but it returned `Nothing`"
-                    (Just model.accountName)
-                    { moduleName = "Session.LoggedIn"
-                    , function = "update"
-                    }
-                    [ Log.contextFromCommunity model.selectedCommunity ]
-
-        CompletedLoadContributionCount (RemoteData.Failure err) ->
-            { model | contributionCount = RemoteData.Failure err }
-                |> UR.init
-                |> UR.logGraphqlError msg
-                    (Just model.accountName)
-                    "Got an error when loading contribution count"
-                    { moduleName = "Session.LoggedIn"
-                    , function = "update"
-                    }
-                    [ Log.contextFromCommunity model.selectedCommunity ]
-                    err
-
-        CompletedLoadContributionCount _ ->
-            model
-                |> UR.init
 
         ClosedHighlightedNews ->
             { model | maybeHighlightedNews = Nothing }
@@ -3253,9 +3200,6 @@ msgToString msg =
 
         GotFeedbackMsg _ ->
             [ "GotFeedbackMsg" ]
-
-        CompletedLoadContributionCount r ->
-            [ "CompletedLoadContributionCount", UR.remoteDataToString r ]
 
         ClosedHighlightedNews ->
             [ "ClosedHighlightedNews" ]
