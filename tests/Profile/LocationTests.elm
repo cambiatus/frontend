@@ -24,6 +24,7 @@ all =
         , saveFieldsTests
         , legacyDocuments
         , startingPlace
+        , cepLookup
         ]
 
 
@@ -425,4 +426,114 @@ startingPlace =
                 [ "Rua das Flores 10", "Av. Brasil, 1500", "20000-000", "Teresópolis - RJ" ]
                     |> List.map Location.looksLikeAddress
                     |> Expect.equalLists [ True, True, True, False ]
+        ]
+
+
+
+-- THE CEP LOOKUP
+
+
+cepLookup : Test
+cepLookup =
+    let
+        found : Location.PostalLookup
+        found =
+            { postalCode = "20241110"
+            , street = Just "Rua do Rezende"
+            , bairroText = Just "Santa Teresa"
+            , bairro = Just santaTeresa
+            , municipality = Just rio
+            , stateCode = Just "RJ"
+            }
+
+        empty =
+            { place = Location.emptyPlace, address = Location.emptyAddress }
+    in
+    describe "CEP lookup"
+        [ describe "normalizeCep"
+            [ test "eight digits are a CEP, with or without the dash or dot" <|
+                \_ ->
+                    Expect.equal
+                        (List.map Location.normalizeCep [ "20241110", "20241-110", " 20.241-110 " ])
+                        (List.repeat 3 (Just "20241110"))
+            , test "fewer or more digits are not" <|
+                \_ ->
+                    Expect.equal
+                        (List.map Location.normalizeCep [ "", "2024111", "202411100" ])
+                        [ Nothing, Nothing, Nothing ]
+            , test "letters and other characters are not, even among eight digits" <|
+                \_ ->
+                    Expect.equal
+                        (List.map Location.normalizeCep [ "2024111A", "+55 21 99999-0000", "20241110x" ])
+                        [ Nothing, Nothing, Nothing ]
+            ]
+        , describe "applyLookup"
+            [ test "fills the município, the bairro row, the street and the CEP" <|
+                \_ ->
+                    Location.applyLookup found empty
+                        |> Expect.all
+                            [ \result -> Expect.equal ( result.place.municipality, result.place.bairro, result.place.bairroText ) ( Just rio, Just santaTeresa, "" )
+                            , \result -> Expect.equal result.address { street = "Rua do Rezende", number = "", complement = "", postalCode = "20241110" }
+                            ]
+            , test "a bairro without a row is kept as text" <|
+                \_ ->
+                    let
+                        result =
+                            Location.applyLookup { found | bairro = Nothing, bairroText = Just "  Vila   Nova " } empty
+                    in
+                    Expect.equal ( result.place.bairro, result.place.bairroText ) ( Nothing, "Vila Nova" )
+            , test "a CEP that covers a whole town leaves the street the member typed" <|
+                \_ ->
+                    let
+                        typed =
+                            { empty | address = { street = "Rua das Flores", number = "12", complement = "", postalCode = "" } }
+
+                        result =
+                            Location.applyLookup { found | street = Nothing, bairro = Nothing, bairroText = Nothing } typed
+                    in
+                    Expect.equal ( result.address.street, result.address.number ) ( "Rua das Flores", "12" )
+            , test "a lookup without a município leaves the place as it was" <|
+                \_ ->
+                    let
+                        withPlace =
+                            { empty | place = brazilPlace }
+                    in
+                    Expect.equal
+                        (Location.applyLookup { found | municipality = Nothing, bairro = Nothing } withPlace).place
+                        brazilPlace
+            ]
+        , describe "foundLine"
+            [ test "folds rua, bairro and cidade into one line with the state" <|
+                \_ ->
+                    let
+                        folded =
+                            Location.applyLookup found empty
+                    in
+                    Expect.equal
+                        (Location.foundLine { street = folded.address.street, place = folded.place, stateCode = found.stateCode })
+                        "Rua do Rezende, Santa Teresa, Rio de Janeiro - RJ"
+            , test "leaves out what is missing" <|
+                \_ ->
+                    let
+                        folded =
+                            Location.applyLookup { found | street = Nothing, bairro = Nothing, bairroText = Nothing } empty
+                    in
+                    Expect.equal
+                        (Location.foundLine { street = "", place = folded.place, stateCode = Just "RJ" })
+                        "Rio de Janeiro - RJ"
+            , test "follows an edit of the street" <|
+                \_ ->
+                    let
+                        folded =
+                            Location.applyLookup found empty
+                    in
+                    Expect.equal
+                        (Location.foundLine { street = "  Rua  Nova ", place = folded.place, stateCode = Nothing })
+                        "Rua Nova, Santa Teresa, Rio de Janeiro"
+            , test "is empty when there is nothing to say" <|
+                \_ ->
+                    Expect.equal
+                        (Location.foundLine { street = "", place = Location.emptyPlace, stateCode = Just "RJ" })
+                        ""
+            ]
         ]

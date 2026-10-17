@@ -113,6 +113,13 @@ completeObjective requiredArgs____ object____ =
     Object.selectionForCompositeField "completeObjective" [ Argument.required "id" requiredArgs____.id Encode.int ] object____ (Basics.identity >> Decode.nullable)
 
 
+{-| [Auth required] The member confirms the place guessed from their profile
+-}
+confirmPlace : SelectionSet Bool RootMutation
+confirmPlace =
+    Object.selectionForField "Bool" "confirmPlace" [] Decode.bool
+
+
 type alias ContributionRequiredArguments =
     { amount : Float
     , currency : Cambiatus.Enum.CurrencyType.CurrencyType
@@ -189,6 +196,13 @@ deleteProduct requiredArgs____ object____ =
     Object.selectionForCompositeField "deleteProduct" [ Argument.required "id" requiredArgs____.id Encode.int ] object____ (Basics.identity >> Decode.nullable)
 
 
+{-| [Auth required] The member skips the place prompt for good
+-}
+dismissPlacePrompt : SelectionSet Bool RootMutation
+dismissPlacePrompt =
+    Object.selectionForField "Bool" "dismissPlacePrompt" [] Decode.bool
+
+
 type alias GenAuthRequiredArguments =
     { account : String }
 
@@ -223,6 +237,30 @@ highlightedNews fillInOptionals____ object____ =
                 |> List.filterMap Basics.identity
     in
     Object.selectionForCompositeField "highlightedNews" optionalArgs____ object____ (Basics.identity >> Decode.nullable)
+
+
+type alias LocatePlaceOptionalArguments =
+    { latitude : OptionalArgument Float
+    , longitude : OptionalArgument Float
+    }
+
+
+{-| [Auth required] The browser's position for the member's place; without a position (refused or none) the place follows the default address. The position is used for one lookup and never stored. An own choice is never overwritten
+-}
+locatePlace :
+    (LocatePlaceOptionalArguments -> LocatePlaceOptionalArguments)
+    -> SelectionSet decodesTo Cambiatus.Object.PlaceStatus
+    -> SelectionSet decodesTo RootMutation
+locatePlace fillInOptionals____ object____ =
+    let
+        filledInOptionals____ =
+            fillInOptionals____ { latitude = Absent, longitude = Absent }
+
+        optionalArgs____ =
+            [ Argument.optional "latitude" filledInOptionals____.latitude Encode.float, Argument.optional "longitude" filledInOptionals____.longitude Encode.float ]
+                |> List.filterMap Basics.identity
+    in
+    Object.selectionForCompositeField "locatePlace" optionalArgs____ object____ Basics.identity
 
 
 type alias NewsOptionalArguments =

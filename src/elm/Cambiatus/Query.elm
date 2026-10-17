@@ -271,6 +271,41 @@ pendingClaims fillInOptionals____ object____ =
     Object.selectionForCompositeField "pendingClaims" optionalArgs____ object____ (Basics.identity >> Decode.nullable)
 
 
+{-| [Auth required] The community's places with their offer counts, and the Online count; the numbers behind the shop's place chips
+-}
+placeCounts :
+    SelectionSet decodesTo Cambiatus.Object.PlaceCounts
+    -> SelectionSet (Maybe decodesTo) RootQuery
+placeCounts object____ =
+    Object.selectionForCompositeField "placeCounts" [] object____ (Basics.identity >> Decode.nullable)
+
+
+{-| [Auth required] Where the current user's public place comes from: their own choice, the browser's location, their default address, or none
+-}
+placeStatus :
+    SelectionSet decodesTo Cambiatus.Object.PlaceStatus
+    -> SelectionSet (Maybe decodesTo) RootQuery
+placeStatus object____ =
+    Object.selectionForCompositeField "placeStatus" [] object____ (Basics.identity >> Decode.nullable)
+
+
+type alias PostalCodeLookupRequiredArguments =
+    { postalCode : String }
+
+
+{-| [Auth required] The address behind a Brazilian CEP (ViaCEP, then BrasilAPI); null when the CEP is unknown or the lookup is unavailable. Only the CEP leaves the server.
+
+  - postalCode - 8 digits, with or without the hyphen
+
+-}
+postalCodeLookup :
+    PostalCodeLookupRequiredArguments
+    -> SelectionSet decodesTo Cambiatus.Object.PostalCodeAddress
+    -> SelectionSet (Maybe decodesTo) RootQuery
+postalCodeLookup requiredArgs____ object____ =
+    Object.selectionForCompositeField "postalCodeLookup" [ Argument.required "postalCode" requiredArgs____.postalCode Encode.string ] object____ (Basics.identity >> Decode.nullable)
+
+
 type alias ProductRequiredArguments =
     { id : Int }
 

@@ -9,6 +9,7 @@ module Page.Profile.Editor exposing
     )
 
 import Avatar
+import Browser.Dom
 import Cambiatus.Mutation
 import Dict
 import Eos
@@ -32,6 +33,7 @@ import RemoteData exposing (RemoteData)
 import Route
 import Session.LoggedIn as LoggedIn exposing (External)
 import Session.Shared exposing (Translators)
+import Task
 import UpdateResult as UR
 import Utils
 import View.Components
@@ -90,9 +92,21 @@ type alias LocationState =
     , municipalityPicker : LocalityPicker.Model
     , bairroPicker : Maybe LocalityPicker.Model
     , typingBairro : Bool
+    , cep : CepState
     , showErrors : Bool
     , feedback : FeedbackState
     }
+
+
+{-| What the CEP lookup knows. `CepFound` keeps the folded flag: while folded,
+rua, bairro and cidade show as one line and only the número is left to type.
+-}
+type CepState
+    = CepIdle
+    | CepLoading String
+    | CepFound { lookup : Location.PostalLookup, folded : Bool }
+    | CepNotFound
+    | CepUnavailable
 
 
 type alias FeedbackState =
@@ -724,6 +738,11 @@ viewAddressSection translators state =
     div [ class "mb-10" ]
         [ h2 [ class "font-bold text-lg mb-1" ] [ text (tl translators "address.title") ]
         , p [ class "text-gray-700 mb-4" ] [ text (tl translators "address.private") ]
+        , if state.place.country == Brazil then
+            viewCepField translators state errorFor
+
+          else
+            text ""
         , if not isPicked then
             p [ id "location-address-needs-place", class "p-4 rounded bg-gray-100 text-gray-700" ]
                 [ text
@@ -731,7 +750,7 @@ viewAddressSection translators state =
                         tl translators "address.needs_canton"
 
                      else
-                        tl translators "address.needs_city"
+                        tl translators "address.needs_city_or_cep"
                     )
                 ]
 
@@ -772,56 +791,125 @@ viewAddressSection translators state =
                         ]
 
                   else
-                    div []
-                        [ viewTextInput
-                            { id = "address-street-input"
-                            , label = tl translators "address.street"
-                            , placeholder = ""
-                            , value = state.address.street
-                            , onInput = ChangedAddress Street
-                            , error = errorFor Location.StreetRequired "errors.street_required"
-                            , attrs = [ attribute "autocomplete" "address-line1" ]
-                            , isTextarea = False
-                            , translators = translators
-                            }
-                        , div [ class "grid grid-cols-1 sm:grid-cols-2 sm:gap-x-4" ]
-                            [ viewTextInput
-                                { id = "address-number-input"
-                                , label = tl translators "address.number"
-                                , placeholder = ""
-                                , value = state.address.number
-                                , onInput = ChangedAddress Number
-                                , error = errorFor Location.NumberRequired "errors.number_required"
-                                , attrs = []
-                                , isTextarea = False
-                                , translators = translators
-                                }
-                            , viewTextInput
-                                { id = "address-complement-input"
-                                , label = tl translators "address.complement"
-                                , placeholder = ""
-                                , value = state.address.complement
-                                , onInput = ChangedAddress Complement
-                                , error = Nothing
-                                , attrs = [ attribute "autocomplete" "address-line2" ]
-                                , isTextarea = False
-                                , translators = translators
-                                }
-                            ]
-                        , viewTextInput
-                            { id = "address-postal-code-input"
-                            , label = tl translators "address.cep"
-                            , placeholder = "00000-000"
-                            , value = state.address.postalCode
-                            , onInput = ChangedAddress PostalCode
-                            , error = errorFor Location.PostalCodeInvalid "errors.cep_invalid"
-                            , attrs = [ attribute "inputmode" "numeric", attribute "autocomplete" "postal-code", maxlength 9 ]
-                            , isTextarea = False
-                            , translators = translators
-                            }
-                        ]
+                    viewBrazilAddressFields translators state errorFor
                 ]
         ]
+
+
+viewCepField : Translators -> LocationState -> (Location.AddressError -> String -> Maybe String) -> Html Msg
+viewCepField translators state errorFor =
+    div []
+        [ viewTextInput
+            { id = "address-postal-code-input"
+            , label = tl translators "address.cep"
+            , placeholder = "00000-000"
+            , value = state.address.postalCode
+            , onInput = ChangedAddress PostalCode
+            , error = errorFor Location.PostalCodeInvalid "errors.cep_invalid"
+            , attrs = [ attribute "inputmode" "numeric", attribute "autocomplete" "postal-code", maxlength 9 ]
+            , isTextarea = False
+            , translators = translators
+            }
+        , div [ id "cep-status", attribute "role" "status", attribute "aria-live" "polite", class "-mt-2 mb-4" ]
+            [ case state.cep of
+                CepIdle ->
+                    p [ class "text-gray-700 text-sm" ] [ text (tl translators "address.cep_hint") ]
+
+                CepLoading _ ->
+                    p [ class "text-gray-700 text-sm" ] [ text (tl translators "address.cep_loading") ]
+
+                CepFound { lookup, folded } ->
+                    div
+                        [ id "cep-found"
+                        , class "flex flex-wrap items-center justify-between gap-x-4 gap-y-1 p-4 rounded bg-green/20 text-gray-333"
+                        ]
+                        [ span [ class "font-bold break-words" ]
+                            [ text
+                                (Location.foundLine
+                                    { street = state.address.street
+                                    , place = state.place
+                                    , stateCode = lookup.stateCode
+                                    }
+                                )
+                            ]
+                        , if folded then
+                            button
+                                [ type_ "button"
+                                , id "cep-edit-address"
+                                , class "text-orange-500 font-bold hover:underline focus-ring"
+                                , onClick ClickedEditAddress
+                                ]
+                                [ text (tl translators "address.edit_address") ]
+
+                          else
+                            text ""
+                        ]
+
+                CepNotFound ->
+                    p [ id "cep-not-found", class "p-4 rounded bg-gray-100 text-gray-700" ]
+                        [ text (tl translators "address.cep_not_found") ]
+
+                CepUnavailable ->
+                    p [ id "cep-unavailable", class "p-4 rounded bg-gray-100 text-gray-700" ]
+                        [ text (tl translators "address.cep_unavailable") ]
+            ]
+        ]
+
+
+viewBrazilAddressFields : Translators -> LocationState -> (Location.AddressError -> String -> Maybe String) -> Html Msg
+viewBrazilAddressFields translators state errorFor =
+    let
+        streetInput =
+            viewTextInput
+                { id = "address-street-input"
+                , label = tl translators "address.street"
+                , placeholder = ""
+                , value = state.address.street
+                , onInput = ChangedAddress Street
+                , error = errorFor Location.StreetRequired "errors.street_required"
+                , attrs = [ attribute "autocomplete" "address-line1" ]
+                , isTextarea = False
+                , translators = translators
+                }
+
+        numberAndComplement =
+            div [ class "grid grid-cols-1 sm:grid-cols-2 sm:gap-x-4" ]
+                [ viewTextInput
+                    { id = "address-number-input"
+                    , label = tl translators "address.number"
+                    , placeholder = ""
+                    , value = state.address.number
+                    , onInput = ChangedAddress Number
+                    , error = errorFor Location.NumberRequired "errors.number_required"
+                    , attrs = []
+                    , isTextarea = False
+                    , translators = translators
+                    }
+                , viewTextInput
+                    { id = "address-complement-input"
+                    , label = tl translators "address.complement"
+                    , placeholder = ""
+                    , value = state.address.complement
+                    , onInput = ChangedAddress Complement
+                    , error = Nothing
+                    , attrs = [ attribute "autocomplete" "address-line2" ]
+                    , isTextarea = False
+                    , translators = translators
+                    }
+                ]
+    in
+    case state.cep of
+        -- The street came with the CEP: it folds into the found line. A CEP that
+        -- covers a whole town has no street, so its field stays.
+        CepFound { lookup, folded } ->
+            if folded && lookup.street /= Nothing then
+                numberAndComplement
+
+            else
+                div [] [ streetInput, numberAndComplement ]
+
+        _ ->
+            div [] [ streetInput, numberAndComplement ]
 
 
 viewTextInput :
@@ -889,6 +977,8 @@ type Msg
     | ChangedBairroText String
     | ChangedOtherText String
     | ChangedAddress AddressField String
+    | GotPostalLookup String (RemoteData (Graphql.Http.Error (Maybe Location.PostalLookup)) (Maybe Location.PostalLookup))
+    | ClickedEditAddress
     | ToggledFeedback
     | ChangedFeedbackKind String
     | ChangedFeedbackBody String
@@ -1151,7 +1241,79 @@ update msg model loggedIn =
             updateLocation model (mapPlace (\place -> { place | otherText = text }))
 
         ChangedAddress field text ->
-            updateLocation model (\location -> { location | address = setAddressField field text location.address })
+            withLocation model
+                (\location ->
+                    let
+                        withText =
+                            { location | address = setAddressField field text location.address }
+                    in
+                    case field of
+                        PostalCode ->
+                            changedPostalCode loggedIn withText model
+
+                        _ ->
+                            UR.init (setLocation withText model)
+                )
+
+        GotPostalLookup digits result ->
+            withLocation model
+                (\location ->
+                    -- A late answer for a CEP the member has since changed is dropped
+                    if location.cep /= CepLoading digits then
+                        UR.init model
+
+                    else
+                        case result of
+                            RemoteData.Success (Just lookup) ->
+                                let
+                                    folded =
+                                        Location.applyLookup lookup { place = location.place, address = location.address }
+
+                                    ( withMunicipality, request ) =
+                                        case lookup.municipality of
+                                            Just municipality ->
+                                                selectMunicipality municipality location
+
+                                            Nothing ->
+                                                ( location, Nothing )
+
+                                    newLocation =
+                                        { withMunicipality
+                                            | place = folded.place
+                                            , address = folded.address
+                                            , typingBairro = folded.place.bairro == Nothing && folded.place.bairroText /= ""
+                                            , cep = CepFound { lookup = lookup, folded = lookup.municipality /= Nothing }
+                                        }
+
+                                    focusId =
+                                        if lookup.street == Nothing then
+                                            "address-street-input"
+
+                                        else
+                                            "address-number-input"
+                                in
+                                setLocation newLocation model
+                                    |> UR.init
+                                    |> addPickerRequest loggedIn GotBairroPickerMsg request
+                                    |> UR.addCmd (Browser.Dom.focus focusId |> Task.attempt (\_ -> NoOp))
+
+                            RemoteData.Success Nothing ->
+                                UR.init (setLocation { location | cep = CepNotFound } model)
+
+                            _ ->
+                                UR.init (setLocation { location | cep = CepUnavailable } model)
+                )
+
+        ClickedEditAddress ->
+            updateLocation model
+                (\location ->
+                    case location.cep of
+                        CepFound found ->
+                            { location | cep = CepFound { found | folded = False } }
+
+                        _ ->
+                            location
+                )
 
         ToggledFeedback ->
             updateLocation model (mapFeedback (\feedback -> { feedback | isOpen = not feedback.isOpen, status = Writing }))
@@ -1303,6 +1465,7 @@ initLocation data =
       , municipalityPicker = newMunicipalityPicker place.country
       , bairroPicker = bairroPicker
       , typingBairro = place.bairro == Nothing && Location.cleanText place.bairroText /= ""
+      , cep = CepIdle
       , showErrors = False
       , feedback = { isOpen = False, kind = "problem", body = "", status = Writing }
       }
@@ -1346,6 +1509,7 @@ resetPlace country location =
         , municipalityPicker = newMunicipalityPicker country
         , bairroPicker = Nothing
         , typingBairro = False
+        , cep = CepIdle
     }
 
 
@@ -1413,6 +1577,42 @@ mapPlace fn location =
 mapFeedback : (FeedbackState -> FeedbackState) -> LocationState -> LocationState
 mapFeedback fn location =
     { location | feedback = fn location.feedback }
+
+
+{-| A complete CEP of a Brazilian address asks the server what it knows; anything
+else clears the lookup, so a stale "found" never lingers
+-}
+changedPostalCode : LoggedIn.Model -> LocationState -> Model -> UpdateResult
+changedPostalCode loggedIn location model =
+    case ( location.place.country, Location.normalizeCep location.address.postalCode ) of
+        ( Brazil, Just digits ) ->
+            if isLookupFor digits location.cep then
+                UR.init (setLocation location model)
+
+            else
+                setLocation { location | cep = CepLoading digits } model
+                    |> UR.init
+                    |> UR.addExt
+                        (LoggedIn.query loggedIn
+                            (Location.postalLookupQuery digits)
+                            (GotPostalLookup digits)
+                        )
+
+        _ ->
+            UR.init (setLocation { location | cep = CepIdle } model)
+
+
+isLookupFor : String -> CepState -> Bool
+isLookupFor digits cep =
+    case cep of
+        CepLoading asked ->
+            asked == digits
+
+        CepFound { lookup } ->
+            lookup.postalCode == digits
+
+        _ ->
+            False
 
 
 setAddressField : AddressField -> String -> Address -> Address
@@ -1521,6 +1721,12 @@ msgToString msg =
 
         ChangedAddress _ _ ->
             [ "ChangedAddress" ]
+
+        GotPostalLookup _ r ->
+            [ "GotPostalLookup", UR.remoteDataToString r ]
+
+        ClickedEditAddress ->
+            [ "ClickedEditAddress" ]
 
         ToggledFeedback ->
             [ "ToggledFeedback" ]

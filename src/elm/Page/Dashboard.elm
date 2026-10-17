@@ -31,17 +31,19 @@ import Form.Text
 import Form.UserPicker
 import Graphql.Http
 import Graphql.OptionalArgument as OptionalArgument exposing (OptionalArgument(..))
-import Html exposing (Html, a, br, button, div, h1, h2, hr, img, li, p, span, strong, text, ul)
+import Html exposing (Html, a, br, button, div, h1, h2, hr, img, li, p, section, span, strong, text, ul)
 import Html.Attributes exposing (alt, class, classList, disabled, id, src, style, tabindex)
 import Html.Events exposing (onClick)
 import Http
 import Icons
-import Json.Decode exposing (Value)
+import Json.Decode as Decode exposing (Value)
 import Json.Encode as Encode
 import List.Extra as List
 import Log
 import Markdown
 import Page
+import PlaceLocation
+import PlaceRelease
 import Profile
 import Profile.Contact as Contact
 import Profile.Summary
@@ -92,6 +94,8 @@ type alias Model =
     , inviteModalStatus : InviteModalStatus
     , claimModalStatus : Claim.ModalStatus
     , copied : Bool
+    , placeStatus : Maybe PlaceLocation.Status
+    , addressNoteDismissed : Bool
     }
 
 
@@ -139,6 +143,8 @@ initModel shared =
     , inviteModalStatus = InviteModalClosed
     , claimModalStatus = Claim.Closed
     , copied = False
+    , placeStatus = Nothing
+    , addressNoteDismissed = False
     }
 
 
@@ -218,7 +224,8 @@ view ({ shared } as loggedIn) model =
                             isExplicitValidator || (hasVerifyPermission && hasAvailableClaims)
                     in
                     div []
-                        [ div [ class "container mx-auto my-8 px-4 lg:grid lg:grid-cols-3 lg:gap-7" ]
+                        [ viewAddressNote shared model
+                        , div [ class "container mx-auto my-8 px-4 lg:grid lg:grid-cols-3 lg:gap-7" ]
                             [ if not loggedIn.hasAcceptedCodeOfConduct then
                                 LoggedIn.viewFrozenAccountCard shared.translators
                                     { onClick = ClickedAcceptCodeOfConduct
@@ -247,6 +254,41 @@ view ({ shared } as loggedIn) model =
     { title = t "menu.dashboard"
     , content = content
     }
+
+
+viewAddressNote : Shared -> Model -> Html Msg
+viewAddressNote { translators } model =
+    if PlaceLocation.showAddressNote { dismissed = model.addressNoteDismissed } model.placeStatus then
+        div [ class "container mx-auto mt-8 px-4" ]
+            [ section
+                [ id "address-note"
+                , class "rounded-lg bg-orange-100/20 p-4 flex flex-col md:flex-row md:items-center gap-4"
+                , Html.Attributes.attribute "aria-label" (translators.t "dashboard.address_note.title")
+                ]
+                [ div [ class "flex-grow" ]
+                    [ h2 [ class "font-bold" ] [ text (translators.t "dashboard.address_note.title") ]
+                    , p [ class "text-gray-333 mt-1" ] [ text (translators.t "dashboard.address_note.body") ]
+                    ]
+                , div [ class "flex flex-col sm:flex-row gap-2 md:flex-shrink-0" ]
+                    [ a
+                        [ class "button button-primary w-full sm:w-auto"
+                        , id "address-note-add"
+                        , Route.href Route.ProfileEditor
+                        ]
+                        [ text (translators.t "dashboard.address_note.action") ]
+                    , button
+                        [ class "button button-secondary w-full sm:w-auto"
+                        , Html.Attributes.type_ "button"
+                        , id "address-note-dismiss"
+                        , onClick ClickedDismissAddressNote
+                        ]
+                        [ text (translators.t "dashboard.address_note.dismiss") ]
+                    ]
+                ]
+            ]
+
+    else
+        text ""
 
 
 addContactModal : Shared -> Model -> Html Msg
@@ -949,6 +991,11 @@ type Msg
     | CopyToClipboard String
     | CopiedToClipboard
     | ClickedAcceptCodeOfConduct
+    | CompletedLoadPlaceRelease (RemoteData (Graphql.Http.Error Bool) Bool)
+    | GotBrowserLocation Value
+    | CompletedLocatePlace (RemoteData (Graphql.Http.Error PlaceLocation.Status) PlaceLocation.Status)
+    | CompletedLoadPlaceStatus (RemoteData (Graphql.Http.Error (Maybe PlaceLocation.Status)) (Maybe PlaceLocation.Status))
+    | ClickedDismissAddressNote
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
@@ -967,6 +1014,65 @@ update msg model ({ shared, accountName } as loggedIn) =
                 |> UR.addCmd (fetchBalance shared accountName community)
                 |> UR.addExt (fetchAvailableAnalysis loggedIn Nothing)
                 |> UR.addExt (fetchTransfers loggedIn community Nothing model)
+                |> UR.addExt (LoggedIn.query loggedIn (PlaceRelease.query loggedIn) CompletedLoadPlaceRelease)
+
+        -- Only members who hold the `elm_places` release share their browser's location
+        CompletedLoadPlaceRelease (RemoteData.Success True) ->
+            UR.init model
+                |> UR.addPort
+                    { responseAddress = GotBrowserLocation Encode.null
+                    , responseData = Encode.null
+                    , data = Encode.object [ ( "name", Encode.string "memberLocation" ) ]
+                    }
+
+        CompletedLoadPlaceRelease _ ->
+            UR.init model
+
+        GotBrowserLocation value ->
+            let
+                dismissed flags =
+                    { model | addressNoteDismissed = flags.noteDismissed }
+            in
+            case Decode.decodeValue PlaceLocation.replyDecoder value of
+                Ok (PlaceLocation.Located position flags) ->
+                    dismissed flags
+                        |> UR.init
+                        |> UR.addExt (LoggedIn.mutation loggedIn (PlaceLocation.locate (Just position)) CompletedLocatePlace)
+
+                Ok (PlaceLocation.Unavailable flags) ->
+                    dismissed flags
+                        |> UR.init
+                        |> UR.addExt (LoggedIn.mutation loggedIn (PlaceLocation.locate Nothing) CompletedLocatePlace)
+
+                Ok (PlaceLocation.Skipped flags) ->
+                    dismissed flags
+                        |> UR.init
+                        |> UR.addExt (LoggedIn.query loggedIn PlaceLocation.status CompletedLoadPlaceStatus)
+
+                -- The location is a nicety: if it can't be read, the dashboard goes without it
+                Err _ ->
+                    UR.init model
+
+        CompletedLocatePlace (RemoteData.Success placeStatus) ->
+            UR.init { model | placeStatus = Just placeStatus }
+
+        CompletedLocatePlace _ ->
+            UR.init model
+
+        CompletedLoadPlaceStatus (RemoteData.Success maybeStatus) ->
+            UR.init { model | placeStatus = maybeStatus }
+
+        CompletedLoadPlaceStatus _ ->
+            UR.init model
+
+        ClickedDismissAddressNote ->
+            { model | addressNoteDismissed = True }
+                |> UR.init
+                |> UR.addPort
+                    { responseAddress = NoOp
+                    , responseData = Encode.null
+                    , data = Encode.object [ ( "name", Encode.string "dismissAddressNote" ) ]
+                    }
 
         CompletedLoadBalance (Ok balance) ->
             UR.init { model | balance = RemoteData.Success balance }
@@ -1393,10 +1499,13 @@ receiveBroadcast broadcastMsg =
 
 
 jsAddressToMsg : List String -> Value -> Maybe Msg
-jsAddressToMsg addr _ =
+jsAddressToMsg addr val =
     case addr of
         "CopiedToClipboard" :: _ ->
             Just CopiedToClipboard
+
+        "GotBrowserLocation" :: _ ->
+            Just (GotBrowserLocation val)
 
         _ ->
             Nothing
@@ -1410,6 +1519,21 @@ msgToString msg =
 
         CompletedLoadCommunity _ ->
             [ "CompletedLoadCommunity" ]
+
+        CompletedLoadPlaceRelease r ->
+            [ "CompletedLoadPlaceRelease", UR.remoteDataToString r ]
+
+        GotBrowserLocation _ ->
+            [ "GotBrowserLocation" ]
+
+        CompletedLocatePlace r ->
+            [ "CompletedLocatePlace", UR.remoteDataToString r ]
+
+        CompletedLoadPlaceStatus r ->
+            [ "CompletedLoadPlaceStatus", UR.remoteDataToString r ]
+
+        ClickedDismissAddressNote ->
+            [ "ClickedDismissAddressNote" ]
 
         CompletedLoadBalance result ->
             [ "CompletedLoadBalance", UR.resultToString result ]

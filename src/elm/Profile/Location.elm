@@ -4,6 +4,7 @@ module Profile.Location exposing
     , Place, emptyPlace, placeFromSaved, isPicked, previewLabel, municipalityRow
     , cleanText, BairroTextError(..), validateBairroText
     , Address, emptyAddress, isAddressEmpty, AddressError(..), validateAddress, looksLikeAddress
+    , normalizeCep, PostalLookup, postalLookupQuery, applyLookup, foundLine
     , Saved, EditorData, editorSelectionSet
     , SaveFields, noSaveFields, legacySaveFields, saveFields
     )
@@ -38,6 +39,11 @@ editor.
 @docs Address, emptyAddress, isAddressEmpty, AddressError, validateAddress, looksLikeAddress
 
 
+# CEP lookup
+
+@docs normalizeCep, PostalLookup, postalLookupQuery, applyLookup, foundLine
+
+
 # Loading
 
 @docs Saved, EditorData, editorSelectionSet
@@ -55,6 +61,7 @@ import Cambiatus.Object.Community as Community
 import Cambiatus.Object.DeliveryAddress as DeliveryAddress
 import Cambiatus.Object.Locality as Locality
 import Cambiatus.Object.LocationPlace as LocationPlace
+import Cambiatus.Object.PostalCodeAddress as PostalCodeAddress
 import Cambiatus.Object.User as User
 import Cambiatus.Query
 import Eos
@@ -492,6 +499,140 @@ dropUnusedFields country address =
 
         _ ->
             address
+
+
+
+-- CEP LOOKUP
+
+
+{-| The eight digits of a CEP, or `Nothing` when the text is not a CEP. Dots,
+hyphens and spaces are ignored; anything else (letters, a phone number's plus)
+means it is not a CEP. Same rule as the backend's `PostalCode.normalize`.
+-}
+normalizeCep : String -> Maybe String
+normalizeCep text =
+    let
+        digits =
+            String.filter Char.isDigit text
+
+        hasStrangeCharacters =
+            String.any (\char -> not (Char.isDigit char || List.member char [ '.', '-', ' ' ])) text
+    in
+    if String.length digits == 8 && not hasStrangeCharacters then
+        Just digits
+
+    else
+        Nothing
+
+
+{-| What `postalCodeLookup` found. `bairro` and `municipality` are the gazetteer
+rows the backend matched; `bairroText` is the name when there is no row.
+-}
+type alias PostalLookup =
+    { postalCode : String
+    , street : Maybe String
+    , bairroText : Maybe String
+    , bairro : Maybe Locality
+    , municipality : Maybe Locality
+    , stateCode : Maybe String
+    }
+
+
+postalLookupQuery : String -> SelectionSet (Maybe PostalLookup) RootQuery
+postalLookupQuery digits =
+    Cambiatus.Query.postalCodeLookup { postalCode = digits }
+        (SelectionSet.succeed PostalLookup
+            |> with PostalCodeAddress.postalCode
+            |> with PostalCodeAddress.street
+            |> with PostalCodeAddress.bairroText
+            |> with (PostalCodeAddress.bairro localitySelectionSet)
+            |> with (PostalCodeAddress.municipality localitySelectionSet)
+            |> with PostalCodeAddress.stateCode
+        )
+
+
+{-| Folds a found CEP into the place and the address: the município, the bairro
+(the row when there is one, else the name as text) and the street. A CEP that
+covers a whole town has no street, so the member's own text stays. The município
+is only replaced when the lookup resolved one.
+-}
+applyLookup : PostalLookup -> { place : Place, address : Address } -> { place : Place, address : Address }
+applyLookup lookup { place, address } =
+    let
+        withMunicipality =
+            case lookup.municipality of
+                Just municipality ->
+                    { place
+                        | country = Brazil
+                        , municipality = Just municipality
+                        , bairro = lookup.bairro
+                        , bairroText =
+                            case lookup.bairro of
+                                Just _ ->
+                                    ""
+
+                                Nothing ->
+                                    lookup.bairroText |> Maybe.map cleanText |> Maybe.withDefault ""
+                    }
+
+                Nothing ->
+                    place
+    in
+    { place = withMunicipality
+    , address =
+        { address
+            | street = lookup.street |> Maybe.map cleanText |> nonEmptyOr address.street
+            , postalCode = lookup.postalCode
+        }
+    }
+
+
+nonEmptyOr : String -> Maybe String -> String
+nonEmptyOr fallback maybeText =
+    case maybeText of
+        Just text ->
+            if text == "" then
+                fallback
+
+            else
+                text
+
+        Nothing ->
+            fallback
+
+
+{-| "Rua X, Bairro Y, Cidade - UF", from what the fields say now so an edit
+shows. Empty parts are left out.
+-}
+foundLine : { street : String, place : Place, stateCode : Maybe String } -> String
+foundLine { street, place, stateCode } =
+    let
+        bairroName =
+            case place.bairro of
+                Just bairro ->
+                    bairro.name
+
+                Nothing ->
+                    cleanText place.bairroText
+
+        cityName =
+            place.municipality |> Maybe.map .name |> Maybe.withDefault ""
+
+        line =
+            [ cleanText street, bairroName, cityName ]
+                |> List.filter (not << String.isEmpty)
+                |> String.join ", "
+    in
+    case stateCode of
+        Just code ->
+            if line == "" then
+                line
+
+            else
+                line ++ " - " ++ code
+
+        Nothing ->
+            line
 
 
 
