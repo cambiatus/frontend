@@ -173,6 +173,40 @@ invite requiredArgs____ object____ =
     Object.selectionForCompositeField "invite" [ Argument.required "id" requiredArgs____.id Encode.string ] object____ (Basics.identity >> Decode.nullable)
 
 
+type alias LocalitiesOptionalArguments =
+    { country : OptionalArgument String
+    , first : OptionalArgument Int
+    , kind : OptionalArgument String
+    , municipalityId : OptionalArgument Int
+    , query : OptionalArgument String
+    }
+
+
+{-| [Auth required] Places for the location picker: municípios (or cantones) of a country, or the bairros of one município
+
+  - country - BR (default) or CR
+  - first - At most this many (default 8, max 50)
+  - kind - municipality (default) or bairro; a string so new kinds never break a decoder
+  - municipalityId - Lists this município's bairros instead
+  - query - Folded name prefix/substring, or an exact UF such as RJ
+
+-}
+localities :
+    (LocalitiesOptionalArguments -> LocalitiesOptionalArguments)
+    -> SelectionSet decodesTo Cambiatus.Object.Locality
+    -> SelectionSet (List decodesTo) RootQuery
+localities fillInOptionals____ object____ =
+    let
+        filledInOptionals____ =
+            fillInOptionals____ { country = Absent, first = Absent, kind = Absent, municipalityId = Absent, query = Absent }
+
+        optionalArgs____ =
+            [ Argument.optional "country" filledInOptionals____.country Encode.string, Argument.optional "first" filledInOptionals____.first Encode.int, Argument.optional "kind" filledInOptionals____.kind Encode.string, Argument.optional "municipalityId" filledInOptionals____.municipalityId Encode.int, Argument.optional "query" filledInOptionals____.query Encode.string ]
+                |> List.filterMap Basics.identity
+    in
+    Object.selectionForCompositeField "localities" optionalArgs____ object____ (Basics.identity >> Decode.list)
+
+
 type alias NewsRequiredArguments =
     { newsId : Int }
 

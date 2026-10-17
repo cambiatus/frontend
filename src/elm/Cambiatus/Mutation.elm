@@ -453,6 +453,19 @@ registerPush requiredArgs____ object____ =
     Object.selectionForCompositeField "registerPush" [ Argument.required "input" requiredArgs____.input Cambiatus.InputObject.encodePushSubscriptionInput ] object____ Basics.identity
 
 
+type alias SendReleaseFeedbackRequiredArguments =
+    { input : Cambiatus.InputObject.ReleaseFeedbackInput }
+
+
+{-| [Auth required] Files feedback about a feature the viewer can see
+-}
+sendReleaseFeedback :
+    SendReleaseFeedbackRequiredArguments
+    -> SelectionSet (Maybe Bool) RootMutation
+sendReleaseFeedback requiredArgs____ =
+    Object.selectionForField "(Maybe Bool)" "sendReleaseFeedback" [ Argument.required "input" requiredArgs____.input Cambiatus.InputObject.encodeReleaseFeedbackInput ] (Decode.bool |> Decode.nullable)
+
+
 type alias SignInOptionalArguments =
     { invitationId : OptionalArgument String }
 

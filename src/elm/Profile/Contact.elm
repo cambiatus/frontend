@@ -1480,10 +1480,14 @@ mutation contacts =
             , bio = Absent
             , claimNotification = Absent
             , contacts = Present (List.map contactInput contacts)
+            , deliveryAddress = Absent
             , digest = Absent
             , email = Absent
             , interests = Absent
             , location = Absent
+            , locationBairroId = Absent
+            , locationBairroText = Absent
+            , locationMunicipalityId = Absent
             , name = Absent
             , transferNotification = Absent
             }

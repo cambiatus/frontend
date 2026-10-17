@@ -220,6 +220,13 @@ productCount =
     Object.selectionForField "Int" "productCount" [] Decode.int
 
 
+{-| Progressive-release keys this viewer holds in this community (RD12)
+-}
+releasedFeatures : SelectionSet (List String) Cambiatus.Object.Community
+releasedFeatures =
+    Object.selectionForField "(List String)" "releasedFeatures" [] (Decode.string |> Decode.list)
+
+
 rewards :
     SelectionSet decodesTo Cambiatus.Object.Reward
     -> SelectionSet (List decodesTo) Cambiatus.Object.Community

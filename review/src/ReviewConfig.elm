@@ -90,7 +90,7 @@ config =
           , [ "Form.DatePicker" ]
           )
         , ( [ "View.Select.newConfig", "View.Select.view", "View.Select.update" ]
-          , [ "Form.UserPicker" ]
+          , [ "Form.UserPicker", "Form.LocalityPicker" ]
           )
         , ( [ "Slug.generate" ], [ "Utils" ] )
         ]

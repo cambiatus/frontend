@@ -163,6 +163,15 @@ createdEosAccount =
     Object.selectionForField "(Maybe String)" "createdEosAccount" [] (Decode.string |> Decode.nullable)
 
 
+{-| The owner's default delivery address; null for everyone else
+-}
+deliveryAddress :
+    SelectionSet decodesTo Cambiatus.Object.DeliveryAddress
+    -> SelectionSet (Maybe decodesTo) Cambiatus.Object.User
+deliveryAddress object____ =
+    Object.selectionForCompositeField "deliveryAddress" [] object____ (Basics.identity >> Decode.nullable)
+
+
 digest : SelectionSet Bool Cambiatus.Object.User
 digest =
     Object.selectionForField "Bool" "digest" [] Decode.bool
@@ -217,6 +226,15 @@ latestAcceptedTerms =
 location : SelectionSet (Maybe String) Cambiatus.Object.User
 location =
     Object.selectionForField "(Maybe String)" "location" [] (Decode.string |> Decode.nullable)
+
+
+{-| The public place behind `location`; visible to anyone
+-}
+locationPlace :
+    SelectionSet decodesTo Cambiatus.Object.LocationPlace
+    -> SelectionSet (Maybe decodesTo) Cambiatus.Object.User
+locationPlace object____ =
+    Object.selectionForCompositeField "locationPlace" [] object____ (Basics.identity >> Decode.nullable)
 
 
 memberSince : SelectionSet Cambiatus.ScalarCodecs.DateTime Cambiatus.Object.User

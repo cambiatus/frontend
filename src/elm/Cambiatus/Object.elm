@@ -65,6 +65,10 @@ type DeleteStatus
     = DeleteStatus
 
 
+type DeliveryAddress
+    = DeliveryAddress
+
+
 type EncryptedMnemonicResult
     = EncryptedMnemonicResult
 
@@ -79,6 +83,14 @@ type Invite
 
 type KycData
     = KycData
+
+
+type Locality
+    = Locality
+
+
+type LocationPlace
+    = LocationPlace
 
 
 type Mint

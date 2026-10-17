@@ -9,7 +9,7 @@ module View.Select exposing
     , newState, queryFromState
     , view
     , update
-    , withDisabled
+    , withDisabled, withEmptySearch
     )
 
 {-| Select input with auto-complete
@@ -271,6 +271,18 @@ withDisabled isDisabled config =
     let
         fn c =
             { c | disabled = isDisabled }
+    in
+    mapConfig fn config
+
+
+{-| Open the menu with every item as soon as the input is focused, before
+anything is typed
+-}
+withEmptySearch : Bool -> Config msg item -> Config msg item
+withEmptySearch emptySearch config =
+    let
+        fn c =
+            { c | emptySearch = emptySearch }
     in
     mapConfig fn config
 
