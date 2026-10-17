@@ -1091,15 +1091,11 @@
       "success": "እንኳን ደስ አሎት! እር ለማግኘት ተቃርበዋል ለ {{symbolCode}}. የእርሶን ተግባር እያየን ነዉ",
       "failure": "ጥያቄ ሲታይ ችግር ተፈጥሯል, እባኮን እንደገና ይሞክሩr"
     },
-    "place_prompt": {
-      "ask_title": "Onde você está?",
-      "ask_body": "Diga seu lugar para ver ofertas e ações perto de você. Leva um minuto.",
-      "ask_action": "Escolher meu lugar",
-      "confirm_title": "Você está em {{place}}?",
-      "confirm_body": "Usamos o lugar do seu perfil para mostrar o que há perto de você.",
-      "confirm_yes": "Sim, é aqui",
-      "confirm_fix": "Corrigir",
-      "not_now": "Agora não"
+    "address_note": {
+      "title": "Adicione seu endereço",
+      "body": "Usamos para entregas e para o seu lugar quando a localização está desligada.",
+      "action": "Adicionar endereço",
+      "dismiss": "Agora não"
     }
   },
   "all_analysis": {

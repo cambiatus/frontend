@@ -36,13 +36,13 @@ import Html.Attributes exposing (alt, class, classList, disabled, id, src, style
 import Html.Events exposing (onClick)
 import Http
 import Icons
-import Json.Decode exposing (Value)
+import Json.Decode as Decode exposing (Value)
 import Json.Encode as Encode
 import List.Extra as List
 import Log
 import Markdown
 import Page
-import PlacePrompt
+import PlaceLocation
 import PlaceRelease
 import Profile
 import Profile.Contact as Contact
@@ -94,7 +94,8 @@ type alias Model =
     , inviteModalStatus : InviteModalStatus
     , claimModalStatus : Claim.ModalStatus
     , copied : Bool
-    , placePrompt : Maybe PlacePrompt.Prompt
+    , placeStatus : Maybe PlaceLocation.Status
+    , addressNoteDismissed : Bool
     }
 
 
@@ -142,7 +143,8 @@ initModel shared =
     , inviteModalStatus = InviteModalClosed
     , claimModalStatus = Claim.Closed
     , copied = False
-    , placePrompt = Nothing
+    , placeStatus = Nothing
+    , addressNoteDismissed = False
     }
 
 
@@ -222,7 +224,7 @@ view ({ shared } as loggedIn) model =
                             isExplicitValidator || (hasVerifyPermission && hasAvailableClaims)
                     in
                     div []
-                        [ viewPlacePrompt shared model.placePrompt
+                        [ viewAddressNote shared model
                         , div [ class "container mx-auto my-8 px-4 lg:grid lg:grid-cols-3 lg:gap-7" ]
                             [ if not loggedIn.hasAcceptedCodeOfConduct then
                                 LoggedIn.viewFrozenAccountCard shared.translators
@@ -254,71 +256,39 @@ view ({ shared } as loggedIn) model =
     }
 
 
-viewPlacePrompt : Shared -> Maybe PlacePrompt.Prompt -> Html Msg
-viewPlacePrompt { translators } maybePrompt =
-    let
-        t key =
-            translators.t ("dashboard.place_prompt." ++ key)
-
-        card prompt title body actions =
-            div [ class "container mx-auto mt-8 px-4" ]
-                [ section
-                    [ id "place-prompt"
-                    , class "rounded-lg bg-orange-100/20 p-4 md:p-6 flex flex-col md:flex-row md:items-center gap-4"
-                    , Html.Attributes.attribute "aria-label" title
+viewAddressNote : Shared -> Model -> Html Msg
+viewAddressNote { translators } model =
+    if PlaceLocation.showAddressNote { dismissed = model.addressNoteDismissed } model.placeStatus then
+        div [ class "container mx-auto mt-8 px-4" ]
+            [ section
+                [ id "address-note"
+                , class "rounded-lg bg-orange-100/20 p-4 flex flex-col md:flex-row md:items-center gap-4"
+                , Html.Attributes.attribute "aria-label" (translators.t "dashboard.address_note.title")
+                ]
+                [ div [ class "flex-grow" ]
+                    [ h2 [ class "font-bold" ] [ text (translators.t "dashboard.address_note.title") ]
+                    , p [ class "text-gray-333 mt-1" ] [ text (translators.t "dashboard.address_note.body") ]
                     ]
-                    [ div [ class "flex-grow" ]
-                        [ h2 [ class "font-bold text-lg" ] [ text title ]
-                        , p [ class "text-gray-333 mt-1" ] [ text body ]
+                , div [ class "flex flex-col sm:flex-row gap-2 md:flex-shrink-0" ]
+                    [ a
+                        [ class "button button-primary w-full sm:w-auto"
+                        , id "address-note-add"
+                        , Route.href Route.ProfileEditor
                         ]
-                    , div [ class "flex flex-col sm:flex-row gap-2 md:flex-shrink-0" ]
-                        (actions
-                            ++ [ button
-                                    [ class "button button-secondary w-full sm:w-auto"
-                                    , Html.Attributes.type_ "button"
-                                    , id "place-prompt-dismiss"
-                                    , onClick (ClickedDismissPlacePrompt prompt)
-                                    ]
-                                    [ text (t "not_now") ]
-                               ]
-                        )
+                        [ text (translators.t "dashboard.address_note.action") ]
+                    , button
+                        [ class "button button-secondary w-full sm:w-auto"
+                        , Html.Attributes.type_ "button"
+                        , id "address-note-dismiss"
+                        , onClick ClickedDismissAddressNote
+                        ]
+                        [ text (translators.t "dashboard.address_note.dismiss") ]
                     ]
                 ]
-    in
-    case maybePrompt of
-        Nothing ->
-            text ""
+            ]
 
-        Just (PlacePrompt.Ask as prompt) ->
-            card prompt
-                (t "ask_title")
-                (t "ask_body")
-                [ a
-                    [ class "button button-primary w-full sm:w-auto"
-                    , id "place-prompt-pick"
-                    , Route.href Route.ProfileEditor
-                    ]
-                    [ text (t "ask_action") ]
-                ]
-
-        Just ((PlacePrompt.Confirm place) as prompt) ->
-            card prompt
-                (translators.tr "dashboard.place_prompt.confirm_title" [ ( "place", place ) ])
-                (t "confirm_body")
-                [ button
-                    [ class "button button-primary w-full sm:w-auto"
-                    , Html.Attributes.type_ "button"
-                    , id "place-prompt-confirm"
-                    , onClick (ClickedConfirmPlace prompt)
-                    ]
-                    [ text (t "confirm_yes") ]
-                , a
-                    [ class "button button-secondary w-full sm:w-auto"
-                    , id "place-prompt-fix"
-                    , Route.href Route.ProfileEditor
-                    ]
-                    [ text (t "confirm_fix") ]
-                ]
+    else
+        text ""
 
 
 addContactModal : Shared -> Model -> Html Msg
@@ -1022,10 +992,10 @@ type Msg
     | CopiedToClipboard
     | ClickedAcceptCodeOfConduct
     | CompletedLoadPlaceRelease (RemoteData (Graphql.Http.Error Bool) Bool)
-    | CompletedLoadPlacePrompt (RemoteData (Graphql.Http.Error (Maybe PlacePrompt.Prompt)) (Maybe PlacePrompt.Prompt))
-    | ClickedConfirmPlace PlacePrompt.Prompt
-    | ClickedDismissPlacePrompt PlacePrompt.Prompt
-    | GotPlacePromptAnswer PlacePrompt.Prompt (RemoteData (Graphql.Http.Error Bool) Bool)
+    | GotBrowserLocation Value
+    | CompletedLocatePlace (RemoteData (Graphql.Http.Error PlaceLocation.Status) PlaceLocation.Status)
+    | CompletedLoadPlaceStatus (RemoteData (Graphql.Http.Error (Maybe PlaceLocation.Status)) (Maybe PlaceLocation.Status))
+    | ClickedDismissAddressNote
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
@@ -1046,40 +1016,63 @@ update msg model ({ shared, accountName } as loggedIn) =
                 |> UR.addExt (fetchTransfers loggedIn community Nothing model)
                 |> UR.addExt (LoggedIn.query loggedIn (PlaceRelease.query loggedIn) CompletedLoadPlaceRelease)
 
-        -- Only members who hold the `elm_places` release are asked for the card
+        -- Only members who hold the `elm_places` release share their browser's location
         CompletedLoadPlaceRelease (RemoteData.Success True) ->
             UR.init model
-                |> UR.addExt (LoggedIn.query loggedIn (PlacePrompt.query accountName) CompletedLoadPlacePrompt)
+                |> UR.addPort
+                    { responseAddress = GotBrowserLocation Encode.null
+                    , responseData = Encode.null
+                    , data = Encode.object [ ( "name", Encode.string "memberLocation" ) ]
+                    }
 
         CompletedLoadPlaceRelease _ ->
             UR.init model
 
-        CompletedLoadPlacePrompt (RemoteData.Success prompt) ->
-            UR.init { model | placePrompt = prompt }
+        GotBrowserLocation value ->
+            let
+                dismissed flags =
+                    { model | addressNoteDismissed = flags.noteDismissed }
+            in
+            case Decode.decodeValue PlaceLocation.replyDecoder value of
+                Ok (PlaceLocation.Located position flags) ->
+                    dismissed flags
+                        |> UR.init
+                        |> UR.addExt (LoggedIn.mutation loggedIn (PlaceLocation.locate (Just position)) CompletedLocatePlace)
 
-        -- The card is a nicety: if it can't load, the dashboard goes without it
-        CompletedLoadPlacePrompt _ ->
+                Ok (PlaceLocation.Unavailable flags) ->
+                    dismissed flags
+                        |> UR.init
+                        |> UR.addExt (LoggedIn.mutation loggedIn (PlaceLocation.locate Nothing) CompletedLocatePlace)
+
+                Ok (PlaceLocation.Skipped flags) ->
+                    dismissed flags
+                        |> UR.init
+                        |> UR.addExt (LoggedIn.query loggedIn PlaceLocation.status CompletedLoadPlaceStatus)
+
+                -- The location is a nicety: if it can't be read, the dashboard goes without it
+                Err _ ->
+                    UR.init model
+
+        CompletedLocatePlace (RemoteData.Success placeStatus) ->
+            UR.init { model | placeStatus = Just placeStatus }
+
+        CompletedLocatePlace _ ->
             UR.init model
 
-        ClickedConfirmPlace prompt ->
-            { model | placePrompt = Nothing }
-                |> UR.init
-                |> UR.addExt (LoggedIn.mutation loggedIn PlacePrompt.confirm (GotPlacePromptAnswer prompt))
+        CompletedLoadPlaceStatus (RemoteData.Success maybeStatus) ->
+            UR.init { model | placeStatus = maybeStatus }
 
-        ClickedDismissPlacePrompt prompt ->
-            { model | placePrompt = Nothing }
-                |> UR.init
-                |> UR.addExt (LoggedIn.mutation loggedIn PlacePrompt.dismiss (GotPlacePromptAnswer prompt))
-
-        -- An answer that didn't land brings the card back, so it isn't lost silently
-        GotPlacePromptAnswer prompt (RemoteData.Failure _) ->
-            UR.init { model | placePrompt = Just prompt }
-
-        GotPlacePromptAnswer prompt (RemoteData.Success False) ->
-            UR.init { model | placePrompt = Just prompt }
-
-        GotPlacePromptAnswer _ _ ->
+        CompletedLoadPlaceStatus _ ->
             UR.init model
+
+        ClickedDismissAddressNote ->
+            { model | addressNoteDismissed = True }
+                |> UR.init
+                |> UR.addPort
+                    { responseAddress = NoOp
+                    , responseData = Encode.null
+                    , data = Encode.object [ ( "name", Encode.string "dismissAddressNote" ) ]
+                    }
 
         CompletedLoadBalance (Ok balance) ->
             UR.init { model | balance = RemoteData.Success balance }
@@ -1506,10 +1499,13 @@ receiveBroadcast broadcastMsg =
 
 
 jsAddressToMsg : List String -> Value -> Maybe Msg
-jsAddressToMsg addr _ =
+jsAddressToMsg addr val =
     case addr of
         "CopiedToClipboard" :: _ ->
             Just CopiedToClipboard
+
+        "GotBrowserLocation" :: _ ->
+            Just (GotBrowserLocation val)
 
         _ ->
             Nothing
@@ -1527,17 +1523,17 @@ msgToString msg =
         CompletedLoadPlaceRelease r ->
             [ "CompletedLoadPlaceRelease", UR.remoteDataToString r ]
 
-        CompletedLoadPlacePrompt r ->
-            [ "CompletedLoadPlacePrompt", UR.remoteDataToString r ]
+        GotBrowserLocation _ ->
+            [ "GotBrowserLocation" ]
 
-        ClickedConfirmPlace _ ->
-            [ "ClickedConfirmPlace" ]
+        CompletedLocatePlace r ->
+            [ "CompletedLocatePlace", UR.remoteDataToString r ]
 
-        ClickedDismissPlacePrompt _ ->
-            [ "ClickedDismissPlacePrompt" ]
+        CompletedLoadPlaceStatus r ->
+            [ "CompletedLoadPlaceStatus", UR.remoteDataToString r ]
 
-        GotPlacePromptAnswer _ r ->
-            [ "GotPlacePromptAnswer", UR.remoteDataToString r ]
+        ClickedDismissAddressNote ->
+            [ "ClickedDismissAddressNote" ]
 
         CompletedLoadBalance result ->
             [ "CompletedLoadBalance", UR.resultToString result ]

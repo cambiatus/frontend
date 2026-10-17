@@ -1133,15 +1133,11 @@
       "success": "¡Felicidades! ya casi tienes tus {{symbolCode}}. Estamos revisando tu acción.",
       "failure": "Se produjo un error al intentar procesar su reclamo. Vuelva a intentarlo más tarde."
     },
-    "place_prompt": {
-      "ask_title": "¿Dónde estás?",
-      "ask_body": "Dinos tu lugar para ver ofertas y acciones cerca de ti. Toma un minuto.",
-      "ask_action": "Elegir mi lugar",
-      "confirm_title": "¿Estás en {{place}}?",
-      "confirm_body": "Usamos el lugar de tu perfil para mostrarte lo que hay cerca de ti.",
-      "confirm_yes": "Sí, es aquí",
-      "confirm_fix": "Corregir",
-      "not_now": "Ahora no"
+    "address_note": {
+      "title": "Añade tu dirección",
+      "body": "Lo usamos para entregas y para tu lugar cuando tu ubicación está desactivada.",
+      "action": "Añadir dirección",
+      "dismiss": "Ahora no"
     }
   },
   "all_analysis": {

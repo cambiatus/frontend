@@ -1,7 +1,7 @@
 module Shop.Where exposing
     ( Where(..), isChosen
-    , Place, Options, Entry, query
-    , Chips, ChipPlace, chips, chipsIf
+    , Place, ChipPlace, Options, query
+    , Chips, chips, chipsIf
     )
 
 {-| The shop's "Onde" filter: where an offer is had. A chip is a município the
@@ -9,10 +9,8 @@ member lives in ("Perto de você"), a município the community's offers are had 
 or "Online". Choosing one is passed to `products` as `filters.placeId` or
 `filters.online`.
 
-The API has no per-place counts yet, so the chips are counted here from one light
-query over the community's offers: an offer counts under each município it
-names, or, when it names none, under its seller's município. Offers that are
-Online count only there.
+The counts come from the backend (`placeCounts`), the same numbers LiveView's
+chips show.
 
 
 # Choice
@@ -22,26 +20,25 @@ Online count only there.
 
 # Reading the options
 
-@docs Place, Options, Entry, query
+@docs Place, ChipPlace, Options, query
 
 
 # Chips
 
-@docs Chips, ChipPlace, chips, chipsIf
+@docs Chips, chips, chipsIf
 
 -}
 
 import Cambiatus.Object
 import Cambiatus.Object.Locality as Locality
 import Cambiatus.Object.LocationPlace as LocationPlace
-import Cambiatus.Object.Product as Product
+import Cambiatus.Object.PlaceCount as PlaceCount
+import Cambiatus.Object.PlaceCounts as PlaceCounts
 import Cambiatus.Object.User as User
 import Cambiatus.Query as Query
-import Dict exposing (Dict)
 import Eos.Account
 import Graphql.Operation exposing (RootQuery)
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
-import List.Extra
 
 
 
@@ -72,41 +69,53 @@ type alias Place =
     }
 
 
-{-| What the shop needs to know about one offer to count it
--}
-type alias Entry =
-    { places : List Place
-    , online : Bool
-    , sellerPlace : Maybe Place
+type alias ChipPlace =
+    { place : Place
+    , count : Int
     }
 
 
+{-| `home` is the member's own município; `places` are the municípios the
+community's offers are had in, with how many; `online` is how many Online offers
+there are
+-}
 type alias Options =
     { home : Maybe Place
-    , entries : List Entry
+    , places : List ChipPlace
+    , online : Int
     }
 
 
 query : Eos.Account.Name -> SelectionSet Options RootQuery
 query account =
-    SelectionSet.map2 Options
+    SelectionSet.map2
+        (\home counts ->
+            { home = home
+            , places = counts |> Maybe.map .places |> Maybe.withDefault []
+            , online = counts |> Maybe.map .online |> Maybe.withDefault 0
+            }
+        )
         (Query.user { account = Eos.Account.nameToString account } homeSelectionSet
             |> SelectionSet.map (Maybe.andThen identity)
         )
-        (Query.products identity entrySelectionSet)
+        (Query.placeCounts
+            (SelectionSet.map2 (\online places -> { online = online, places = places })
+                PlaceCounts.online
+                (PlaceCounts.places chipPlaceSelectionSet)
+            )
+        )
+
+
+chipPlaceSelectionSet : SelectionSet ChipPlace Cambiatus.Object.PlaceCount
+chipPlaceSelectionSet =
+    SelectionSet.succeed ChipPlace
+        |> with (PlaceCount.locality placeSelectionSet)
+        |> with PlaceCount.count
 
 
 homeSelectionSet : SelectionSet (Maybe Place) Cambiatus.Object.User
 homeSelectionSet =
     User.locationPlace (LocationPlace.municipality placeSelectionSet)
-
-
-entrySelectionSet : SelectionSet Entry Cambiatus.Object.Product
-entrySelectionSet =
-    SelectionSet.succeed Entry
-        |> with (Product.places municipalityOfSelectionSet |> SelectionSet.map (List.filterMap identity))
-        |> with Product.online
-        |> with (Product.creator homeSelectionSet)
 
 
 placeSelectionSet : SelectionSet Place Cambiatus.Object.Locality
@@ -117,24 +126,8 @@ placeSelectionSet =
         |> with Locality.stateCode
 
 
-{-| A município stays itself; a bairro counts under its município
--}
-municipalityOfSelectionSet : SelectionSet (Maybe Place) Cambiatus.Object.Locality
-municipalityOfSelectionSet =
-    SelectionSet.map2
-        (\own parent -> Just (Maybe.withDefault own parent))
-        placeSelectionSet
-        (Locality.municipality placeSelectionSet)
-
-
 
 -- CHIPS
-
-
-type alias ChipPlace =
-    { place : Place
-    , count : Int
-    }
 
 
 {-| `home` is "Perto de você"; `places` are the other municípios, the busiest
@@ -152,48 +145,23 @@ own município is "Perto de você" and does not repeat in the list. A place nobo
 offers in is left out, and so is "Perto de você" when the member has no place.
 -}
 chips : Int -> Options -> Chips
-chips limit { home, entries } =
+chips limit { home, places, online } =
     let
-        placesOf entry =
-            if entry.online && List.isEmpty entry.places then
-                []
-
-            else if List.isEmpty entry.places then
-                Maybe.map List.singleton entry.sellerPlace |> Maybe.withDefault []
-
-            else
-                entry.places
-
-        counted : Dict Int ChipPlace
-        counted =
-            entries
-                |> List.concatMap (placesOf >> List.Extra.uniqueBy .id)
-                |> List.foldl
-                    (\place ->
-                        Dict.update place.id
-                            (\existing ->
-                                case existing of
-                                    Just chip ->
-                                        Just { chip | count = chip.count + 1 }
-
-                                    Nothing ->
-                                        Just { place = place, count = 1 }
-                            )
-                    )
-                    Dict.empty
+        offered =
+            List.filter (\chip -> chip.count > 0) places
 
         homeId =
             Maybe.map .id home
     in
     { home =
         home
-            |> Maybe.andThen (\place -> Dict.get place.id counted)
+            |> Maybe.andThen (\place -> List.filter (\chip -> chip.place.id == place.id) offered |> List.head)
     , places =
-        Dict.values counted
+        offered
             |> List.filter (\chip -> Just chip.place.id /= homeId)
             |> List.sortBy (\chip -> ( -chip.count, chip.place.name ))
             |> List.take limit
-    , online = entries |> List.filter .online |> List.length
+    , online = online
     }
 
 

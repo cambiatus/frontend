@@ -145,8 +145,20 @@ type PasskeyRegistrationChallenge
     = PasskeyRegistrationChallenge
 
 
+type PlaceCount
+    = PlaceCount
+
+
+type PlaceCounts
+    = PlaceCounts
+
+
 type PlacePrompt
     = PlacePrompt
+
+
+type PlaceStatus
+    = PlaceStatus
 
 
 type PostalCodeAddress

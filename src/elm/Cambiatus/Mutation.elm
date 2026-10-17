@@ -239,6 +239,30 @@ highlightedNews fillInOptionals____ object____ =
     Object.selectionForCompositeField "highlightedNews" optionalArgs____ object____ (Basics.identity >> Decode.nullable)
 
 
+type alias LocatePlaceOptionalArguments =
+    { latitude : OptionalArgument Float
+    , longitude : OptionalArgument Float
+    }
+
+
+{-| [Auth required] The browser's position for the member's place; without a position (refused or none) the place follows the default address. The position is used for one lookup and never stored. An own choice is never overwritten
+-}
+locatePlace :
+    (LocatePlaceOptionalArguments -> LocatePlaceOptionalArguments)
+    -> SelectionSet decodesTo Cambiatus.Object.PlaceStatus
+    -> SelectionSet decodesTo RootMutation
+locatePlace fillInOptionals____ object____ =
+    let
+        filledInOptionals____ =
+            fillInOptionals____ { latitude = Absent, longitude = Absent }
+
+        optionalArgs____ =
+            [ Argument.optional "latitude" filledInOptionals____.latitude Encode.float, Argument.optional "longitude" filledInOptionals____.longitude Encode.float ]
+                |> List.filterMap Basics.identity
+    in
+    Object.selectionForCompositeField "locatePlace" optionalArgs____ object____ Basics.identity
+
+
 type alias NewsOptionalArguments =
     { id : OptionalArgument Int
     , scheduling : OptionalArgument Cambiatus.ScalarCodecs.DateTime

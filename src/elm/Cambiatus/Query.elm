@@ -271,6 +271,24 @@ pendingClaims fillInOptionals____ object____ =
     Object.selectionForCompositeField "pendingClaims" optionalArgs____ object____ (Basics.identity >> Decode.nullable)
 
 
+{-| [Auth required] The community's places with their offer counts, and the Online count; the numbers behind the shop's place chips
+-}
+placeCounts :
+    SelectionSet decodesTo Cambiatus.Object.PlaceCounts
+    -> SelectionSet (Maybe decodesTo) RootQuery
+placeCounts object____ =
+    Object.selectionForCompositeField "placeCounts" [] object____ (Basics.identity >> Decode.nullable)
+
+
+{-| [Auth required] Where the current user's public place comes from: their own choice, the browser's location, their default address, or none
+-}
+placeStatus :
+    SelectionSet decodesTo Cambiatus.Object.PlaceStatus
+    -> SelectionSet (Maybe decodesTo) RootQuery
+placeStatus object____ =
+    Object.selectionForCompositeField "placeStatus" [] object____ (Basics.identity >> Decode.nullable)
+
+
 type alias PostalCodeLookupRequiredArguments =
     { postalCode : String }
 

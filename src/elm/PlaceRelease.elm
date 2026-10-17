@@ -1,6 +1,6 @@
 module PlaceRelease exposing (isReleased, query)
 
-{-| The `elm_places` release: Elm's "Onde" chips in the shop and the place card
+{-| The `elm_places` release: Elm's "Onde" chips in the shop and the browser location
 on the dashboard. Without the key Elm behaves as it did before, and the new
 fields are never asked for.
 -}

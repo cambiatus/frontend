@@ -9,83 +9,48 @@ import Test exposing (Test, describe, test)
 all : Test
 all =
     describe "Shop.Where"
-        [ test "an offer counts under its explicit places, not its seller's" <|
+        [ test "the busiest place comes first, ties by name" <|
             \_ ->
                 Where.chips 8
                     { home = Nothing
-                    , entries = [ { places = [ teresopolis ], online = False, sellerPlace = Just rio } ]
+                    , places = [ chip teresopolis 1, chip rio 5, chip niteroi 1 ]
+                    , online = 0
                     }
                     |> .places
-                    |> List.map (\chip -> ( chip.place.name, chip.count ))
-                    |> Expect.equal [ ( "Teresópolis", 1 ) ]
-        , test "an offer with no explicit place counts under its seller's" <|
+                    |> List.map (\c -> ( c.place.name, c.count ))
+                    |> Expect.equal [ ( "Rio de Janeiro", 5 ), ( "Niterói", 1 ), ( "Teresópolis", 1 ) ]
+        , test "Online is the backend's count" <|
             \_ ->
-                Where.chips 8
-                    { home = Nothing
-                    , entries = [ { places = [], online = False, sellerPlace = Just rio } ]
-                    }
-                    |> .places
-                    |> List.map (\chip -> ( chip.place.name, chip.count ))
-                    |> Expect.equal [ ( "Rio de Janeiro", 1 ) ]
-        , test "an Online offer counts only as Online" <|
-            \_ ->
-                let
-                    chips =
-                        Where.chips 8
-                            { home = Nothing
-                            , entries =
-                                [ { places = [], online = True, sellerPlace = Just rio }
-                                , { places = [], online = False, sellerPlace = Just rio }
-                                ]
-                            }
-                in
-                Expect.equal ( chips.online, List.map (.place >> .name) chips.places ) ( 1, [ "Rio de Janeiro" ] )
-        , test "an offer naming a place twice counts once; the busiest place comes first" <|
-            \_ ->
-                Where.chips 8
-                    { home = Nothing
-                    , entries =
-                        [ { places = [ teresopolis, teresopolis ], online = False, sellerPlace = Nothing }
-                        , { places = [ rio ], online = False, sellerPlace = Nothing }
-                        , { places = [ rio ], online = False, sellerPlace = Nothing }
-                        ]
-                    }
-                    |> .places
-                    |> List.map (\chip -> ( chip.place.name, chip.count ))
-                    |> Expect.equal [ ( "Rio de Janeiro", 2 ), ( "Teresópolis", 1 ) ]
+                Where.chips 8 { home = Nothing, places = [ chip rio 2 ], online = 7 }
+                    |> .online
+                    |> Expect.equal 7
         , test "Perto de você is the member's place and does not repeat in the list" <|
             \_ ->
                 let
                     chips =
                         Where.chips 8
                             { home = Just rio
-                            , entries =
-                                [ { places = [ rio ], online = False, sellerPlace = Nothing }
-                                , { places = [ teresopolis ], online = False, sellerPlace = Nothing }
-                                ]
+                            , places = [ chip rio 2, chip teresopolis 1 ]
+                            , online = 0
                             }
                 in
                 Expect.equal
-                    ( Maybe.map (.place >> .name) chips.home, List.map (.place >> .name) chips.places )
-                    ( Just "Rio de Janeiro", [ "Teresópolis" ] )
+                    ( Maybe.map (\c -> ( c.place.name, c.count )) chips.home, List.map (.place >> .name) chips.places )
+                    ( Just ( "Rio de Janeiro", 2 ), [ "Teresópolis" ] )
         , test "Perto de você is left out when nobody offers there" <|
             \_ ->
-                Where.chips 8
-                    { home = Just rio
-                    , entries = [ { places = [ teresopolis ], online = False, sellerPlace = Nothing } ]
-                    }
+                Where.chips 8 { home = Just rio, places = [ chip teresopolis 1 ], online = 0 }
                     |> .home
                     |> Expect.equal Nothing
+        , test "a place with no offers is left out" <|
+            \_ ->
+                Where.chips 8 { home = Nothing, places = [ chip rio 0, chip teresopolis 1 ], online = 0 }
+                    |> .places
+                    |> List.map (.place >> .name)
+                    |> Expect.equal [ "Teresópolis" ]
         , test "only the busiest places up to the limit show" <|
             \_ ->
-                Where.chips 1
-                    { home = Nothing
-                    , entries =
-                        [ { places = [ rio ], online = False, sellerPlace = Nothing }
-                        , { places = [ rio ], online = False, sellerPlace = Nothing }
-                        , { places = [ teresopolis ], online = False, sellerPlace = Nothing }
-                        ]
-                    }
+                Where.chips 1 { home = Nothing, places = [ chip teresopolis 1, chip rio 2 ], online = 0 }
                     |> .places
                     |> List.map (.place >> .name)
                     |> Expect.equal [ "Rio de Janeiro" ]
@@ -108,7 +73,7 @@ all =
                         |> Expect.equal (Just 1)
             , test "released, but with nothing to choose from, there are no chips" <|
                 \_ ->
-                    Where.chipsIf { released = True, limit = 8 } (Just { home = Nothing, entries = [] })
+                    Where.chipsIf { released = True, limit = 8 } (Just { home = Nothing, places = [], online = 0 })
                         |> Expect.equal Nothing
             , test "released, but the options have not arrived, there are no chips" <|
                 \_ ->
@@ -121,8 +86,14 @@ all =
 options : Where.Options
 options =
     { home = Nothing
-    , entries = [ { places = [ rio ], online = False, sellerPlace = Nothing } ]
+    , places = [ chip rio 1 ]
+    , online = 0
     }
+
+
+chip : Where.Place -> Int -> Where.ChipPlace
+chip place count =
+    { place = place, count = count }
 
 
 rio : Where.Place
@@ -133,3 +104,8 @@ rio =
 teresopolis : Where.Place
 teresopolis =
     { id = 3305802, name = "Teresópolis", stateCode = Just "RJ" }
+
+
+niteroi : Where.Place
+niteroi =
+    { id = 3303302, name = "Niterói", stateCode = Just "RJ" }

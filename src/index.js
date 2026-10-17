@@ -14,6 +14,7 @@ import "./styles/main.css";
 import pdfFonts from "./vfs_fonts";
 import { register as registerCustomElements } from "./customElements/index";
 import * as matomo from "./utils/matomo";
+import * as memberLocation from "./utils/memberLocation";
 import { Socket as PhoenixSocket } from "phoenix";
 import * as ElmDebugger from "elm-debug-transformer";
 import { serialize } from "eosjs";
@@ -1380,6 +1381,13 @@ async function handleJavascriptPort(arg) {
       });
 
       return { copied: true };
+    }
+    case "memberLocation": {
+      return await memberLocation.locate();
+    }
+    case "dismissAddressNote": {
+      memberLocation.dismissAddressNote();
+      return {};
     }
     case "readClipboard": {
       if (canReadClipboard()) {

@@ -1130,15 +1130,11 @@
       "success": "Congrats! You are close to earn your {{symbolCode}}. We are reviewing your action",
       "failure": "Something went wrong while trying to process your claim, please try again later"
     },
-    "place_prompt": {
-      "ask_title": "Where are you?",
-      "ask_body": "Tell us your place to see offers and actions near you. It takes a minute.",
-      "ask_action": "Choose my place",
-      "confirm_title": "Are you in {{place}}?",
-      "confirm_body": "We use the place on your profile to show what is near you.",
-      "confirm_yes": "Yes, this is it",
-      "confirm_fix": "Correct it",
-      "not_now": "Not now"
+    "address_note": {
+      "title": "Add your address",
+      "body": "We use it for deliveries, and for your place when your location is off.",
+      "action": "Add address",
+      "dismiss": "Not now"
     }
   },
   "all_analysis": {
