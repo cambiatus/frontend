@@ -42,12 +42,6 @@ validations), so we get consistent error messages throughout the app.
 
 @docs markdownLongerThan
 
-
-## List inputs
-
-
-## Dates
-
 -}
 
 import Eos.Account
@@ -308,8 +302,6 @@ email =
 
 
 
--- LISTS
--- DATES
 -- INTERNAL HELPERS
 
 

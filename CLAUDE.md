@@ -35,7 +35,7 @@ The app has two session types:
 
 ### Page Structure
 Pages are organized in `src/elm/Page/` with subdirectories for feature areas:
-- `Page/Community/` - Community management pages (settings, objectives, sponsorship, transfers)
+- `Page/Community/` - Community pages (about, objectives, invite, transfers). Admin settings live in the LiveView `/app` panel; their old routes render `Page/AdminMoved.elm`
 - `Page/Dashboard.elm` - Main user dashboard with claims and analysis
 - `Page/Profile/` - User profile and related features (KYC, contacts, claims)
 - `Page/Shop.elm` - Commerce functionality

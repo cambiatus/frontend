@@ -149,8 +149,6 @@ type Valid
 
 
 
--- FORM EVENT HANDLERS
--- FORM VALIDATION
 -- GRAPHQL
 
 
