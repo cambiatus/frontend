@@ -8,8 +8,6 @@ module Icons exposing
     , cambiatusCoin
     , camera
     , checkmark
-    , circledPlus
-    , circularClose
     , clearInput
     , clock
     , close
@@ -34,7 +32,6 @@ module Icons exposing
     , mail
     , minus
     , notification
-    , paypal
     , phone
     , phoneInverted
     , plus
@@ -58,8 +55,8 @@ module Icons exposing
 import Html exposing (Html)
 import Html.Attributes exposing (alt)
 import Html.Attributes.Aria exposing (ariaHidden)
-import Svg exposing (Svg, defs, feBlend, feColorMatrix, feComposite, feFlood, feGaussianBlur, feOffset, g, linearGradient, stop, svg)
-import Svg.Attributes exposing (class, clipPath, clipRule, colorInterpolationFilters, d, dx, dy, enableBackground, fill, fillRule, filter, filterUnits, floodOpacity, gradientUnits, height, id, in2, in_, k2, k3, offset, operator, result, stdDeviation, stopColor, stroke, strokeLinecap, strokeLinejoin, strokeMiterlimit, strokeOpacity, strokeWidth, style, values, viewBox, width, x, x1, x2, y, y1, y2)
+import Svg exposing (Svg, g, svg)
+import Svg.Attributes exposing (class, clipPath, clipRule, d, enableBackground, fill, fillRule, height, id, stroke, strokeLinecap, strokeLinejoin, strokeMiterlimit, strokeOpacity, strokeWidth, style, viewBox, width)
 
 
 shop : String -> Svg msg
@@ -74,18 +71,6 @@ close class_ =
         [ Svg.path [ fillRule "evenodd", clipRule "evenodd", d "M13.6299 12.0242L22.2329 3.25164C22.603 2.84787 22.5865 2.22339 22.1956 1.83974C21.8046 1.4561 21.18 1.45137 20.7833 1.82906L12.1938 10.5881L3.25206 1.81551C2.99607 1.54661 2.6138 1.43874 2.25501 1.53415C1.89622 1.62956 1.61802 1.91306 1.5294 2.2736C1.44078 2.63414 1.55584 3.01431 1.82951 3.26519L10.7577 12.0242L1.82951 20.7832C1.45184 21.1799 1.45656 21.8046 1.8402 22.1956C2.22383 22.5865 2.8483 22.603 3.25206 22.2329L12.1938 13.4603L20.7833 22.2194C21.18 22.597 21.8046 22.5923 22.1956 22.2087C22.5865 21.825 22.603 21.2005 22.2329 20.7968L13.6299 12.0242Z" ] [] ]
 
 
-circularClose : String -> Svg msg
-circularClose class_ =
-    svg
-        [ width "18"
-        , height "16"
-        , viewBox "0 0 18 16"
-        , fill "none"
-        , class class_
-        ]
-        [ Svg.path [ d "M5.45632 11.5353C7.57956 13.4879 11.022 13.4879 13.1452 11.5353C15.2685 9.58269 15.2685 6.41687 13.1452 4.46424C11.022 2.51162 7.57956 2.51162 5.45632 4.46424C3.33308 6.41687 3.33308 9.58269 5.45632 11.5353Z", stroke "#DB1B1B", strokeWidth "1.5", strokeLinecap "round", strokeLinejoin "round" ] [], Svg.path [ d "M11.6075 8.00023L6.9941 8.00023", stroke "#DB1B1B", strokeWidth "1.5", strokeLinecap "round", strokeLinejoin "round" ] [] ]
-
-
 plus : String -> Svg msg
 plus class_ =
     svg
@@ -96,18 +81,6 @@ plus class_ =
         , ariaHidden True
         ]
         [ Svg.path [ fillRule "evenodd", clipRule "evenodd", d "M24.2829 12.0329H13.9671V1.71711C13.9671 1.18299 13.5341 0.75 13 0.75C12.4659 0.75 12.0329 1.18299 12.0329 1.71711V12.0329H1.71711C1.18299 12.0329 0.75 12.4659 0.75 13C0.75 13.5341 1.18299 13.9671 1.71711 13.9671H12.0329V24.2829C12.0329 24.817 12.4659 25.25 13 25.25C13.5341 25.25 13.9671 24.817 13.9671 24.2829V13.9671H24.2829C24.817 13.9671 25.25 13.5341 25.25 13C25.25 12.4659 24.817 12.0329 24.2829 12.0329Z" ] [] ]
-
-
-circledPlus : String -> Svg msg
-circledPlus class_ =
-    svg
-        [ width "24"
-        , height "24"
-        , viewBox "0 0 24 24"
-        , fill "none"
-        , class class_
-        ]
-        [ Svg.path [ d "M6.6967 17.3035C9.62563 20.2324 14.3744 20.2324 17.3033 17.3035C20.2322 14.3745 20.2322 9.62579 17.3033 6.69686C14.3744 3.76792 9.62563 3.76792 6.6967 6.69686C3.76777 9.62579 3.76777 14.3745 6.6967 17.3035Z", stroke "#F99D33", strokeWidth "2", strokeLinecap "round", strokeLinejoin "round" ] [], Svg.path [ d "M15.182 12.0003H8.81802", stroke "#F99D33", strokeWidth "2", strokeLinecap "round", strokeLinejoin "round" ] [], Svg.path [ d "M12 8.81836V15.1823", stroke "#F99D33", strokeWidth "2", strokeLinecap "round", strokeLinejoin "round" ] [] ]
 
 
 minus : String -> Svg msg
@@ -449,23 +422,6 @@ telegramInverted : String -> Html msg
 telegramInverted class_ =
     svg [ class class_, width "24", height "24", viewBox "0 0 24 24", fill "none" ]
         [ Svg.path [ d "M3.32359 11.7622L7.90888 14.0601C8.08622 14.1481 8.29561 14.1418 8.46514 14.042L12.5465 11.6561L10.0761 13.8574C9.95034 13.9698 9.87846 14.13 9.87846 14.2989V19.6607C9.87846 20.2263 10.5965 20.4644 10.9332 20.015L12.9153 17.3651L17.817 20.1721C18.1607 20.3709 18.6014 20.1713 18.6811 19.7762L21.7382 4.45683C21.8296 3.99647 21.3741 3.62095 20.9507 3.79221L3.37203 10.6859C2.90014 10.8713 2.86967 11.5352 3.32359 11.7622ZM20.3788 5.28172L17.692 18.7447L13.0473 16.0846C12.7942 15.9393 12.4684 16.0037 12.2887 16.2425L11.0504 17.8978V14.5637L17.731 8.61191C18.26 8.14133 17.6521 7.30466 17.0482 7.66132L8.14951 12.8636L5.03067 11.301L20.3788 5.28172Z", fill "#0088CC" ] [] ]
-
-
-paypal : String -> Html msg
-paypal class_ =
-    svg [ width "21", height "23", fill "none", class class_ ]
-        [ Svg.path [ fillRule "evenodd", clipRule "evenodd", d "M14.822 1c2.623 0 4.324 1.79 4.324 4.551v9.999c0 2.76-1.7 4.551-4.324 4.551H5.324C2.7 20.101 1 18.311 1 15.55V5.55C1 2.791 2.701 1 5.324 1h9.498Z", fill "url(#a)" ] []
-        , g [ filter "url(#b)" ] [ Svg.path [ fillRule "evenodd", clipRule "evenodd", d "M6.787 3.706a.461.461 0 0 0-.448.402L4.648 15.25c-.045.29.168.553.447.553h2.446l.577-3.956a.462.462 0 0 1 .448-.405h.969s1.14.075 2.005-.28c1.221-.501 2.787-1.682 2.966-3.832.306-3.673-2.094-3.624-3.583-3.624H6.787Z", fill "#fff" ] [] ]
-        , g [ filter "url(#c)" ] [ Svg.path [ fillRule "evenodd", clipRule "evenodd", d "M9.282 6.73a.46.46 0 0 0-.447.403l-1.466 9.653c-.044.29.17.553.448.553H9.72c.223 0 .413-.17.448-.402l.46-3.02a.461.461 0 0 1 .447-.403h.57s.77.05 1.53-.261c1.07-.44 2.255-1.48 2.412-3.366.268-3.22-2.954-3.156-4.26-3.156H9.282Z", fill "#ADD1E6" ] [] ]
-        , g [ filter "url(#d)" ] [ Svg.path [ fillRule "evenodd", clipRule "evenodd", d "M8.126 11.816c.083-.199.262-.374.47-.374h.918s1.15.007 2.016-.348c1.22-.5 2.773-1.611 2.955-3.757-.993-.629-2.415-.606-3.18-.606H9.329c-.25 0-.486.211-.526.473l-.696 4.583.019.03Z", fill "url(#e)" ] [] ]
-        , defs []
-            [ Svg.filter [ id "b", x ".142", y ".706", width "17.891", height "20.097", filterUnits "userSpaceOnUse", colorInterpolationFilters "sRGB" ] [ feFlood [ floodOpacity "0", result "BackgroundImageFix" ] [], feColorMatrix [ in_ "SourceAlpha", values "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0", result "hardAlpha" ] [], feOffset [ dx "-.5", dy "1" ] [], feGaussianBlur [ stdDeviation "2" ] [], feColorMatrix [ values "0 0 0 0 0 0 0 0 0 0.345098 0 0 0 0 0.631373 0 0 0 1 0" ] [], feBlend [ in2 "BackgroundImageFix", result "effect1_dropShadow" ] [], feBlend [ in_ "SourceGraphic", in2 "effect1_dropShadow", result "shape" ] [], feColorMatrix [ in_ "SourceAlpha", values "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0", result "hardAlpha" ] [], feOffset [ dy "-1" ] [], feGaussianBlur [ stdDeviation "2" ] [], feComposite [ in2 "hardAlpha", operator "arithmetic", k2 "-1", k3 "1" ] [], feColorMatrix [ values "0 0 0 0 0.760784 0 0 0 0 0.858824 0 0 0 0 0.921569 0 0 0 1 0" ] [], feBlend [ in2 "shape", result "effect2_innerShadow" ] [] ]
-            , Svg.filter [ id "c", x "4.363", y "3.73", width "16.238", height "18.608", filterUnits "userSpaceOnUse", colorInterpolationFilters "sRGB" ] [ feFlood [ floodOpacity "0", result "BackgroundImageFix" ] [], feColorMatrix [ in_ "SourceAlpha", values "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0", result "hardAlpha" ] [], feOffset [ dx "1", dy "1" ] [], feGaussianBlur [ stdDeviation "2" ] [], feColorMatrix [ values "0 0 0 0 0 0 0 0 0 0.419608 0 0 0 0 0.701961 0 0 0 1 0" ] [], feBlend [ in2 "BackgroundImageFix", result "effect1_dropShadow" ] [], feBlend [ in_ "SourceGraphic", in2 "effect1_dropShadow", result "shape" ] [], feColorMatrix [ in_ "SourceAlpha", values "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0", result "hardAlpha" ] [], feOffset [ dy "-1" ] [], feGaussianBlur [ stdDeviation "2" ] [], feComposite [ in2 "hardAlpha", operator "arithmetic", k2 "-1", k3 "1" ] [], feColorMatrix [ values "0 0 0 0 0.751403 0 0 0 0 0.876099 0 0 0 0 0.941911 0 0 0 1 0" ] [], feBlend [ in2 "shape", result "effect2_innerShadow" ] [] ]
-            , Svg.filter [ id "d", x "8.107", y "5.73", width "6.378", height "6.086", filterUnits "userSpaceOnUse", colorInterpolationFilters "sRGB" ] [ feFlood [ floodOpacity "0", result "BackgroundImageFix" ] [], feBlend [ in_ "SourceGraphic", in2 "BackgroundImageFix", result "shape" ] [], feColorMatrix [ in_ "SourceAlpha", values "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0", result "hardAlpha" ] [], feOffset [ dy "-1" ] [], feGaussianBlur [ stdDeviation "2" ] [], feComposite [ in2 "hardAlpha", operator "arithmetic", k2 "-1", k3 "1" ] [], feColorMatrix [ values "0 0 0 0 0.839216 0 0 0 0 0.905882 0 0 0 0 0.945098 0 0 0 1 0" ] [], feBlend [ in2 "shape", result "effect1_innerShadow" ] [] ]
-            , linearGradient [ id "a", x1 "-5.858", y1 "10.954", x2 "10.889", y2 "26.375", gradientUnits "userSpaceOnUse" ] [ stop [ stopColor "#002B6F" ] [], stop [ offset "1", stopColor "#0097D9" ] [] ]
-            , linearGradient [ id "e", x1 "6.5", y1 "7.908", x2 "8.573", y2 "12.316", gradientUnits "userSpaceOnUse" ] [ stop [ stopColor "#E6EEF5" ] [], stop [ offset "1", stopColor "#E6F0F7" ] [] ]
-            ]
-        ]
 
 
 phone : String -> Html msg

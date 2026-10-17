@@ -4,7 +4,6 @@ module Form.UserPicker exposing
     , getId, isEmpty
     , view, ViewConfig, mapViewConfig
     , Model, update, Msg, msgToString
-    , MultiplePickerModel, initMultiple, fromMultiplePicker, toMultiplePicker, getMultipleProfiles
     , SinglePickerModel, initSingle, fromSinglePicker, toSinglePicker, getSingleProfile, setSingle
     , getCurrentQuery
     )
@@ -48,8 +47,6 @@ This is how you actually use this component!
 
 
 ## Multiple users picker
-
-@docs MultiplePickerModel, initMultiple, fromMultiplePicker, toMultiplePicker, getMultipleProfiles
 
 
 ## Single user picker
@@ -274,9 +271,6 @@ view ((Options options) as wrappedOptions) viewConfig toMsg =
 
         selectedProfiles =
             case model.selectedProfile of
-                Multiple profiles_ ->
-                    profiles_
-
                 Single Nothing ->
                     []
 
@@ -395,42 +389,14 @@ type SinglePickerModel
         }
 
 
-type MultiplePickerModel
-    = MultiplePickerModel
-        { selectState : View.Select.State
-        , id : String
-        , selectedProfiles : List ProfileWithSummary
-        }
-
-
 type SelectedProfile
     = Single (Maybe ProfileWithSummary)
-    | Multiple (List ProfileWithSummary)
 
 
 type alias ProfileWithSummary =
     { profile : Profile.Minimal
     , summary : Profile.Summary.Model
     }
-
-
-{-| Initialize a `Model` that will take can have multiple profiles selected at
-once
--}
-initMultiple : { id : String, selectedProfiles : List Profile.Minimal } -> MultiplePickerModel
-initMultiple { id, selectedProfiles } =
-    MultiplePickerModel
-        { selectState = View.Select.newState id
-        , id = id
-        , selectedProfiles =
-            List.map
-                (\profile ->
-                    { profile = profile
-                    , summary = Profile.Summary.init False
-                    }
-                )
-                selectedProfiles
-        }
 
 
 {-| Initialize a `Model` that will have at most 1 selected profile at a time.
@@ -505,14 +471,6 @@ update options viewConfig msg (Model model) =
                                 }
                                     |> Just
                                     |> Single
-
-                            Multiple profiles ->
-                                Multiple
-                                    ({ profile = profile
-                                     , summary = Profile.Summary.init False
-                                     }
-                                        :: profiles
-                                    )
                 }
             , Cmd.none
             , Nothing
@@ -530,13 +488,6 @@ update options viewConfig msg (Model model) =
                                 { profile | summary = Profile.Summary.update subMsg profile.summary }
                                     |> Just
                                     |> Single
-
-                            Multiple profiles ->
-                                profiles
-                                    |> List.Extra.updateIf
-                                        (.profile >> (==) targetProfile)
-                                        (\profile -> { profile | summary = Profile.Summary.update subMsg profile.summary })
-                                    |> Multiple
                 }
             , Cmd.none
             , Nothing
@@ -549,13 +500,6 @@ update options viewConfig msg (Model model) =
                         case model.selectedProfile of
                             Single _ ->
                                 Single Nothing
-
-                            Multiple profiles ->
-                                Multiple
-                                    (List.filter
-                                        (.profile >> (/=) profileToRemove)
-                                        profiles
-                                    )
                 }
             , Cmd.none
             , Nothing
@@ -597,18 +541,10 @@ isEmpty (Model model) =
         Single maybeProfile ->
             Maybe.Extra.isNothing maybeProfile
 
-        Multiple profiles ->
-            List.isEmpty profiles
-
 
 getSingleProfile : SinglePickerModel -> Maybe Profile.Minimal
 getSingleProfile (SinglePickerModel model) =
     Maybe.map .profile model.selectedProfile
-
-
-getMultipleProfiles : MultiplePickerModel -> List Profile.Minimal
-getMultipleProfiles (MultiplePickerModel model) =
-    List.map .profile model.selectedProfiles
 
 
 getCurrentQuery : Model -> String
@@ -634,41 +570,4 @@ toSinglePicker (Model model) =
                 { selectState = model.selectState
                 , id = model.id
                 , selectedProfile = maybeProfile
-                }
-
-        Multiple selectedProfiles ->
-            SinglePickerModel
-                { selectState = model.selectState
-                , id = model.id
-                , selectedProfile = List.head selectedProfiles
-                }
-
-
-fromMultiplePicker : MultiplePickerModel -> Model
-fromMultiplePicker (MultiplePickerModel model) =
-    Model
-        { selectState = model.selectState
-        , id = model.id
-        , selectedProfile = Multiple model.selectedProfiles
-        }
-
-
-toMultiplePicker : Model -> MultiplePickerModel
-toMultiplePicker (Model model) =
-    case model.selectedProfile of
-        Single maybeProfile ->
-            MultiplePickerModel
-                { selectState = model.selectState
-                , id = model.id
-                , selectedProfiles =
-                    maybeProfile
-                        |> Maybe.map List.singleton
-                        |> Maybe.withDefault []
-                }
-
-        Multiple profiles ->
-            MultiplePickerModel
-                { selectState = model.selectState
-                , id = model.id
-                , selectedProfiles = profiles
                 }

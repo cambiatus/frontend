@@ -2,7 +2,6 @@ module View.Modal exposing
     ( ModalSize(..)
     , initWith
     , toHtml
-    , withAttrs
     , withBody
     , withFooter
     , withHeader
@@ -128,11 +127,6 @@ withPreventScrolling preventScrolling (Modal options) =
 withSize : ModalSize -> Modal msg -> Modal msg
 withSize size (Modal options) =
     Modal { options | size = size }
-
-
-withAttrs : List (Html.Attribute msg) -> Modal msg -> Modal msg
-withAttrs attrs (Modal options) =
-    Modal { options | attrs = attrs ++ options.attrs }
 
 
 

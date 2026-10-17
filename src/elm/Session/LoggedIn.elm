@@ -11,7 +11,6 @@ module Session.LoggedIn exposing
     , hasPermissions
     , init
     , initLogin
-    , isAccount
     , jsAddressToMsg
     , mapExternal
     , mapMsg
@@ -306,13 +305,13 @@ type Page
     = Redirect
     | NotFound
     | ComingSoon
+    | AdminMoved
     | Invite
     | Dashboard
     | News (Maybe Int)
     | CommunityAbout
     | CommunityObjectives
     | CommunitySettings
-    | CommunitySettingsShopCategories
     | CommunitySettingsInfo
     | CommunitySettingsNews
     | CommunitySettingsNewsEditor
@@ -326,10 +325,8 @@ type Page
     | CommunityThankYou
     | CommunitySponsor
     | CommunitySupporters
-    | CommunitySettingsObjectives
     | CommunitySettingsObjectiveEditor
     | CommunitySettingsActionEditor
-    | CommunitySettingsContacts
     | Claim
     | Notification
     | Settings
@@ -623,6 +620,7 @@ viewPageBody ({ shared } as model) profile_ page content =
             [ Redirect
             , NotFound
             , ComingSoon
+            , AdminMoved
             , Invite
             , CommunitySelector
             , Profile
@@ -1742,8 +1740,7 @@ mapExternal mapFn msg =
 
 
 type Resource
-    = CommunityResource
-    | ProfileResource
+    = ProfileResource
     | TimeResource
 
 
@@ -1828,16 +1825,6 @@ updateExternal externalMsg ({ shared } as model) =
 
                 TranslationsLoaded ->
                     { defaultResult | broadcastMsg = Just broadcastMsg }
-
-        ReloadResource CommunityResource ->
-            { defaultResult
-                | cmd =
-                    model.selectedCommunity
-                        |> RemoteData.map .symbol
-                        |> RemoteData.toMaybe
-                        |> loadCommunity model
-                        |> Tuple.second
-            }
 
         ReloadResource ProfileResource ->
             { defaultResult
@@ -3107,11 +3094,6 @@ permissions model =
     profile model
         |> Maybe.map (.roles >> List.concatMap .permissions)
         |> Maybe.withDefault []
-
-
-isAccount : Eos.Name -> Model -> Bool
-isAccount accountName model =
-    Maybe.map .account (profile model) == Just accountName
 
 
 

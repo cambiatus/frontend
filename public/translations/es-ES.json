@@ -1640,5 +1640,12 @@
       "change": "Reemplazar",
       "save": "Salvar"
     }
+  },
+  "admin_moved": {
+    "title": "La administración ahora está en el nuevo panel",
+    "body": "La configuración de la comunidad, los objetivos, las acciones, las noticias y la tienda ahora se gestionan en el nuevo panel de Cambiatus. Esta pantalla antigua se desactivó.",
+    "login_hint": "Entra al nuevo panel con las mismas 12 palabras que usas aquí.",
+    "go": "Entrar al nuevo panel",
+    "back": "Volver al inicio"
   }
 }

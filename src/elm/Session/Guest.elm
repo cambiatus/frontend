@@ -123,6 +123,7 @@ type Page
     = Redirect
     | NotFound
     | ComingSoon
+    | AdminMoved
     | Register
     | Login
     | Invite
@@ -164,6 +165,9 @@ view thisMsg page ({ shared } as model) content =
                     ( Nothing, "md:w-full" )
 
                 ComingSoon ->
+                    ( Nothing, "md:w-full" )
+
+                AdminMoved ->
                     ( Nothing, "md:w-full" )
     in
     case Shared.translationStatus shared of

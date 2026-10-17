@@ -1643,5 +1643,12 @@
       "change": "Substituir",
       "save": "Salvar"
     }
+  },
+  "admin_moved": {
+    "title": "A administração agora fica no novo painel",
+    "body": "As configurações da comunidade, os objetivos, as ações, as notícias e a loja agora são gerenciados no novo painel do Cambiatus. Esta tela antiga foi desativada.",
+    "login_hint": "Entre no novo painel com as mesmas 12 palavras que você usa aqui.",
+    "go": "Entrar no novo painel",
+    "back": "Voltar ao início"
   }
 }

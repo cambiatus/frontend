@@ -12,7 +12,6 @@ module Community exposing
     , Metadata
     , Model
     , Objective
-    , addPhotosMutation
     , communityPreviewImage
     , communityPreviewQuery
     , communityPreviewSymbolQuery
@@ -21,9 +20,6 @@ module Community exposing
     , currencyTranslationKey
     , domainAvailableQuery
     , encodeCreateCommunityData
-    , encodeCreateObjectiveAction
-    , encodeUpdateData
-    , encodeUpdateObjectiveAction
     , fieldSelectionSet
     , fieldsSelectionSet
     , getField
@@ -41,7 +37,6 @@ module Community exposing
 import Action exposing (Action)
 import Cambiatus.Enum.ContributionStatusType
 import Cambiatus.Enum.CurrencyType
-import Cambiatus.Mutation as Mutation
 import Cambiatus.Object
 import Cambiatus.Object.Community as Community
 import Cambiatus.Object.CommunityPreview as CommunityPreview
@@ -62,7 +57,7 @@ import Contact
 import Eos
 import Eos.Account as Eos
 import Graphql.Http
-import Graphql.Operation exposing (RootMutation, RootQuery, RootSubscription)
+import Graphql.Operation exposing (RootQuery, RootSubscription)
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Html exposing (Html, div, img, span, text)
@@ -459,12 +454,6 @@ subdomainQuery subdomain =
     Query.community (\optionals -> { optionals | subdomain = Present subdomain }) communitySelectionSet
 
 
-addPhotosMutation : Eos.Symbol -> List String -> SelectionSet (Maybe Model) RootMutation
-addPhotosMutation symbol photos =
-    Mutation.addCommunityPhotos { symbol = Eos.symbolToString symbol, urls = photos }
-        communitySelectionSet
-
-
 
 -- OBJECTIVE
 
@@ -488,41 +477,6 @@ objectiveSelectionSet =
         |> with (Objective.actions identity Action.selectionSet)
         |> with (Objective.community communitiesSelectionSet)
         |> with Objective.isCompleted
-
-
-type alias CreateObjectiveAction =
-    { communityId : Eos.Symbol
-    , description : Markdown
-    , creator : Eos.Name
-    }
-
-
-encodeCreateObjectiveAction : CreateObjectiveAction -> Value
-encodeCreateObjectiveAction c =
-    Encode.object
-        [ ( "community_id", Eos.encodeSymbol c.communityId )
-        , ( "objective_id", Encode.int 0 )
-        , ( "description", Markdown.encode c.description )
-        , ( "editor", Eos.encodeName c.creator )
-        ]
-
-
-type alias UpdateObjectiveAction =
-    { communityId : Eos.Symbol
-    , objectiveId : Action.ObjectiveId
-    , description : Markdown
-    , editor : Eos.Name
-    }
-
-
-encodeUpdateObjectiveAction : UpdateObjectiveAction -> Value
-encodeUpdateObjectiveAction c =
-    Encode.object
-        [ ( "community_id", Eos.encodeSymbol c.communityId )
-        , ( "objective_id", Action.encodeObjectiveId c.objectiveId )
-        , ( "description", Markdown.encode c.description )
-        , ( "editor", Eos.encodeName c.editor )
-        ]
 
 
 
@@ -712,40 +666,6 @@ createCommunityDataDecoder =
         |> required "has_kyc" Eos.eosBoolDecoder
         |> required "auto_invite" Eos.eosBoolDecoder
         |> required "website" Decode.string
-
-
-type alias UpdateCommunityData =
-    { asset : Eos.Asset
-    , logo : String
-    , name : String
-    , description : Markdown
-    , subdomain : String
-    , inviterReward : Eos.Asset
-    , invitedReward : Eos.Asset
-    , hasObjectives : Eos.EosBool
-    , hasShop : Eos.EosBool
-    , hasKyc : Eos.EosBool
-    , hasAutoInvite : Eos.EosBool
-    , website : String
-    }
-
-
-encodeUpdateData : UpdateCommunityData -> Value
-encodeUpdateData c =
-    Encode.object
-        [ ( "logo", Encode.string c.logo )
-        , ( "cmm_asset", Eos.encodeAsset c.asset )
-        , ( "name", Encode.string c.name )
-        , ( "description", Markdown.encode c.description )
-        , ( "subdomain", Encode.string c.subdomain )
-        , ( "inviter_reward", Eos.encodeAsset c.inviterReward )
-        , ( "invited_reward", Eos.encodeAsset c.invitedReward )
-        , ( "has_objectives", Eos.encodeEosBool c.hasObjectives )
-        , ( "has_shop", Eos.encodeEosBool c.hasShop )
-        , ( "has_kyc", Eos.encodeEosBool c.hasKyc )
-        , ( "auto_invite", Eos.encodeEosBool c.hasAutoInvite )
-        , ( "website", Encode.string c.website )
-        ]
 
 
 domainAvailableSelectionSet : SelectionSet Bool Cambiatus.Object.Exists

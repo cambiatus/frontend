@@ -7,7 +7,6 @@
     "dependencies": {
         "direct": {
             "CurrySoftware/elm-datepicker": "4.0.0",
-            "Gizra/elm-all-set": "1.0.1",
             "Gizra/elm-debouncer": "2.0.0",
             "NoRedInk/elm-json-decode-pipeline": "1.0.1",
             "NoRedInk/elm-simple-fuzzy": "1.0.3",

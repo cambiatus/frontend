@@ -1,12 +1,10 @@
 module Form.Validate exposing
     ( Validator, succeed, validate, custom, Error, withCustomError, map
     , required
-    , stringShorterThan, stringLongerThan, stringLengthExactly, url, email, eosName, time
-    , int, intGreaterThan, intGreaterThanOrEqualTo, intLowerThanOrEqualTo
-    , maskedFloat, floatGreaterThan, floatGreaterThanOrEqualTo, floatLowerThanOrEqualTo
+    , stringShorterThan, stringLongerThan, stringLengthExactly, url, email, eosName
+    , int, intGreaterThanOrEqualTo, intLowerThanOrEqualTo
+    , maskedFloat, floatGreaterThan, floatLowerThanOrEqualTo
     , markdownLongerThan
-    , lengthGreaterThanOrEqualTo
-    , futureDate
     )
 
 {-| This module offers a bunch of ready-made functions to use as the `parser`
@@ -36,31 +34,25 @@ validations), so we get consistent error messages throughout the app.
 
 ## String inputs
 
-@docs stringShorterThan, stringLongerThan, stringLengthExactly, url, email, eosName, time
+@docs stringShorterThan, stringLongerThan, stringLengthExactly, url, email, eosName
 
-@docs int, intGreaterThan, intGreaterThanOrEqualTo, intLowerThanOrEqualTo
+@docs int, intGreaterThanOrEqualTo, intLowerThanOrEqualTo
 
-@docs maskedFloat, floatGreaterThan, floatGreaterThanOrEqualTo, floatLowerThanOrEqualTo
+@docs maskedFloat, floatGreaterThan, floatLowerThanOrEqualTo
 
 @docs markdownLongerThan
 
 
 ## List inputs
 
-@docs lengthGreaterThanOrEqualTo
-
 
 ## Dates
 
-@docs futureDate
-
 -}
 
-import Date exposing (Date)
 import Eos.Account
 import Markdown exposing (Markdown)
 import Regex
-import Time
 import Translation
 import Url
 
@@ -181,11 +173,6 @@ float =
     number String.toFloat
 
 
-intGreaterThan : Int -> Validator Int -> Validator Int
-intGreaterThan =
-    numberGreaterThan String.fromInt
-
-
 intGreaterThanOrEqualTo : Int -> Validator Int -> Validator Int
 intGreaterThanOrEqualTo =
     numberGreaterThanOrEqualTo String.fromInt
@@ -199,11 +186,6 @@ intLowerThanOrEqualTo =
 floatGreaterThan : Float -> Validator Float -> Validator Float
 floatGreaterThan =
     numberGreaterThan String.fromFloat
-
-
-floatGreaterThanOrEqualTo : Float -> Validator Float -> Validator Float
-floatGreaterThanOrEqualTo =
-    numberGreaterThanOrEqualTo String.fromFloat
 
 
 floatLowerThanOrEqualTo : Float -> Validator Float -> Validator Float
@@ -327,61 +309,7 @@ email =
 
 
 -- LISTS
-
-
-lengthGreaterThanOrEqualTo : Int -> Validator (List a) -> Validator (List a)
-lengthGreaterThanOrEqualTo minLength =
-    custom
-        (\items ->
-            if List.length items >= minLength then
-                Ok items
-
-            else
-                Err
-                    (\{ tr } ->
-                        tr "error.validator.number.length_greater_than_or_equal"
-                            [ ( "count", String.fromInt minLength ) ]
-                    )
-        )
-
-
-
 -- DATES
-
-
-futureDate : Time.Zone -> Time.Posix -> Validator Date -> Validator Date
-futureDate timezone now =
-    custom
-        (\selectedDate ->
-            let
-                today =
-                    Date.fromPosix timezone now
-            in
-            if Date.compare selectedDate today == LT then
-                Err (\{ t } -> t "error.validator.date.invalid")
-
-            else
-                Ok selectedDate
-        )
-
-
-time : Validator String -> Validator { hour : Int, minute : Int }
-time =
-    custom
-        (\timeString ->
-            case String.split ":" timeString of
-                [ hourString, minuteString ] ->
-                    Maybe.map2 (\hour minute -> { hour = hour, minute = minute })
-                        (String.toInt hourString)
-                        (String.toInt minuteString)
-                        |> Result.fromMaybe (\{ t } -> t "news.editor.error.invalid_time")
-
-                _ ->
-                    Err (\{ t } -> t "news.editor.error.invalid_time")
-        )
-
-
-
 -- INTERNAL HELPERS
 
 

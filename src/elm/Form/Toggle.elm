@@ -1,7 +1,6 @@
 module Form.Toggle exposing
     ( init, Options
-    , withTooltip, withTopLabel, withStatusText
-    , StatusText(..)
+    , withTooltip
     , withDisabled, withToggleSide, withContainerAttrs, withToggleContainerAttrs
     , Side(..)
     , getId
@@ -26,7 +25,7 @@ module Form.Toggle exposing
 
 ## Adding elements
 
-@docs withTooltip, withTopLabel, withStatusText
+@docs withTooltip
 
 @docs StatusText
 
@@ -93,13 +92,11 @@ init { label, id } =
 
 
 type Side
-    = Left
-    | Right { invert : Bool }
+    = Right { invert : Bool }
 
 
 type StatusText
     = EnabledDisabled
-    | YesNo
 
 
 
@@ -119,20 +116,6 @@ withTooltip tooltip (Options options) =
 withToggleSide : Side -> Options msg -> Options msg
 withToggleSide side (Options options) =
     Options { options | side = side }
-
-
-{-| Show a label on top of the toggle, like other form elements such as text input
--}
-withTopLabel : String -> Options msg -> Options msg
-withTopLabel topLabel (Options options) =
-    Options { options | topLabel = Just topLabel }
-
-
-{-| Selects the kind of status text to be displayed next to the toggle
--}
-withStatusText : StatusText -> Options a -> Options a
-withStatusText statusText_ (Options options) =
-    Options { options | statusText = statusText_ }
 
 
 
@@ -245,20 +228,6 @@ view (Options options) viewConfig =
                 View.Components.label [ class "mb-6" ]
                     { targetId = options.id, labelText = topLabel }
         , case options.side of
-            Left ->
-                div
-                    (class "flex space-x-2 text-sm"
-                        :: (if Maybe.Extra.isNothing options.topLabel then
-                                options.containerAttrs
-
-                            else
-                                []
-                           )
-                    )
-                    [ viewToggle (Options options) viewConfig
-                    , viewLabel (Options options)
-                    ]
-
             Right { invert } ->
                 div
                     (class "flex"
@@ -299,13 +268,6 @@ statusText (Options options) viewConfig =
 
             else
                 viewConfig.translators.t "settings.features.disabled"
-
-        YesNo ->
-            if viewConfig.value then
-                viewConfig.translators.t "community.actions.form.yes"
-
-            else
-                viewConfig.translators.t "community.actions.form.no"
 
 
 

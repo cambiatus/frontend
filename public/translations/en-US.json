@@ -1637,5 +1637,12 @@
       "change": "Change",
       "save": "Save"
     }
+  },
+  "admin_moved": {
+    "title": "Administration now lives in the new panel",
+    "body": "Community settings, objectives, actions, news and the shop are now managed in the new Cambiatus panel. This old screen has been turned off.",
+    "login_hint": "Sign in to the new panel with the same 12 words you use here.",
+    "go": "Sign in to the new panel",
+    "back": "Back to home"
   }
 }

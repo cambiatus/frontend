@@ -15,16 +15,12 @@ import Task
 
 type alias Model =
     { single : Form.UserPicker.Model
-    , multiple : Form.UserPicker.Model
-    , disabledWithError : Form.UserPicker.Model
     }
 
 
 initModel : Model
 initModel =
     { single = Form.UserPicker.initSingle { id = "single-picker" } |> Form.UserPicker.fromSinglePicker
-    , multiple = Form.UserPicker.initMultiple { id = "multiple-picker", selectedProfiles = [] } |> Form.UserPicker.fromMultiplePicker
-    , disabledWithError = Form.UserPicker.initMultiple { id = "disabled-picker", selectedProfiles = [] } |> Form.UserPicker.fromMultiplePicker
     }
 
 
@@ -109,77 +105,6 @@ chapter =
                                         )
                            )
               )
-            , ( "Multiple user picker"
-              , \sharedState ->
-                    let
-                        viewConfig =
-                            { onBlur = NoOp
-                            , value = sharedState.userpickerModel.multiple
-                            , error = Html.text ""
-                            , hasError = False
-                            , translators = Book.Helpers.mockTranslators
-                            }
-                    in
-                    Form.UserPicker.init
-                        { label = "Pick a few users"
-                        , currentUser = Eos.Account.stringToName ""
-                        , profiles = Book.Helpers.mockUsers
-                        }
-                        |> (\options ->
-                                Form.UserPicker.view options
-                                    viewConfig
-                                    (GotPickerMsg options viewConfig)
-                                    |> Html.map
-                                        (Actions.mapUpdateWithCmd
-                                            { fromState = .userpickerModel >> .multiple
-                                            , toState =
-                                                \shared model ->
-                                                    let
-                                                        userpicker =
-                                                            shared.userpickerModel
-                                                    in
-                                                    { shared | userpickerModel = { userpicker | multiple = model } }
-                                            , update = update
-                                            }
-                                        )
-                           )
-              )
-            , ( "With error and disabled"
-              , \sharedState ->
-                    let
-                        viewConfig =
-                            { onBlur = NoOp
-                            , value = sharedState.userpickerModel.disabledWithError
-                            , error = Book.Helpers.viewError [] True (Just "Errors show up between the input and the selected users")
-                            , hasError = True
-                            , translators = Book.Helpers.mockTranslators
-                            }
-                    in
-                    Form.UserPicker.init
-                        { label = "Pick a few users"
-                        , currentUser = Eos.Account.stringToName ""
-                        , profiles = Book.Helpers.mockUsers
-                        }
-                        |> Form.UserPicker.withDisabled True
-                        |> (\options ->
-                                Form.UserPicker.view options
-                                    viewConfig
-                                    (GotPickerMsg options viewConfig)
-                                    |> Html.map
-                                        (Actions.mapUpdateWithCmd
-                                            { fromState = .userpickerModel >> .disabledWithError
-                                            , toState =
-                                                \shared model ->
-                                                    let
-                                                        userpicker =
-                                                            shared.userpickerModel
-                                                    in
-                                                    { shared | userpickerModel = { userpicker | disabledWithError = model } }
-                                            , update = update
-                                            }
-                                        )
-                           )
-              )
             ]
         |> Chapter.render """
 Sometimes we need to select users, such as when transferring some tokens to
@@ -189,16 +114,7 @@ select with `Enter`. We don't use our app's real data here. Instead, we use some
 mock users. You can search for `henriquebuss`, `henriquebus4` or `lucca`. The
 search works by account name (the 12-letter name) and by the user's real name.
 
-For different purposes, you might want to select a single user:
+Select a single user:
 
 <component with-label="Single user picker" />
-
-Or maybe you need to select multiple users at a time:
-
-<component with-label="Multiple user picker" />
-
-In either case, you might want to display an error, or maybe disable it. Here's
-an example with those options:
-
-<component with-label="With error and disabled" />
 """

@@ -1,7 +1,7 @@
 module Form.File exposing
     ( init, Options
     , Model, initSingle, SingleModel, initMultiple, MultipleModel
-    , withLabel, withEditIconOverlay, withAddImagesView, defaultAddImagesView, withImageSiblingElement
+    , withLabel, withEditIconOverlay, withAddImagesView, defaultAddImagesView
     , withContainerAttributes, withDisabled, withEntryContainerAttributes, withImageClass, withImageCropperAttributes, withAddImagesContainerAttributes
     , withFileTypes, FileType(..), withEntryActions, EntryAction(..)
     , withGrayBoxVariant
@@ -56,7 +56,7 @@ the input.
 
 ## Adding or changing elements
 
-@docs withLabel, withEditIconOverlay, withAddImagesView, defaultAddImagesView, withImageSiblingElement
+@docs withLabel, withEditIconOverlay, withAddImagesView, defaultAddImagesView
 
 
 ## Adding attributes
