@@ -72,11 +72,27 @@ insertedAt =
     Object.selectionForField "ScalarCodecs.NaiveDateTime" "insertedAt" [] (Cambiatus.ScalarCodecs.codecs |> Cambiatus.Scalar.unwrapCodecs |> .codecNaiveDateTime |> .decoder)
 
 
+{-| Had online, without a place
+-}
+online : SelectionSet Bool Cambiatus.Object.Product
+online =
+    Object.selectionForField "Bool" "online" [] Decode.bool
+
+
 orders :
     SelectionSet decodesTo Cambiatus.Object.Order
     -> SelectionSet (List decodesTo) Cambiatus.Object.Product
 orders object____ =
     Object.selectionForCompositeField "orders" [] object____ (Basics.identity >> Decode.list)
+
+
+{-| The explicit places this offer is had at; empty when it is sold from the seller's own place
+-}
+places :
+    SelectionSet decodesTo Cambiatus.Object.Locality
+    -> SelectionSet (List decodesTo) Cambiatus.Object.Product
+places object____ =
+    Object.selectionForCompositeField "places" [] object____ (Basics.identity >> Decode.list)
 
 
 price : SelectionSet Float Cambiatus.Object.Product

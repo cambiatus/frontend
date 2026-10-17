@@ -19,7 +19,7 @@ import Form.Checkbox
 import Form.Radio
 import Graphql.Http
 import Html exposing (Html, a, br, button, div, h1, h2, img, li, p, span, text, ul)
-import Html.Attributes exposing (alt, class, classList, src)
+import Html.Attributes exposing (alt, class, classList, id, src)
 import Html.Attributes.Aria exposing (ariaLabel)
 import Html.Events exposing (onClick)
 import Http
@@ -29,6 +29,7 @@ import Json.Encode as Encode
 import List.Extra
 import Markdown
 import Page
+import PlaceRelease
 import Profile.Summary
 import RemoteData exposing (RemoteData)
 import Route
@@ -36,6 +37,7 @@ import Session.LoggedIn as LoggedIn exposing (External)
 import Session.Shared as Shared
 import Shop exposing (Product)
 import Shop.Category
+import Shop.Where as Where exposing (Where)
 import Translation
 import Tree
 import UpdateResult as UR
@@ -55,10 +57,11 @@ init loggedIn filter =
         |> UR.addCmd (Api.getBalances loggedIn.shared loggedIn.accountName CompletedLoadBalances)
         |> UR.addExt
             (LoggedIn.query loggedIn
-                (Shop.productsQuery { user = filter.owner, categories = filter.categories })
+                (Shop.productsQuery { user = filter.owner, categories = filter.categories, where_ = Where.Anywhere })
                 CompletedSalesLoad
             )
         |> UR.addExt (LoggedIn.RequestedCommunityField Community.ShopCategoriesField)
+        |> UR.addExt (LoggedIn.query loggedIn (PlaceRelease.query loggedIn) CompletedLoadPlaceRelease)
 
 
 
@@ -71,6 +74,11 @@ type alias Model =
     , currentFilter : { owner : Maybe Eos.Account.Name, categories : List Shop.Category.Id }
     , isFiltersModalOpen : Bool
     , filtersForm : Form.Model FiltersFormInput
+
+    -- "Onde": the chip chosen, and what the chips are made of
+    , placesReleased : Bool
+    , chosenWhere : Where
+    , whereOptions : RemoteData (Graphql.Http.Error Where.Options) Where.Options
     }
 
 
@@ -80,6 +88,9 @@ initModel filter =
     , balances = []
     , currentFilter = filter
     , isFiltersModalOpen = False
+    , placesReleased = False
+    , chosenWhere = Where.Anywhere
+    , whereOptions = RemoteData.NotAsked
     , filtersForm =
         Form.init
             { owner = filter.owner
@@ -359,7 +370,7 @@ view loggedIn model =
 
                 Loaded cards ->
                     if List.isEmpty cards then
-                        if model.currentFilter.owner == Nothing && List.isEmpty model.currentFilter.categories then
+                        if model.currentFilter.owner == Nothing && List.isEmpty model.currentFilter.categories && not (Where.isChosen model.chosenWhere) then
                             div [ class "container mx-auto px-4 mt-6" ]
                                 [ viewFrozenAccountCard
                                 , viewEmptyState loggedIn community.symbol model
@@ -439,6 +450,121 @@ viewHeader { t } =
 
 viewShopFilter : LoggedIn.Model -> Model -> Html Msg
 viewShopFilter loggedIn model =
+    div []
+        [ viewShopButtons loggedIn model
+        , viewWhere loggedIn.shared.translators model
+        ]
+
+
+{-| Whether "Onde" has anything to offer. While it does, the "Localidade"
+categories are left out of the category filter: they say the same thing.
+-}
+hasWhereChips : Model -> Bool
+hasWhereChips model =
+    whereChips model /= Nothing
+
+
+whereChips : Model -> Maybe Where.Chips
+whereChips model =
+    Where.chipsIf
+        { released = model.placesReleased, limit = whereChipLimit }
+        (RemoteData.toMaybe model.whereOptions)
+
+
+whereChipLimit : Int
+whereChipLimit =
+    8
+
+
+isLocalidade : Shop.Category.Tree -> Bool
+isLocalidade tree =
+    String.startsWith "localidade" (String.toLower (String.trim (Tree.label tree).name))
+
+
+viewWhere : Translation.Translators -> Model -> Html Msg
+viewWhere { t } model =
+    let
+        chip : { chosen : Where, label : String, count : Maybe Int } -> Html Msg
+        chip { chosen, label, count } =
+            let
+                isSelected =
+                    model.chosenWhere == chosen
+            in
+            button
+                [ class "flex items-center gap-x-2 px-4 py-2 rounded-full whitespace-nowrap flex-shrink-0 focus-ring transition-colors"
+                , classList
+                    [ ( "bg-orange-100/30 text-orange-500 font-bold", isSelected )
+                    , ( "bg-gray-200 text-gray-333 hover:bg-gray-300", not isSelected )
+                    ]
+                , Html.Attributes.type_ "button"
+                , Html.Attributes.attribute "aria-pressed"
+                    (if isSelected then
+                        "true"
+
+                     else
+                        "false"
+                    )
+                , onClick (ClickedWhere chosen)
+                ]
+                [ text label
+                , case count of
+                    Just amount ->
+                        span [ class "text-sm text-gray-700 font-normal" ] [ text (String.fromInt amount) ]
+
+                    Nothing ->
+                        text ""
+                ]
+
+        placeLabel place =
+            case place.stateCode of
+                Just stateCode ->
+                    place.name ++ " - " ++ stateCode
+
+                Nothing ->
+                    place.name
+    in
+    case ( model.placesReleased, model.whereOptions ) of
+        ( True, RemoteData.Loading ) ->
+            div [ class "mt-4" ]
+                [ div [ class "animate-skeleton-loading h-9 w-2/3 rounded-full" ] [] ]
+
+        _ ->
+            case whereChips model of
+                Nothing ->
+                    text ""
+
+                Just { home, places, online } ->
+                    div [ id "shop-where", class "mt-4" ]
+                        [ p [ class "text-sm font-bold text-gray-700 mb-2" ] [ text (t "shop.where.title") ]
+                        , div [ class "flex gap-2 overflow-x-auto pb-2 -mx-4 px-4 md:mx-0 md:px-0 md:flex-wrap" ]
+                            (List.filterMap identity
+                                [ Just (chip { chosen = Where.Anywhere, label = t "shop.where.anywhere", count = Nothing })
+                                , home
+                                    |> Maybe.map
+                                        (\{ place, count } ->
+                                            chip
+                                                { chosen = Where.InPlace place.id
+                                                , label = t "shop.where.near_you"
+                                                , count = Just count
+                                                }
+                                        )
+                                , if online > 0 then
+                                    Just (chip { chosen = Where.Online, label = t "shop.where.online", count = Just online })
+
+                                  else
+                                    Nothing
+                                ]
+                                ++ List.map
+                                    (\{ place, count } ->
+                                        chip { chosen = Where.InPlace place.id, label = placeLabel place, count = Just count }
+                                    )
+                                    places
+                            )
+                        ]
+
+
+viewShopButtons : LoggedIn.Model -> Model -> Html Msg
+viewShopButtons loggedIn model =
     let
         { t } =
             loggedIn.shared.translators
@@ -545,6 +671,12 @@ viewFiltersModal loggedIn model =
         categories =
             Community.getField loggedIn.selectedCommunity .shopCategories
                 |> RemoteData.map Tuple.second
+                |> (if hasWhereChips model then
+                        RemoteData.map (List.filter (not << isLocalidade))
+
+                    else
+                        identity
+                   )
     in
     Modal.initWith
         { closeMsg = ClosedFiltersModal
@@ -785,6 +917,9 @@ type Msg
     = NoOp
     | CompletedLoadingShopCategories (List Shop.Category.Tree)
     | CompletedSalesLoad (RemoteData (Graphql.Http.Error (List Product)) (List Product))
+    | CompletedLoadPlaceRelease (RemoteData (Graphql.Http.Error Bool) Bool)
+    | CompletedLoadWhereOptions (RemoteData (Graphql.Http.Error Where.Options) Where.Options)
+    | ClickedWhere Where
     | CompletedLoadBalances (Result Http.Error (List Balance))
     | ClickedAcceptCodeOfConduct
     | ClickedScrollToImage { containerId : String, imageId : String }
@@ -837,6 +972,36 @@ update msg model loggedIn =
 
         CompletedSalesLoad _ ->
             UR.init model
+
+        CompletedLoadPlaceRelease (RemoteData.Success True) ->
+            { model | placesReleased = True, whereOptions = RemoteData.Loading }
+                |> UR.init
+                |> UR.addExt (LoggedIn.query loggedIn (Where.query loggedIn.accountName) CompletedLoadWhereOptions)
+
+        -- Not released, or the check failed: the shop stays as it was
+        CompletedLoadPlaceRelease _ ->
+            UR.init model
+
+        CompletedLoadWhereOptions result ->
+            UR.init { model | whereOptions = result }
+
+        ClickedWhere chosen ->
+            if chosen == model.chosenWhere then
+                UR.init model
+
+            else
+                { model | chosenWhere = chosen, cards = Loading }
+                    |> UR.init
+                    |> UR.addExt
+                        (LoggedIn.query loggedIn
+                            (Shop.productsQuery
+                                { user = model.currentFilter.owner
+                                , categories = model.currentFilter.categories
+                                , where_ = chosen
+                                }
+                            )
+                            CompletedSalesLoad
+                        )
 
         CompletedLoadBalances res ->
             case res of
@@ -959,6 +1124,15 @@ msgToString msg =
 
         CompletedSalesLoad r ->
             [ "CompletedSalesLoad", UR.remoteDataToString r ]
+
+        CompletedLoadPlaceRelease r ->
+            [ "CompletedLoadPlaceRelease", UR.remoteDataToString r ]
+
+        CompletedLoadWhereOptions r ->
+            [ "CompletedLoadWhereOptions", UR.remoteDataToString r ]
+
+        ClickedWhere _ ->
+            [ "ClickedWhere" ]
 
         CompletedLoadBalances _ ->
             [ "CompletedLoadBalances" ]

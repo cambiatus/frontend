@@ -43,6 +43,7 @@ import Json.Encode as Encode exposing (Value)
 import Markdown exposing (Markdown)
 import Profile
 import Shop.Category
+import Shop.Where
 import Translation
 import Url.Parser
 import Utils exposing (onClickPreventAll)
@@ -229,8 +230,8 @@ productPreviewQuery (Id productId) =
     Query.productPreview { id = productId } productPreviewSelectionSet
 
 
-productsQuery : { user : Maybe Eos.Name, categories : List Shop.Category.Id } -> SelectionSet (List Product) RootQuery
-productsQuery { user, categories } =
+productsQuery : { user : Maybe Eos.Name, categories : List Shop.Category.Id, where_ : Shop.Where.Where } -> SelectionSet (List Product) RootQuery
+productsQuery { user, categories, where_ } =
     Query.products
         (\_ ->
             { filters =
@@ -248,6 +249,20 @@ productsQuery { user, categories } =
                                 |> List.map (Shop.Category.idToInt >> Just)
                                 |> Present
                     , inStock = Absent
+                    , placeId =
+                        case where_ of
+                            Shop.Where.InPlace placeId ->
+                                Present placeId
+
+                            _ ->
+                                Absent
+                    , online =
+                        case where_ of
+                            Shop.Where.Online ->
+                                Present True
+
+                            _ ->
+                                Absent
                     }
             }
         )

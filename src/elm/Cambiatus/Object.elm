@@ -145,6 +145,14 @@ type PasskeyRegistrationChallenge
     = PasskeyRegistrationChallenge
 
 
+type PlacePrompt
+    = PlacePrompt
+
+
+type PostalCodeAddress
+    = PostalCodeAddress
+
+
 type Product
     = Product
 

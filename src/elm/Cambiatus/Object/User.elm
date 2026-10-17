@@ -254,6 +254,15 @@ network object____ =
     Object.selectionForCompositeField "network" [] object____ (Basics.identity >> Decode.nullable >> Decode.list >> Decode.nullable)
 
 
+{-| The place prompt to show the owner, or null; null for everyone else
+-}
+placePrompt :
+    SelectionSet decodesTo Cambiatus.Object.PlacePrompt
+    -> SelectionSet (Maybe decodesTo) Cambiatus.Object.User
+placePrompt object____ =
+    Object.selectionForCompositeField "placePrompt" [] object____ (Basics.identity >> Decode.nullable)
+
+
 products :
     SelectionSet decodesTo Cambiatus.Object.Product
     -> SelectionSet (List (Maybe decodesTo)) Cambiatus.Object.User

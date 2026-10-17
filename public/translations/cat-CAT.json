@@ -818,7 +818,13 @@
           "complement": "Complement (optional)",
           "cep": "CEP (optional)",
           "directions": "Other directions",
-          "postal_code_cr": "Postal code (optional)"
+          "postal_code_cr": "Postal code (optional)",
+          "needs_city_or_cep": "Escriu el teu CEP a dalt o tria la teva ciutat per afegir una adreça.",
+          "cep_hint": "Escriu el CEP i omplim el carrer, el barri i la ciutat.",
+          "cep_loading": "Cercant el CEP…",
+          "cep_not_found": "No hem trobat aquest CEP. Revisa els números o omple l'adreça a sota.",
+          "cep_unavailable": "La cerca de CEP no està disponible ara. Omple l'adreça a sota.",
+          "edit_address": "Editar adreça"
         },
         "errors": {
           "bairro_too_long": "Use up to 60 characters.",
@@ -1060,6 +1066,12 @@
       "update_error": "S'ha produït un error en actualitzar la categoria",
       "delete_error": "S'ha produït un error en suprimir la categoria",
       "reorder_error": "S'ha produït un error en reordenar la categoria"
+    },
+    "where": {
+      "title": "On",
+      "anywhere": "Qualsevol lloc",
+      "near_you": "Prop teu",
+      "online": "En línia"
     }
   },
   "dashboard": {
@@ -1119,6 +1131,16 @@
       "no": "No, cancel·la",
       "success": "Felicitats! Esteu a prop de guanyar el vostre {{symbolCode}}. Estem revisant la vostra acció",
       "failure": "Alguna cosa no va funcionar correctament mentre intenteu processar la vostra reclamació. Torneu-ho a provar més endavant"
+    },
+    "place_prompt": {
+      "ask_title": "On ets?",
+      "ask_body": "Digues-nos el teu lloc per veure ofertes i accions a prop teu. Porta un minut.",
+      "ask_action": "Triar el meu lloc",
+      "confirm_title": "Ets a {{place}}?",
+      "confirm_body": "Fem servir el lloc del teu perfil per mostrar-te el que hi ha a prop teu.",
+      "confirm_yes": "Sí, és aquí",
+      "confirm_fix": "Corregir",
+      "not_now": "Ara no"
     }
   },
   "all_analysis": {

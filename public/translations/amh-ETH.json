@@ -776,7 +776,13 @@
           "complement": "Complement (optional)",
           "cep": "CEP (optional)",
           "directions": "Other directions",
-          "postal_code_cr": "Postal code (optional)"
+          "postal_code_cr": "Postal code (optional)",
+          "needs_city_or_cep": "Digite seu CEP acima ou escolha sua cidade para cadastrar um endereço.",
+          "cep_hint": "Digite o CEP e preenchemos a rua, o bairro e a cidade.",
+          "cep_loading": "Buscando o CEP…",
+          "cep_not_found": "Não encontramos este CEP. Confira os números ou preencha o endereço abaixo.",
+          "cep_unavailable": "A busca de CEP não está disponível agora. Preencha o endereço abaixo.",
+          "edit_address": "Editar endereço"
         },
         "errors": {
           "bairro_too_long": "Use up to 60 characters.",
@@ -1018,6 +1024,12 @@
       "update_error": "ምድቡን በማዘመን ላይ የሆነ ችግር ተፈጥሯል",
       "delete_error": "ምድቡን ሲሰርዝ የሆነ ችግር ተፈጥሯል",
       "reorder_error": "ምድቡን እንደገና በማዘዝ ላይ የሆነ ችግር ተፈጥሯል"
+    },
+    "where": {
+      "title": "Onde",
+      "anywhere": "Qualquer lugar",
+      "near_you": "Perto de você",
+      "online": "Online"
     }
   },
   "dashboard": {
@@ -1078,6 +1090,16 @@
       "no": "አይደለም, ተዉ",
       "success": "እንኳን ደስ አሎት! እር ለማግኘት ተቃርበዋል ለ {{symbolCode}}. የእርሶን ተግባር እያየን ነዉ",
       "failure": "ጥያቄ ሲታይ ችግር ተፈጥሯል, እባኮን እንደገና ይሞክሩr"
+    },
+    "place_prompt": {
+      "ask_title": "Onde você está?",
+      "ask_body": "Diga seu lugar para ver ofertas e ações perto de você. Leva um minuto.",
+      "ask_action": "Escolher meu lugar",
+      "confirm_title": "Você está em {{place}}?",
+      "confirm_body": "Usamos o lugar do seu perfil para mostrar o que há perto de você.",
+      "confirm_yes": "Sim, é aqui",
+      "confirm_fix": "Corrigir",
+      "not_now": "Agora não"
     }
   },
   "all_analysis": {

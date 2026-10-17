@@ -113,6 +113,13 @@ completeObjective requiredArgs____ object____ =
     Object.selectionForCompositeField "completeObjective" [ Argument.required "id" requiredArgs____.id Encode.int ] object____ (Basics.identity >> Decode.nullable)
 
 
+{-| [Auth required] The member confirms the place guessed from their profile
+-}
+confirmPlace : SelectionSet Bool RootMutation
+confirmPlace =
+    Object.selectionForField "Bool" "confirmPlace" [] Decode.bool
+
+
 type alias ContributionRequiredArguments =
     { amount : Float
     , currency : Cambiatus.Enum.CurrencyType.CurrencyType
@@ -187,6 +194,13 @@ deleteProduct :
     -> SelectionSet (Maybe decodesTo) RootMutation
 deleteProduct requiredArgs____ object____ =
     Object.selectionForCompositeField "deleteProduct" [ Argument.required "id" requiredArgs____.id Encode.int ] object____ (Basics.identity >> Decode.nullable)
+
+
+{-| [Auth required] The member skips the place prompt for good
+-}
+dismissPlacePrompt : SelectionSet Bool RootMutation
+dismissPlacePrompt =
+    Object.selectionForField "Bool" "dismissPlacePrompt" [] Decode.bool
 
 
 type alias GenAuthRequiredArguments =

@@ -815,7 +815,13 @@
           "complement": "Complement (optional)",
           "cep": "CEP (optional)",
           "directions": "Other directions",
-          "postal_code_cr": "Postal code (optional)"
+          "postal_code_cr": "Postal code (optional)",
+          "needs_city_or_cep": "Type your CEP above or choose your city to add an address.",
+          "cep_hint": "Type the CEP and we fill in the street, neighborhood and city.",
+          "cep_loading": "Looking up the CEP…",
+          "cep_not_found": "We couldn't find this CEP. Check the digits or fill in the address below.",
+          "cep_unavailable": "The CEP lookup isn't available right now. Fill in the address below.",
+          "edit_address": "Edit address"
         },
         "errors": {
           "bairro_too_long": "Use up to 60 characters.",
@@ -1057,6 +1063,12 @@
       "update_error": "Something went wrong when updating the category",
       "delete_error": "Something went wrong when deleting the category",
       "reorder_error": "Something went wrong when reordering the category"
+    },
+    "where": {
+      "title": "Where",
+      "anywhere": "Anywhere",
+      "near_you": "Near you",
+      "online": "Online"
     }
   },
   "dashboard": {
@@ -1117,6 +1129,16 @@
       "no": "No, cancel",
       "success": "Congrats! You are close to earn your {{symbolCode}}. We are reviewing your action",
       "failure": "Something went wrong while trying to process your claim, please try again later"
+    },
+    "place_prompt": {
+      "ask_title": "Where are you?",
+      "ask_body": "Tell us your place to see offers and actions near you. It takes a minute.",
+      "ask_action": "Choose my place",
+      "confirm_title": "Are you in {{place}}?",
+      "confirm_body": "We use the place on your profile to show what is near you.",
+      "confirm_yes": "Yes, this is it",
+      "confirm_fix": "Correct it",
+      "not_now": "Not now"
     }
   },
   "all_analysis": {

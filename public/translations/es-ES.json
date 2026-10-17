@@ -818,7 +818,13 @@
           "complement": "Complemento (opcional)",
           "cep": "CEP (opcional)",
           "directions": "Otras señas",
-          "postal_code_cr": "Código postal (opcional)"
+          "postal_code_cr": "Código postal (opcional)",
+          "needs_city_or_cep": "Escribe tu CEP arriba o elige tu ciudad para registrar una dirección.",
+          "cep_hint": "Escribe el CEP y rellenamos la calle, el barrio y la ciudad.",
+          "cep_loading": "Buscando el CEP…",
+          "cep_not_found": "No encontramos este CEP. Revisa los números o completa la dirección abajo.",
+          "cep_unavailable": "La búsqueda de CEP no está disponible ahora. Completa la dirección abajo.",
+          "edit_address": "Editar dirección"
         },
         "errors": {
           "bairro_too_long": "Usa hasta 60 caracteres.",
@@ -1060,6 +1066,12 @@
       "update_error": "Algo salió mal al actualizar la categoría",
       "delete_error": "Algo salió mal al eliminar la categoría",
       "reorder_error": "Algo salió mal al reordenar la categoría"
+    },
+    "where": {
+      "title": "Dónde",
+      "anywhere": "Cualquier lugar",
+      "near_you": "Cerca de ti",
+      "online": "En línea"
     }
   },
   "dashboard": {
@@ -1120,6 +1132,16 @@
       "no": "No, cancelar",
       "success": "¡Felicidades! ya casi tienes tus {{symbolCode}}. Estamos revisando tu acción.",
       "failure": "Se produjo un error al intentar procesar su reclamo. Vuelva a intentarlo más tarde."
+    },
+    "place_prompt": {
+      "ask_title": "¿Dónde estás?",
+      "ask_body": "Dinos tu lugar para ver ofertas y acciones cerca de ti. Toma un minuto.",
+      "ask_action": "Elegir mi lugar",
+      "confirm_title": "¿Estás en {{place}}?",
+      "confirm_body": "Usamos el lugar de tu perfil para mostrarte lo que hay cerca de ti.",
+      "confirm_yes": "Sí, es aquí",
+      "confirm_fix": "Corregir",
+      "not_now": "Ahora no"
     }
   },
   "all_analysis": {

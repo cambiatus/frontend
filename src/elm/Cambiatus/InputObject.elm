@@ -417,15 +417,17 @@ buildProductsFilterInput fillOptionals____ =
     let
         optionals____ =
             fillOptionals____
-                { account = Absent, categoriesIds = Absent, inStock = Absent }
+                { account = Absent, categoriesIds = Absent, inStock = Absent, online = Absent, placeId = Absent }
     in
-    { account = optionals____.account, categoriesIds = optionals____.categoriesIds, inStock = optionals____.inStock }
+    { account = optionals____.account, categoriesIds = optionals____.categoriesIds, inStock = optionals____.inStock, online = optionals____.online, placeId = optionals____.placeId }
 
 
 type alias ProductsFilterInputOptionalFields =
     { account : OptionalArgument String
     , categoriesIds : OptionalArgument (List (Maybe Int))
     , inStock : OptionalArgument Bool
+    , online : OptionalArgument Bool
+    , placeId : OptionalArgument Int
     }
 
 
@@ -435,6 +437,8 @@ type alias ProductsFilterInput =
     { account : OptionalArgument String
     , categoriesIds : OptionalArgument (List (Maybe Int))
     , inStock : OptionalArgument Bool
+    , online : OptionalArgument Bool
+    , placeId : OptionalArgument Int
     }
 
 
@@ -443,7 +447,7 @@ type alias ProductsFilterInput =
 encodeProductsFilterInput : ProductsFilterInput -> Value
 encodeProductsFilterInput input____ =
     Encode.maybeObject
-        [ ( "account", Encode.string |> Encode.optional input____.account ), ( "categoriesIds", (Encode.int |> Encode.maybe |> Encode.list) |> Encode.optional input____.categoriesIds ), ( "inStock", Encode.bool |> Encode.optional input____.inStock ) ]
+        [ ( "account", Encode.string |> Encode.optional input____.account ), ( "categoriesIds", (Encode.int |> Encode.maybe |> Encode.list) |> Encode.optional input____.categoriesIds ), ( "inStock", Encode.bool |> Encode.optional input____.inStock ), ( "online", Encode.bool |> Encode.optional input____.online ), ( "placeId", Encode.int |> Encode.optional input____.placeId ) ]
 
 
 buildPushSubscriptionInput :

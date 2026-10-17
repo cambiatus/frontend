@@ -31,7 +31,7 @@ import Form.Text
 import Form.UserPicker
 import Graphql.Http
 import Graphql.OptionalArgument as OptionalArgument exposing (OptionalArgument(..))
-import Html exposing (Html, a, br, button, div, h1, h2, hr, img, li, p, span, strong, text, ul)
+import Html exposing (Html, a, br, button, div, h1, h2, hr, img, li, p, section, span, strong, text, ul)
 import Html.Attributes exposing (alt, class, classList, disabled, id, src, style, tabindex)
 import Html.Events exposing (onClick)
 import Http
@@ -42,6 +42,8 @@ import List.Extra as List
 import Log
 import Markdown
 import Page
+import PlacePrompt
+import PlaceRelease
 import Profile
 import Profile.Contact as Contact
 import Profile.Summary
@@ -92,6 +94,7 @@ type alias Model =
     , inviteModalStatus : InviteModalStatus
     , claimModalStatus : Claim.ModalStatus
     , copied : Bool
+    , placePrompt : Maybe PlacePrompt.Prompt
     }
 
 
@@ -139,6 +142,7 @@ initModel shared =
     , inviteModalStatus = InviteModalClosed
     , claimModalStatus = Claim.Closed
     , copied = False
+    , placePrompt = Nothing
     }
 
 
@@ -218,7 +222,8 @@ view ({ shared } as loggedIn) model =
                             isExplicitValidator || (hasVerifyPermission && hasAvailableClaims)
                     in
                     div []
-                        [ div [ class "container mx-auto my-8 px-4 lg:grid lg:grid-cols-3 lg:gap-7" ]
+                        [ viewPlacePrompt shared model.placePrompt
+                        , div [ class "container mx-auto my-8 px-4 lg:grid lg:grid-cols-3 lg:gap-7" ]
                             [ if not loggedIn.hasAcceptedCodeOfConduct then
                                 LoggedIn.viewFrozenAccountCard shared.translators
                                     { onClick = ClickedAcceptCodeOfConduct
@@ -247,6 +252,73 @@ view ({ shared } as loggedIn) model =
     { title = t "menu.dashboard"
     , content = content
     }
+
+
+viewPlacePrompt : Shared -> Maybe PlacePrompt.Prompt -> Html Msg
+viewPlacePrompt { translators } maybePrompt =
+    let
+        t key =
+            translators.t ("dashboard.place_prompt." ++ key)
+
+        card prompt title body actions =
+            div [ class "container mx-auto mt-8 px-4" ]
+                [ section
+                    [ id "place-prompt"
+                    , class "rounded-lg bg-orange-100/20 p-4 md:p-6 flex flex-col md:flex-row md:items-center gap-4"
+                    , Html.Attributes.attribute "aria-label" title
+                    ]
+                    [ div [ class "flex-grow" ]
+                        [ h2 [ class "font-bold text-lg" ] [ text title ]
+                        , p [ class "text-gray-333 mt-1" ] [ text body ]
+                        ]
+                    , div [ class "flex flex-col sm:flex-row gap-2 md:flex-shrink-0" ]
+                        (actions
+                            ++ [ button
+                                    [ class "button button-secondary w-full sm:w-auto"
+                                    , Html.Attributes.type_ "button"
+                                    , id "place-prompt-dismiss"
+                                    , onClick (ClickedDismissPlacePrompt prompt)
+                                    ]
+                                    [ text (t "not_now") ]
+                               ]
+                        )
+                    ]
+                ]
+    in
+    case maybePrompt of
+        Nothing ->
+            text ""
+
+        Just (PlacePrompt.Ask as prompt) ->
+            card prompt
+                (t "ask_title")
+                (t "ask_body")
+                [ a
+                    [ class "button button-primary w-full sm:w-auto"
+                    , id "place-prompt-pick"
+                    , Route.href Route.ProfileEditor
+                    ]
+                    [ text (t "ask_action") ]
+                ]
+
+        Just ((PlacePrompt.Confirm place) as prompt) ->
+            card prompt
+                (translators.tr "dashboard.place_prompt.confirm_title" [ ( "place", place ) ])
+                (t "confirm_body")
+                [ button
+                    [ class "button button-primary w-full sm:w-auto"
+                    , Html.Attributes.type_ "button"
+                    , id "place-prompt-confirm"
+                    , onClick (ClickedConfirmPlace prompt)
+                    ]
+                    [ text (t "confirm_yes") ]
+                , a
+                    [ class "button button-secondary w-full sm:w-auto"
+                    , id "place-prompt-fix"
+                    , Route.href Route.ProfileEditor
+                    ]
+                    [ text (t "confirm_fix") ]
+                ]
 
 
 addContactModal : Shared -> Model -> Html Msg
@@ -949,6 +1021,11 @@ type Msg
     | CopyToClipboard String
     | CopiedToClipboard
     | ClickedAcceptCodeOfConduct
+    | CompletedLoadPlaceRelease (RemoteData (Graphql.Http.Error Bool) Bool)
+    | CompletedLoadPlacePrompt (RemoteData (Graphql.Http.Error (Maybe PlacePrompt.Prompt)) (Maybe PlacePrompt.Prompt))
+    | ClickedConfirmPlace PlacePrompt.Prompt
+    | ClickedDismissPlacePrompt PlacePrompt.Prompt
+    | GotPlacePromptAnswer PlacePrompt.Prompt (RemoteData (Graphql.Http.Error Bool) Bool)
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
@@ -967,6 +1044,42 @@ update msg model ({ shared, accountName } as loggedIn) =
                 |> UR.addCmd (fetchBalance shared accountName community)
                 |> UR.addExt (fetchAvailableAnalysis loggedIn Nothing)
                 |> UR.addExt (fetchTransfers loggedIn community Nothing model)
+                |> UR.addExt (LoggedIn.query loggedIn (PlaceRelease.query loggedIn) CompletedLoadPlaceRelease)
+
+        -- Only members who hold the `elm_places` release are asked for the card
+        CompletedLoadPlaceRelease (RemoteData.Success True) ->
+            UR.init model
+                |> UR.addExt (LoggedIn.query loggedIn (PlacePrompt.query accountName) CompletedLoadPlacePrompt)
+
+        CompletedLoadPlaceRelease _ ->
+            UR.init model
+
+        CompletedLoadPlacePrompt (RemoteData.Success prompt) ->
+            UR.init { model | placePrompt = prompt }
+
+        -- The card is a nicety: if it can't load, the dashboard goes without it
+        CompletedLoadPlacePrompt _ ->
+            UR.init model
+
+        ClickedConfirmPlace prompt ->
+            { model | placePrompt = Nothing }
+                |> UR.init
+                |> UR.addExt (LoggedIn.mutation loggedIn PlacePrompt.confirm (GotPlacePromptAnswer prompt))
+
+        ClickedDismissPlacePrompt prompt ->
+            { model | placePrompt = Nothing }
+                |> UR.init
+                |> UR.addExt (LoggedIn.mutation loggedIn PlacePrompt.dismiss (GotPlacePromptAnswer prompt))
+
+        -- An answer that didn't land brings the card back, so it isn't lost silently
+        GotPlacePromptAnswer prompt (RemoteData.Failure _) ->
+            UR.init { model | placePrompt = Just prompt }
+
+        GotPlacePromptAnswer prompt (RemoteData.Success False) ->
+            UR.init { model | placePrompt = Just prompt }
+
+        GotPlacePromptAnswer _ _ ->
+            UR.init model
 
         CompletedLoadBalance (Ok balance) ->
             UR.init { model | balance = RemoteData.Success balance }
@@ -1410,6 +1523,21 @@ msgToString msg =
 
         CompletedLoadCommunity _ ->
             [ "CompletedLoadCommunity" ]
+
+        CompletedLoadPlaceRelease r ->
+            [ "CompletedLoadPlaceRelease", UR.remoteDataToString r ]
+
+        CompletedLoadPlacePrompt r ->
+            [ "CompletedLoadPlacePrompt", UR.remoteDataToString r ]
+
+        ClickedConfirmPlace _ ->
+            [ "ClickedConfirmPlace" ]
+
+        ClickedDismissPlacePrompt _ ->
+            [ "ClickedDismissPlacePrompt" ]
+
+        GotPlacePromptAnswer _ r ->
+            [ "GotPlacePromptAnswer", UR.remoteDataToString r ]
 
         CompletedLoadBalance result ->
             [ "CompletedLoadBalance", UR.resultToString result ]
