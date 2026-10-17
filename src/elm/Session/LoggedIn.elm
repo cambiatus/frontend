@@ -688,10 +688,13 @@ viewHeader page ({ shared } as model) profile_ =
         hideCommunitySelector =
             List.member page hideCommunitySelectorPages
 
-        isCommunityCreator =
+        -- The settings gear leads to the AdminMoved explainer. Temporary (2026-10-17): it also
+        -- shows for `lucca` (MUDA admin role, not the creator) to validate the explainer in
+        -- prod. Remove the account check once that's done.
+        showSettingsGear =
             case model.selectedCommunity of
                 RemoteData.Success community ->
-                    community.creator == model.accountName
+                    community.creator == model.accountName || Eos.nameToString model.accountName == "lucca"
 
                 _ ->
                     False
@@ -709,7 +712,7 @@ viewHeader page ({ shared } as model) profile_ =
             [ class "flex-shrink-0"
             , classList
                 [ ( "md:flex-shrink md:w-full lg:w-2/3 xl:w-full", not isSearchOpen )
-                , ( "lg:w-full", not isCommunityCreator && not isSearchOpen )
+                , ( "lg:w-full", not showSettingsGear && not isSearchOpen )
                 ]
             ]
             (if hideCommunitySelector then
@@ -752,7 +755,7 @@ viewHeader page ({ shared } as model) profile_ =
                   else
                     text ""
                 ]
-            , if isCommunityCreator then
+            , if showSettingsGear then
                 a
                     [ class "rounded-sm group focus-ring focus:ring-orange-300 focus:ring-opacity-50 focus:ring-offset-4"
                     , Route.href Route.CommunitySettings
