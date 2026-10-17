@@ -10,7 +10,7 @@ import TestHelpers.Fuzz as Fuzz
 
 all : Test
 all =
-    describe "Claim" [ isValidated, isVotable ]
+    describe "Claim" [ isValidated, isVotable, isNotVotableByClaimer ]
 
 
 
@@ -40,7 +40,20 @@ isVotable =
                         && List.member Permission.Verify fuzzPermissions
                    )
             )
+                && (fuzzClaim.claimer.account /= fuzzName)
                 && not (Claim.isValidated fuzzClaim fuzzName)
                 && not (Action.isClosed fuzzClaim.action fuzzTime)
                 && not fuzzClaim.action.isCompleted
                 |> Expect.equal (Claim.isVotable fuzzClaim fuzzName fuzzPermissions fuzzTime)
+
+
+isNotVotableByClaimer : Test
+isNotVotableByClaimer =
+    fuzz3 Fuzz.claim Fuzz.permissions Fuzz.time "the claimer cannot vote on their own claim" <|
+        \fuzzClaim fuzzPermissions fuzzTime ->
+            let
+                claimer =
+                    fuzzClaim.claimer
+            in
+            Claim.isVotable fuzzClaim claimer.account fuzzPermissions fuzzTime
+                |> Expect.equal False

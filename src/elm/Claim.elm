@@ -124,9 +124,13 @@ canVote accountName permissions claim =
            )
 
 
+{-| Whether the user can vote on the claim now. The claimer never can: the contract
+refuses a vote on one's own claim.
+-}
 isVotable : Model -> Eos.Name -> List Permission -> Time.Posix -> Bool
 isVotable claim accountName permissions now =
     canVote accountName permissions claim
+        && (claim.claimer.account /= accountName)
         && not (isValidated claim accountName)
         && not (Action.isClosed claim.action now)
         && not claim.action.isCompleted
