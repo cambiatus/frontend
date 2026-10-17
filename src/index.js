@@ -30,7 +30,6 @@ const AUTH_TOKEN = "bespiral.auth_token";
 const RECENT_SEARCHES = "bespiral.recent_search";
 const SELECTED_COMMUNITY_KEY = "bespiral.selected_community";
 const PIN_VISIBILITY_KEY = "bespiral.pin_visibility";
-const HAS_SEEN_SPONSOR_MODAL_KEY = "bespiral.has_seen_sponsor_modal";
 const env = process.env.NODE_ENV || "development";
 const useSubdomain =
   process.env.USE_SUBDOMAIN === undefined
@@ -340,8 +339,6 @@ function flags() {
     useSubdomain,
     selectedCommunity: getItem(SELECTED_COMMUNITY_KEY),
     pinVisibility: JSON.parse(getItem(PIN_VISIBILITY_KEY)) || false,
-    hasSeenSponsorModal:
-      JSON.parse(getItem(HAS_SEEN_SPONSOR_MODAL_KEY)) || false,
   };
 }
 
@@ -468,18 +465,6 @@ app.ports.storePinVisibility.subscribe((pinVisibility) => {
     category: "storePinVisibility",
     message: "Stored pin visibility",
     data: { pinVisibility },
-    localData: {},
-    level: "debug",
-  });
-});
-
-app.ports.storeHasSeenSponsorModal.subscribe((hasSeenSponsorModal) => {
-  setItem(HAS_SEEN_SPONSOR_MODAL_KEY, hasSeenSponsorModal);
-  addBreadcrumb({
-    type: "info",
-    category: "storeHasSeenSponsorModal",
-    message: "Stored whether or not the user has seen the sponsor modal",
-    data: { hasSeenSponsorModal },
     localData: {},
     level: "debug",
   });

@@ -134,7 +134,6 @@ type InputType
     | Telephone
     | Number
     | Url
-    | Time
     | Password
 
 
@@ -433,25 +432,6 @@ viewInput (Options options) ({ onChange, value, hasError, onBlur, translators, i
                 TextareaInput _ ->
                     ( Html.textarea, class "" )
 
-        paddedTimeValue =
-            case options.type_ of
-                Time ->
-                    case String.split ":" value of
-                        [ hour, minute ] ->
-                            -- We need to pad values with 0. From MDN:
-                            -- The value of the time input is always in 24-hour
-                            -- format that includes leading zeros: hh:mm
-                            [ String.repeat (2 - String.length hour) "0" ++ hour
-                            , String.repeat (2 - String.length minute) "0" ++ minute
-                            ]
-                                |> String.join ":"
-
-                        _ ->
-                            value
-
-                _ ->
-                    value
-
         ( beforeRenderingValue, beforeChangeEvent, maskHelper ) =
             case options.mask of
                 Just (NumberMask decimalDigits) ->
@@ -510,7 +490,7 @@ viewInput (Options options) ({ onChange, value, hasError, onBlur, translators, i
                 :: class "w-full input peer"
                 :: classList [ ( "with-error", hasError ) ]
                 :: disabled options.disabled
-                :: Html.Attributes.value (beforeRenderingValue paddedTimeValue)
+                :: Html.Attributes.value (beforeRenderingValue value)
                 :: placeholder (Maybe.withDefault "" options.placeholder)
                 :: typeAttr
                 :: required isRequired
@@ -564,9 +544,6 @@ typeToString type_ =
 
         Url ->
             "url"
-
-        Time ->
-            "time"
 
         Password ->
             "password"

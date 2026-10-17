@@ -13,6 +13,5 @@ window._env_ = {
   USE_SUBDOMAIN: false,
   SELECTED_COMMUNITY: '0,CMB',
   COMMUNITY_CONTRACT: 'cambiatus.cm',
-  TOKEN_CONTRACT: 'cambiatus.tk',
-  PAYPAL_CLIENT_ID: 'AdBXyRgrFKtbmgKMU3WYUI0gPUo6_PT8NJvA4xXcqBWBsV6XdHAlYCJatB7NBgGSU2pOtO4Fez2qYq_S'
+  TOKEN_CONTRACT: 'cambiatus.tk'
 }

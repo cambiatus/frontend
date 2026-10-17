@@ -42,7 +42,6 @@ import List.Extra as List
 import Log
 import Markdown
 import Page
-import Ports
 import Profile
 import Profile.Contact as Contact
 import Profile.Summary
@@ -93,7 +92,6 @@ type alias Model =
     , inviteModalStatus : InviteModalStatus
     , claimModalStatus : Claim.ModalStatus
     , copied : Bool
-    , showModalRequestingSponsor : Bool
     }
 
 
@@ -118,7 +116,6 @@ hasModalsOpen model =
     in
     model.showTransferFiltersModal
         || model.showContactModal
-        || model.showModalRequestingSponsor
         || isShowingInviteModal
         || isShowingClaimModal
 
@@ -142,7 +139,6 @@ initModel shared =
     , inviteModalStatus = InviteModalClosed
     , claimModalStatus = Claim.Closed
     , copied = False
-    , showModalRequestingSponsor = False
     }
 
 
@@ -242,7 +238,6 @@ view ({ shared } as loggedIn) model =
                             ]
                         , viewInvitationModal loggedIn model
                         , addContactModal shared model
-                        , viewModalRequestingSponsor shared community model
                         , viewTransferFilters loggedIn community.members model
                         ]
 
@@ -252,45 +247,6 @@ view ({ shared } as loggedIn) model =
     { title = t "menu.dashboard"
     , content = content
     }
-
-
-viewNewTag : Shared -> Html msg
-viewNewTag shared =
-    p [ class "flex items-center bg-purple-100 text-white rounded-full py-0.5 px-2 text-caption uppercase" ]
-        [ text <| shared.translators.t "contact_modal.new" ]
-
-
-viewModalRequestingSponsor : Shared -> Community.Model -> Model -> Html Msg
-viewModalRequestingSponsor shared community model =
-    let
-        text_ =
-            shared.translators.t >> text
-    in
-    Modal.initWith
-        { closeMsg = ClosedModalRequestingSponsor
-        , isVisible = model.showModalRequestingSponsor
-        }
-        |> Modal.withHeaderElement (viewNewTag shared)
-        |> Modal.withBody
-            [ div [ class "flex flex-col items-center h-full" ]
-                [ h1 [ class "text-center text-heading font-bold" ]
-                    [ text_ "sponsorship.dashboard_modal.title" ]
-                , img [ class "mt-4", src "/images/sponsor-community.svg" ] []
-                , div [ class "w-full mt-7 mx-auto md:w-5/6 lg:w-2/3" ]
-                    [ p [ class "text-center mb-6" ]
-                        [ text_ "sponsorship.dashboard_modal.subtitle" ]
-                    , p [ class "text-center mb-6" ]
-                        [ text_ "sponsorship.dashboard_modal.explanation" ]
-                    , a
-                        [ class "button button-primary w-full md:mt-8 mb-6"
-                        , Route.href Route.CommunitySponsor
-                        ]
-                        [ text (shared.translators.tr "sponsorship.dashboard_modal.sponsor" [ ( "community_name", community.name ) ]) ]
-                    ]
-                ]
-            ]
-        |> Modal.withSize Modal.Large
-        |> Modal.toHtml
 
 
 addContactModal : Shared -> Model -> Html Msg
@@ -761,17 +717,6 @@ viewWelcomeCard ({ shared } as loggedIn) community balance =
                         , Route.href (Route.Transfer Nothing)
                         ]
                         [ text_ "dashboard.transfer" ]
-                    , case community.contributionConfiguration |> Maybe.andThen .paypalAccount of
-                        Just _ ->
-                            button
-                                [ class "button button-secondary w-full"
-                                , disabled (not loggedIn.hasAcceptedCodeOfConduct)
-                                , onClick ClickedSupportUsButton
-                                ]
-                                [ text_ "community.index.support_us" ]
-
-                        _ ->
-                            text ""
                     ]
                 ]
             , ul [ class "px-4 pt-2 divide-y divide-y-gray-100" ]
@@ -818,21 +763,6 @@ viewWelcomeCard ({ shared } as loggedIn) community balance =
 
                   else
                     text ""
-                , case loggedIn.contributionCount of
-                    RemoteData.Success contributionCount ->
-                        if contributionCount > 0 then
-                            listItem Icons.heartStroke
-                                False
-                                "w-5 h-5"
-                                (t "dashboard.my_contributions")
-                                a
-                                [ Route.href (Route.ProfileContributions loggedIn.accountName) ]
-
-                        else
-                            text ""
-
-                    _ ->
-                        text ""
                 , listItem Icons.globe
                     False
                     "w-5 h-5"
@@ -1011,7 +941,6 @@ type Msg
     | GotTransfersFiltersFormMsg (Form.Msg TransferFiltersFormInput)
     | SubmittedTransfersFiltersForm TransfersFilters
     | ClickedTransferCard Int
-    | ClickedSupportUsButton
     | CreateInvite
     | GotContactMsg Contact.Msg
     | ClosedAddContactModal
@@ -1019,7 +948,6 @@ type Msg
     | CompletedInviteCreation (Result Http.Error String)
     | CopyToClipboard String
     | CopiedToClipboard
-    | ClosedModalRequestingSponsor
     | ClickedAcceptCodeOfConduct
 
 
@@ -1030,37 +958,15 @@ update msg model ({ shared, accountName } as loggedIn) =
             UR.init model
 
         CompletedLoadCommunity community ->
-            let
-                hasContributionConfiguration =
-                    case community.contributionConfiguration |> Maybe.andThen .paypalAccount of
-                        Just _ ->
-                            True
-
-                        Nothing ->
-                            False
-
-                markSponsorModalAsSeen =
-                    if hasContributionConfiguration then
-                        UR.addExt (LoggedIn.UpdatedLoggedIn { loggedIn | shared = { shared | hasSeenSponsorModal = True } })
-                            >> UR.addCmd (Ports.storeHasSeenSponsorModal True)
-
-                    else
-                        identity
-
-                showModalRequestingSponsor =
-                    hasContributionConfiguration && not shared.hasSeenSponsorModal
-            in
             UR.init
                 { model
                     | balance = RemoteData.Loading
                     , analysis = LoadingGraphql Nothing
-                    , showModalRequestingSponsor = showModalRequestingSponsor
-                    , showContactModal = not showModalRequestingSponsor && shouldShowContactModal loggedIn model
+                    , showContactModal = shouldShowContactModal loggedIn model
                 }
                 |> UR.addCmd (fetchBalance shared accountName community)
                 |> UR.addExt (fetchAvailableAnalysis loggedIn Nothing)
                 |> UR.addExt (fetchTransfers loggedIn community Nothing model)
-                |> markSponsorModalAsSeen
 
         CompletedLoadBalance (Ok balance) ->
             UR.init { model | balance = RemoteData.Success balance }
@@ -1234,10 +1140,6 @@ update msg model ({ shared, accountName } as loggedIn) =
                 |> UR.init
                 |> UR.addCmd (Route.pushUrl loggedIn.shared.navKey (Route.ViewTransfer transferId))
 
-        ClickedSupportUsButton ->
-            { model | showModalRequestingSponsor = True }
-                |> UR.init
-
         CreateInvite ->
             case loggedIn.profile of
                 RemoteData.Success profile ->
@@ -1353,14 +1255,6 @@ update msg model ({ shared, accountName } as loggedIn) =
             { model | copied = True }
                 |> UR.init
 
-        ClosedModalRequestingSponsor ->
-            let
-                newModel =
-                    { model | showModalRequestingSponsor = False }
-            in
-            { newModel | showContactModal = shouldShowContactModal loggedIn newModel }
-                |> UR.init
-
         ClickedAcceptCodeOfConduct ->
             model
                 |> UR.init
@@ -1385,7 +1279,6 @@ shouldShowContactModal loggedIn model =
             in
             showContactModalFromDate
                 && List.isEmpty profile.contacts
-                && not model.showModalRequestingSponsor
 
         _ ->
             False
@@ -1548,9 +1441,6 @@ msgToString msg =
         ClickedTransferCard _ ->
             [ "ClickedTransferCard" ]
 
-        ClickedSupportUsButton ->
-            [ "ClickedSupportUsButton" ]
-
         CreateInvite ->
             [ "CreateInvite" ]
 
@@ -1571,9 +1461,6 @@ msgToString msg =
 
         CopiedToClipboard ->
             [ "CopiedToClipboard" ]
-
-        ClosedModalRequestingSponsor ->
-            [ "ClosedModalRequestingSponsor" ]
 
         ClickedAcceptCodeOfConduct ->
             [ "ClickedAcceptCodeOfConduct" ]

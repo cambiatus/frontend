@@ -1,6 +1,5 @@
 module Main exposing (main)
 
-import Action
 import Api.Graphql
 import Browser exposing (Document)
 import Browser.Navigation as Nav
@@ -12,29 +11,13 @@ import Json.Decode as Decode exposing (Value)
 import Json.Encode as Encode
 import Log
 import Page exposing (Session)
+import Page.AdminMoved as AdminMoved
 import Page.ComingSoon as ComingSoon
 import Page.Community.About as CommunityAbout
 import Page.Community.Invite as Invite
 import Page.Community.New as CommunityEditor
 import Page.Community.Objectives as CommunityObjectives
 import Page.Community.Selector as CommunitySelector
-import Page.Community.Settings.ActionEditor as CommunitySettingsActionEditor
-import Page.Community.Settings.Contacts as CommunitySettingsContacts
-import Page.Community.Settings.Currency as CommunitySettingsCurrency
-import Page.Community.Settings.Features as CommunitySettingsFeatures
-import Page.Community.Settings.Info as CommunitySettingsInfo
-import Page.Community.Settings.News as CommunitySettingsNews
-import Page.Community.Settings.News.Editor as CommunitySettingsNewsEditor
-import Page.Community.Settings.ObjectiveEditor as CommunitySettingsObjectiveEditor
-import Page.Community.Settings.Objectives as CommunitySettingsObjectives
-import Page.Community.Settings.Settings as CommunitySettings
-import Page.Community.Settings.Shop.Categories as CommunitySettingsShopCategories
-import Page.Community.Settings.Sponsorship as CommunitySettingsSponsorship
-import Page.Community.Settings.Sponsorship.Fiat as CommunitySettingsSponsorshipFiat
-import Page.Community.Settings.Sponsorship.ThankYouMessage as CommunitySettingsSponsorshipThankYouMessage
-import Page.Community.Sponsor as CommunitySponsor
-import Page.Community.Supporters as CommunitySupporters
-import Page.Community.ThankYou as CommunityThankYou
 import Page.Community.Transfer as Transfer
 import Page.Dashboard as Dashboard
 import Page.Dashboard.Analysis as Analysis
@@ -49,7 +32,6 @@ import Page.Profile as Profile
 import Page.Profile.AddContact as ProfileAddContact
 import Page.Profile.AddKyc as ProfileAddKyc
 import Page.Profile.Claims as ProfileClaims
-import Page.Profile.Contributions as ProfileContributions
 import Page.Profile.Editor as ProfileEditor
 import Page.Register as Register
 import Page.Settings as Settings
@@ -142,17 +124,6 @@ subscriptions model =
     Sub.batch
         [ Sub.map GotPageMsg (Page.subscriptions model.session)
         , Ports.javascriptInPort GotJavascriptData
-        , case model.status of
-            CommunitySponsor subModel ->
-                CommunitySponsor.subscriptions subModel
-                    |> Sub.map GotCommunitySponsorMsg
-
-            CommunitySettingsShopCategories subModel ->
-                CommunitySettingsShopCategories.subscriptions subModel
-                    |> Sub.map GotCommunitySettingsShopCategoriesMsg
-
-            _ ->
-                Sub.none
         ]
 
 
@@ -173,35 +144,18 @@ type Status
     = Redirect
     | NotFound
     | ComingSoon
+    | AdminMoved
     | PaymentHistory PaymentHistory.Model
     | CommunityAbout CommunityAbout.Model
     | CommunityObjectives CommunityObjectives.Model
     | CommunityEditor CommunityEditor.Model
-    | CommunitySettings CommunitySettings.Model
-    | CommunitySettingsShopCategories CommunitySettingsShopCategories.Model
-    | CommunitySettingsFeatures CommunitySettingsFeatures.Model
-    | CommunitySettingsInfo CommunitySettingsInfo.Model
-    | CommunitySettingsNews CommunitySettingsNews.Model
-    | CommunitySettingsNewsEditor CommunitySettingsNewsEditor.Model
-    | CommunitySettingsCurrency CommunitySettingsCurrency.Model
-    | CommunitySettingsSponsorship CommunitySettingsSponsorship.Model
-    | CommunitySettingsSponsorshipFiat CommunitySettingsSponsorshipFiat.Model
-    | CommunitySettingsSponsorshipThankYouMessage CommunitySettingsSponsorshipThankYouMessage.Model
     | CommunitySelector CommunitySelector.Model
-    | CommunityThankYou
-    | CommunitySponsor CommunitySponsor.Model
-    | CommunitySupporters CommunitySupporters.Model
-    | CommunitySettingsObjectives CommunitySettingsObjectives.Model
-    | CommunitySettingsObjectiveEditor CommunitySettingsObjectiveEditor.Model
-    | CommunitySettingsActionEditor CommunitySettingsActionEditor.Model
-    | CommunitySettingsContacts CommunitySettingsContacts.Model
     | Claim Int Int Claim.Model
     | Notification Notification.Model
     | Dashboard Dashboard.Model
     | Login (Maybe Route) Login.Model
     | News News.Model
     | Profile Profile.Model
-    | ProfileContributions ProfileContributions.Model
     | ProfileEditor ProfileEditor.Model
     | ProfileAddKyc ProfileAddKyc.Model
     | ProfileClaims ProfileClaims.Model
@@ -232,29 +186,12 @@ type Msg
     | GotCommunityAboutMsg CommunityAbout.Msg
     | GotCommunityObjectivesMsg CommunityObjectives.Msg
     | GotCommunityEditorMsg CommunityEditor.Msg
-    | GotCommunitySettingsMsg CommunitySettings.Msg
-    | GotCommunitySettingsShopCategoriesMsg CommunitySettingsShopCategories.Msg
-    | GotCommunitySettingsFeaturesMsg CommunitySettingsFeatures.Msg
-    | GotCommunitySettingsInfoMsg CommunitySettingsInfo.Msg
-    | GotCommunitySettingsNewsMsg CommunitySettingsNews.Msg
-    | GotCommunitySettingsNewsEditorMsg CommunitySettingsNewsEditor.Msg
-    | GotCommunitySettingsCurrencyMsg CommunitySettingsCurrency.Msg
-    | GotCommunitySettingsSponsorshipMsg CommunitySettingsSponsorship.Msg
-    | GotCommunitySettingsSponsorshipFiatMsg CommunitySettingsSponsorshipFiat.Msg
-    | GotCommunitySettingsSponsorshipThankYouMessageMsg CommunitySettingsSponsorshipThankYouMessage.Msg
-    | GotCommunitySponsorMsg CommunitySponsor.Msg
-    | GotCommunitySupportersMsg CommunitySupporters.Msg
-    | GotCommunitySettingsObjectivesMsg CommunitySettingsObjectives.Msg
-    | GotCommunitySettingsObjectiveEditorMsg CommunitySettingsObjectiveEditor.Msg
-    | GotCommunitySettingsActionEditorMsg CommunitySettingsActionEditor.Msg
-    | GotCommunitySettingsContactsMsg CommunitySettingsContacts.Msg
     | GotVerifyClaimMsg Claim.Msg
     | GotDashboardMsg Dashboard.Msg
     | GotLoginMsg Login.Msg
     | GotNewsMsg News.Msg
     | GotPaymentHistoryMsg PaymentHistory.Msg
     | GotProfileMsg Profile.Msg
-    | GotProfileContributionsMsg ProfileContributions.Msg
     | GotProfileEditorMsg ProfileEditor.Msg
     | GotProfileAddKycMsg ProfileAddKyc.Msg
     | GotProfileClaimsMsg ProfileClaims.Msg
@@ -434,16 +371,6 @@ update msg model =
                 >> updateLoggedInUResult CommunityEditor GotCommunityEditorMsg model
                 |> withLoggedIn
 
-        ( GotCommunitySettingsObjectivesMsg subMsg, CommunitySettingsObjectives subModel ) ->
-            CommunitySettingsObjectives.update subMsg subModel
-                >> updateLoggedInUResult CommunitySettingsObjectives GotCommunitySettingsObjectivesMsg model
-                |> withLoggedIn
-
-        ( GotCommunitySettingsObjectiveEditorMsg subMsg, CommunitySettingsObjectiveEditor subModel ) ->
-            CommunitySettingsObjectiveEditor.update subMsg subModel
-                >> updateLoggedInUResult CommunitySettingsObjectiveEditor GotCommunitySettingsObjectiveEditorMsg model
-                |> withLoggedIn
-
         ( GotDashboardMsg subMsg, Dashboard subModel ) ->
             Dashboard.update subMsg subModel
                 >> updateLoggedInUResult Dashboard GotDashboardMsg model
@@ -452,11 +379,6 @@ update msg model =
         ( GotProfileMsg subMsg, Profile subModel ) ->
             Profile.update subMsg subModel
                 >> updateLoggedInUResult Profile GotProfileMsg model
-                |> withLoggedIn
-
-        ( GotProfileContributionsMsg subMsg, ProfileContributions subModel ) ->
-            ProfileContributions.update subMsg subModel
-                >> updateLoggedInUResult ProfileContributions GotProfileContributionsMsg model
                 |> withLoggedIn
 
         ( GotProfileEditorMsg subMsg, ProfileEditor subModel ) ->
@@ -479,66 +401,6 @@ update msg model =
                 >> updateLoggedInUResult ProfileAddContact GotProfileAddContactMsg model
                 |> withLoggedIn
 
-        ( GotCommunitySettingsMsg subMsg, CommunitySettings subModel ) ->
-            CommunitySettings.update subMsg subModel
-                >> updateLoggedInUResult CommunitySettings GotCommunitySettingsMsg model
-                |> withLoggedIn
-
-        ( GotCommunitySettingsShopCategoriesMsg subMsg, CommunitySettingsShopCategories subModel ) ->
-            CommunitySettingsShopCategories.update subMsg subModel
-                >> updateLoggedInUResult CommunitySettingsShopCategories GotCommunitySettingsShopCategoriesMsg model
-                |> withLoggedIn
-
-        ( GotCommunitySettingsFeaturesMsg subMsg, CommunitySettingsFeatures subModel ) ->
-            CommunitySettingsFeatures.update subMsg subModel
-                >> updateLoggedInUResult CommunitySettingsFeatures GotCommunitySettingsFeaturesMsg model
-                |> withLoggedIn
-
-        ( GotCommunitySettingsInfoMsg subMsg, CommunitySettingsInfo subModel ) ->
-            CommunitySettingsInfo.update subMsg subModel
-                >> updateLoggedInUResult CommunitySettingsInfo GotCommunitySettingsInfoMsg model
-                |> withLoggedIn
-
-        ( GotCommunitySettingsNewsMsg subMsg, CommunitySettingsNews subModel ) ->
-            CommunitySettingsNews.update subMsg subModel
-                >> updateLoggedInUResult CommunitySettingsNews GotCommunitySettingsNewsMsg model
-                |> withLoggedIn
-
-        ( GotCommunitySettingsNewsEditorMsg subMsg, CommunitySettingsNewsEditor subModel ) ->
-            CommunitySettingsNewsEditor.update subMsg subModel
-                >> updateLoggedInUResult CommunitySettingsNewsEditor GotCommunitySettingsNewsEditorMsg model
-                |> withLoggedIn
-
-        ( GotCommunitySettingsCurrencyMsg subMsg, CommunitySettingsCurrency subModel ) ->
-            CommunitySettingsCurrency.update subMsg subModel
-                >> updateLoggedInUResult CommunitySettingsCurrency GotCommunitySettingsCurrencyMsg model
-                |> withLoggedIn
-
-        ( GotCommunitySettingsSponsorshipMsg subMsg, CommunitySettingsSponsorship subModel ) ->
-            CommunitySettingsSponsorship.update subMsg subModel
-                >> updateLoggedInUResult CommunitySettingsSponsorship GotCommunitySettingsSponsorshipMsg model
-                |> withLoggedIn
-
-        ( GotCommunitySettingsSponsorshipFiatMsg subMsg, CommunitySettingsSponsorshipFiat subModel ) ->
-            CommunitySettingsSponsorshipFiat.update subMsg subModel
-                >> updateLoggedInUResult CommunitySettingsSponsorshipFiat GotCommunitySettingsSponsorshipFiatMsg model
-                |> withLoggedIn
-
-        ( GotCommunitySettingsSponsorshipThankYouMessageMsg subMsg, CommunitySettingsSponsorshipThankYouMessage subModel ) ->
-            CommunitySettingsSponsorshipThankYouMessage.update subMsg subModel
-                >> updateLoggedInUResult CommunitySettingsSponsorshipThankYouMessage GotCommunitySettingsSponsorshipThankYouMessageMsg model
-                |> withLoggedIn
-
-        ( GotCommunitySponsorMsg subMsg, CommunitySponsor subModel ) ->
-            CommunitySponsor.update subMsg subModel
-                >> updateLoggedInUResult CommunitySponsor GotCommunitySponsorMsg model
-                |> withLoggedIn
-
-        ( GotCommunitySupportersMsg subMsg, CommunitySupporters subModel ) ->
-            CommunitySupporters.update subMsg subModel
-                >> updateLoggedInUResult CommunitySupporters GotCommunitySupportersMsg model
-                |> withLoggedIn
-
         ( GotShopMsg subMsg, Shop maybeFilter subModel ) ->
             Shop.update subMsg subModel
                 >> updateLoggedInUResult (Shop maybeFilter) GotShopMsg model
@@ -553,16 +415,6 @@ update msg model =
             ShopViewer.update subMsg subModel
                 >> updatePageUResult (ShopViewer saleId) GotShopViewerMsg model
                 |> withSession
-
-        ( GotCommunitySettingsActionEditorMsg subMsg, CommunitySettingsActionEditor subModel ) ->
-            CommunitySettingsActionEditor.update subMsg subModel
-                >> updateLoggedInUResult CommunitySettingsActionEditor GotCommunitySettingsActionEditorMsg model
-                |> withLoggedIn
-
-        ( GotCommunitySettingsContactsMsg subMsg, CommunitySettingsContacts subModel ) ->
-            CommunitySettingsContacts.update subMsg subModel
-                >> updateLoggedInUResult CommunitySettingsContacts GotCommunitySettingsContactsMsg model
-                |> withLoggedIn
 
         ( GotVerifyClaimMsg subMsg, Claim objectiveId actionId subModel ) ->
             Claim.update subMsg subModel
@@ -641,14 +493,6 @@ broadcast loggedIn broadcastMessage status =
                     ProfileClaims.receiveBroadcast broadcastMessage
                         |> Maybe.map GotProfileClaimsMsg
 
-                CommunitySettingsActionEditor _ ->
-                    CommunitySettingsActionEditor.receiveBroadcast broadcastMessage
-                        |> Maybe.map GotCommunitySettingsActionEditorMsg
-
-                CommunitySettingsObjectives _ ->
-                    CommunitySettingsObjectives.receiveBroadcast broadcastMessage
-                        |> Maybe.map GotCommunitySettingsObjectivesMsg
-
                 CommunityAbout _ ->
                     CommunityAbout.receiveBroadcast broadcastMessage
                         |> Maybe.map GotCommunityAboutMsg
@@ -656,58 +500,6 @@ broadcast loggedIn broadcastMessage status =
                 CommunityObjectives _ ->
                     CommunityObjectives.receiveBroadcast broadcastMessage
                         |> Maybe.map GotCommunityObjectivesMsg
-
-                CommunitySettingsFeatures _ ->
-                    CommunitySettingsFeatures.receiveBroadcast broadcastMessage
-                        |> Maybe.map GotCommunitySettingsFeaturesMsg
-
-                CommunitySettingsInfo _ ->
-                    CommunitySettingsInfo.receiveBroadcast broadcastMessage
-                        |> Maybe.map GotCommunitySettingsInfoMsg
-
-                CommunitySettingsNews _ ->
-                    CommunitySettingsNews.receiveBroadcast broadcastMessage
-                        |> Maybe.map GotCommunitySettingsNewsMsg
-
-                CommunitySettingsNewsEditor _ ->
-                    CommunitySettingsNewsEditor.receiveBroadcast broadcastMessage
-                        |> Maybe.map GotCommunitySettingsNewsEditorMsg
-
-                CommunitySettingsCurrency _ ->
-                    CommunitySettingsCurrency.receiveBroadcast broadcastMessage
-                        |> Maybe.map GotCommunitySettingsCurrencyMsg
-
-                CommunitySettingsSponsorship _ ->
-                    CommunitySettingsSponsorship.receiveBroadcast broadcastMessage
-                        |> Maybe.map GotCommunitySettingsSponsorshipMsg
-
-                CommunitySettingsSponsorshipFiat _ ->
-                    CommunitySettingsSponsorshipFiat.receiveBroadcast broadcastMessage
-                        |> Maybe.map GotCommunitySettingsSponsorshipFiatMsg
-
-                CommunitySettingsSponsorshipThankYouMessage _ ->
-                    CommunitySettingsSponsorshipThankYouMessage.receiveBroadcast broadcastMessage
-                        |> Maybe.map GotCommunitySettingsSponsorshipThankYouMessageMsg
-
-                CommunitySettings _ ->
-                    CommunitySettings.receiveBroadcast broadcastMessage
-                        |> Maybe.map GotCommunitySettingsMsg
-
-                CommunitySponsor _ ->
-                    CommunitySponsor.receiveBroadcast broadcastMessage
-                        |> Maybe.map GotCommunitySponsorMsg
-
-                CommunitySupporters _ ->
-                    CommunitySupporters.receiveBroadcast broadcastMessage
-                        |> Maybe.map GotCommunitySupportersMsg
-
-                CommunitySettingsObjectiveEditor _ ->
-                    CommunitySettingsObjectiveEditor.receiveBroadcast broadcastMessage
-                        |> Maybe.map GotCommunitySettingsObjectiveEditorMsg
-
-                CommunitySettingsContacts _ ->
-                    CommunitySettingsContacts.receiveBroadcast broadcastMessage
-                        |> Maybe.map GotCommunitySettingsContactsMsg
 
                 ProfileAddContact _ ->
                     ProfileAddContact.receiveBroadcast broadcastMessage
@@ -720,10 +512,6 @@ broadcast loggedIn broadcastMessage status =
                 Profile _ ->
                     Profile.receiveBroadcast broadcastMessage
                         |> Maybe.map GotProfileMsg
-
-                ProfileContributions _ ->
-                    ProfileContributions.receiveBroadcast broadcastMessage
-                        |> Maybe.map GotProfileContributionsMsg
 
                 ShopEditor _ subModel ->
                     ShopEditor.receiveBroadcast loggedIn.shared.translators broadcastMessage subModel
@@ -1058,6 +846,9 @@ statusToRoute status session =
         ComingSoon ->
             Nothing
 
+        AdminMoved ->
+            Nothing
+
         PaymentHistory subModel ->
             subModel.recipientProfile.account
                 |> Route.PaymentHistory
@@ -1072,73 +863,8 @@ statusToRoute status session =
         CommunityEditor _ ->
             Just Route.NewCommunity
 
-        CommunitySettings _ ->
-            Just Route.CommunitySettings
-
-        CommunitySettingsShopCategories _ ->
-            Just Route.CommunitySettingsShopCategories
-
-        CommunitySettingsFeatures _ ->
-            Just Route.CommunitySettingsFeatures
-
-        CommunitySettingsInfo _ ->
-            Just Route.CommunitySettingsInfo
-
-        CommunitySettingsNews _ ->
-            Just Route.CommunitySettingsNews
-
-        CommunitySettingsNewsEditor _ ->
-            Just (Route.CommunitySettingsNewsEditor Route.CreateNews)
-
-        CommunitySettingsCurrency _ ->
-            Just Route.CommunitySettingsCurrency
-
-        CommunitySettingsSponsorship _ ->
-            Just Route.CommunitySettingsSponsorship
-
-        CommunitySettingsSponsorshipFiat _ ->
-            Just Route.CommunitySettingsSponsorshipFiat
-
-        CommunitySettingsSponsorshipThankYouMessage _ ->
-            Just Route.CommunitySettingsSponsorshipThankYouMessage
-
         CommunitySelector subModel ->
             Just (Route.CommunitySelector subModel.maybeRedirect)
-
-        CommunityThankYou ->
-            Just Route.CommunityThankYou
-
-        CommunitySponsor _ ->
-            Just Route.CommunitySponsor
-
-        CommunitySupporters _ ->
-            Just Route.CommunitySupporters
-
-        CommunitySettingsObjectives _ ->
-            Just Route.CommunitySettingsObjectives
-
-        CommunitySettingsObjectiveEditor subModel ->
-            case subModel.objectiveId of
-                Nothing ->
-                    Just Route.CommunitySettingsNewObjective
-
-                Just objectiveId ->
-                    Just (Route.CommunitySettingsEditObjective (Action.objectiveIdToInt objectiveId))
-
-        CommunitySettingsActionEditor subModel ->
-            case subModel.actionId of
-                Nothing ->
-                    Just (Route.CommunitySettingsNewAction (Action.objectiveIdToInt subModel.objectiveId))
-
-                Just actionId ->
-                    Just
-                        (Route.CommunitySettingsEditAction
-                            (Action.objectiveIdToInt subModel.objectiveId)
-                            (Action.idToInt actionId)
-                        )
-
-        CommunitySettingsContacts _ ->
-            Just Route.CommunitySettingsContacts
 
         Claim objectiveId actionId subModel ->
             Just (Route.Claim objectiveId actionId subModel.claimId)
@@ -1166,9 +892,6 @@ statusToRoute status session =
 
         Profile subModel ->
             Just (Route.Profile subModel.profileName)
-
-        ProfileContributions subModel ->
-            Just (Route.ProfileContributions subModel.profileName)
 
         ProfileEditor _ ->
             Just Route.ProfileEditor
@@ -1441,11 +1164,6 @@ changeRouteTo maybeRoute model =
                 >> updateLoggedInUResult Profile GotProfileMsg model
                 |> withLoggedIn (Route.Profile profileName)
 
-        Just (Route.ProfileContributions profileName) ->
-            (\l -> ProfileContributions.init l profileName)
-                >> updateStatusWith ProfileContributions GotProfileContributionsMsg model
-                |> withLoggedIn (Route.ProfileContributions profileName)
-
         Just Route.ProfileEditor ->
             ProfileEditor.init
                 >> updateStatusWith ProfileEditor GotProfileEditorMsg model
@@ -1482,74 +1200,39 @@ changeRouteTo maybeRoute model =
                 |> withLoggedIn (Route.CommunityObjectives selectedObjective)
 
         Just Route.CommunitySettings ->
-            CommunitySettings.init
-                >> updateStatusWith CommunitySettings GotCommunitySettingsMsg model
-                |> withLoggedIn Route.CommunitySettings
+            noCmd (updateStatus model AdminMoved)
 
         Just Route.CommunitySettingsShopCategories ->
-            CommunitySettingsShopCategories.init
-                >> updateLoggedInUResult CommunitySettingsShopCategories GotCommunitySettingsShopCategoriesMsg model
-                |> withLoggedIn Route.CommunitySettingsShopCategories
+            noCmd (updateStatus model AdminMoved)
 
         Just Route.CommunitySettingsFeatures ->
-            CommunitySettingsFeatures.init
-                >> updateStatusWith CommunitySettingsFeatures GotCommunitySettingsFeaturesMsg model
-                |> withLoggedIn Route.CommunitySettingsFeatures
+            noCmd (updateStatus model AdminMoved)
 
         Just Route.CommunitySettingsInfo ->
-            CommunitySettingsInfo.init
-                >> updateStatusWith CommunitySettingsInfo GotCommunitySettingsInfoMsg model
-                |> withLoggedIn Route.CommunitySettingsInfo
+            noCmd (updateStatus model AdminMoved)
 
         Just Route.CommunitySettingsNews ->
-            CommunitySettingsNews.init
-                >> updateLoggedInUResult CommunitySettingsNews GotCommunitySettingsNewsMsg model
-                |> withLoggedIn Route.CommunitySettingsNews
+            noCmd (updateStatus model AdminMoved)
 
-        Just (Route.CommunitySettingsNewsEditor editorKind) ->
-            CommunitySettingsNewsEditor.init editorKind
-                >> updateLoggedInUResult CommunitySettingsNewsEditor GotCommunitySettingsNewsEditorMsg model
-                |> withLoggedIn (Route.CommunitySettingsNewsEditor editorKind)
+        Just (Route.CommunitySettingsNewsEditor _) ->
+            noCmd (updateStatus model AdminMoved)
 
         Just Route.CommunitySettingsCurrency ->
-            CommunitySettingsCurrency.init
-                >> updateStatusWith CommunitySettingsCurrency GotCommunitySettingsCurrencyMsg model
-                |> withLoggedIn Route.CommunitySettingsCurrency
+            noCmd (updateStatus model AdminMoved)
 
         Just Route.CommunitySettingsSponsorship ->
-            CommunitySettingsSponsorship.init
-                >> updateStatusWith CommunitySettingsSponsorship GotCommunitySettingsSponsorshipMsg model
-                |> withLoggedIn Route.CommunitySettingsSponsorship
+            noCmd (updateStatus model AdminMoved)
 
         Just Route.CommunitySettingsSponsorshipFiat ->
-            CommunitySettingsSponsorshipFiat.init
-                >> updateStatusWith CommunitySettingsSponsorshipFiat GotCommunitySettingsSponsorshipFiatMsg model
-                |> withLoggedIn Route.CommunitySettingsSponsorshipFiat
+            noCmd (updateStatus model AdminMoved)
 
         Just Route.CommunitySettingsSponsorshipThankYouMessage ->
-            CommunitySettingsSponsorshipThankYouMessage.init
-                >> updateStatusWith CommunitySettingsSponsorshipThankYouMessage GotCommunitySettingsSponsorshipThankYouMessageMsg model
-                |> withLoggedIn Route.CommunitySettingsSponsorshipThankYouMessage
+            noCmd (updateStatus model AdminMoved)
 
         Just (Route.CommunitySelector maybeRedirect) ->
             CommunitySelector.init maybeRedirect
                 >> updateStatusWith CommunitySelector (\_ -> Ignored) model
                 |> withLoggedIn (Route.CommunitySelector maybeRedirect)
-
-        Just Route.CommunityThankYou ->
-            CommunityThankYou
-                |> updateStatus model
-                |> noCmd
-
-        Just Route.CommunitySponsor ->
-            CommunitySponsor.init
-                >> updateStatusWith CommunitySponsor GotCommunitySponsorMsg model
-                |> withLoggedIn Route.CommunitySponsor
-
-        Just Route.CommunitySupporters ->
-            CommunitySupporters.init
-                >> updateLoggedInUResult CommunitySupporters GotCommunitySupportersMsg model
-                |> withLoggedIn Route.CommunitySupporters
 
         Just Route.NewCommunity ->
             CommunityEditor.init
@@ -1557,38 +1240,22 @@ changeRouteTo maybeRoute model =
                 |> withLoggedIn Route.NewCommunity
 
         Just Route.CommunitySettingsObjectives ->
-            CommunitySettingsObjectives.init
-                >> updateStatusWith CommunitySettingsObjectives GotCommunitySettingsObjectivesMsg model
-                |> withLoggedIn Route.CommunitySettingsObjectives
+            noCmd (updateStatus model AdminMoved)
 
         Just Route.CommunitySettingsNewObjective ->
-            CommunitySettingsObjectiveEditor.initNew
-                >> updateStatusWith CommunitySettingsObjectiveEditor GotCommunitySettingsObjectiveEditorMsg model
-                |> withLoggedIn Route.CommunitySettingsNewObjective
+            noCmd (updateStatus model AdminMoved)
 
-        Just (Route.CommunitySettingsEditObjective objectiveId) ->
-            (\l -> CommunitySettingsObjectiveEditor.initEdit l (Action.objectiveIdFromInt objectiveId))
-                >> updateStatusWith CommunitySettingsObjectiveEditor GotCommunitySettingsObjectiveEditorMsg model
-                |> withLoggedIn (Route.CommunitySettingsEditObjective objectiveId)
+        Just (Route.CommunitySettingsEditObjective _) ->
+            noCmd (updateStatus model AdminMoved)
 
-        Just (Route.CommunitySettingsNewAction objectiveId) ->
-            (\l -> CommunitySettingsActionEditor.init l (Action.objectiveIdFromInt objectiveId) Nothing)
-                >> updateLoggedInUResult CommunitySettingsActionEditor GotCommunitySettingsActionEditorMsg model
-                |> withLoggedIn (Route.CommunitySettingsNewAction objectiveId)
+        Just (Route.CommunitySettingsNewAction _) ->
+            noCmd (updateStatus model AdminMoved)
 
-        Just (Route.CommunitySettingsEditAction objectiveId actionId) ->
-            (\l ->
-                CommunitySettingsActionEditor.init l
-                    (Action.objectiveIdFromInt objectiveId)
-                    (Just <| Action.idFromInt actionId)
-            )
-                >> updateLoggedInUResult CommunitySettingsActionEditor GotCommunitySettingsActionEditorMsg model
-                |> withLoggedIn (Route.CommunitySettingsEditAction objectiveId actionId)
+        Just (Route.CommunitySettingsEditAction _ _) ->
+            noCmd (updateStatus model AdminMoved)
 
         Just Route.CommunitySettingsContacts ->
-            (\l -> CommunitySettingsContacts.init l)
-                >> updateStatusWith CommunitySettingsContacts GotCommunitySettingsContactsMsg model
-                |> withLoggedIn Route.CommunitySettingsContacts
+            noCmd (updateStatus model AdminMoved)
 
         Just (Route.Claim objectiveId actionId claimId) ->
             (\l -> Claim.init l claimId)
@@ -1686,10 +1353,6 @@ jsAddressToMsg address val =
             Maybe.map GotCommunityEditorMsg
                 (CommunityEditor.jsAddressToMsg rAddress val)
 
-        "GotCommunitySettingsObjectiveEditorMsg" :: rAddress ->
-            Maybe.map GotCommunitySettingsObjectiveEditorMsg
-                (CommunitySettingsObjectiveEditor.jsAddressToMsg rAddress val)
-
         "GotShopViewerMsg" :: rAddress ->
             Maybe.map GotShopViewerMsg
                 (ShopViewer.jsAddressToMsg rAddress val)
@@ -1701,22 +1364,6 @@ jsAddressToMsg address val =
         "GotSettingsMsg" :: rAddress ->
             Maybe.map GotSettingsMsg
                 (Settings.jsAddressToMsg rAddress val)
-
-        "GotCommunitySettingsFeaturesMsg" :: rAddress ->
-            Maybe.map GotCommunitySettingsFeaturesMsg
-                (CommunitySettingsFeatures.jsAddressToMsg rAddress val)
-
-        "GotCommunitySettingsInfoMsg" :: rAddress ->
-            Maybe.map GotCommunitySettingsInfoMsg
-                (CommunitySettingsInfo.jsAddressToMsg rAddress val)
-
-        "GotCommunitySettingsCurrencyMsg" :: rAddress ->
-            Maybe.map GotCommunitySettingsCurrencyMsg
-                (CommunitySettingsCurrency.jsAddressToMsg rAddress val)
-
-        "GotCommunitySettingsActionEditorMsg" :: rAddress ->
-            Maybe.map GotCommunitySettingsActionEditorMsg
-                (CommunitySettingsActionEditor.jsAddressToMsg rAddress val)
 
         "GotVerifyClaimMsg" :: rAddress ->
             Maybe.map GotVerifyClaimMsg
@@ -1765,54 +1412,6 @@ msgToString msg =
         GotCommunityEditorMsg subMsg ->
             "GotCommunityEditorMsg" :: CommunityEditor.msgToString subMsg
 
-        GotCommunitySettingsMsg subMsg ->
-            "GotCommunitySettingsMsg" :: CommunitySettings.msgToString subMsg
-
-        GotCommunitySettingsShopCategoriesMsg subMsg ->
-            "GotCommunitySettingsShopCategoriesMsg" :: CommunitySettingsShopCategories.msgToString subMsg
-
-        GotCommunitySettingsFeaturesMsg subMsg ->
-            "GotCommunitySettingsFeaturesMsg" :: CommunitySettingsFeatures.msgToString subMsg
-
-        GotCommunitySettingsInfoMsg subMsg ->
-            "GotCommunitySettingsInfoMsg" :: CommunitySettingsInfo.msgToString subMsg
-
-        GotCommunitySettingsNewsMsg subMsg ->
-            "GotCommunitySettingsNewsMsg" :: CommunitySettingsNews.msgToString subMsg
-
-        GotCommunitySettingsNewsEditorMsg subMsg ->
-            "GotCommunitySettingsNewsEditorMsg" :: CommunitySettingsNewsEditor.msgToString subMsg
-
-        GotCommunitySettingsCurrencyMsg subMsg ->
-            "GotCommunitySettingsCurrencyMsg" :: CommunitySettingsCurrency.msgToString subMsg
-
-        GotCommunitySettingsSponsorshipMsg subMsg ->
-            "GotCommunitySettingsSponsorshipMsg" :: CommunitySettingsSponsorship.msgToString subMsg
-
-        GotCommunitySettingsSponsorshipFiatMsg subMsg ->
-            "GotCommunitySettingsSponsorshipFiatMsg" :: CommunitySettingsSponsorshipFiat.msgToString subMsg
-
-        GotCommunitySettingsSponsorshipThankYouMessageMsg subMsg ->
-            "GotCommunitySettingsSponsorshipThankYouMessageMsg" :: CommunitySettingsSponsorshipThankYouMessage.msgToString subMsg
-
-        GotCommunitySponsorMsg subMsg ->
-            "GotCommunitySponsorMsg" :: CommunitySponsor.msgToString subMsg
-
-        GotCommunitySupportersMsg subMsg ->
-            "GotCommunitySupportersMsg" :: CommunitySupporters.msgToString subMsg
-
-        GotCommunitySettingsObjectivesMsg subMsg ->
-            "GotCommunitySettingsObjectivesMsg" :: CommunitySettingsObjectives.msgToString subMsg
-
-        GotCommunitySettingsObjectiveEditorMsg subMsg ->
-            "GotCommunitySettingsObjectiveEditorMsg" :: CommunitySettingsObjectiveEditor.msgToString subMsg
-
-        GotCommunitySettingsActionEditorMsg subMsg ->
-            "GotCommunitySettingsActionEditorMsg" :: CommunitySettingsActionEditor.msgToString subMsg
-
-        GotCommunitySettingsContactsMsg subMsg ->
-            "GotCommunitySettingsContactsMsg" :: CommunitySettingsContacts.msgToString subMsg
-
         GotVerifyClaimMsg subMsg ->
             "GotVerifyClaimMsg" :: Claim.msgToString subMsg
 
@@ -1833,9 +1432,6 @@ msgToString msg =
 
         GotProfileMsg subMsg ->
             "GotProfileMsg" :: Profile.msgToString subMsg
-
-        GotProfileContributionsMsg subMsg ->
-            "GotProfileContributionsMsg" :: ProfileContributions.msgToString subMsg
 
         GotProfileEditorMsg subMsg ->
             "GotProfileEditorMsg" :: ProfileEditor.msgToString subMsg
@@ -1974,6 +1570,9 @@ view model =
         ComingSoon ->
             viewPage Guest.ComingSoon LoggedIn.ComingSoon (\_ -> Ignored) (ComingSoon.view model.session)
 
+        AdminMoved ->
+            viewPage Guest.AdminMoved LoggedIn.AdminMoved (\_ -> Ignored) (AdminMoved.view model.session)
+
         Invite subModel ->
             viewPage Guest.Invite LoggedIn.Invite GotInviteMsg (Invite.view model.session subModel)
 
@@ -2004,62 +1603,11 @@ view model =
         CommunityObjectives subModel ->
             viewLoggedIn subModel LoggedIn.CommunityObjectives GotCommunityObjectivesMsg CommunityObjectives.view
 
-        CommunitySettings subModel ->
-            viewLoggedIn subModel LoggedIn.CommunitySettings GotCommunitySettingsMsg CommunitySettings.view
-
-        CommunitySettingsShopCategories subModel ->
-            viewLoggedIn subModel LoggedIn.CommunitySettingsShopCategories GotCommunitySettingsShopCategoriesMsg CommunitySettingsShopCategories.view
-
-        CommunitySettingsFeatures subModel ->
-            viewLoggedIn subModel LoggedIn.CommunitySettingsFeatures GotCommunitySettingsFeaturesMsg CommunitySettingsFeatures.view
-
-        CommunitySettingsInfo subModel ->
-            viewLoggedIn subModel LoggedIn.CommunitySettingsInfo GotCommunitySettingsInfoMsg CommunitySettingsInfo.view
-
-        CommunitySettingsNews subModel ->
-            viewLoggedIn subModel LoggedIn.CommunitySettingsNews GotCommunitySettingsNewsMsg CommunitySettingsNews.view
-
-        CommunitySettingsNewsEditor subModel ->
-            viewLoggedIn subModel LoggedIn.CommunitySettingsNewsEditor GotCommunitySettingsNewsEditorMsg CommunitySettingsNewsEditor.view
-
-        CommunitySettingsCurrency subModel ->
-            viewLoggedIn subModel LoggedIn.CommunitySettingsCurrency GotCommunitySettingsCurrencyMsg CommunitySettingsCurrency.view
-
-        CommunitySettingsSponsorship subModel ->
-            viewLoggedIn subModel LoggedIn.CommunitySettingsSponsorship GotCommunitySettingsSponsorshipMsg CommunitySettingsSponsorship.view
-
-        CommunitySettingsSponsorshipFiat subModel ->
-            viewLoggedIn subModel LoggedIn.CommunitySettingsSponsorshipFiat GotCommunitySettingsSponsorshipFiatMsg CommunitySettingsSponsorshipFiat.view
-
-        CommunitySettingsSponsorshipThankYouMessage subModel ->
-            viewLoggedIn subModel LoggedIn.CommunitySettingsSponsorshipThankYouMessage GotCommunitySettingsSponsorshipThankYouMessageMsg CommunitySettingsSponsorshipThankYouMessage.view
-
         CommunitySelector subModel ->
             viewLoggedIn subModel LoggedIn.CommunitySelector (\_ -> Ignored) CommunitySelector.view
 
-        CommunityThankYou ->
-            viewLoggedIn () LoggedIn.CommunityThankYou (\_ -> Ignored) (\l () -> CommunityThankYou.view l)
-
-        CommunitySponsor subModel ->
-            viewLoggedIn subModel LoggedIn.CommunitySponsor GotCommunitySponsorMsg CommunitySponsor.view
-
-        CommunitySupporters subModel ->
-            viewLoggedIn subModel LoggedIn.CommunitySupporters GotCommunitySupportersMsg CommunitySupporters.view
-
         CommunityEditor subModel ->
             viewLoggedIn subModel LoggedIn.CommunityEditor GotCommunityEditorMsg CommunityEditor.view
-
-        CommunitySettingsObjectives subModel ->
-            viewLoggedIn subModel LoggedIn.CommunitySettingsObjectives GotCommunitySettingsObjectivesMsg CommunitySettingsObjectives.view
-
-        CommunitySettingsObjectiveEditor subModel ->
-            viewLoggedIn subModel LoggedIn.CommunitySettingsObjectiveEditor GotCommunitySettingsObjectiveEditorMsg CommunitySettingsObjectiveEditor.view
-
-        CommunitySettingsActionEditor subModel ->
-            viewLoggedIn subModel LoggedIn.CommunitySettingsActionEditor GotCommunitySettingsActionEditorMsg CommunitySettingsActionEditor.view
-
-        CommunitySettingsContacts subModel ->
-            viewLoggedIn subModel LoggedIn.CommunitySettingsContacts GotCommunitySettingsContactsMsg CommunitySettingsContacts.view
 
         Claim _ _ subModel ->
             viewLoggedIn subModel LoggedIn.Claim GotVerifyClaimMsg Claim.view
@@ -2069,9 +1617,6 @@ view model =
 
         Profile subModel ->
             viewLoggedIn subModel LoggedIn.Profile GotProfileMsg Profile.view
-
-        ProfileContributions subModel ->
-            viewLoggedIn subModel LoggedIn.ProfileContributions GotProfileContributionsMsg ProfileContributions.view
 
         ProfileEditor subModel ->
             viewLoggedIn subModel LoggedIn.ProfileEditor GotProfileEditorMsg ProfileEditor.view

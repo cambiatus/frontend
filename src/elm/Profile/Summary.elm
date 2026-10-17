@@ -1,13 +1,11 @@
 module Profile.Summary exposing
     ( Model
     , Msg
-    , expand
     , init
     , initMany
     , msgToString
     , update
     , view
-    , withAttrs
     , withImageSize
     , withNameBg
     , withPreventScrolling
@@ -98,11 +96,6 @@ update msg model =
             { model | isExpanded = False }
 
 
-expand : Msg
-expand =
-    OpenedInfo
-
-
 withPreventScrolling : View.Components.PreventScroll -> Model -> Model
 withPreventScrolling preventScrolling model =
     { model | preventScrolling = preventScrolling }
@@ -140,11 +133,6 @@ withoutYouLabel model =
 withImageSize : String -> Model -> Model
 withImageSize imageSize model =
     { model | imageSize = imageSize }
-
-
-withAttrs : List (Html.Attribute Msg) -> Model -> Model
-withAttrs attrs model =
-    { model | extraAttrs = model.extraAttrs ++ attrs }
 
 
 view : Translation.Translators -> Eos.Name -> Profile.Basic profile -> Model -> Html Msg

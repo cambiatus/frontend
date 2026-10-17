@@ -1,7 +1,6 @@
 module Utils.Tree exposing
     ( findInForest, findZipperInForest, getAllAncestors
     , toFlatForest, fromFlatForest
-    , goUpWithoutChildren, goDownWithoutChildren
     )
 
 {-| Helper functions that deal with Trees from zwilias/elm-rosetree
@@ -18,8 +17,6 @@ module Utils.Tree exposing
 
 
 ## Traversing through the tree
-
-@docs goUpWithoutChildren, goDownWithoutChildren
 
 -}
 
@@ -74,27 +71,3 @@ fromFlatForest trees =
 
         [] ->
             Nothing
-
-
-goUpWithoutChildren : Tree.Zipper.Zipper a -> Maybe (Tree.Zipper.Zipper a)
-goUpWithoutChildren zipper =
-    Tree.Zipper.backward zipper
-        |> Maybe.andThen
-            (\backwardZipper ->
-                if Tree.Zipper.parent zipper == Just backwardZipper then
-                    Tree.Zipper.parent backwardZipper
-
-                else
-                    Just backwardZipper
-            )
-
-
-goDownWithoutChildren : Tree.Zipper.Zipper a -> Maybe (Tree.Zipper.Zipper a)
-goDownWithoutChildren zipper =
-    case Tree.Zipper.nextSibling zipper of
-        Nothing ->
-            Tree.Zipper.parent zipper
-                |> Maybe.andThen Tree.Zipper.parent
-
-        Just firstSibling ->
-            Just firstSibling

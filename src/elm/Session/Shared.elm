@@ -56,7 +56,6 @@ type alias Shared =
     , useSubdomain : Bool
     , selectedCommunity : Maybe Eos.Symbol
     , pinVisibility : Bool
-    , hasSeenSponsorModal : Bool
 
     -- Bip39 is what we use to generate the 12 words to login. We store them in
     -- Shared so that we don't need more HTTP requests than necessary (or to
@@ -116,7 +115,6 @@ init ({ maybeAccount, endpoints, allowCommunityCreation, tokenContract, communit
       , useSubdomain = flags.useSubdomain
       , selectedCommunity = flags.selectedCommunity
       , pinVisibility = flags.pinVisibility
-      , hasSeenSponsorModal = flags.hasSeenSponsorModal
       , bip39 = Bip39NotLoaded
       }
     , case environment of

@@ -59,7 +59,6 @@ type Route
     | ProfileAddContact
     | PaymentHistory Eos.Account.Name
     | Profile Eos.Account.Name
-    | ProfileContributions Eos.Account.Name
     | Dashboard
     | CommunityAbout
     | CommunityObjectives SelectedObjective
@@ -82,9 +81,6 @@ type Route
     | CommunitySettingsContacts
     | CommunitySettingsShopCategories
     | CommunitySelector (Maybe Route)
-    | CommunityThankYou
-    | CommunitySponsor
-    | CommunitySupporters
     | Claim Int Int Int
     | Settings
     | Shop { owner : Maybe Eos.Account.Name, categories : List Shop.Category.Id }
@@ -134,7 +130,6 @@ parser url =
         , Url.map ProfileAddKyc (s "profile" </> s "add-kyc")
         , Url.map ProfileAddContact (s "profile" </> s "add-contact")
         , Url.map Profile (s "profile" </> (string |> Url.map Eos.Account.stringToName))
-        , Url.map ProfileContributions (s "profile" </> (string |> Url.map Eos.Account.stringToName) </> s "contributions")
         , Url.map ProfileClaims (s "profile" </> string </> s "claims")
         , Url.map PaymentHistory (s "payments" </> (string |> Url.map Eos.Account.stringToName))
         , Url.map Notification (s "notification")
@@ -186,9 +181,6 @@ parser url =
                         (parseRedirect url)
                         (Query.string "redirect")
             )
-        , Url.map CommunityThankYou (s "community" </> s "thank-you")
-        , Url.map CommunitySponsor (s "community" </> s "sponsor")
-        , Url.map CommunitySupporters (s "community" </> s "supporters")
         , Url.map CommunitySettingsNewObjective (s "community" </> s "settings" </> s "objectives" </> s "new")
         , Url.map CommunitySettingsEditObjective (s "community" </> s "settings" </> s "objectives" </> int </> s "edit")
         , Url.map CommunitySettingsNewAction (s "community" </> s "settings" </> s "objectives" </> int </> s "action" </> s "new")
@@ -531,9 +523,6 @@ routeToString route =
                 Profile accountName ->
                     ( [ "profile", Eos.Account.nameToString accountName ], [] )
 
-                ProfileContributions accountName ->
-                    ( [ "profile", Eos.Account.nameToString accountName, "contributions" ], [] )
-
                 Dashboard ->
                     ( [ "dashboard" ], [] )
 
@@ -594,15 +583,6 @@ routeToString route =
                     ( [ "community", "selector" ]
                     , queryBuilder routeToString maybeRedirect "redirect"
                     )
-
-                CommunityThankYou ->
-                    ( [ "community", "thank-you" ], [] )
-
-                CommunitySponsor ->
-                    ( [ "community", "sponsor" ], [] )
-
-                CommunitySupporters ->
-                    ( [ "community", "supporters" ], [] )
 
                 NewCommunity ->
                     ( [ "community", "new" ], [] )

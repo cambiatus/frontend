@@ -1,9 +1,9 @@
 module Action exposing
     ( Action, Objective
-    , Id, encodeId, idFromInt, idFromString, idToInt, idToString
-    , ObjectiveId, encodeObjectiveId, objectiveIdSelectionSet, objectiveIdFromInt, objectiveIdToInt
+    , Id, idFromInt, idFromString, idToInt, idToString
+    , ObjectiveId, objectiveIdSelectionSet, objectiveIdFromInt, objectiveIdToInt
     , isClosed, isPastDeadline, isObjectiveClosed
-    , selectionSet, completeObjectiveSelectionSet, updateAction
+    , selectionSet
     , ClaimingStatus, notClaiming, startClaiming, Msg, update, ExternalMsg(..), msgToString, jsAddressToMsg
     , viewCard, viewClaimModal
     )
@@ -21,12 +21,12 @@ module Action exposing
 
 #### Action Ids
 
-@docs Id, encodeId, idFromInt, idFromString, idToInt, idToString
+@docs Id, idFromInt, idFromString, idToInt, idToString
 
 
 #### Objective Ids
 
-@docs ObjectiveId, encodeObjectiveId, objectiveIdSelectionSet, objectiveIdFromInt, objectiveIdToInt
+@docs ObjectiveId, objectiveIdSelectionSet, objectiveIdFromInt, objectiveIdToInt
 
 
 ## Helper functions
@@ -36,7 +36,7 @@ module Action exposing
 
 ## GraphQL & EOS
 
-@docs selectionSet, completeObjectiveSelectionSet, updateAction
+@docs selectionSet
 
 
 ## Claiming actions
@@ -54,7 +54,6 @@ import Auth
 import Browser.Dom
 import Cambiatus.Enum.Permission as Permission exposing (Permission)
 import Cambiatus.Enum.VerificationType as VerificationType exposing (VerificationType)
-import Cambiatus.Mutation
 import Cambiatus.Object
 import Cambiatus.Object.Action
 import Cambiatus.Object.Community
@@ -66,7 +65,6 @@ import Form
 import Form.File
 import Form.Text
 import Graphql.Http
-import Graphql.Operation exposing (RootMutation)
 import Graphql.OptionalArgument as OptionalArgument
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet)
 import Html exposing (Html, button, div, h4, img, li, p, span, text)
@@ -1081,27 +1079,6 @@ communitySelectionSet =
         |> SelectionSet.with Cambiatus.Object.Community.name
 
 
-completeObjectiveSelectionSet : ObjectiveId -> SelectionSet decodesTo Cambiatus.Object.Objective -> SelectionSet (Maybe decodesTo) RootMutation
-completeObjectiveSelectionSet (ObjectiveId id) =
-    Cambiatus.Mutation.completeObjective { id = id }
-
-
-
--- EOS
-
-
-updateAction : Eos.Account.Name -> Shared -> Action -> Eos.Action
-updateAction accountName shared action =
-    { accountName = shared.contracts.community
-    , name = "upsertaction"
-    , authorization =
-        { actor = accountName
-        , permissionName = Eos.Account.samplePermission
-        }
-    , data = encode action
-    }
-
-
 
 -- JSON
 
@@ -1152,11 +1129,6 @@ encodeClaimAction c =
         ]
 
 
-encodeObjectiveId : ObjectiveId -> Json.Encode.Value
-encodeObjectiveId (ObjectiveId id) =
-    Json.Encode.int id
-
-
 encodeId : Id -> Json.Encode.Value
 encodeId (Id id) =
     Json.Encode.int id
@@ -1165,49 +1137,6 @@ encodeId (Id id) =
 decodeId : Json.Decode.Decoder Id
 decodeId =
     Json.Decode.map Id Json.Decode.int
-
-
-encode : Action -> Json.Encode.Value
-encode action =
-    let
-        makeAsset : Float -> Eos.Asset
-        makeAsset amount =
-            { symbol = action.objective.community.symbol, amount = amount }
-    in
-    Json.Encode.object
-        [ ( "community_id", Eos.encodeSymbol action.objective.community.symbol )
-        , ( "action_id", encodeId action.id )
-        , ( "objective_id", encodeObjectiveId action.objective.id )
-        , ( "description", Markdown.encode action.description )
-        , ( "reward", Eos.encodeAsset (makeAsset action.reward) )
-        , ( "verifier_reward", Eos.encodeAsset (makeAsset action.verifierReward) )
-        , ( "deadline"
-          , Utils.fromMaybeDateTime action.deadline
-                |> Time.posixToMillis
-                |> Json.Encode.int
-          )
-        , ( "usages", Json.Encode.int action.usages )
-        , ( "usages_left", Json.Encode.int action.usagesLeft )
-        , ( "verifications", Json.Encode.int action.verifications )
-        , ( "verification_type"
-          , action.verificationType
-                |> VerificationType.toString
-                |> String.toLower
-                |> Json.Encode.string
-          )
-        , ( "validators_str"
-          , action.validators
-                |> List.map (\v -> Eos.Account.nameToString v.account)
-                |> String.join "-"
-                |> Json.Encode.string
-          )
-        , ( "is_completed", Eos.encodeEosBool (Eos.boolToEosBool action.isCompleted) )
-        , ( "creator", Eos.Account.encodeName action.creator )
-        , ( "has_proof_photo", Eos.encodeEosBool (Eos.boolToEosBool action.hasProofPhoto) )
-        , ( "has_proof_code", Eos.encodeEosBool (Eos.boolToEosBool action.hasProofCode) )
-        , ( "photo_proof_instructions", Markdown.encode (Maybe.withDefault Markdown.empty action.photoProofInstructions) )
-        , ( "image", Json.Encode.string "" )
-        ]
 
 
 

@@ -1,5 +1,5 @@
 module View.Components exposing
-    ( loadingLogoAnimated, loadingLogoAnimatedFluid, loadingLogoWithCustomText, loadingLogoWithNoText
+    ( loadingLogoAnimated, loadingLogoAnimatedFluid, loadingLogoWithNoText
     , dialogBubble, masonryLayout, keyedMasonryLayout, Breakpoint(..)
     , tooltip, pdfViewer, PdfViewerFileType(..), dateViewer, infiniteList, ElementToTrack(..), label, disablableLink
     , bgNoScroll, PreventScroll(..), keyListener, Key(..), focusTrap, intersectionObserver, pointerListener
@@ -11,7 +11,7 @@ state or configuration, such as loading indicators and containers
 
 # Loading
 
-@docs loadingLogoAnimated, loadingLogoAnimatedFluid, loadingLogoWithCustomText, loadingLogoWithNoText
+@docs loadingLogoAnimated, loadingLogoAnimatedFluid, loadingLogoWithNoText
 
 
 # Containers

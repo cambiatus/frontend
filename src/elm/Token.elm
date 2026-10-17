@@ -9,10 +9,7 @@ module Token exposing
     , encodeExpiryOpts
     , encodeUpdateTokenData
     , expiryOptsDataDecoder
-    , getExpiryOpts
     , getToken
-    , tokenTypeFromString
-    , tokenTypeToString
     , updateTokenDataDecoder
     )
 
@@ -171,22 +168,6 @@ getToken shared symbol toMsg =
         toMsg
 
 
-getExpiryOpts : Shared -> Eos.Symbol -> (Result Http.Error (Maybe ExpiryOptsData) -> msg) -> Cmd msg
-getExpiryOpts shared symbol toMsg =
-    Api.getFromBlockchain shared
-        { code = shared.contracts.token
-        , scope = shared.contracts.token
-        , table = "expiryopts"
-        , limit = 1000
-        }
-        (Decode.field "rows"
-            (Decode.list expiryOptsDataDecoder
-                |> Decode.map (List.filter (.currency >> (==) symbol) >> List.head)
-            )
-        )
-        toMsg
-
-
 
 -- UTILS
 
@@ -199,16 +180,3 @@ tokenTypeToString tokenType =
 
         Expiry ->
             "expiry"
-
-
-tokenTypeFromString : String -> Maybe TokenType
-tokenTypeFromString tokenType =
-    case tokenType of
-        "mcc" ->
-            Just Mcc
-
-        "expiry" ->
-            Just Expiry
-
-        _ ->
-            Nothing

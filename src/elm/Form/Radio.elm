@@ -1,7 +1,7 @@
 module Form.Radio exposing
     ( init, Options
     , withOption
-    , withDisabled, withContainerAttrs, withLabelAttrs, withHiddenRadioButton
+    , withDisabled, withContainerAttrs
     , Direction(..), withDirection
     , getId, getOptionToString
     , view
@@ -34,7 +34,7 @@ module Form.Radio exposing
 
 ## Adding attributes
 
-@docs withDisabled, withContainerAttrs, withLabelAttrs, withHiddenRadioButton
+@docs withDisabled, withContainerAttrs
 
 
 ## Controlling direction
@@ -154,20 +154,6 @@ and the error message
 withContainerAttrs : List (Html.Attribute msg) -> Options option msg -> Options option msg
 withContainerAttrs attrs (Options options) =
     Options { options | containerAttrs = options.containerAttrs ++ attrs }
-
-
-{-| Adds attributes to the label/legend element
--}
-withLabelAttrs : List (Html.Attribute msg) -> Options option msg -> Options option msg
-withLabelAttrs attrs (Options options) =
-    Options { options | labelAttrs = options.labelAttrs ++ attrs }
-
-
-{-| Determine if we should hide the radio button itself and only show the label
--}
-withHiddenRadioButton : Bool -> Options option msg -> Options option msg
-withHiddenRadioButton hideRadioButton (Options options) =
-    Options { options | hideRadioButton = hideRadioButton }
 
 
 

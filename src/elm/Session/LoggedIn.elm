@@ -11,7 +11,6 @@ module Session.LoggedIn exposing
     , hasPermissions
     , init
     , initLogin
-    , isAccount
     , jsAddressToMsg
     , mapExternal
     , mapMsg
@@ -229,7 +228,6 @@ type alias Model =
     , profile : RemoteData (Graphql.Http.Error (Maybe Profile.Model)) Profile.Model
     , showInsufficientPermissionsModal : Bool
     , selectedCommunity : RemoteData (Graphql.Http.Error (Maybe Community.Model)) Community.Model
-    , contributionCount : RemoteData (Graphql.Http.Error (Maybe Int)) Int
     , showUserNav : Bool
     , showLanguageItems : Bool
     , showNotificationModal : Bool
@@ -273,7 +271,6 @@ initModel shared lastKnownPin maybePrivateKey_ accountName authToken =
       , profile = RemoteData.Loading
       , showInsufficientPermissionsModal = False
       , selectedCommunity = RemoteData.Loading
-      , contributionCount = RemoteData.NotAsked
       , showUserNav = False
       , showLanguageItems = False
       , showNotificationModal = False
@@ -306,30 +303,14 @@ type Page
     = Redirect
     | NotFound
     | ComingSoon
+    | AdminMoved
     | Invite
     | Dashboard
     | News (Maybe Int)
     | CommunityAbout
     | CommunityObjectives
-    | CommunitySettings
-    | CommunitySettingsShopCategories
-    | CommunitySettingsInfo
-    | CommunitySettingsNews
-    | CommunitySettingsNewsEditor
-    | CommunitySettingsCurrency
-    | CommunitySettingsFeatures
-    | CommunitySettingsSponsorship
-    | CommunitySettingsSponsorshipFiat
-    | CommunitySettingsSponsorshipThankYouMessage
     | CommunityEditor
     | CommunitySelector
-    | CommunityThankYou
-    | CommunitySponsor
-    | CommunitySupporters
-    | CommunitySettingsObjectives
-    | CommunitySettingsObjectiveEditor
-    | CommunitySettingsActionEditor
-    | CommunitySettingsContacts
     | Claim
     | Notification
     | Settings
@@ -338,7 +319,6 @@ type Page
     | ShopViewer
     | Profile
     | ProfilePublic
-    | ProfileContributions
     | ProfileEditor
     | ProfileAddKyc
     | ProfileClaims
@@ -447,7 +427,7 @@ viewHelper pageMsg page profile_ ({ shared } as model) content =
 
                             showHighlightedNews =
                                 not (Maybe.Extra.isJust news.receipt)
-                                    && not (isAdminPage page)
+                                    && (page /= AdminMoved)
                                     && not isInNewsPage
                                     && not (List.member page [ Join, Invite ])
                         in
@@ -623,6 +603,7 @@ viewPageBody ({ shared } as model) profile_ page content =
             [ Redirect
             , NotFound
             , ComingSoon
+            , AdminMoved
             , Invite
             , CommunitySelector
             , Profile
@@ -1158,23 +1139,6 @@ isActive page route =
             False
 
 
-isAdminPage : Page -> Bool
-isAdminPage page =
-    List.member page
-        [ CommunitySettings
-        , CommunitySettingsInfo
-        , CommunitySettingsNews
-        , CommunitySettingsNewsEditor
-        , CommunitySettingsCurrency
-        , CommunitySettingsFeatures
-        , CommunitySettingsSponsorship
-        , CommunitySettingsSponsorshipFiat
-        , CommunitySettingsSponsorshipThankYouMessage
-        , CommunitySettingsObjectiveEditor
-        , CommunitySettingsActionEditor
-        ]
-
-
 viewFooter : Model -> Html (Msg externalMsg)
 viewFooter ({ shared } as model) =
     let
@@ -1595,9 +1559,6 @@ mapMsg mapFn msg =
         GotTimeInternal time ->
             GotTimeInternal time
 
-        CompletedLoadContributionCount result ->
-            CompletedLoadContributionCount result
-
         ClickedReadHighlightedNews ->
             ClickedReadHighlightedNews
 
@@ -1742,8 +1703,7 @@ mapExternal mapFn msg =
 
 
 type Resource
-    = CommunityResource
-    | ProfileResource
+    = ProfileResource
     | TimeResource
 
 
@@ -1828,16 +1788,6 @@ updateExternal externalMsg ({ shared } as model) =
 
                 TranslationsLoaded ->
                     { defaultResult | broadcastMsg = Just broadcastMsg }
-
-        ReloadResource CommunityResource ->
-            { defaultResult
-                | cmd =
-                    model.selectedCommunity
-                        |> RemoteData.map .symbol
-                        |> RemoteData.toMaybe
-                        |> loadCommunity model
-                        |> Tuple.second
-            }
 
         ReloadResource ProfileResource ->
             { defaultResult
@@ -2011,7 +1961,6 @@ type Msg externalMsg
     | ClickedNavLink
     | ClosedSearch
     | GotTimeInternal Time.Posix
-    | CompletedLoadContributionCount (RemoteData (Graphql.Http.Error (Maybe Int)) (Maybe Int))
     | ClickedReadHighlightedNews
     | ClosedHighlightedNews
     | ReceivedNewHighlightedNews Value
@@ -2230,11 +2179,6 @@ update msg model =
                                     comm
                                     newModel.queuedCommunityFields
                            )
-
-                queryForContributionCount =
-                    internalQuery newModel
-                        (Profile.contributionCountQuery community.symbol model.accountName)
-                        CompletedLoadContributionCount
             in
             { newModel
                 | selectedCommunity = RemoteData.Success newCommunity
@@ -2271,7 +2215,6 @@ update msg model =
                         (Community.fieldsSelectionSet community.symbol newModel.queuedCommunityFields)
                         (CompletedLoadCommunityFields newCommunity)
                     )
-                |> UR.addCmd queryForContributionCount
                 |> UR.addBreadcrumb
                     { type_ = Log.DefaultBreadcrumb
                     , category = msg
@@ -2535,37 +2478,6 @@ update msg model =
 
                 RemoteData.Loading ->
                     UR.init model
-
-        CompletedLoadContributionCount (RemoteData.Success (Just contributionCount)) ->
-            { model | contributionCount = RemoteData.Success contributionCount }
-                |> UR.init
-
-        CompletedLoadContributionCount (RemoteData.Success Nothing) ->
-            { model | contributionCount = RemoteData.Success 0 }
-                |> UR.init
-                |> UR.logImpossible msg
-                    "Got contribution count successfully, but it returned `Nothing`"
-                    (Just model.accountName)
-                    { moduleName = "Session.LoggedIn"
-                    , function = "update"
-                    }
-                    [ Log.contextFromCommunity model.selectedCommunity ]
-
-        CompletedLoadContributionCount (RemoteData.Failure err) ->
-            { model | contributionCount = RemoteData.Failure err }
-                |> UR.init
-                |> UR.logGraphqlError msg
-                    (Just model.accountName)
-                    "Got an error when loading contribution count"
-                    { moduleName = "Session.LoggedIn"
-                    , function = "update"
-                    }
-                    [ Log.contextFromCommunity model.selectedCommunity ]
-                    err
-
-        CompletedLoadContributionCount _ ->
-            model
-                |> UR.init
 
         ClosedHighlightedNews ->
             { model | maybeHighlightedNews = Nothing }
@@ -3109,11 +3021,6 @@ permissions model =
         |> Maybe.withDefault []
 
 
-isAccount : Eos.Name -> Model -> Bool
-isAccount accountName model =
-    Maybe.map .account (profile model) == Just accountName
-
-
 
 -- UNREAD NOTIFICATIONS
 
@@ -3271,9 +3178,6 @@ msgToString msg =
 
         GotFeedbackMsg _ ->
             [ "GotFeedbackMsg" ]
-
-        CompletedLoadContributionCount r ->
-            [ "CompletedLoadContributionCount", UR.remoteDataToString r ]
 
         ClosedHighlightedNews ->
             [ "ClosedHighlightedNews" ]

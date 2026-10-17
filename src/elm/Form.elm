@@ -1,11 +1,11 @@
 module Form exposing
     ( Form
-    , succeed, fail, with, withNoOutput, withDecoration, withNesting, withGroup, withGroupOf3
-    , optional, introspect, list, mapValues, mapOutput, withValidationStrategy, ValidationStrategy(..)
-    , textField, richText, toggle, checkbox, radio, select, file, fileMultiple, datePicker, userPicker, userPickerMultiple, arbitrary, arbitraryWith, unsafeArbitrary
+    , succeed, fail, with, withNoOutput, withDecoration, withGroup
+    , optional, introspect, list, mapValues, mapOutput, ValidationStrategy(..)
+    , textField, richText, toggle, checkbox, radio, select, file, fileMultiple, datePicker, userPicker, arbitrary, arbitraryWith, unsafeArbitrary
     , view, viewWithoutSubmit, Model, init, Msg, update, updateValues, getValue, hasFieldsLoading, msgToString
     , withDisabled, withShowAllErrors
-    , isDisabled, isShowingAllErrors
+    , isShowingAllErrors
     , parse
     )
 
@@ -68,17 +68,17 @@ documentation if you're stuck.
 
 ## Composing
 
-@docs succeed, fail, with, withNoOutput, withDecoration, withNesting, withGroup, withGroupOf3
+@docs succeed, fail, with, withNoOutput, withDecoration, withGroup
 
 
 ## Modifiers
 
-@docs optional, introspect, list, mapValues, mapOutput, withValidationStrategy, ValidationStrategy
+@docs optional, introspect, list, mapValues, mapOutput, ValidationStrategy
 
 
 ## Fields
 
-@docs textField, richText, toggle, checkbox, radio, select, file, fileMultiple, datePicker, userPicker, userPickerMultiple, arbitrary, arbitraryWith, unsafeArbitrary
+@docs textField, richText, toggle, checkbox, radio, select, file, fileMultiple, datePicker, userPicker, arbitrary, arbitraryWith, unsafeArbitrary
 
 
 ## Viewing
@@ -93,7 +93,7 @@ documentation if you're stuck.
 
 ### Checking attributes and state
 
-@docs isDisabled, isShowingAllErrors
+@docs isShowingAllErrors
 
 
 ## Validating
@@ -148,7 +148,6 @@ to set a field's validation strategy to `ValidateOnSubmit`
 -}
 type ValidationStrategy
     = ValidateOnBlur
-    | ValidateOnSubmit
 
 
 {-| A `FilledForm` represents a form with some (dirty) values in it. It also
@@ -467,29 +466,6 @@ userPicker config options =
         }
 
 
-{-| An input that lets you select multiple users. Checkout `Form.UserPicker` for
-more information on what you can do with this field.
--}
-userPickerMultiple :
-    { parser : List Profile.Minimal -> Result String output
-    , value : values -> UserPicker.MultiplePickerModel
-    , update : UserPicker.MultiplePickerModel -> values -> values
-    , externalError : values -> Maybe String
-    }
-    -> UserPicker.Options (Msg values)
-    -> Form msg values output
-userPickerMultiple config options =
-    field
-        (mapBaseField UserPicker.fromMultiplePicker UserPicker.toMultiplePicker
-            >> UserPicker options
-        )
-        { parser = UserPicker.getMultipleProfiles >> config.parser
-        , value = config.value
-        , update = config.update
-        , externalError = config.externalError
-        }
-
-
 
 -- COMPOSING
 
@@ -563,40 +539,6 @@ with new current =
         )
 
 
-{-| Use this if you want to nest forms. If you need to break forms apart for any
-reason (reusability, making it easier to follow, etc.), you can use this function
-to nest them!
-
-    type alias Input =
-        { name : String, address : AddressInput }
-
-    type alias Output =
-        { name : String, address : Address }
-
-    addressForm : Form AddressInput Address
-
-    userForm : Form Input Output
-    userForm =
-        Form.succeed Output
-            |> Form.with nameField
-            |> Form.withNesting
-                { value = .address
-                , update = \address user -> { user | address = address }
-                }
-                addressForm
-
--}
-withNesting :
-    { value : parent -> child
-    , update : child -> parent -> parent
-    }
-    -> Form msg child a
-    -> Form msg parent (a -> b)
-    -> Form msg parent b
-withNesting mappings child parent =
-    with (mapValues mappings child) parent
-
-
 {-| Display two fields as a group. You can pass in arbitrary HTML attributes, as
 long as they don't emit Msgs.
 -}
@@ -627,44 +569,6 @@ withGroup attributes leftSide rightSide current =
                 }
                     :: filledCurrent.fields
             , result = accumulateResults filledLeft.result filledRight.result filledCurrent.result
-            }
-        )
-
-
-{-| Display three fields as a group. You can pass in arbitrary HTML attributes, as
-long as they don't emit Msgs.
--}
-withGroupOf3 :
-    List (Html.Attribute Never)
-    -> Form msg values a
-    -> Form msg values b
-    -> Form msg values c
-    -> Form msg values (a -> b -> c -> d)
-    -> Form msg values d
-withGroupOf3 attributes first second third current =
-    Form
-        (\values ->
-            let
-                filledFirst =
-                    fill first values
-
-                filledSecond =
-                    fill second values
-
-                filledThird =
-                    fill third values
-
-                filledCurrent =
-                    fill current values
-            in
-            { fields =
-                { state = Group attributes (filledFirst.fields ++ filledSecond.fields ++ filledThird.fields)
-                , error = Nothing
-                , validationStrategy = ValidateOnBlur
-                , isRequired = False
-                }
-                    :: filledCurrent.fields
-            , result = accumulateResults3 filledFirst.result filledSecond.result filledThird.result filledCurrent.result
             }
         )
 
@@ -904,30 +808,6 @@ optional form =
         )
 
 
-{-| Change a Form's `ValidationStrategy`. If validating only on submit will
-provide a better UX, do it! Note you can use this on a per field basis:
-
-    Form.succeed User
-        |> Form.with nameField
-        |> Form.with (ageField |> Form.withValidationStrategy Form.ValdiateOnSubmit)
-
--}
-withValidationStrategy : ValidationStrategy -> Form msg values output -> Form msg values output
-withValidationStrategy validationStrategy form =
-    Form
-        (\values ->
-            let
-                filled =
-                    fill form values
-            in
-            { fields =
-                filled.fields
-                    |> List.map (\field_ -> { field_ | validationStrategy = validationStrategy })
-            , result = filled.result
-            }
-        )
-
-
 {-| Just like `with`, but don't consider the result in the final output.
 -}
 withNoOutput : Form msg values x -> Form msg values output -> Form msg values output
@@ -1041,15 +921,6 @@ withShowAllErrors showAllErrors (Model model) =
                         | showAllErrors = showAllErrors
                     }
         }
-
-
-{-| Checks if the form is disabled. It's useful to disable submit buttons when
-using `viewWithoutSubmit` or when some parts of the UI should be disabled when
-the form is disabled.
--}
-isDisabled : Model values -> Bool
-isDisabled (Model model) =
-    model.disabled
 
 
 {-| Checks if the form is showing all errors. This will be true after the user
@@ -1950,43 +1821,6 @@ accumulateResults first second combinator =
     case combinator of
         OptOk fn ->
             OptionalResult.map2 fn first second
-
-        OptErr ( error, errors ) ->
-            OptErr ( error, errors ++ allErrors )
-
-        OptNothing ->
-            case allErrors of
-                error :: errors ->
-                    OptErr ( error, errors )
-
-                [] ->
-                    OptNothing
-
-
-accumulateResults3 :
-    OptionalResult ( String, List String ) a
-    -> OptionalResult ( String, List String ) b
-    -> OptionalResult ( String, List String ) c
-    -> OptionalResult ( String, List String ) (a -> b -> c -> d)
-    -> OptionalResult ( String, List String ) d
-accumulateResults3 first second third combinator =
-    let
-        getErrors result =
-            case result of
-                OptErr ( firstError, otherErrors ) ->
-                    Just (firstError :: otherErrors)
-
-                _ ->
-                    Nothing
-
-        allErrors =
-            [ getErrors first, getErrors second, getErrors third ]
-                |> List.filterMap identity
-                |> List.concat
-    in
-    case combinator of
-        OptOk fn ->
-            OptionalResult.map3 fn first second third
 
         OptErr ( error, errors ) ->
             OptErr ( error, errors ++ allErrors )

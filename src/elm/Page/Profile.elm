@@ -12,7 +12,6 @@ import Api
 import Api.Relay
 import Avatar
 import Cambiatus.Enum.ContactType as ContactType
-import Cambiatus.Enum.CurrencyType
 import Cambiatus.Object
 import Cambiatus.Object.Claim
 import Cambiatus.Object.Network
@@ -61,7 +60,6 @@ type alias Model =
     , profile : RemoteData (QueryError (Graphql.Http.Error (Maybe Profile.Model))) Profile.Model
     , balance : RemoteData (QueryError Http.Error) Community.Balance
     , graphqlInfo : RemoteData (QueryError (Graphql.Http.Error (Maybe GraphqlInfo))) GraphqlInfo
-    , contributionInfo : Maybe ContributionInfo
     , transfersStatus : TransfersStatus
     }
 
@@ -94,7 +92,6 @@ init loggedIn profileName =
             , profile = RemoteData.Loading
             , balance = RemoteData.Loading
             , graphqlInfo = RemoteData.Loading
-            , contributionInfo = Nothing
             , transfersStatus = Loading []
             }
     in
@@ -102,7 +99,6 @@ init loggedIn profileName =
         |> UR.init
         |> fetchProfile
         |> UR.addCmd (LoggedIn.maybeInitWith CompletedLoadCommunity .selectedCommunity loggedIn)
-        |> UR.addExt (LoggedIn.RequestedCommunityField Community.ContributionsField)
 
 
 
@@ -128,12 +124,6 @@ type alias GraphqlInfo =
     }
 
 
-type alias ContributionInfo =
-    { amount : Float
-    , currency : Cambiatus.Enum.CurrencyType.CurrencyType
-    }
-
-
 type VerticalAlign
     = Top
     | Center
@@ -148,7 +138,6 @@ type alias Network =
 type Msg
     = CompletedLoadProfile (RemoteData (Graphql.Http.Error (Maybe Profile.Model)) (Maybe Profile.Model))
     | CompletedLoadCommunity Community.Model
-    | CompletedLoadContributions (List Community.Contribution)
     | CompletedLoadBalance (Result (QueryError Http.Error) Community.Balance)
     | CompletedLoadGraphqlInfo (RemoteData (Graphql.Http.Error (Maybe GraphqlInfo)) (Maybe GraphqlInfo))
     | CompletedLoadUserTransfers (RemoteData (Graphql.Http.Error (Maybe QueryTransfers)) (Maybe QueryTransfers))
@@ -227,27 +216,6 @@ update msg model loggedIn =
                         CompletedLoadGraphqlInfo
                     )
                 |> UR.addExt (fetchTransfers loggedIn community Nothing)
-
-        CompletedLoadContributions contributions ->
-            let
-                userContributions =
-                    contributions
-                        |> List.filter (\contribution -> contribution.user.account == loggedIn.accountName)
-
-                contributionInfo : Maybe ContributionInfo
-                contributionInfo =
-                    case userContributions of
-                        [] ->
-                            Nothing
-
-                        first :: rest ->
-                            Just
-                                { amount = List.map .amount (first :: rest) |> List.sum
-                                , currency = first.currency
-                                }
-            in
-            { model | contributionInfo = contributionInfo }
-                |> UR.init
 
         CompletedLoadBalance (Ok balance) ->
             { model
@@ -671,7 +639,7 @@ viewDetails loggedIn profile balance graphqlInfo model =
                     ]
                 ]
             , if isProfileOwner || isCommunityAdmin then
-                viewHistory loggedIn.shared balance graphqlInfo model.contributionInfo
+                viewHistory loggedIn.shared balance graphqlInfo
 
               else
                 text ""
@@ -861,8 +829,8 @@ viewTransactionList loggedIn transfers =
             )
 
 
-viewHistory : Shared -> Community.Balance -> GraphqlInfo -> Maybe ContributionInfo -> Html msg
-viewHistory shared balance graphqlInfo maybeContributionInfo =
+viewHistory : Shared -> Community.Balance -> GraphqlInfo -> Html msg
+viewHistory shared balance graphqlInfo =
     let
         { t } =
             shared.translators
@@ -898,18 +866,6 @@ viewHistory shared balance graphqlInfo maybeContributionInfo =
                     |> Eos.symbolToSymbolCodeString
                     |> text
                 )
-            , case maybeContributionInfo of
-                Nothing ->
-                    text ""
-
-                Just contributionInfo ->
-                    viewHistoryItem [ text_ "dashboard.my_contributions" ]
-                        (Utils.formatFloat (Just shared.translators) 2 contributionInfo.amount
-                            |> text
-                        )
-                        (Community.currencyTranslationKey contributionInfo
-                            |> text_
-                        )
             , viewHistoryItem [ text_ "profile.history.transfers_number" ]
                 (graphqlInfo.totalTransfers
                     |> String.fromInt
@@ -1069,9 +1025,6 @@ receiveBroadcast broadcastMsg =
         LoggedIn.CommunityLoaded community ->
             Just (CompletedLoadCommunity community)
 
-        LoggedIn.CommunityFieldLoaded _ (Community.ContributionsValue contributions) ->
-            Just (CompletedLoadContributions contributions)
-
         _ ->
             Nothing
 
@@ -1084,9 +1037,6 @@ msgToString msg =
 
         CompletedLoadCommunity _ ->
             [ "CompletedLoadCommunity" ]
-
-        CompletedLoadContributions _ ->
-            [ "CompletedLoadContributions" ]
 
         CompletedLoadBalance r ->
             [ "CompletedLoadBalance", UR.resultToString r ]
