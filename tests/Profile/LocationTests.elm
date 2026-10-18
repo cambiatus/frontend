@@ -3,10 +3,14 @@ module Profile.LocationTests exposing (all)
 import Avatar
 import Cambiatus.Mutation
 import Cambiatus.Object.Session
+import Dict
 import Eos.Account
 import Expect
 import Graphql.Document
+import Graphql.Http
+import Graphql.Http.GraphqlError
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
+import Json.Encode as Encode
 import Markdown
 import Profile
 import Profile.Location as Location exposing (Address, Country(..), Locality, Place)
@@ -25,6 +29,7 @@ all =
         , legacyDocuments
         , startingPlace
         , cepLookup
+        , worldPlaces
         ]
 
 
@@ -536,4 +541,105 @@ cepLookup =
                         (Location.foundLine { street = "", place = Location.emptyPlace, stateCode = Just "RJ" })
                         ""
             ]
+        ]
+
+
+
+-- A WORLD CITY IS NOT A BRAZILIAN CITY
+
+
+worldPlaces : Test
+worldPlaces =
+    let
+        rotterdam : Locality
+        rotterdam =
+            { id = 28141, name = "Rotterdam", kind = "municipality", country = "NL", stateCode = Nothing, code = Nothing }
+
+        savedRotterdam =
+            Just { municipality = rotterdam, bairro = Nothing, bairroText = Nothing, label = "Rotterdam, Países Baixos" }
+
+        startingPlace_ =
+            Location.placeFromSaved { storedText = "Rotterdam, Países Baixos", saved = savedRotterdam }
+
+        original =
+            { place = startingPlace_, address = address }
+
+        isEmptyFields fields =
+            fields == Location.noSaveFields
+    in
+    describe "a place in another country"
+        [ test "only BR and CR countries get a picker" <|
+            \_ ->
+                [ rio, monteverde, rotterdam ]
+                    |> List.map (\locality -> (Location.placeFromSaved { storedText = "x", saved = Just { municipality = locality, bairro = Nothing, bairroText = Nothing, label = "x" } }).country)
+                    |> Expect.equal [ Brazil, CostaRica, Other ]
+        , test "a saved world city starts as text under Outro pais" <|
+            \_ ->
+                Expect.equal
+                    { country = Other, municipality = Nothing, bairro = Nothing, bairroText = "", otherText = "Rotterdam, Países Baixos" }
+                    startingPlace_
+        , test "saving without touching it sends no place and no address" <|
+            \_ ->
+                Location.saveFields { original = original, current = original }
+                    |> isEmptyFields
+                    |> Expect.equal True
+        , test "a changed address sends deliveryAddress only, with no picker field" <|
+            \_ ->
+                Location.saveFields
+                    { original = original
+                    , current = { original | address = { address | number = "11", postalCode = "05054060" } }
+                    }
+                    |> (\fields ->
+                            { location = fields.location
+                            , municipalityId = fields.locationMunicipalityId
+                            , bairroId = fields.locationBairroId
+                            , bairroText = fields.locationBairroText
+                            , sendsAddress = fields.deliveryAddress /= Absent
+                            }
+                       )
+                    |> Expect.equal
+                        { location = Absent
+                        , municipalityId = Absent
+                        , bairroId = Absent
+                        , bairroText = Absent
+                        , sendsAddress = True
+                        }
+        , test "clearing the address sends an explicit null, still no place" <|
+            \_ ->
+                Location.saveFields
+                    { original = original
+                    , current = { original | address = Location.emptyAddress }
+                    }
+                    |> (\fields -> ( fields.deliveryAddress, fields.locationMunicipalityId, fields.location ))
+                    |> Expect.equal ( Null, Absent, Absent )
+        , test "the address of such a place needs a CEP" <|
+            \_ ->
+                Expect.equal
+                    ( Location.validateAddress Other address
+                    , Location.validateAddress Other { address | postalCode = "05054-060" }
+                    , Location.validateAddress Other { address | postalCode = "123" }
+                    )
+                    ( Err [ Location.PostalCodeRequired ]
+                    , Ok (Just { address | postalCode = "05054060" })
+                    , Err [ Location.PostalCodeInvalid ]
+                    )
+        , test "needs_postal_code from the backend is recognised" <|
+            \_ ->
+                let
+                    error details =
+                        Graphql.Http.GraphqlError
+                            (Graphql.Http.GraphqlError.UnparsedData Encode.null)
+                            [ { message = "Could not update user"
+                              , locations = Nothing
+                              , details = Dict.fromList [ ( "details", details ) ]
+                              }
+                            ]
+
+                    needs =
+                        Encode.object [ ( "delivery_address", Encode.list Encode.string [ "needs_postal_code" ] ) ]
+
+                    other =
+                        Encode.object [ ( "location", Encode.list Encode.string [ "bairro_invalid" ] ) ]
+                in
+                Expect.equal ( True, False ) ( Location.needsPostalCode (error needs), Location.needsPostalCode (error other) )
         ]

@@ -6,7 +6,7 @@ module Profile.Location exposing
     , Address, emptyAddress, isAddressEmpty, AddressError(..), validateAddress, looksLikeAddress
     , normalizeCep, PostalLookup, postalLookupQuery, applyLookup, foundLine
     , Saved, EditorData, editorSelectionSet
-    , SaveFields, noSaveFields, legacySaveFields, saveFields
+    , SaveFields, noSaveFields, legacySaveFields, saveFields, needsPostalCode
     )
 
 {-| Everything the profile editor needs to know about where a member is and
@@ -51,7 +51,7 @@ editor.
 
 # Saving
 
-@docs SaveFields, noSaveFields, legacySaveFields, saveFields
+@docs SaveFields, noSaveFields, legacySaveFields, saveFields, needsPostalCode
 
 -}
 
@@ -64,11 +64,14 @@ import Cambiatus.Object.LocationPlace as LocationPlace
 import Cambiatus.Object.PostalCodeAddress as PostalCodeAddress
 import Cambiatus.Object.User as User
 import Cambiatus.Query
+import Dict
 import Eos
 import Eos.Account
+import Graphql.Http
 import Graphql.Operation exposing (RootQuery)
 import Graphql.OptionalArgument as OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
+import Json.Decode
 import Regex
 
 
@@ -114,11 +117,14 @@ type Country
 countryFromCode : String -> Country
 countryFromCode code =
     case code of
+        "BR" ->
+            Brazil
+
         "CR" ->
             CostaRica
 
         _ ->
-            Brazil
+            Other
 
 
 {-| The `country` argument of `localities`; `Nothing` for free text
@@ -179,19 +185,31 @@ placeFromSaved : { storedText : String, saved : Maybe Saved } -> Place
 placeFromSaved { storedText, saved } =
     case saved of
         Just { municipality, bairro, bairroText } ->
-            { country = countryFromCode municipality.country
-            , municipality = Just municipality
-            , bairro = bairro
-            , bairroText = Maybe.withDefault "" bairroText
-            , otherText = ""
-            }
+            case countryFromCode municipality.country of
+                Other ->
+                    -- A world city has no picker here: it shows as text, and
+                    -- saving without touching it sends no place at all
+                    otherPlace storedText
+
+                country ->
+                    { country = country
+                    , municipality = Just municipality
+                    , bairro = bairro
+                    , bairroText = Maybe.withDefault "" bairroText
+                    , otherText = ""
+                    }
 
         Nothing ->
             if cleanText storedText == "" || looksLikeAddress storedText then
                 emptyPlace
 
             else
-                { emptyPlace | country = Other, otherText = cleanText storedText }
+                otherPlace storedText
+
+
+otherPlace : String -> Place
+otherPlace storedText =
+    { emptyPlace | country = Other, otherText = cleanText storedText }
 
 
 {-| Whether the place is a picked município or cantón, the only kind of place a
@@ -438,6 +456,7 @@ type AddressError
     = StreetRequired
     | NumberRequired
     | PostalCodeInvalid
+    | PostalCodeRequired
 
 
 {-| The address to send (`Nothing` when every field is empty, which means "no
@@ -467,6 +486,7 @@ validateAddress country address =
             List.filterMap identity
                 [ errorIf (normalized.street == "") StreetRequired
                 , errorIf (country /= CostaRica && normalized.number == "") NumberRequired
+                , errorIf (country == Other && normalized.postalCode == "") PostalCodeRequired
                 , errorIf (normalized.postalCode /= "" && not postalCodeValid) PostalCodeInvalid
                 ]
     in
@@ -747,7 +767,9 @@ has now (`current`), so a save changes only what the member changed:
     they were all cleared.
   - The legacy `location` only for "Outro país" text or a cleared place.
 
-An address is sent only while the place is a picked município or cantón.
+An address is sent while the place is a picked município or cantón, or a place
+that is only text ("Outro país"): then it is a Brazilian address filed under its
+own CEP, and no picker field goes with it.
 
 -}
 saveFields :
@@ -778,7 +800,15 @@ saveFields { original, current } =
             legacyLocation ""
 
         OtherPlace text ->
-            legacyLocation text
+            let
+                withAddress fields =
+                    if addressChanged then
+                        { fields | deliveryAddress = addressField current }
+
+                    else
+                        fields
+            in
+            withAddress (legacyLocation text)
 
         PickedPlace picked ->
             if placeChanged || addressChanged then
@@ -787,18 +817,24 @@ saveFields { original, current } =
                 , locationBairroId = OptionalArgument.fromMaybe picked.bairroId
                 , locationBairroText = optionalText picked.bairroText
                 , deliveryAddress =
-                    if not addressChanged then
-                        Absent
-
-                    else if isAddressEmpty current.address then
-                        Null
+                    if addressChanged then
+                        addressField current
 
                     else
-                        Present (toInput current.place.country current.address)
+                        Absent
                 }
 
             else
                 noSaveFields
+
+
+addressField : { place : Place, address : Address } -> OptionalArgument Cambiatus.InputObject.DeliveryAddressInput
+addressField { place, address } =
+    if isAddressEmpty address then
+        Null
+
+    else
+        Present (toInput place.country address)
 
 
 toInput : Country -> Address -> Cambiatus.InputObject.DeliveryAddressInput
@@ -853,3 +889,27 @@ placeKey place =
                     else
                         ""
                 }
+
+
+{-| Whether the backend refused the save because the address has no CEP to be
+filed under (`details: {delivery_address: ["needs_postal_code"]}`)
+-}
+needsPostalCode : Graphql.Http.Error a -> Bool
+needsPostalCode error =
+    case error of
+        Graphql.Http.GraphqlError _ errors ->
+            List.any
+                (\graphqlError ->
+                    Dict.get "details" graphqlError.details
+                        |> Maybe.andThen
+                            (Json.Decode.decodeValue
+                                (Json.Decode.at [ "delivery_address" ] (Json.Decode.list Json.Decode.string))
+                                >> Result.toMaybe
+                            )
+                        |> Maybe.withDefault []
+                        |> List.member "needs_postal_code"
+                )
+                errors
+
+        _ ->
+            False

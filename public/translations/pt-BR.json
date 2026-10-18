@@ -821,10 +821,12 @@
           "number": "Número",
           "complement": "Complemento (opcional)",
           "cep": "CEP (opcional)",
+          "cep_required_label": "CEP",
           "directions": "Outras indicações",
           "postal_code_cr": "Código postal (opcional)",
           "needs_city_or_cep": "Digite seu CEP acima ou escolha sua cidade para cadastrar um endereço.",
           "cep_hint": "Digite o CEP e preenchemos a rua, o bairro e a cidade.",
+          "cep_hint_other": "Seu endereço de entrega fica no Brasil. Ele não muda o lugar do seu perfil.",
           "cep_loading": "Buscando o CEP…",
           "cep_not_found": "Não encontramos este CEP. Confira os números ou preencha o endereço abaixo.",
           "cep_unavailable": "A busca de CEP não está disponível agora. Preencha o endereço abaixo.",
@@ -837,6 +839,7 @@
           "number_required": "Escreva o número.",
           "directions_required": "Escreva as indicações para chegar.",
           "cep_invalid": "O CEP tem 8 números.",
+          "cep_required": "Para um endereço no Brasil, digite o CEP.",
           "postal_code_invalid": "O código postal tem 5 números."
         }
       },
