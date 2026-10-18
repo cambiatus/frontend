@@ -456,14 +456,6 @@ viewShopFilter loggedIn model =
         ]
 
 
-{-| Whether "Onde" has anything to offer. While it does, the "Localidade"
-categories are left out of the category filter: they say the same thing.
--}
-hasWhereChips : Model -> Bool
-hasWhereChips model =
-    whereChips model /= Nothing
-
-
 whereChips : Model -> Maybe Where.Chips
 whereChips model =
     Where.chipsIf
@@ -474,11 +466,6 @@ whereChips model =
 whereChipLimit : Int
 whereChipLimit =
     8
-
-
-isLocalidade : Shop.Category.Tree -> Bool
-isLocalidade tree =
-    String.startsWith "localidade" (String.toLower (String.trim (Tree.label tree).name))
 
 
 viewWhere : Translation.Translators -> Model -> Html Msg
@@ -671,12 +658,6 @@ viewFiltersModal loggedIn model =
         categories =
             Community.getField loggedIn.selectedCommunity .shopCategories
                 |> RemoteData.map Tuple.second
-                |> (if hasWhereChips model then
-                        RemoteData.map (List.filter (not << isLocalidade))
-
-                    else
-                        identity
-                   )
     in
     Modal.initWith
         { closeMsg = ClosedFiltersModal
