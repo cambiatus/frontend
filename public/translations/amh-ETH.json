@@ -918,7 +918,10 @@
         "name_label": "ስም",
         "name_placeholder": "የምርት ስም",
         "description_label": "መግለጫ",
-        "description_placeholder": "ምርትዎን ሙሉ በሙሉ ይግለጹ። ለሽያጭ ይረዳል"
+        "description_placeholder": "ምርትዎን ሙሉ በሙሉ ይግለጹ። ለሽያጭ ይረዳል",
+        "type_label": "ዓይነት",
+        "type_product": "ምርት",
+        "type_service": "አገልግሎት"
       },
       "images": {
         "title": "ምስሎች",
@@ -1035,6 +1038,11 @@
       "anywhere": "Qualquer lugar",
       "near_you": "Perto de você",
       "online": "Online"
+    },
+    "type": {
+      "all": "ሁሉም",
+      "products": "ምርቶች",
+      "services": "አገልግሎቶች"
     }
   },
   "dashboard": {

@@ -957,7 +957,10 @@
         "name_label": "Name",
         "name_placeholder": "Product's name",
         "description_label": "Description",
-        "description_placeholder": "Describe your product fully. This will help in sales"
+        "description_placeholder": "Describe your product fully. This will help in sales",
+        "type_label": "Type",
+        "type_product": "Product",
+        "type_service": "Service"
       },
       "images": {
         "title": "Images",
@@ -1074,6 +1077,11 @@
       "anywhere": "Anywhere",
       "near_you": "Near you",
       "online": "Online"
+    },
+    "type": {
+      "all": "All",
+      "products": "Products",
+      "services": "Services"
     }
   },
   "dashboard": {

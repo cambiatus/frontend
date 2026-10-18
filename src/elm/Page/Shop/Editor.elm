@@ -1,9 +1,12 @@
 module Page.Shop.Editor exposing
-    ( Model
+    ( MainInformationFormInput
+    , Model
     , Msg(..)
     , getCurrentStep
     , initCreate
     , initUpdate
+    , mainInformationForm
+    , mainInformationInput
     , maybeSetStep
     , msgToString
     , receiveBroadcast
@@ -12,12 +15,14 @@ module Page.Shop.Editor exposing
     )
 
 import AssocList as Dict
+import Cambiatus.Enum.OfferType as OfferType exposing (OfferType)
 import Cambiatus.Enum.Permission as Permission
 import Community
 import Eos
 import Form
 import Form.Checkbox
 import Form.File
+import Form.Radio
 import Form.RichText
 import Form.Text
 import Form.Toggle
@@ -114,18 +119,28 @@ type Step
 
 
 type alias MainInformationFormInput =
-    { title : String
+    { offerType : OfferType
+    , title : String
     , description : Form.RichText.Model
     }
 
 
 type alias MainInformationFormOutput =
-    { title : String, description : Markdown }
+    { offerType : OfferType, title : String, description : Markdown }
+
+
+mainInformationInput : { product | offerType : OfferType, title : String, description : Markdown } -> MainInformationFormInput
+mainInformationInput product =
+    { offerType = product.offerType
+    , title = product.title
+    , description = Form.RichText.initModel "product-description-editor" (Just product.description)
+    }
 
 
 mainInformationForm : Translation.Translators -> Form.Form msg MainInformationFormInput MainInformationFormOutput
 mainInformationForm ({ t } as translators) =
     Form.succeed MainInformationFormOutput
+        |> Form.with (offerTypeForm translators)
         |> Form.with
             (Form.Text.init
                 { label = t "shop.steps.main_information.name_label"
@@ -159,6 +174,29 @@ mainInformationForm ({ t } as translators) =
                     , externalError = always Nothing
                     }
             )
+
+
+{-| Product or service. Baskets (batches availability) aren't offered here: an
+offer that already is one keeps it until the seller picks Produto or Serviço.
+-}
+offerTypeForm : Translation.Translators -> Form.Form msg { input | offerType : OfferType } OfferType
+offerTypeForm { t } =
+    Form.Radio.init
+        { label = t "shop.steps.main_information.type_label"
+        , id = "product-type-radio"
+        , optionToString = OfferType.toString
+        }
+        |> Form.Radio.withOption OfferType.Simple (text <| t "shop.steps.main_information.type_product")
+        |> Form.Radio.withOption OfferType.Service (text <| t "shop.steps.main_information.type_service")
+        |> Form.Radio.withDirection Form.Radio.Horizontal
+        |> Form.Radio.withContainerAttrs [ class "mb-6" ]
+        |> Form.radio
+            (\string -> OfferType.fromString string |> Maybe.withDefault OfferType.Simple)
+            { parser = Ok
+            , value = .offerType
+            , update = \newType values -> { values | offerType = newType }
+            , externalError = always Nothing
+            }
 
 
 type alias ImagesFormInput =
@@ -453,7 +491,8 @@ initFormData : FormData
 initFormData =
     { mainInformation =
         Form.init
-            { title = ""
+            { offerType = OfferType.Simple
+            , title = ""
             , description = Form.RichText.initModel "product-description-editor" Nothing
             }
     , images = Form.init (Form.File.initMultiple { fileUrls = [], aspectRatio = Nothing })
@@ -471,10 +510,7 @@ initFormData =
 initEditingFormData : Translation.Translators -> Product -> Route.EditSaleStep -> FormData
 initEditingFormData translators product step =
     { mainInformation =
-        Form.init
-            { title = product.title
-            , description = Form.RichText.initModel "product-description-editor" (Just product.description)
-            }
+        Form.init (mainInformationInput product)
     , images =
         Form.File.initMultiple { fileUrls = product.images, aspectRatio = Nothing }
             |> Form.init
@@ -502,15 +538,15 @@ initEditingFormData translators product step =
                 MainInformation
 
             Route.SaleImages ->
-                Images { title = product.title, description = product.description }
+                Images { offerType = product.offerType, title = product.title, description = product.description }
 
             Route.SaleCategories ->
-                Categories { title = product.title, description = product.description }
+                Categories { offerType = product.offerType, title = product.title, description = product.description }
                     product.images
 
             Route.SalePriceAndInventory ->
                 PriceAndInventory
-                    { title = product.title, description = product.description }
+                    { offerType = product.offerType, title = product.title, description = product.description }
                     product.images
                     { categories = List.map .id product.categories, online = product.online }
     }
@@ -1312,7 +1348,8 @@ update msg model loggedIn =
                                     (LoggedIn.mutation
                                         loggedIn
                                         (Shop.createProduct
-                                            { title = mainInformation.title
+                                            { offerType = mainInformation.offerType
+                                            , title = mainInformation.title
                                             , description = mainInformation.description
                                             , images = images
                                             , categories = categoriesOutput.categories
@@ -1337,6 +1374,7 @@ update msg model loggedIn =
                                         loggedIn
                                         (Shop.updateProduct
                                             { id = sale.id
+                                            , offerType = mainInformation.offerType
                                             , title = mainInformation.title
                                             , description = mainInformation.description
                                             , images = images
