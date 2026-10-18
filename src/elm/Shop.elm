@@ -65,6 +65,7 @@ type alias Product =
     , stockTracking : StockTracking
     , creator : Profile.Minimal
     , categories : List Shop.Category.Model
+    , online : Bool
     }
 
 
@@ -144,7 +145,7 @@ encodeTransferSale t =
 productSelectionSet : SelectionSet Product Cambiatus.Object.Product
 productSelectionSet =
     SelectionSet.succeed
-        (\id title description creatorId price symbol images maybeUnits trackStock creator categories ->
+        (\id title description creatorId price symbol images maybeUnits trackStock creator categories online ->
             { id = id
             , title = title
             , description = description
@@ -167,6 +168,7 @@ productSelectionSet =
                     NoTracking
             , creator = creator
             , categories = categories
+            , online = online
             }
         )
         |> with idSelectionSet
@@ -180,6 +182,7 @@ productSelectionSet =
         |> with Cambiatus.Object.Product.trackStock
         |> with (Cambiatus.Object.Product.creator Profile.minimalSelectionSet)
         |> with (Cambiatus.Object.Product.categories Shop.Category.selectionSet)
+        |> with Cambiatus.Object.Product.online
 
 
 productPreviewSelectionSet : SelectionSet ProductPreview Cambiatus.Object.ProductPreview
@@ -276,6 +279,7 @@ createProduct :
     , categories : List Shop.Category.Id
     , price : Float
     , stockTracking : StockTracking
+    , online : Bool
     }
     -> SelectionSet decodesTo Cambiatus.Object.Product
     -> SelectionSet (Maybe decodesTo) RootMutation
@@ -288,6 +292,7 @@ createProduct options selectionSet =
         , categories = options.categories
         , price = options.price
         , stockTracking = options.stockTracking
+        , online = options.online
         }
         selectionSet
 
@@ -303,6 +308,7 @@ updateProduct :
     , categories : List Shop.Category.Id
     , price : Float
     , stockTracking : StockTracking
+    , online : Bool
     }
     -> SelectionSet decodesTo Cambiatus.Object.Product
     -> SelectionSet (Maybe decodesTo) RootMutation
@@ -315,15 +321,16 @@ updateProduct options selectionSet =
         , categories = options.categories
         , price = options.price
         , stockTracking = options.stockTracking
+        , online = options.online
         }
         selectionSet
 
 
 updateProductCategories :
-    { id : Id, categories : List Shop.Category.Id }
+    { id : Id, categories : List Shop.Category.Id, online : Bool }
     -> SelectionSet decodesTo Cambiatus.Object.Product
     -> SelectionSet (Maybe decodesTo) RootMutation
-updateProductCategories { id, categories } selectionSet =
+updateProductCategories { id, categories, online } selectionSet =
     let
         (Id unwrappedId) =
             id
@@ -332,6 +339,7 @@ updateProductCategories { id, categories } selectionSet =
         (\optionals ->
             { optionals
                 | id = Present unwrappedId
+                , online = Present online
                 , categories =
                     categories
                         |> List.map Shop.Category.idToInt
@@ -349,10 +357,11 @@ upsert :
     , categories : List Shop.Category.Id
     , price : Float
     , stockTracking : StockTracking
+    , online : Bool
     }
     -> SelectionSet decodesTo Cambiatus.Object.Product
     -> SelectionSet (Maybe decodesTo) RootMutation
-upsert { id, title, description, images, categories, price, stockTracking } =
+upsert { id, title, description, images, categories, price, stockTracking, online } =
     Mutation.product
         (\_ ->
             { id =
@@ -370,6 +379,7 @@ upsert { id, title, description, images, categories, price, stockTracking } =
             , description = Present (Markdown.toRawString description)
             , images = Present images
             , price = Present price
+            , online = Present online
             , trackStock =
                 case stockTracking of
                     NoTracking ->

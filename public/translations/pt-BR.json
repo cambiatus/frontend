@@ -972,7 +972,9 @@
       },
       "categories": {
         "title": "Categorias",
-        "guidance": "Você pode selecionar uma ou mais categorias para ajudar usuários a achar este produto"
+        "guidance": "Você pode selecionar uma ou mais categorias para ajudar usuários a achar este produto",
+        "online_label": "Oferta online",
+        "online_description": "Aparece em Online no filtro Onde da loja; não precisa de lugar"
       },
       "price_and_inventory": {
         "title": "Preço e Inventário",
