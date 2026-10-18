@@ -965,7 +965,9 @@
       },
       "categories": {
         "title": "Categories",
-        "guidance": "You can select one or more categories to help users find this product"
+        "guidance": "You can select one or more categories to help users find this product",
+        "online_label": "Online offer",
+        "online_description": "Shows under Online in the shop's Where filter; no place needed"
       },
       "price_and_inventory": {
         "title": "Price and Inventory",

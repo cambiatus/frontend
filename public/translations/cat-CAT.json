@@ -968,7 +968,9 @@
       },
       "categories": {
         "title": "Categories",
-        "guidance": "Podeu seleccionar una o més categories per ajudar els usuaris a trobar aquest producte"
+        "guidance": "Podeu seleccionar una o més categories per ajudar els usuaris a trobar aquest producte",
+        "online_label": "Oferta en línia",
+        "online_description": "Apareix a En línia al filtre On de la botiga; no necessita lloc"
       },
       "price_and_inventory": {
         "title": "Preu i Inventari",

@@ -405,6 +405,7 @@ type alias ProductOptionalArguments =
     , description : OptionalArgument String
     , id : OptionalArgument Int
     , images : OptionalArgument (List String)
+    , online : OptionalArgument Bool
     , price : OptionalArgument Float
     , title : OptionalArgument String
     , trackStock : OptionalArgument Bool
@@ -415,6 +416,7 @@ type alias ProductOptionalArguments =
 {-| [Auth required] Upserts a product
 
   - categories - List of categories ID you want to relate to this product
+  - online - Had online, without a place. Absent: unchanged on update, false on create
 
 -}
 product :
@@ -424,10 +426,10 @@ product :
 product fillInOptionals____ object____ =
     let
         filledInOptionals____ =
-            fillInOptionals____ { categories = Absent, description = Absent, id = Absent, images = Absent, price = Absent, title = Absent, trackStock = Absent, units = Absent }
+            fillInOptionals____ { categories = Absent, description = Absent, id = Absent, images = Absent, online = Absent, price = Absent, title = Absent, trackStock = Absent, units = Absent }
 
         optionalArgs____ =
-            [ Argument.optional "categories" filledInOptionals____.categories (Encode.int |> Encode.list), Argument.optional "description" filledInOptionals____.description Encode.string, Argument.optional "id" filledInOptionals____.id Encode.int, Argument.optional "images" filledInOptionals____.images (Encode.string |> Encode.list), Argument.optional "price" filledInOptionals____.price Encode.float, Argument.optional "title" filledInOptionals____.title Encode.string, Argument.optional "trackStock" filledInOptionals____.trackStock Encode.bool, Argument.optional "units" filledInOptionals____.units Encode.int ]
+            [ Argument.optional "categories" filledInOptionals____.categories (Encode.int |> Encode.list), Argument.optional "description" filledInOptionals____.description Encode.string, Argument.optional "id" filledInOptionals____.id Encode.int, Argument.optional "images" filledInOptionals____.images (Encode.string |> Encode.list), Argument.optional "online" filledInOptionals____.online Encode.bool, Argument.optional "price" filledInOptionals____.price Encode.float, Argument.optional "title" filledInOptionals____.title Encode.string, Argument.optional "trackStock" filledInOptionals____.trackStock Encode.bool, Argument.optional "units" filledInOptionals____.units Encode.int ]
                 |> List.filterMap Basics.identity
     in
     Object.selectionForCompositeField "product" optionalArgs____ object____ (Basics.identity >> Decode.nullable)

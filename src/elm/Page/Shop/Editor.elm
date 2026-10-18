@@ -193,11 +193,15 @@ imagesForm translators =
 
 
 type alias CategoriesFormInput =
-    Dict.Dict Shop.Category.Model Bool
+    { selected : Dict.Dict Shop.Category.Model Bool
+    , online : Bool
+    }
 
 
 type alias CategoriesFormOutput =
-    List Shop.Category.Id
+    { categories : List Shop.Category.Id
+    , online : Bool
+    }
 
 
 categoriesForm : Translation.Translators -> List Shop.Category.Tree -> Form.Form msg CategoriesFormInput CategoriesFormOutput
@@ -227,7 +231,7 @@ categoriesForm translators allCategories =
 
                             else
                                 Ok Nothing
-                    , value = \input -> Dict.get category input |> Maybe.withDefault False
+                    , value = \input -> Dict.get category input.selected |> Maybe.withDefault False
                     , update =
                         \input values ->
                             let
@@ -238,14 +242,17 @@ categoriesForm translators allCategories =
                                         |> Maybe.map Utils.Tree.getAllAncestors
                                         |> Maybe.withDefault []
                                         |> List.map Tree.Zipper.label
-                            in
-                            if input then
-                                ancestors
-                                    |> List.foldl (\ancestor -> Dict.insert ancestor True) values
-                                    |> Dict.insert category input
 
-                            else
-                                Dict.insert category input values
+                                selected =
+                                    if input then
+                                        ancestors
+                                            |> List.foldl (\ancestor -> Dict.insert ancestor True) values.selected
+                                            |> Dict.insert category input
+
+                                    else
+                                        Dict.insert category input values.selected
+                            in
+                            { values | selected = selected }
                     , externalError = always Nothing
                     }
 
@@ -272,11 +279,15 @@ categoriesForm translators allCategories =
                             |> Form.mapOutput List.concat
                     )
     in
-    Form.succeed identity
+    Form.succeed CategoriesFormOutput
         |> Form.withNoOutput
             (Form.arbitrary
-                (p [ class "mb-4" ]
-                    [ text <| translators.t "shop.steps.categories.guidance" ]
+                (if List.isEmpty allCategories then
+                    text ""
+
+                 else
+                    p [ class "mb-4" ]
+                        [ text <| translators.t "shop.steps.categories.guidance" ]
                 )
             )
         |> Form.with
@@ -285,6 +296,32 @@ categoriesForm translators allCategories =
                 |> Form.list [ class "flex flex-col gap-y-6" ]
                 |> Form.mapOutput List.concat
             )
+        |> Form.with (onlineForm translators)
+
+
+onlineForm : Translation.Translators -> Form.Form msg { input | online : Bool } Bool
+onlineForm translators =
+    Form.succeed (\online () -> online)
+        |> Form.withGroup [ class "bg-gray-100 rounded-sm p-4 mt-8" ]
+            (Form.Toggle.init
+                { label =
+                    div [ class "text-gray-333 text-base mb-4" ]
+                        [ span [ class "font-bold" ] [ text <| translators.t "shop.steps.categories.online_label" ]
+                        , p [ class "mt-2" ] [ text <| translators.t "shop.steps.categories.online_description" ]
+                        ]
+                , id = "product-online-toggle"
+                }
+                |> Form.Toggle.withContainerAttrs [ class "flex flex-col" ]
+                |> Form.Toggle.withToggleContainerAttrs [ class "ml-0 pl-0" ]
+                |> Form.Toggle.withToggleSide (Form.Toggle.Right { invert = True })
+                |> Form.toggle
+                    { parser = Ok
+                    , value = .online
+                    , update = \newOnline values -> { values | online = newOnline }
+                    , externalError = always Nothing
+                    }
+            )
+            (Form.succeed ())
 
 
 type alias PriceAndInventoryFormInput =
@@ -420,7 +457,7 @@ initFormData =
             , description = Form.RichText.initModel "product-description-editor" Nothing
             }
     , images = Form.init (Form.File.initMultiple { fileUrls = [], aspectRatio = Nothing })
-    , categories = Form.init Dict.empty
+    , categories = Form.init { selected = Dict.empty, online = False }
     , priceAndInventory =
         Form.init
             { price = "0"
@@ -442,9 +479,11 @@ initEditingFormData translators product step =
         Form.File.initMultiple { fileUrls = product.images, aspectRatio = Nothing }
             |> Form.init
     , categories =
-        product.categories
-            |> List.foldl (\category -> Dict.insert category True) Dict.empty
-            |> Form.init
+        Form.init
+            { selected =
+                List.foldl (\category -> Dict.insert category True) Dict.empty product.categories
+            , online = product.online
+            }
     , priceAndInventory =
         Form.init
             { price = Eos.formatSymbolAmount translators product.symbol product.price
@@ -473,7 +512,7 @@ initEditingFormData translators product step =
                 PriceAndInventory
                     { title = product.title, description = product.description }
                     product.images
-                    (List.map .id product.categories)
+                    { categories = List.map .id product.categories, online = product.online }
     }
 
 
@@ -531,9 +570,7 @@ view loggedIn model =
                         shopCategories
                         { isEdit = False
                         , isDisabled = False
-                        , availableSteps =
-                            allRouteSteps
-                                |> removeCategoriesStep shopCategories
+                        , availableSteps = allRouteSteps
                         }
                         model
                         formData
@@ -544,9 +581,7 @@ view loggedIn model =
                         shopCategories
                         { isEdit = False
                         , isDisabled = True
-                        , availableSteps =
-                            allRouteSteps
-                                |> removeCategoriesStep shopCategories
+                        , availableSteps = allRouteSteps
                         }
                         model
                         formData
@@ -557,9 +592,7 @@ view loggedIn model =
                         shopCategories
                         { isEdit = True
                         , isDisabled = False
-                        , availableSteps =
-                            allRouteSteps
-                                |> removeCategoriesStep shopCategories
+                        , availableSteps = allRouteSteps
                         }
                         model
                         formData
@@ -570,9 +603,7 @@ view loggedIn model =
                         shopCategories
                         { isEdit = True
                         , isDisabled = True
-                        , availableSteps =
-                            allRouteSteps
-                                |> removeCategoriesStep shopCategories
+                        , availableSteps = allRouteSteps
                         }
                         model
                         formData
@@ -1243,7 +1274,8 @@ update msg model loggedIn =
                                     (LoggedIn.mutation loggedIn
                                         (Shop.updateProductCategories
                                             { id = sale.id
-                                            , categories = formOutput
+                                            , categories = formOutput.categories
+                                            , online = formOutput.online
                                             }
                                             Shop.idSelectionSet
                                         )
@@ -1271,7 +1303,7 @@ update msg model loggedIn =
                         |> Maybe.map .currentStep
             in
             case maybeCurrentStep of
-                Just (PriceAndInventory mainInformation images categories) ->
+                Just (PriceAndInventory mainInformation images categoriesOutput) ->
                     case model.status of
                         EditingCreate formData ->
                             { model | status = Creating formData }
@@ -1283,9 +1315,10 @@ update msg model loggedIn =
                                             { title = mainInformation.title
                                             , description = mainInformation.description
                                             , images = images
-                                            , categories = categories
+                                            , categories = categoriesOutput.categories
                                             , price = priceAndInventory.price.amount
                                             , stockTracking = priceAndInventory.unitTracking
+                                            , online = categoriesOutput.online
                                             }
                                             Shop.idSelectionSet
                                         )
@@ -1307,9 +1340,10 @@ update msg model loggedIn =
                                             , title = mainInformation.title
                                             , description = mainInformation.description
                                             , images = images
-                                            , categories = categories
+                                            , categories = categoriesOutput.categories
                                             , price = priceAndInventory.price.amount
                                             , stockTracking = priceAndInventory.unitTracking
+                                            , online = categoriesOutput.online
                                             }
                                             Shop.idSelectionSet
                                         )
@@ -1709,15 +1743,6 @@ allRouteSteps =
     , Route.SaleCategories
     , Route.SalePriceAndInventory
     ]
-
-
-removeCategoriesStep : List Shop.Category.Tree -> List Route.EditSaleStep -> List Route.EditSaleStep
-removeCategoriesStep allCategories steps =
-    if List.isEmpty allCategories then
-        List.filter (\step -> step /= Route.SaleCategories) steps
-
-    else
-        steps
 
 
 receiveBroadcast : Translation.Translators -> LoggedIn.BroadcastMsg -> Model -> Maybe Msg

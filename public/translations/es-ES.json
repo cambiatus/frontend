@@ -968,7 +968,9 @@
       },
       "categories": {
         "title": "Categorías",
-        "guidance": "Puede seleccionar una o más categorías para ayudar a los usuarios a encontrar este producto"
+        "guidance": "Puede seleccionar una o más categorías para ayudar a los usuarios a encontrar este producto",
+        "online_label": "Oferta en línea",
+        "online_description": "Aparece en En línea en el filtro Dónde de la tienda; no necesita lugar"
       },
       "price_and_inventory": {
         "title": "Precio y Inventario",
