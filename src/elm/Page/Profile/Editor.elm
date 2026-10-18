@@ -94,6 +94,9 @@ type alias LocationState =
     , typingBairro : Bool
     , cep : CepState
     , showErrors : Bool
+
+    -- The backend said the address has no CEP to be filed under
+    , serverWantsPostalCode : Bool
     , feedback : FeedbackState
     }
 
@@ -712,8 +715,13 @@ viewAddressSection translators state =
         isCostaRica =
             state.place.country == CostaRica
 
+        -- A place that is only text ("Outro país") has a Brazilian address, filed
+        -- under its own CEP
+        hasOwnAddress =
+            isPicked || state.place.country == Other
+
         errors =
-            if state.showErrors && isPicked then
+            if state.showErrors && hasOwnAddress then
                 case Location.validateAddress state.place.country state.address of
                     Ok _ ->
                         []
@@ -738,12 +746,12 @@ viewAddressSection translators state =
     div [ class "mb-10" ]
         [ h2 [ class "font-bold text-lg mb-1" ] [ text (tl translators "address.title") ]
         , p [ class "text-gray-700 mb-4" ] [ text (tl translators "address.private") ]
-        , if state.place.country == Brazil then
+        , if state.place.country == Brazil || state.place.country == Other then
             viewCepField translators state errorFor
 
           else
             text ""
-        , if not isPicked then
+        , if not hasOwnAddress then
             p [ id "location-address-needs-place", class "p-4 rounded bg-gray-100 text-gray-700" ]
                 [ text
                     (if isCostaRica then
@@ -801,11 +809,26 @@ viewCepField translators state errorFor =
     div []
         [ viewTextInput
             { id = "address-postal-code-input"
-            , label = tl translators "address.cep"
+            , label =
+                if state.place.country == Other then
+                    tl translators "address.cep_required_label"
+
+                else
+                    tl translators "address.cep"
             , placeholder = "00000-000"
             , value = state.address.postalCode
             , onInput = ChangedAddress PostalCode
-            , error = errorFor Location.PostalCodeInvalid "errors.cep_invalid"
+            , error =
+                case errorFor Location.PostalCodeRequired "errors.cep_required" of
+                    Just required ->
+                        Just required
+
+                    Nothing ->
+                        if state.serverWantsPostalCode && String.isEmpty (String.trim state.address.postalCode) then
+                            Just (tl translators "errors.cep_required")
+
+                        else
+                            errorFor Location.PostalCodeInvalid "errors.cep_invalid"
             , attrs = [ attribute "inputmode" "numeric", attribute "autocomplete" "postal-code", maxlength 9 ]
             , isTextarea = False
             , translators = translators
@@ -813,7 +836,15 @@ viewCepField translators state errorFor =
         , div [ id "cep-status", attribute "role" "status", attribute "aria-live" "polite", class "-mt-2 mb-4" ]
             [ case state.cep of
                 CepIdle ->
-                    p [ class "text-gray-700 text-sm" ] [ text (tl translators "address.cep_hint") ]
+                    p [ class "text-gray-700 text-sm" ]
+                        [ text
+                            (if state.place.country == Other then
+                                tl translators "address.cep_hint_other"
+
+                             else
+                                tl translators "address.cep_hint"
+                            )
+                        ]
 
                 CepLoading _ ->
                     p [ class "text-gray-700 text-sm" ] [ text (tl translators "address.cep_loading") ]
@@ -1129,15 +1160,33 @@ update msg model loggedIn =
                 |> UR.init
 
         GotSaveResult (RemoteData.Failure e) ->
-            model
-                |> UR.init
-                |> UR.addExt (LoggedIn.UpdatedLoggedIn { loggedIn | profile = RemoteData.Failure e })
-                |> UR.logGraphqlError msg
-                    (Just loggedIn.accountName)
-                    "Got an error when trying to save profile"
-                    { moduleName = "Page.Profile.Editor", function = "update" }
-                    []
-                    e
+            if Location.needsPostalCode e then
+                -- Not a failure of the profile: the member only has to type the CEP
+                withLocation model
+                    (\location ->
+                        setLocation { location | serverWantsPostalCode = True, showErrors = True } model
+                            |> UR.init
+                            |> UR.addExt
+                                (LoggedIn.UpdatedLoggedIn
+                                    { loggedIn
+                                        | profile =
+                                            model.profile
+                                                |> Maybe.map RemoteData.Success
+                                                |> Maybe.withDefault loggedIn.profile
+                                    }
+                                )
+                    )
+
+            else
+                model
+                    |> UR.init
+                    |> UR.addExt (LoggedIn.UpdatedLoggedIn { loggedIn | profile = RemoteData.Failure e })
+                    |> UR.logGraphqlError msg
+                        (Just loggedIn.accountName)
+                        "Got an error when trying to save profile"
+                        { moduleName = "Page.Profile.Editor", function = "update" }
+                        []
+                        e
 
         GotSaveResult _ ->
             UR.init model
@@ -1467,6 +1516,7 @@ initLocation data =
       , typingBairro = place.bairro == Nothing && Location.cleanText place.bairroText /= ""
       , cep = CepIdle
       , showErrors = False
+      , serverWantsPostalCode = False
       , feedback = { isOpen = False, kind = "problem", body = "", status = Writing }
       }
     , request
@@ -1652,7 +1702,8 @@ hasLocationErrors { place, address } =
                 Err _ ->
                     True
     in
-    Location.isPicked place && (bairroInvalid || addressInvalid)
+    (Location.isPicked place && (bairroInvalid || addressInvalid))
+        || (place.country == Other && addressInvalid)
 
 
 receiveBroadcast : LoggedIn.BroadcastMsg -> Maybe Msg

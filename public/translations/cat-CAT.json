@@ -817,10 +817,12 @@
           "number": "Number",
           "complement": "Complement (optional)",
           "cep": "CEP (optional)",
+          "cep_required_label": "CEP",
           "directions": "Other directions",
           "postal_code_cr": "Postal code (optional)",
           "needs_city_or_cep": "Escriu el teu CEP a dalt o tria la teva ciutat per afegir una adreça.",
           "cep_hint": "Escriu el CEP i omplim el carrer, el barri i la ciutat.",
+          "cep_hint_other": "La teva adreça d'entrega és al Brasil. No canvia el lloc del teu perfil.",
           "cep_loading": "Cercant el CEP…",
           "cep_not_found": "No hem trobat aquest CEP. Revisa els números o omple l'adreça a sota.",
           "cep_unavailable": "La cerca de CEP no està disponible ara. Omple l'adreça a sota.",
@@ -833,6 +835,7 @@
           "number_required": "Write the number.",
           "directions_required": "Write the directions to get there.",
           "cep_invalid": "The CEP has 8 digits.",
+          "cep_required": "Per a una adreça al Brasil, escriu el CEP.",
           "postal_code_invalid": "The postal code has 5 digits."
         }
       },

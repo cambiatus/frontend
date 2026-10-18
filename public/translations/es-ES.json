@@ -817,10 +817,12 @@
           "number": "Número",
           "complement": "Complemento (opcional)",
           "cep": "CEP (opcional)",
+          "cep_required_label": "CEP",
           "directions": "Otras señas",
           "postal_code_cr": "Código postal (opcional)",
           "needs_city_or_cep": "Escribe tu CEP arriba o elige tu ciudad para registrar una dirección.",
           "cep_hint": "Escribe el CEP y rellenamos la calle, el barrio y la ciudad.",
+          "cep_hint_other": "Tu dirección de entrega está en Brasil. No cambia el lugar de tu perfil.",
           "cep_loading": "Buscando el CEP…",
           "cep_not_found": "No encontramos este CEP. Revisa los números o completa la dirección abajo.",
           "cep_unavailable": "La búsqueda de CEP no está disponible ahora. Completa la dirección abajo.",
@@ -833,6 +835,7 @@
           "number_required": "Escribe el número.",
           "directions_required": "Escribe las señas para llegar.",
           "cep_invalid": "El CEP tiene 8 números.",
+          "cep_required": "Para una dirección en Brasil, escribe el CEP.",
           "postal_code_invalid": "El código postal tiene 5 números."
         }
       },

@@ -814,10 +814,12 @@
           "number": "Number",
           "complement": "Complement (optional)",
           "cep": "CEP (optional)",
+          "cep_required_label": "CEP",
           "directions": "Other directions",
           "postal_code_cr": "Postal code (optional)",
           "needs_city_or_cep": "Type your CEP above or choose your city to add an address.",
           "cep_hint": "Type the CEP and we fill in the street, neighborhood and city.",
+          "cep_hint_other": "Your delivery address is in Brazil. It does not change the place on your profile.",
           "cep_loading": "Looking up the CEP…",
           "cep_not_found": "We couldn't find this CEP. Check the digits or fill in the address below.",
           "cep_unavailable": "The CEP lookup isn't available right now. Fill in the address below.",
@@ -830,6 +832,7 @@
           "number_required": "Write the number.",
           "directions_required": "Write the directions to get there.",
           "cep_invalid": "The CEP has 8 digits.",
+          "cep_required": "For an address in Brazil, type the CEP.",
           "postal_code_invalid": "The postal code has 5 digits."
         }
       },
