@@ -220,7 +220,7 @@ selectionSet now =
         |> with Claim.id
         |> with (SelectionSet.map claimStatusMap Claim.status)
         |> with (Claim.claimer Profile.minimalSelectionSet)
-        |> with (Claim.action Action.selectionSet)
+        |> with (Claim.action Action.selectionSetWithoutEligibility)
         |> with (Claim.checks (\_ -> { input = Absent }) checkSelectionSet)
         |> with Claim.createdAt
         |> with (SelectionSet.map emptyStringToNothing Claim.proofPhoto)

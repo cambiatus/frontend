@@ -104,12 +104,17 @@ limitNotice =
             \fuzzAction ->
                 withEligibility ClaimEligibilityStatus.Cooldown (Just (plusMs threeDays)) fuzzAction
                     |> Action.limitNotice translators now
-                    |> Expect.equal (Just "community.objectives.claim_limit.cooldown")
+                    |> Expect.equal (Just "community.objectives.claim_limit.cooldown|count=3")
         , fuzz Fuzz.action "shows the cooldown in one day when less than a day is left" <|
             \fuzzAction ->
                 withEligibility ClaimEligibilityStatus.Cooldown (Just (plusMs twoHours)) fuzzAction
                     |> Action.limitNotice translators now
-                    |> Expect.equal (Just "community.objectives.claim_limit.cooldown_one")
+                    |> Expect.equal (Just "community.objectives.claim_limit.cooldown_one|")
+        , fuzz Fuzz.action "is Nothing when the cooldown has already ended" <|
+            \fuzzAction ->
+                withEligibility ClaimEligibilityStatus.Cooldown (Just (plusMs -5000)) fuzzAction
+                    |> Action.limitNotice translators now
+                    |> Expect.equal Nothing
         , fuzz Fuzz.action "is Nothing when the action is available" <|
             \fuzzAction ->
                 withEligibility ClaimEligibilityStatus.Available Nothing fuzzAction
@@ -121,7 +126,7 @@ limitNotice =
 translators : Translation.Translators
 translators =
     { t = identity
-    , tr = \key _ -> key
+    , tr = \key repl -> key ++ "|" ++ String.join "," (List.map (\( k, v ) -> k ++ "=" ++ v) repl)
     }
 
 

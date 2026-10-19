@@ -2,11 +2,10 @@ module Action exposing
     ( Action, Objective
     , Id, idFromInt, idFromString, idToInt, idToString
     , ObjectiveId, objectiveIdSelectionSet, objectiveIdFromInt, objectiveIdToInt
-    , isClosed, isPastDeadline, isObjectiveClosed
-    , selectionSet
+    , isClosed, isPastDeadline, isObjectiveClosed, daysLeft, limitNotice
+    , selectionSet, selectionSetWithoutEligibility
     , ClaimingStatus, notClaiming, startClaiming, Msg, update, ExternalMsg(..), msgToString, jsAddressToMsg
     , viewCard, viewClaimModal
-    , daysLeft, limitNotice
     )
 
 {-|
@@ -32,12 +31,12 @@ module Action exposing
 
 ## Helper functions
 
-@docs isClosed, isPastDeadline, isObjectiveClosed
+@docs isClosed, isPastDeadline, isObjectiveClosed, daysLeft, limitNotice
 
 
 ## GraphQL & EOS
 
-@docs selectionSet
+@docs selectionSet, selectionSetWithoutEligibility
 
 
 ## Claiming actions
@@ -1064,6 +1063,24 @@ claimWithPhotoForm translators =
 
 selectionSet : SelectionSet Action Cambiatus.Object.Action
 selectionSet =
+    actionFieldsSelectionSet
+        |> SelectionSet.with Cambiatus.Object.Action.maxClaimsPerAccount
+        |> SelectionSet.with (Cambiatus.Object.Action.myClaimEligibility claimEligibilitySelectionSet)
+
+
+{-| The same as `selectionSet`, but without the claim limit fields. Use it where the
+eligibility isn't needed (for example, on claim pages), so those queries don't depend on the
+eligibility resolver.
+-}
+selectionSetWithoutEligibility : SelectionSet Action Cambiatus.Object.Action
+selectionSetWithoutEligibility =
+    actionFieldsSelectionSet
+        |> SelectionSet.hardcoded Nothing
+        |> SelectionSet.hardcoded Nothing
+
+
+actionFieldsSelectionSet : SelectionSet (Maybe Int -> Maybe ClaimEligibility -> Action) Cambiatus.Object.Action
+actionFieldsSelectionSet =
     SelectionSet.succeed Action
         |> SelectionSet.with idSelectionSet
         |> SelectionSet.with (Markdown.selectionSet Cambiatus.Object.Action.description)
@@ -1094,8 +1111,6 @@ selectionSet =
         |> SelectionSet.with (Markdown.maybeSelectionSet Cambiatus.Object.Action.photoProofInstructions)
         |> SelectionSet.with Cambiatus.Object.Action.position
         |> SelectionSet.with (Cambiatus.Object.Action.claimCount (\optionals -> { optionals | status = OptionalArgument.Absent }))
-        |> SelectionSet.with Cambiatus.Object.Action.maxClaimsPerAccount
-        |> SelectionSet.with (Cambiatus.Object.Action.myClaimEligibility claimEligibilitySelectionSet)
 
 
 claimEligibilitySelectionSet : SelectionSet ClaimEligibility Cambiatus.Object.ClaimEligibility
@@ -1289,12 +1304,25 @@ limitNotice { t, tr } now action =
                     Just (t "community.objectives.claim_limit.pending")
 
                 ClaimEligibilityStatus.Cooldown ->
-                    case daysLeft now (Utils.fromMaybeDateTime eligibility.availableAt) of
-                        1 ->
+                    case eligibility.availableAt of
+                        Nothing ->
                             Just (tr "community.objectives.claim_limit.cooldown_one" [])
 
-                        days ->
-                            Just (tr "community.objectives.claim_limit.cooldown" [ ( "count", String.fromInt days ) ])
+                        Just _ ->
+                            let
+                                availableAt =
+                                    Utils.fromMaybeDateTime eligibility.availableAt
+                            in
+                            if Time.posixToMillis availableAt <= Time.posixToMillis now then
+                                Nothing
+
+                            else
+                                case daysLeft now availableAt of
+                                    1 ->
+                                        Just (tr "community.objectives.claim_limit.cooldown_one" [])
+
+                                    days ->
+                                        Just (tr "community.objectives.claim_limit.cooldown" [ ( "count", String.fromInt days ) ])
 
                 ClaimEligibilityStatus.Available ->
                     Nothing
