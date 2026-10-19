@@ -10,6 +10,7 @@ module Page.Shop exposing
 
 import Api
 import AssocList as Dict
+import Cambiatus.Enum.OfferType as OfferType exposing (OfferType)
 import Cambiatus.Enum.Permission as Permission
 import Community exposing (Balance)
 import Eos
@@ -57,7 +58,7 @@ init loggedIn filter =
         |> UR.addCmd (Api.getBalances loggedIn.shared loggedIn.accountName CompletedLoadBalances)
         |> UR.addExt
             (LoggedIn.query loggedIn
-                (Shop.productsQuery { user = filter.owner, categories = filter.categories, where_ = Where.Anywhere })
+                (Shop.productsQuery { user = filter.owner, categories = filter.categories, where_ = Where.Anywhere, offerType = Nothing })
                 CompletedSalesLoad
             )
         |> UR.addExt (LoggedIn.RequestedCommunityField Community.ShopCategoriesField)
@@ -78,6 +79,7 @@ type alias Model =
     -- "Onde": the chip chosen, and what the chips are made of
     , placesReleased : Bool
     , chosenWhere : Where
+    , chosenType : Maybe OfferType
     , whereOptions : RemoteData (Graphql.Http.Error Where.Options) Where.Options
     }
 
@@ -90,6 +92,7 @@ initModel filter =
     , isFiltersModalOpen = False
     , placesReleased = False
     , chosenWhere = Where.Anywhere
+    , chosenType = Nothing
     , whereOptions = RemoteData.NotAsked
     , filtersForm =
         Form.init
@@ -370,7 +373,7 @@ view loggedIn model =
 
                 Loaded cards ->
                     if List.isEmpty cards then
-                        if model.currentFilter.owner == Nothing && List.isEmpty model.currentFilter.categories && not (Where.isChosen model.chosenWhere) then
+                        if model.currentFilter.owner == Nothing && List.isEmpty model.currentFilter.categories && not (Where.isChosen model.chosenWhere) && model.chosenType == Nothing then
                             div [ class "container mx-auto px-4 mt-6" ]
                                 [ viewFrozenAccountCard
                                 , viewEmptyState loggedIn community.symbol model
@@ -452,7 +455,58 @@ viewShopFilter : LoggedIn.Model -> Model -> Html Msg
 viewShopFilter loggedIn model =
     div []
         [ viewShopButtons loggedIn model
+        , viewOfferType loggedIn.shared.translators model
         , viewWhere loggedIn.shared.translators model
+        ]
+
+
+viewChip : { isSelected : Bool, label : String, count : Maybe Int, msg : Msg } -> Html Msg
+viewChip { isSelected, label, count, msg } =
+    button
+        [ class "flex items-center gap-x-2 px-4 py-2 rounded-full whitespace-nowrap flex-shrink-0 focus-ring transition-colors"
+        , classList
+            [ ( "bg-orange-100/30 text-orange-500 font-bold", isSelected )
+            , ( "bg-gray-200 text-gray-333 hover:bg-gray-300", not isSelected )
+            ]
+        , Html.Attributes.type_ "button"
+        , Html.Attributes.attribute "aria-pressed"
+            (if isSelected then
+                "true"
+
+             else
+                "false"
+            )
+        , onClick msg
+        ]
+        [ text label
+        , case count of
+            Just amount ->
+                span [ class "text-sm text-gray-700 font-normal" ] [ text (String.fromInt amount) ]
+
+            Nothing ->
+                text ""
+        ]
+
+
+{-| Products and services, natively typed on the offer. Baskets show under "All".
+-}
+viewOfferType : Translation.Translators -> Model -> Html Msg
+viewOfferType { t } model =
+    let
+        chip chosen label =
+            viewChip
+                { isSelected = model.chosenType == chosen
+                , label = label
+                , count = Nothing
+                , msg = ClickedOfferType chosen
+                }
+    in
+    div [ id "shop-offer-type", class "mt-4" ]
+        [ div [ class "flex gap-2 overflow-x-auto pb-2 -mx-4 px-4 md:mx-0 md:px-0 md:flex-wrap" ]
+            [ chip Nothing (t "shop.type.all")
+            , chip (Just OfferType.Simple) (t "shop.type.products")
+            , chip (Just OfferType.Service) (t "shop.type.services")
+            ]
         ]
 
 
@@ -473,34 +527,12 @@ viewWhere { t } model =
     let
         chip : { chosen : Where, label : String, count : Maybe Int } -> Html Msg
         chip { chosen, label, count } =
-            let
-                isSelected =
-                    model.chosenWhere == chosen
-            in
-            button
-                [ class "flex items-center gap-x-2 px-4 py-2 rounded-full whitespace-nowrap flex-shrink-0 focus-ring transition-colors"
-                , classList
-                    [ ( "bg-orange-100/30 text-orange-500 font-bold", isSelected )
-                    , ( "bg-gray-200 text-gray-333 hover:bg-gray-300", not isSelected )
-                    ]
-                , Html.Attributes.type_ "button"
-                , Html.Attributes.attribute "aria-pressed"
-                    (if isSelected then
-                        "true"
-
-                     else
-                        "false"
-                    )
-                , onClick (ClickedWhere chosen)
-                ]
-                [ text label
-                , case count of
-                    Just amount ->
-                        span [ class "text-sm text-gray-700 font-normal" ] [ text (String.fromInt amount) ]
-
-                    Nothing ->
-                        text ""
-                ]
+            viewChip
+                { isSelected = model.chosenWhere == chosen
+                , label = label
+                , count = count
+                , msg = ClickedWhere chosen
+                }
 
         placeLabel place =
             case place.stateCode of
@@ -901,6 +933,7 @@ type Msg
     | CompletedLoadPlaceRelease (RemoteData (Graphql.Http.Error Bool) Bool)
     | CompletedLoadWhereOptions (RemoteData (Graphql.Http.Error Where.Options) Where.Options)
     | ClickedWhere Where
+    | ClickedOfferType (Maybe OfferType)
     | CompletedLoadBalances (Result Http.Error (List Balance))
     | ClickedAcceptCodeOfConduct
     | ClickedScrollToImage { containerId : String, imageId : String }
@@ -979,6 +1012,26 @@ update msg model loggedIn =
                                 { user = model.currentFilter.owner
                                 , categories = model.currentFilter.categories
                                 , where_ = chosen
+                                , offerType = model.chosenType
+                                }
+                            )
+                            CompletedSalesLoad
+                        )
+
+        ClickedOfferType chosen ->
+            if chosen == model.chosenType then
+                UR.init model
+
+            else
+                { model | chosenType = chosen, cards = Loading }
+                    |> UR.init
+                    |> UR.addExt
+                        (LoggedIn.query loggedIn
+                            (Shop.productsQuery
+                                { user = model.currentFilter.owner
+                                , categories = model.currentFilter.categories
+                                , where_ = model.chosenWhere
+                                , offerType = chosen
                                 }
                             )
                             CompletedSalesLoad
@@ -1114,6 +1167,9 @@ msgToString msg =
 
         ClickedWhere _ ->
             [ "ClickedWhere" ]
+
+        ClickedOfferType _ ->
+            [ "ClickedOfferType" ]
 
         CompletedLoadBalances _ ->
             [ "CompletedLoadBalances" ]

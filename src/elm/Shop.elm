@@ -23,6 +23,7 @@ module Shop exposing
     )
 
 import Avatar
+import Cambiatus.Enum.OfferType exposing (OfferType)
 import Cambiatus.Mutation as Mutation
 import Cambiatus.Object
 import Cambiatus.Object.Product
@@ -66,6 +67,7 @@ type alias Product =
     , creator : Profile.Minimal
     , categories : List Shop.Category.Model
     , online : Bool
+    , offerType : OfferType
     }
 
 
@@ -145,7 +147,7 @@ encodeTransferSale t =
 productSelectionSet : SelectionSet Product Cambiatus.Object.Product
 productSelectionSet =
     SelectionSet.succeed
-        (\id title description creatorId price symbol images maybeUnits trackStock creator categories online ->
+        (\id title description creatorId price symbol images maybeUnits trackStock creator categories online offerType ->
             { id = id
             , title = title
             , description = description
@@ -169,6 +171,7 @@ productSelectionSet =
             , creator = creator
             , categories = categories
             , online = online
+            , offerType = offerType
             }
         )
         |> with idSelectionSet
@@ -183,6 +186,7 @@ productSelectionSet =
         |> with (Cambiatus.Object.Product.creator Profile.minimalSelectionSet)
         |> with (Cambiatus.Object.Product.categories Shop.Category.selectionSet)
         |> with Cambiatus.Object.Product.online
+        |> with Cambiatus.Object.Product.type_
 
 
 productPreviewSelectionSet : SelectionSet ProductPreview Cambiatus.Object.ProductPreview
@@ -233,11 +237,12 @@ productPreviewQuery (Id productId) =
     Query.productPreview { id = productId } productPreviewSelectionSet
 
 
-productsQuery : { user : Maybe Eos.Name, categories : List Shop.Category.Id, where_ : Shop.Where.Where } -> SelectionSet (List Product) RootQuery
-productsQuery { user, categories, where_ } =
+productsQuery : { user : Maybe Eos.Name, categories : List Shop.Category.Id, where_ : Shop.Where.Where, offerType : Maybe OfferType } -> SelectionSet (List Product) RootQuery
+productsQuery { user, categories, where_, offerType } =
     Query.products
         (\_ ->
-            { filters =
+            { type_ = Graphql.OptionalArgument.fromMaybe offerType
+            , filters =
                 Present
                     { account =
                         user
@@ -280,6 +285,7 @@ createProduct :
     , price : Float
     , stockTracking : StockTracking
     , online : Bool
+    , offerType : OfferType
     }
     -> SelectionSet decodesTo Cambiatus.Object.Product
     -> SelectionSet (Maybe decodesTo) RootMutation
@@ -293,6 +299,7 @@ createProduct options selectionSet =
         , price = options.price
         , stockTracking = options.stockTracking
         , online = options.online
+        , offerType = options.offerType
         }
         selectionSet
 
@@ -309,6 +316,7 @@ updateProduct :
     , price : Float
     , stockTracking : StockTracking
     , online : Bool
+    , offerType : OfferType
     }
     -> SelectionSet decodesTo Cambiatus.Object.Product
     -> SelectionSet (Maybe decodesTo) RootMutation
@@ -322,6 +330,7 @@ updateProduct options selectionSet =
         , price = options.price
         , stockTracking = options.stockTracking
         , online = options.online
+        , offerType = options.offerType
         }
         selectionSet
 
@@ -358,10 +367,11 @@ upsert :
     , price : Float
     , stockTracking : StockTracking
     , online : Bool
+    , offerType : OfferType
     }
     -> SelectionSet decodesTo Cambiatus.Object.Product
     -> SelectionSet (Maybe decodesTo) RootMutation
-upsert { id, title, description, images, categories, price, stockTracking, online } =
+upsert { id, title, description, images, categories, price, stockTracking, online, offerType } =
     Mutation.product
         (\_ ->
             { id =
@@ -380,6 +390,7 @@ upsert { id, title, description, images, categories, price, stockTracking, onlin
             , images = Present images
             , price = Present price
             , online = Present online
+            , type_ = Present offerType
             , trackStock =
                 case stockTracking of
                     NoTracking ->

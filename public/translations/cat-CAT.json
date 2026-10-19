@@ -960,7 +960,10 @@
         "name_label": "Nom",
         "name_placeholder": "Nom del producte",
         "description_label": "Descripció",
-        "description_placeholder": "Descriu completament el teu producte. Ajudarà amb les vendes"
+        "description_placeholder": "Descriu completament el teu producte. Ajudarà amb les vendes",
+        "type_label": "Tipus",
+        "type_product": "Producte",
+        "type_service": "Servei"
       },
       "images": {
         "title": "Imatges",
@@ -1077,6 +1080,11 @@
       "anywhere": "Qualsevol lloc",
       "near_you": "Prop teu",
       "online": "En línia"
+    },
+    "type": {
+      "all": "Tots",
+      "products": "Productes",
+      "services": "Serveis"
     }
   },
   "dashboard": {

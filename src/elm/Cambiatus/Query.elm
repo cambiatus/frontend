@@ -4,6 +4,7 @@
 
 module Cambiatus.Query exposing (..)
 
+import Cambiatus.Enum.OfferType
 import Cambiatus.InputObject
 import Cambiatus.Interface
 import Cambiatus.Object
@@ -335,10 +336,15 @@ productPreview requiredArgs____ object____ =
 
 
 type alias ProductsOptionalArguments =
-    { filters : OptionalArgument Cambiatus.InputObject.ProductsFilterInput }
+    { filters : OptionalArgument Cambiatus.InputObject.ProductsFilterInput
+    , type_ : OptionalArgument Cambiatus.Enum.OfferType.OfferType
+    }
 
 
 {-| [Auth required] Products in a community
+
+  - type\_ - Only offers of this type. Absent: every type. NULL-typed offers read by `Product.type`
+
 -}
 products :
     (ProductsOptionalArguments -> ProductsOptionalArguments)
@@ -347,10 +353,10 @@ products :
 products fillInOptionals____ object____ =
     let
         filledInOptionals____ =
-            fillInOptionals____ { filters = Absent }
+            fillInOptionals____ { filters = Absent, type_ = Absent }
 
         optionalArgs____ =
-            [ Argument.optional "filters" filledInOptionals____.filters Cambiatus.InputObject.encodeProductsFilterInput ]
+            [ Argument.optional "filters" filledInOptionals____.filters Cambiatus.InputObject.encodeProductsFilterInput, Argument.optional "type" filledInOptionals____.type_ (Encode.enum Cambiatus.Enum.OfferType.toString) ]
                 |> List.filterMap Basics.identity
     in
     Object.selectionForCompositeField "products" optionalArgs____ object____ (Basics.identity >> Decode.list)

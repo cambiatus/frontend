@@ -960,7 +960,10 @@
         "name_label": "Nombre",
         "name_placeholder": "Nombre del producto",
         "description_label": "Descripción",
-        "description_placeholder": "Describa completamente su producto. Ayudará con las ventas"
+        "description_placeholder": "Describa completamente su producto. Ayudará con las ventas",
+        "type_label": "Tipo",
+        "type_product": "Producto",
+        "type_service": "Servicio"
       },
       "images": {
         "title": "Imágenes",
@@ -1077,6 +1080,11 @@
       "anywhere": "Cualquier lugar",
       "near_you": "Cerca de ti",
       "online": "En línea"
+    },
+    "type": {
+      "all": "Todos",
+      "products": "Productos",
+      "services": "Servicios"
     }
   },
   "dashboard": {

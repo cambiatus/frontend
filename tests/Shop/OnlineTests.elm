@@ -1,5 +1,6 @@
 module Shop.OnlineTests exposing (all)
 
+import Cambiatus.Enum.OfferType as OfferType
 import Expect
 import Graphql.Document
 import Markdown
@@ -37,6 +38,7 @@ all =
                             , price = 10
                             , stockTracking = Shop.NoTracking
                             , online = True
+                            , offerType = OfferType.Simple
                             }
                             Shop.idSelectionSet
                             |> Graphql.Document.serializeMutation
@@ -67,6 +69,7 @@ createMutation online =
         , price = 10
         , stockTracking = Shop.NoTracking
         , online = online
+        , offerType = OfferType.Simple
         }
         Shop.idSelectionSet
         |> Graphql.Document.serializeMutation

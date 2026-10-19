@@ -4,6 +4,7 @@
 
 module Cambiatus.Object.Product exposing (..)
 
+import Cambiatus.Enum.OfferType
 import Cambiatus.InputObject
 import Cambiatus.Interface
 import Cambiatus.Object
@@ -108,6 +109,13 @@ title =
 trackStock : SelectionSet Bool Cambiatus.Object.Product
 trackStock =
     Object.selectionForField "Bool" "trackStock" [] Decode.bool
+
+
+{-| Product, service or basket; inferred for offers saved without one
+-}
+type_ : SelectionSet Cambiatus.Enum.OfferType.OfferType Cambiatus.Object.Product
+type_ =
+    Object.selectionForField "Enum.OfferType.OfferType" "type" [] Cambiatus.Enum.OfferType.decoder
 
 
 units : SelectionSet (Maybe Int) Cambiatus.Object.Product
