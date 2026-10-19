@@ -2,8 +2,8 @@ module Action exposing
     ( Action, Objective
     , Id, idFromInt, idFromString, idToInt, idToString
     , ObjectiveId, objectiveIdSelectionSet, objectiveIdFromInt, objectiveIdToInt
-    , isClosed, isPastDeadline, isObjectiveClosed
-    , selectionSet
+    , isClosed, isPastDeadline, isObjectiveClosed, daysLeft, limitNotice
+    , selectionSet, selectionSetWithoutEligibility
     , ClaimingStatus, notClaiming, startClaiming, Msg, update, ExternalMsg(..), msgToString, jsAddressToMsg
     , viewCard, viewClaimModal
     )
@@ -31,12 +31,12 @@ module Action exposing
 
 ## Helper functions
 
-@docs isClosed, isPastDeadline, isObjectiveClosed
+@docs isClosed, isPastDeadline, isObjectiveClosed, daysLeft, limitNotice
 
 
 ## GraphQL & EOS
 
-@docs selectionSet
+@docs selectionSet, selectionSetWithoutEligibility
 
 
 ## Claiming actions
@@ -52,10 +52,12 @@ module Action exposing
 
 import Auth
 import Browser.Dom
+import Cambiatus.Enum.ClaimEligibilityStatus as ClaimEligibilityStatus exposing (ClaimEligibilityStatus)
 import Cambiatus.Enum.Permission as Permission exposing (Permission)
 import Cambiatus.Enum.VerificationType as VerificationType exposing (VerificationType)
 import Cambiatus.Object
 import Cambiatus.Object.Action
+import Cambiatus.Object.ClaimEligibility
 import Cambiatus.Object.Community
 import Cambiatus.Object.Objective
 import Cambiatus.Scalar exposing (DateTime)
@@ -111,6 +113,15 @@ type alias Action =
     , photoProofInstructions : Maybe Markdown
     , position : Maybe Int
     , claimCount : Int
+    , maxClaimsPerAccount : Maybe Int
+    , myClaimEligibility : Maybe ClaimEligibility
+    }
+
+
+type alias ClaimEligibility =
+    { status : ClaimEligibilityStatus
+    , availableAt : Maybe DateTime
+    , approvedCount : Int
     }
 
 
@@ -541,9 +552,23 @@ updateClaimingAction msg action proof { position } loggedIn =
                             )
 
         CompletedClaimingAction (Err val) ->
+            let
+                raw =
+                    Json.Encode.encode 0 val
+
+                failureText =
+                    if String.contains "claim limit reached" raw then
+                        loggedIn.shared.translators.t "community.objectives.claim_limit.failed_limit"
+
+                    else if String.contains "reclaim cooldown until" raw then
+                        loggedIn.shared.translators.t "community.objectives.claim_limit.failed_cooldown"
+
+                    else
+                        loggedIn.shared.translators.t "dashboard.check_claim.failure"
+            in
             NotClaiming
                 |> UR.init
-                |> UR.addExt (ShowFeedback (View.Feedback.Visible View.Feedback.Failure (loggedIn.shared.translators.t "dashboard.check_claim.failure")))
+                |> UR.addExt (ShowFeedback (View.Feedback.Visible View.Feedback.Failure failureText))
                 |> UR.addExt (SetUpdateTimeEvery (60 * 1000))
                 |> UR.logJsonValue (GotClaimingActionMsg msg)
                     (Just loggedIn.accountName)
@@ -571,8 +596,11 @@ viewCard loggedIn { containerAttrs, position, toMsg } action =
         ({ t, tr } as translators) =
             loggedIn.shared.translators
 
+        maybeLimitNotice =
+            limitNotice translators loggedIn.shared.now action
+
         canBeClaimed =
-            isClaimable action && isOpenForNewClaims action loggedIn.shared.now
+            isClaimable action && isOpenForNewClaims action loggedIn.shared.now && maybeLimitNotice == Nothing
     in
     li (class "bg-white rounded self-start w-full flex-shrink-0" :: containerAttrs)
         [ case action.image of
@@ -639,16 +667,22 @@ viewCard loggedIn { containerAttrs, position, toMsg } action =
                             ]
                         , text (Eos.symbolToSymbolCodeString action.objective.community.symbol)
                         ]
+                    , viewClaimProgress translators action
                     ]
                 ]
-            , if not (isOpenForNewClaims action loggedIn.shared.now) then
-                viewNotAbleToClaimNotice (t "community.objectives.action_completed_notice")
+            , case maybeLimitNotice of
+                Just notice ->
+                    viewNotAbleToClaimNotice notice
 
-              else if not (isClaimable action) then
-                viewNotAbleToClaimNotice (t "community.objectives.action_automatic_notice")
+                Nothing ->
+                    if not (isOpenForNewClaims action loggedIn.shared.now) then
+                        viewNotAbleToClaimNotice (t "community.objectives.action_completed_notice")
 
-              else
-                text ""
+                    else if not (isClaimable action) then
+                        viewNotAbleToClaimNotice (t "community.objectives.action_automatic_notice")
+
+                    else
+                        text ""
             , div
                 [ class "grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2"
                 , classList [ ( "sm:grid-cols-1", not canBeClaimed ) ]
@@ -738,6 +772,27 @@ viewNotAbleToClaimNotice noticeText =
             []
         , span [ class "text-sm text-gray-900" ] [ text noticeText ]
         ]
+
+
+viewClaimProgress : Translation.Translators -> Action -> Html msg
+viewClaimProgress { tr } action =
+    case ( action.maxClaimsPerAccount, action.myClaimEligibility ) of
+        ( Just maxClaims, Just eligibility ) ->
+            if maxClaims > 1 && eligibility.status == ClaimEligibilityStatus.Available && eligibility.approvedCount > 0 then
+                span [ class "text-sm text-gray-900" ]
+                    [ text
+                        (tr "community.objectives.claim_limit.progress"
+                            [ ( "done", String.fromInt eligibility.approvedCount )
+                            , ( "max", String.fromInt maxClaims )
+                            ]
+                        )
+                    ]
+
+            else
+                text ""
+
+        _ ->
+            text ""
 
 
 viewClaimModal : Shared -> ClaimingStatus -> Html Msg
@@ -1008,6 +1063,24 @@ claimWithPhotoForm translators =
 
 selectionSet : SelectionSet Action Cambiatus.Object.Action
 selectionSet =
+    actionFieldsSelectionSet
+        |> SelectionSet.with Cambiatus.Object.Action.maxClaimsPerAccount
+        |> SelectionSet.with (Cambiatus.Object.Action.myClaimEligibility claimEligibilitySelectionSet)
+
+
+{-| The same as `selectionSet`, but without the claim limit fields. Use it where the
+eligibility isn't needed (for example, on claim pages), so those queries don't depend on the
+eligibility resolver.
+-}
+selectionSetWithoutEligibility : SelectionSet Action Cambiatus.Object.Action
+selectionSetWithoutEligibility =
+    actionFieldsSelectionSet
+        |> SelectionSet.hardcoded Nothing
+        |> SelectionSet.hardcoded Nothing
+
+
+actionFieldsSelectionSet : SelectionSet (Maybe Int -> Maybe ClaimEligibility -> Action) Cambiatus.Object.Action
+actionFieldsSelectionSet =
     SelectionSet.succeed Action
         |> SelectionSet.with idSelectionSet
         |> SelectionSet.with (Markdown.selectionSet Cambiatus.Object.Action.description)
@@ -1038,6 +1111,14 @@ selectionSet =
         |> SelectionSet.with (Markdown.maybeSelectionSet Cambiatus.Object.Action.photoProofInstructions)
         |> SelectionSet.with Cambiatus.Object.Action.position
         |> SelectionSet.with (Cambiatus.Object.Action.claimCount (\optionals -> { optionals | status = OptionalArgument.Absent }))
+
+
+claimEligibilitySelectionSet : SelectionSet ClaimEligibility Cambiatus.Object.ClaimEligibility
+claimEligibilitySelectionSet =
+    SelectionSet.succeed ClaimEligibility
+        |> SelectionSet.with Cambiatus.Object.ClaimEligibility.status
+        |> SelectionSet.with Cambiatus.Object.ClaimEligibility.availableAt
+        |> SelectionSet.with Cambiatus.Object.ClaimEligibility.approvedCount
 
 
 emptyStringToNothing : Maybe String -> Maybe String
@@ -1192,6 +1273,59 @@ isOpenForNewClaims action now =
     not (isClosed action now)
         && not action.isCompleted
         && not (isObjectiveClosed action)
+
+
+{-| Whole days until `availableAt`, rounded up, and never less than one
+-}
+daysLeft : Time.Posix -> Time.Posix -> Int
+daysLeft now availableAt =
+    let
+        msLeft =
+            Time.posixToMillis availableAt - Time.posixToMillis now
+    in
+    max 1 (ceiling (toFloat msLeft / 86400000))
+
+
+{-| The message explaining why a member can't claim this action because of a claim limit.
+`Nothing` means the member may claim it.
+-}
+limitNotice : Translation.Translators -> Time.Posix -> Action -> Maybe String
+limitNotice { t, tr } now action =
+    case action.myClaimEligibility of
+        Nothing ->
+            Nothing
+
+        Just eligibility ->
+            case eligibility.status of
+                ClaimEligibilityStatus.Completed ->
+                    Just (t "community.objectives.claim_limit.completed")
+
+                ClaimEligibilityStatus.Pending ->
+                    Just (t "community.objectives.claim_limit.pending")
+
+                ClaimEligibilityStatus.Cooldown ->
+                    case eligibility.availableAt of
+                        Nothing ->
+                            Just (tr "community.objectives.claim_limit.cooldown_one" [])
+
+                        Just _ ->
+                            let
+                                availableAt =
+                                    Utils.fromMaybeDateTime eligibility.availableAt
+                            in
+                            if Time.posixToMillis availableAt <= Time.posixToMillis now then
+                                Nothing
+
+                            else
+                                case daysLeft now availableAt of
+                                    1 ->
+                                        Just (tr "community.objectives.claim_limit.cooldown_one" [])
+
+                                    days ->
+                                        Just (tr "community.objectives.claim_limit.cooldown" [ ( "count", String.fromInt days ) ])
+
+                ClaimEligibilityStatus.Available ->
+                    Nothing
 
 
 shareActionButtonId : Id -> String
