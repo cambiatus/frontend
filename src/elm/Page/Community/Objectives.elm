@@ -199,9 +199,13 @@ update msg model loggedIn =
                                     identity
 
                                 Just ( action, position ) ->
-                                    Action.startClaiming { position = Just position } action
-                                        |> LoggedIn.ExternalActionMsg
-                                        |> UR.addExt
+                                    if Action.limitNotice loggedIn.shared.translators loggedIn.shared.now action == Nothing then
+                                        Action.startClaiming { position = Just position } action
+                                            |> LoggedIn.ExternalActionMsg
+                                            |> UR.addExt
+
+                                    else
+                                        identity
             in
             model
                 |> UR.init
