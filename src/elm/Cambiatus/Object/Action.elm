@@ -114,6 +114,18 @@ isCompleted =
     Object.selectionForField "Bool" "isCompleted" [] Decode.bool
 
 
+maxClaimsPerAccount : SelectionSet (Maybe Int) Cambiatus.Object.Action
+maxClaimsPerAccount =
+    Object.selectionForField "(Maybe Int)" "maxClaimsPerAccount" [] (Decode.int |> Decode.nullable)
+
+
+myClaimEligibility :
+    SelectionSet decodesTo Cambiatus.Object.ClaimEligibility
+    -> SelectionSet (Maybe decodesTo) Cambiatus.Object.Action
+myClaimEligibility object____ =
+    Object.selectionForCompositeField "myClaimEligibility" [] object____ (Basics.identity >> Decode.nullable)
+
+
 objective :
     SelectionSet decodesTo Cambiatus.Object.Objective
     -> SelectionSet decodesTo Cambiatus.Object.Action
@@ -129,6 +141,11 @@ photoProofInstructions =
 position : SelectionSet (Maybe Int) Cambiatus.Object.Action
 position =
     Object.selectionForField "(Maybe Int)" "position" [] (Decode.int |> Decode.nullable)
+
+
+reclaimCooldown : SelectionSet (Maybe Int) Cambiatus.Object.Action
+reclaimCooldown =
+    Object.selectionForField "(Maybe Int)" "reclaimCooldown" [] (Decode.int |> Decode.nullable)
 
 
 reward : SelectionSet Float Cambiatus.Object.Action

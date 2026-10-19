@@ -141,6 +141,8 @@ action action_ =
         |> andMap (maybe Markdown.shrink action_.photoProofInstructions)
         |> andMap (maybe int action_.position)
         |> andMap (int action_.claimCount)
+        |> andMap (maybe int action_.maxClaimsPerAccount)
+        |> andMap (noShrink action_.myClaimEligibility)
 
 
 

@@ -380,10 +380,14 @@ type alias PreferenceOptionalArguments =
     , digest : OptionalArgument Bool
     , language : OptionalArgument Cambiatus.Enum.Language.Language
     , transferNotification : OptionalArgument Bool
+    , validatorEmail : OptionalArgument String
     }
 
 
 {-| [Auth required] A mutation to set the preferences of the logged user
+
+  - validatorEmail - How often a validator gets the claim queue email: immediate, daily, weekly or off
+
 -}
 preference :
     (PreferenceOptionalArguments -> PreferenceOptionalArguments)
@@ -392,10 +396,10 @@ preference :
 preference fillInOptionals____ object____ =
     let
         filledInOptionals____ =
-            fillInOptionals____ { claimNotification = Absent, digest = Absent, language = Absent, transferNotification = Absent }
+            fillInOptionals____ { claimNotification = Absent, digest = Absent, language = Absent, transferNotification = Absent, validatorEmail = Absent }
 
         optionalArgs____ =
-            [ Argument.optional "claimNotification" filledInOptionals____.claimNotification Encode.bool, Argument.optional "digest" filledInOptionals____.digest Encode.bool, Argument.optional "language" filledInOptionals____.language (Encode.enum Cambiatus.Enum.Language.toString), Argument.optional "transferNotification" filledInOptionals____.transferNotification Encode.bool ]
+            [ Argument.optional "claimNotification" filledInOptionals____.claimNotification Encode.bool, Argument.optional "digest" filledInOptionals____.digest Encode.bool, Argument.optional "language" filledInOptionals____.language (Encode.enum Cambiatus.Enum.Language.toString), Argument.optional "transferNotification" filledInOptionals____.transferNotification Encode.bool, Argument.optional "validatorEmail" filledInOptionals____.validatorEmail Encode.string ]
                 |> List.filterMap Basics.identity
     in
     Object.selectionForCompositeField "preference" optionalArgs____ object____ (Basics.identity >> Decode.nullable)

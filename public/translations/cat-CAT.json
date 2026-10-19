@@ -590,7 +590,16 @@
         "description": "Les reclamacions, les accions i els objectius estan desactivats en aquesta comunitat."
       },
       "action_completed_notice": "Aquesta acció s'ha completat i no està disponible per a reclamacions noves",
-      "action_automatic_notice": "Aquesta acció no es pot reclamar, rebràs la recompensa automàticament un cop feta l'acció"
+      "action_automatic_notice": "Aquesta acció no es pot reclamar, rebràs la recompensa automàticament un cop feta l'acció",
+      "claim_limit": {
+        "completed": "Done",
+        "pending": "In review",
+        "cooldown": "Try again in {{count}} days",
+        "cooldown_one": "Try again in 1 day",
+        "progress": "{{done}} of {{max}}",
+        "failed_limit": "You've already claimed this action as many times as allowed.",
+        "failed_cooldown": "You're still in this action's waiting period."
+      }
     },
     "actions": {
       "title": "Acció",

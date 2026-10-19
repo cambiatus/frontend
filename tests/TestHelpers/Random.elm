@@ -310,6 +310,8 @@ action =
         |> with (maybe (Markdown.generator string))
         |> with (maybe (Random.int 0 Random.maxInt))
         |> with (Random.int 0 Random.maxInt)
+        |> with (Random.constant Nothing)
+        |> with (Random.constant Nothing)
 
 
 

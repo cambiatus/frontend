@@ -37,6 +37,10 @@ type ClaimEdge
     = ClaimEdge
 
 
+type ClaimEligibility
+    = ClaimEligibility
+
+
 type Community
     = Community
 

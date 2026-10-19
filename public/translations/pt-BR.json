@@ -594,7 +594,16 @@
         "description": "Reivindicações, ações e objetivos estão desativados nesta comunidade."
       },
       "action_completed_notice": "Essa ação foi completada e não está disponível para novas reivindicações",
-      "action_automatic_notice": "Essa ação não pode ser reivindicada, você receberá a recompensa automaticamente assim que a ação for feita"
+      "action_automatic_notice": "Essa ação não pode ser reivindicada, você receberá a recompensa automaticamente assim que a ação for feita",
+      "claim_limit": {
+        "completed": "Concluída",
+        "pending": "Em análise",
+        "cooldown": "Pode tentar de novo em {{count}} dias",
+        "cooldown_one": "Pode tentar de novo em 1 dia",
+        "progress": "{{done}} de {{max}}",
+        "failed_limit": "Você já reivindicou esta ação o número máximo de vezes.",
+        "failed_cooldown": "Você ainda está no período de espera desta ação."
+      }
     },
     "actions": {
       "title": "Ação",

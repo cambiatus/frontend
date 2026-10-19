@@ -548,7 +548,16 @@
         "description": "የማህበረሰቡ ጥያቄ፣ተግባራት እና ዓላማዎች ተከልክለዋል."
       },
       "action_completed_notice": "ይህ እርምጃ የተጠናቀቀ ሲሆን ለአዲስ የይገባኛል ጥያቄዎች አይገኝም",
-      "action_automatic_notice": "ይህ ድርጊት የይገባኛል ጥያቄ ሊነሳ አይችልም፣ እርምጃው ከተፈጸመ በኋላ ሽልማቱን በራስ-ሰር ያገኛሉ"
+      "action_automatic_notice": "ይህ ድርጊት የይገባኛል ጥያቄ ሊነሳ አይችልም፣ እርምጃው ከተፈጸመ በኋላ ሽልማቱን በራስ-ሰር ያገኛሉ",
+      "claim_limit": {
+        "completed": "Done",
+        "pending": "In review",
+        "cooldown": "Try again in {{count}} days",
+        "cooldown_one": "Try again in 1 day",
+        "progress": "{{done}} of {{max}}",
+        "failed_limit": "You've already claimed this action as many times as allowed.",
+        "failed_cooldown": "You're still in this action's waiting period."
+      }
     },
     "actions": {
       "title": "Action",
