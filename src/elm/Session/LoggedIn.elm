@@ -1707,7 +1707,6 @@ mapExternal mapFn msg =
 
 type Resource
     = ProfileResource
-    | TimeResource
 
 
 updateExternal :
@@ -1799,9 +1798,6 @@ updateExternal externalMsg ({ shared } as model) =
                         (Profile.query model.accountName)
                         CompletedLoadProfile
             }
-
-        ReloadResource TimeResource ->
-            { defaultResult | cmd = Task.perform GotTimeInternal Time.now }
 
         RequestedCommunityField field ->
             case model.selectedCommunity of

@@ -8,7 +8,6 @@ module Claim exposing
     , Msg(..)
     , Paginated
     , claimPaginatedSelectionSet
-    , encodeVerification
     , initClaimProfileSummaries
     , isOpenForVotes
     , isValidated
@@ -20,7 +19,6 @@ module Claim exposing
     , updateProfileSummaries
     , viewClaimCard
     , viewPhotoModal
-    , viewVoteClaimModal
     , viewVotingProgress
     )
 
@@ -40,17 +38,16 @@ import Eos.Account as Eos
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Html exposing (Html, a, button, div, p, span, strong, text)
-import Html.Attributes exposing (class, classList, disabled, href, id, style, target)
-import Html.Events exposing (onClick)
+import Html.Attributes exposing (class, classList, href, id, style, target)
 import Icons
-import Json.Encode as Encode
 import List.Extra as List
 import Markdown
 import Profile
 import Profile.Summary
+import ReviewMoved
 import Route
 import Session.LoggedIn as LoggedIn
-import Session.Shared exposing (Shared, Translators)
+import Session.Shared exposing (Shared)
 import Time
 import Utils
 import View.Components
@@ -70,9 +67,7 @@ type alias Model =
 
 
 type ModalStatus
-    = Loading ClaimId Bool
-    | VoteConfirmationModal ClaimId Bool
-    | PhotoModal Model
+    = PhotoModal Model
     | Closed
 
 
@@ -161,31 +156,6 @@ pendingValidators claim =
                 |> not
         )
         claim.action.validators
-
-
-encodeVerification : ClaimId -> Eos.Name -> Bool -> Eos.Symbol -> Encode.Value
-encodeVerification claimId validator vote communityId =
-    let
-        encodedClaimId : Encode.Value
-        encodedClaimId =
-            Encode.int claimId
-
-        encodedVerifier : Encode.Value
-        encodedVerifier =
-            Eos.encodeName validator
-
-        encodedVote : Encode.Value
-        encodedVote =
-            vote
-                |> Eos.boolToEosBool
-                |> Eos.encodeEosBool
-    in
-    Encode.object
-        [ ( "community_id", Eos.encodeSymbol communityId )
-        , ( "claim_id", encodedClaimId )
-        , ( "verifier", encodedVerifier )
-        , ( "vote", encodedVote )
-        ]
 
 
 
@@ -362,18 +332,8 @@ type ProfileSummaryKind
     | PendingSummaries Int
 
 
-type alias VoteClaimModalOptions msg =
-    { voteMsg : ClaimId -> Bool -> msg
-    , closeMsg : msg
-    , claimId : ClaimId
-    , isApproving : Bool
-    , isInProgress : Bool
-    }
-
-
 type Msg
-    = OpenVoteModal ClaimId Bool
-    | CloseClaimModals
+    = CloseClaimModals
     | OpenPhotoModal Model
     | GotExternalMsg ExternalMsg
 
@@ -387,9 +347,6 @@ type ExternalMsg
 updateClaimModalStatus : Msg -> { m | claimModalStatus : ModalStatus } -> { m | claimModalStatus : ModalStatus }
 updateClaimModalStatus msg model =
     case msg of
-        OpenVoteModal claimId vote ->
-            { model | claimModalStatus = VoteConfirmationModal claimId vote }
-
         CloseClaimModals ->
             { model | claimModalStatus = Closed }
 
@@ -558,20 +515,10 @@ viewClaimCard attributes loggedIn profileSummaries claim =
                     [ text (t "all_analysis.more_details") ]
 
               else
-                div [ class "flex justify-between space-x-4" ]
-                    [ button
-                        [ class "button button-danger"
-                        , Utils.onClickNoBubble (OpenVoteModal claim.id False)
-                        , disabled (not loggedIn.hasAcceptedCodeOfConduct)
-                        ]
-                        [ text (t "dashboard.reject") ]
-                    , button
-                        [ class "button button-primary"
-                        , Utils.onClickNoBubble (OpenVoteModal claim.id True)
-                        , disabled (not loggedIn.hasAcceptedCodeOfConduct)
-                        ]
-                        [ text (t "dashboard.verify") ]
-                    ]
+                ReviewMoved.viewClaimCta loggedIn.shared.translators
+                    loggedIn.shared.endpoints.api
+                    claim.id
+                    [ Utils.onClickNoBubble (GotExternalMsg CloseClaimModal) ]
             ]
         ]
 
@@ -1036,20 +983,7 @@ viewClaimModal ({ shared, accountName } as loggedIn) profileSummaries claim =
         footer =
             div [ class "block w-full my-4 sm:w-1/2 sm:mx-auto" ]
                 [ if isVotable claim accountName (LoggedIn.permissions loggedIn) shared.now then
-                    div [ class "flex space-x-4" ]
-                        [ button
-                            [ class "w-full button button-danger"
-                            , onClick (OpenVoteModal claim.id False)
-                            , disabled (not loggedIn.hasAcceptedCodeOfConduct)
-                            ]
-                            [ text (t "dashboard.reject") ]
-                        , button
-                            [ class "w-full button button-primary"
-                            , onClick (OpenVoteModal claim.id True)
-                            , disabled (not loggedIn.hasAcceptedCodeOfConduct)
-                            ]
-                            [ text (t "dashboard.verify") ]
-                        ]
+                    ReviewMoved.viewClaimCta shared.translators shared.endpoints.api claim.id []
 
                   else
                     text ""
@@ -1124,17 +1058,7 @@ viewPhotoModal loggedIn claim =
         withPhotoModalFooter =
             if isVotable claim loggedIn.accountName (LoggedIn.permissions loggedIn) loggedIn.shared.now then
                 Modal.withFooter
-                    [ button
-                        [ class "modal-cancel"
-                        , onClick (OpenVoteModal claim.id False)
-                        ]
-                        [ text <| t "dashboard.reject" ]
-                    , button
-                        [ class "modal-accept"
-                        , onClick (OpenVoteModal claim.id True)
-                        ]
-                        [ text <| t "dashboard.verify" ]
-                    ]
+                    [ ReviewMoved.viewClaimCta loggedIn.shared.translators loggedIn.shared.endpoints.api claim.id [] ]
 
             else
                 -- Don't show footer if the Claim is already validated by the current user
@@ -1148,50 +1072,4 @@ viewPhotoModal loggedIn claim =
         |> Modal.withHeader (t "dashboard.claim")
         |> Modal.withBody body
         |> withPhotoModalFooter
-        |> Modal.toHtml
-
-
-viewVoteClaimModal : Translators -> VoteClaimModalOptions msg -> Html msg
-viewVoteClaimModal { t } { voteMsg, closeMsg, claimId, isApproving, isInProgress } =
-    let
-        text_ s =
-            text (t s)
-
-        body =
-            [ if isApproving then
-                text_ "claim.modal.message_approve"
-
-              else
-                text_ "claim.modal.message_disapprove"
-            ]
-
-        footer =
-            [ button
-                [ class "modal-cancel"
-                , onClick closeMsg
-                , classList [ ( "button-disabled", isInProgress ) ]
-                , disabled isInProgress
-                ]
-                [ text_ "claim.modal.secondary" ]
-            , button
-                [ class "modal-accept"
-                , classList [ ( "button-disabled", isInProgress ) ]
-                , disabled isInProgress
-                , onClick (voteMsg claimId isApproving)
-                ]
-                [ if isApproving then
-                    text_ "claim.modal.primary_approve"
-
-                  else
-                    text_ "claim.modal.primary_disapprove"
-                ]
-            ]
-    in
-    Modal.initWith
-        { closeMsg = closeMsg
-        , isVisible = True
-        }
-        |> Modal.withHeader (t "claim.modal.title")
-        |> Modal.withBody body
-        |> Modal.withFooter footer
         |> Modal.toHtml

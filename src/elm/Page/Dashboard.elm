@@ -32,7 +32,7 @@ import Form.UserPicker
 import Graphql.Http
 import Graphql.OptionalArgument as OptionalArgument exposing (OptionalArgument(..))
 import Html exposing (Html, a, br, button, div, h1, h2, hr, img, li, p, section, span, strong, text, ul)
-import Html.Attributes exposing (alt, class, classList, disabled, id, src, style, tabindex)
+import Html.Attributes exposing (alt, class, classList, disabled, href, id, src, style, tabindex, target)
 import Html.Events exposing (onClick)
 import Http
 import Icons
@@ -48,6 +48,7 @@ import Profile
 import Profile.Contact as Contact
 import Profile.Summary
 import RemoteData exposing (RemoteData)
+import ReviewMoved
 import Route
 import Session.LoggedIn as LoggedIn
 import Session.Shared exposing (Shared)
@@ -882,14 +883,15 @@ viewActionsForAnalysisCard loggedIn model =
                                 )
                             , Markdown.view [ class "mb-4 text-center" ]
                                 (Markdown.fromTranslationWithReplacements loggedIn.shared.translators
-                                    "dashboard.analysis.count"
+                                    "review_moved.card_count"
                                     [ ( "amount", String.fromInt analysis.count ) ]
                                 )
                             , a
                                 [ class "button button-primary w-full"
-                                , Route.href Route.Analysis
+                                , href (ReviewMoved.reviewUrl loggedIn.shared.endpoints.api Nothing)
+                                , target "_self"
                                 ]
-                                [ text_ "dashboard.analysis.analyze_now" ]
+                                [ text_ "review_moved.go" ]
                             ]
 
                     else

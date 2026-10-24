@@ -1,7 +1,4 @@
-module Eos.EosError exposing
-    ( parseClaimError
-    , parseTransferError
-    )
+module Eos.EosError exposing (parseTransferError)
 
 import Json.Decode as Decode exposing (Value, at, decodeValue, field, list, string)
 import Session.Shared exposing (Translators)
@@ -55,15 +52,6 @@ decodeErrorDetails =
 
 
 -- MESSAGES FOR MODULES
-
-
-parseClaimError : Translators -> Maybe Value -> String
-parseClaimError translators eosErrorString =
-    parseErrorMessage
-        translators
-        "error.contracts.verifyclaim."
-        "community.verifyClaim.error"
-        eosErrorString
 
 
 {-| Handle errors for both `transfer` and `transfersale` transactions.
