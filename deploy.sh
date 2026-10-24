@@ -32,6 +32,22 @@ if [ ! -f "$ARTIFACT" ]; then
   exit 1
 fi
 
+# Refuse to deploy while the prod maintenance page is on (DB windows, box reboots).
+# The flag file is the one nginx checks (scripts/box-runbook.md §10). ssh exits 0 =
+# flag present, 1 = absent, 255 = ssh itself failed; on 255 we carry on and let the
+# scp below fail exactly as it did before this check existed.
+MAINTENANCE_FLAG="/home/ubuntu/apps/maintenance/on"
+flag_rc=0
+ssh "${DEPLOY_USER}@${SERVER}" "test -e ${MAINTENANCE_FLAG}" || flag_rc=$?
+if [ "$flag_rc" -eq 0 ]; then
+  echo "Error: maintenance window in progress on ${SERVER} (${MAINTENANCE_FLAG} exists)."
+  echo "  A DB window or box reboot is running; deploying now can restart against a down"
+  echo "  database or race the reboot. See scripts/box-runbook.md §10 and rerun when it is off."
+  exit 1
+elif [ "$flag_rc" -ne 1 ]; then
+  echo "Warning: could not check the maintenance flag (ssh exit ${flag_rc}); continuing."
+fi
+
 TS="$(date +%Y%m%d_%H%M%S)"
 REMOTE_TGZ="/tmp/frontend-static-${TS}.tar.gz"
 
