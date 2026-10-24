@@ -656,9 +656,6 @@
         "error": "እንቅስቃሴ መፍጠር አይቻልም. ሌላ ጊዜ ይሞክሩ"
       }
     },
-    "verifyClaim": {
-      "error": "ማረጋገጫ ወቅት የሆነ ስህተት ተፈጥሯል, እባኮን ሌላ ጊዜ ይሞክሩ"
-    },
     "kyc": {
       "title": "KYC",
       "dataTitle": "KYC ደታ",
@@ -1083,8 +1080,6 @@
     "verification": "ማረጋገጫ",
     "your_reward": "የእርሶ ሽልማት",
     "action": "ተግባር",
-    "reject": "አልጸደቀም",
-    "verify": "አጽድቅ",
     "closed": "ዝጋ",
     "my_claims": "የእኔ የይገባኛል ጥያቄዎች",
     "my_offers": "የእኔ ቅናሾች",
@@ -1097,8 +1092,6 @@
         "1": "እንኳን ደስ አላችሁ",
         "2": "ለመተንተን ተጨማሪ እርምጃዎች የሉም"
       },
-      "analyze_now": "አሁን ይተንትኑ",
-      "count": "ለመተንተን **{{amount}} እርምጃዎች** አሉዎት",
       "error_fetching": "ለመተንተን እርምጃዎችን በማምጣት ላይ የሆነ ችግር ተፈጥሯል"
     },
     "activities": {
@@ -1121,23 +1114,17 @@
     }
   },
   "all_analysis": {
-    "title": "ሁሉም ተግባር ለትንተና",
     "more_details": "ተጨማሪ ዝርዝር",
     "all": "ሁሉምl",
     "approved": "ፀድቋል",
     "pending": "እየታየ ነዉ",
     "disapproved": "አልጸደቀም",
-    "empty": "ወጤቶች የለም, ",
-    "clear_filters": "ማጣሪያ አጽዳ",
-    "show_more": "የሚቀጥሉትን 16 ዕቃዎችን አሳይ",
-    "error": "እርምጃዎችን ሲጫኑ አንድ ነገር ተሳስቷል",
     "tabs": {
       "waiting_vote": "ድምጽ በመጠበቅ ላይ",
       "analyzed": "ተተንትኗል"
     },
     "filter": {
       "title": "ማጣሪያዎች",
-      "user": "ተጠቃሚ",
       "apply": "ያመልክቱ",
       "status": {
         "label": "የተግባር ሁኔታ",
@@ -1179,7 +1166,6 @@
     "cancelled": "ተሰር .ል",
     "disapproved": "አልጸደቀም",
     "approved": "ጸድቋል",
-    "reward": "እንኳን ደስ አሎት, አግኝተዋል: {{value}}",
     "sub_wait_1": "መጠበቅ አለቦት, በሌላ ተጠቃሚ ጥያቄዉ እየታየ ነወ.",
     "sub_wait_2": "ሲያልቅ, ሽልማቱን ይቀበላሉ.",
     "objective": "ተጠባቂ ዉጤት",
@@ -1198,7 +1184,6 @@
     "disapprove": "አታጽድቅ",
     "approve": "አጸድቅ",
     "no_results_found": "ምላሽ አልተገኘም",
-    "voteTitle": "ይህን ተግበር አጸድቀዋል ወይም አላጸደቁም?",
     "attention": "ትኩረት ፦ ",
     "cancelled_texts": {
       "cancelled_claim": "የይገባኛል ጥያቄ ተሰር .ል",
@@ -1209,12 +1194,6 @@
       "not_available": "ስለዚህ የይገባኛል ጥያቄው ከአሁን በኋላ ለድምጽ አይሰጥም"
     },
     "modal": {
-      "title": "እየታየ ነዉ",
-      "message_disapprove": "ይህን ተግባር ለማጽደቅ አይፈልጉም?",
-      "message_approve": "ይህንን ተግባር ለማጸደቅ ይፈልጋሉ?",
-      "primary_disapprove": "አዎ, አይጽደቅ",
-      "primary_approve": "አዎ, ይጽደቅ",
-      "secondary": "አይደለም,ተዉ ",
       "view_details": "ዝርዝሮችን ይመልከቱ"
     }
   },
@@ -1643,5 +1622,11 @@
     "login_hint": "Sign in to the new panel with the same 12 words you use here.",
     "go": "Sign in to the new panel",
     "back": "Back to home"
+  },
+  "review_moved": {
+    "title": "Validation has moved",
+    "body": "Voting now happens in the new app.",
+    "go": "Vote in the new app",
+    "card_count": "**{{amount}} claims** waiting for your vote"
   }
 }

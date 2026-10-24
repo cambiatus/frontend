@@ -162,19 +162,6 @@
         "Sale creator and sale doesn't match": "Creador de venta y venta no coincide",
         "Invalid number of units": "Número de unidades no válido",
         "overdrawn community limit": "Saldo insuficiente para realizar esta transferencia"
-      },
-      "verifyclaim": {
-        "Can't vote on already verified claim": "No puedo votar sobre un reclamo ya verificado",
-        "This is action is already completed, can't verify claim": "Esta acción ya se completó, no se puede verificar el reclamo",
-        "There are no usages left for this action": "No quedan usos para esta acción",
-        "Can't find claim with given claim_id": "No se puede encontrar el reclamo con el ID de reclamo dado",
-        "Can't find action with given claim_id": "No se puede encontrar la acción con el claim_id especificado",
-        "Can't find objective with given claim_id": "No se puede encontrar el objetivo con el claim_id especificado",
-        "Can't find community with given claim_id": "No se puede encontrar la comunidad con el ID de reclamo especificado",
-        "This community don't have objectives enabled.": "Esta comunidad no tiene objetivos habilitados.",
-        "Verifier is not in the action validator list": "El verificador no está en la lista de validadores de acciones",
-        "Deadline exceeded": "Fecha límite excedida",
-        "The verifier cannot check the same claim more than once": "El verificador no puede verificar la misma afirmación más de una vez."
       }
     }
   },
@@ -698,9 +685,6 @@
         "success": "La actividad se creó con éxito."
       }
     },
-    "verifyClaim": {
-      "error": "Se produjo un error al intentar procesar la validación. Vuelve a intentarlo más tarde."
-    },
     "kyc": {
       "title": "KYC",
       "dataTitle": "Datos KYC",
@@ -1125,8 +1109,6 @@
     "verification": "Verificación",
     "your_reward": "Tu recompensa",
     "action": "Acción",
-    "reject": "Rechazar",
-    "verify": "Verificar",
     "closed": "cerrado",
     "my_claims": "Mis reclamos",
     "my_offers": "Mis ofertas",
@@ -1139,8 +1121,6 @@
         "1": "Felicidades",
         "2": "No hay más acciones para analizar"
       },
-      "analyze_now": "Analizar ahora",
-      "count": "Tienes **{{amount}} acciones** para analizar",
       "error_fetching": "Algo salió mal al buscar acciones para su análisis"
     },
     "activities": {
@@ -1163,23 +1143,17 @@
     }
   },
   "all_analysis": {
-    "title": "Todas las acciones para el análisis.",
     "more_details": "Más detalles",
     "all": "Todas",
     "approved": "Aprobada",
     "pending": "Bajo revisión",
     "disapproved": "Rechazada",
-    "empty": "No hay resultados, ",
-    "clear_filters": "limpiar los filtros",
-    "show_more": "mostrar los siguientes 16 artículos",
-    "error": "Algo salió mal al cargar acciones",
     "tabs": {
       "waiting_vote": "Esperando voto",
       "analyzed": "Analizadas"
     },
     "filter": {
       "title": "Filtros",
-      "user": "Usuario",
       "apply": "Aplicar",
       "status": {
         "label": "estado de acción",
@@ -1221,7 +1195,6 @@
     "cancelled": "cancelado",
     "disapproved": "Rechazado",
     "approved": "Aprobado",
-    "reward": "Ganaste: {{value}}",
     "sub_wait_1": "Debe esperar, este reclamo está siendo revisado por otros usuarios.",
     "sub_wait_2": "Cuando termine, recibirá su recompensa.",
     "objective": "Objetivo",
@@ -1240,7 +1213,6 @@
     "disapprove": "Desaprobar",
     "approve": "Aprobar",
     "no_results_found": "No se han encontrado resultados",
-    "voteTitle": "¿Aprueba o desaprueba esta acción?",
     "attention": "Atención: ",
     "cancelled_texts": {
       "cancelled_claim": "Reclamo cancelado",
@@ -1251,12 +1223,6 @@
       "not_available": "Por lo tanto, el reclamo ya no está disponible para votar"
     },
     "modal": {
-      "title": "Bajo Revisión",
-      "message_disapprove": "Realmente quiere desaprobar este reclamo?",
-      "message_approve": "Realmente desea aprobar este reclamo?",
-      "primary_disapprove": "sí, desaprobar",
-      "primary_approve": "sí, aprobar",
-      "secondary": "no, cancelar",
       "view_details": "Ver Detalles"
     }
   },
@@ -1687,5 +1653,11 @@
     "login_hint": "Entra al nuevo panel con las mismas 12 palabras que usas aquí.",
     "go": "Entrar al nuevo panel",
     "back": "Volver al inicio"
+  },
+  "review_moved": {
+    "title": "La validación cambió de lugar",
+    "body": "La votación ahora es en la nueva app.",
+    "go": "Votar en la nueva app",
+    "card_count": "**{{amount}} solicitudes** esperan tu voto"
   }
 }

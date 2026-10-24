@@ -9,7 +9,6 @@ module Page.Profile.Claims exposing
     , view
     )
 
-import Cambiatus.Enum.Permission as Permission
 import Cambiatus.Object
 import Cambiatus.Object.User as Profile
 import Cambiatus.Query
@@ -17,8 +16,6 @@ import Claim
 import Community
 import Dict
 import Eos
-import Eos.Account as Eos
-import Eos.EosError as EosError
 import Form.Select
 import Graphql.Http
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
@@ -27,7 +24,6 @@ import Html exposing (Html, a, button, div, img, li, text, ul)
 import Html.Attributes exposing (class, classList, src)
 import Html.Events exposing (onClick)
 import Icons
-import Json.Decode as Decode exposing (Value)
 import Json.Encode as Encode
 import List.Extra as List
 import Log
@@ -38,7 +34,6 @@ import Session.Shared exposing (Shared)
 import Time
 import UpdateResult as UR
 import View.Components
-import View.Feedback as Feedback
 import View.Modal as Modal
 import View.TabSelector
 
@@ -127,7 +122,7 @@ view loggedIn model =
 
                 Loaded profileSummaries profileClaims ->
                     [ viewResults loggedIn profileSummaries profileClaims model
-                    , viewClaimVoteModal loggedIn model
+                    , viewClaimPhotoModal loggedIn model
                     ]
 
                 NotFound ->
@@ -380,31 +375,14 @@ viewResults loggedIn profileSummaries claims model =
         ]
 
 
-viewClaimVoteModal : LoggedIn.Model -> Model -> Html Msg
-viewClaimVoteModal loggedIn model =
-    let
-        viewVoteModal claimId isApproving isLoading =
-            Claim.viewVoteClaimModal
-                loggedIn.shared.translators
-                { voteMsg = VoteClaim
-                , closeMsg = ClaimMsg 0 Claim.CloseClaimModals
-                , claimId = claimId
-                , isApproving = isApproving
-                , isInProgress = isLoading
-                }
-    in
+viewClaimPhotoModal : LoggedIn.Model -> Model -> Html Msg
+viewClaimPhotoModal loggedIn model =
     case model.claimModalStatus of
-        Claim.VoteConfirmationModal claimId vote ->
-            viewVoteModal claimId vote False
-
-        Claim.Loading claimId vote ->
-            viewVoteModal claimId vote True
-
-        Claim.PhotoModal claimId ->
-            Claim.viewPhotoModal loggedIn claimId
+        Claim.PhotoModal claim ->
+            Claim.viewPhotoModal loggedIn claim
                 |> Html.map (ClaimMsg 0)
 
-        _ ->
+        Claim.Closed ->
             text ""
 
 
@@ -435,11 +413,8 @@ type alias UpdateResult =
 type Msg
     = NoOp
     | ClaimsLoaded (RemoteData (Graphql.Http.Error (Maybe ProfileClaims)) (Maybe ProfileClaims))
-    | ClosedAuthModal
     | CompletedLoadCommunity Community.Model
     | ClaimMsg Int Claim.Msg
-    | VoteClaim Claim.ClaimId Bool
-    | GotVoteResult Claim.ClaimId (Result (Maybe Value) String)
     | SelectedTab Tab
     | OpenedFilterModal
     | ClosedFilterModal
@@ -476,10 +451,6 @@ update msg model loggedIn =
         ClaimsLoaded _ ->
             UR.init model
 
-        ClosedAuthModal ->
-            { model | claimModalStatus = Claim.Closed }
-                |> UR.init
-
         CompletedLoadCommunity community ->
             UR.init model
                 |> UR.addExt
@@ -506,108 +477,6 @@ update msg model loggedIn =
             updatedModel
                 |> Claim.updateClaimModalStatus m
                 |> UR.init
-
-        VoteClaim claimId vote ->
-            case ( model.status, loggedIn.selectedCommunity ) of
-                ( Loaded _ _, RemoteData.Success community ) ->
-                    let
-                        newModel =
-                            { model
-                                | claimModalStatus = Claim.Loading claimId vote
-                            }
-                    in
-                    UR.init newModel
-                        |> UR.addPort
-                            { responseAddress = msg
-                            , responseData = Encode.null
-                            , data =
-                                Eos.encodeTransaction
-                                    [ { accountName = loggedIn.shared.contracts.community
-                                      , name = "verifyclaim"
-                                      , authorization =
-                                            { actor = loggedIn.accountName
-                                            , permissionName = Eos.samplePermission
-                                            }
-                                      , data =
-                                            Claim.encodeVerification claimId
-                                                loggedIn.accountName
-                                                vote
-                                                community.symbol
-                                      }
-                                    ]
-                            }
-                        |> LoggedIn.withPrivateKey loggedIn
-                            [ Permission.Verify ]
-                            model
-                            { successMsg = msg, errorMsg = ClosedAuthModal }
-
-                _ ->
-                    model
-                        |> UR.init
-
-        GotVoteResult claimId (Ok _) ->
-            case model.status of
-                Loaded _ profileClaims ->
-                    let
-                        maybeClaim : Maybe Claim.Model
-                        maybeClaim =
-                            List.find (\c -> c.id == claimId) profileClaims
-
-                        message val =
-                            [ ( "value", val ) ]
-                                |> loggedIn.shared.translators.tr "claim.reward"
-                    in
-                    case maybeClaim of
-                        Just claim ->
-                            let
-                                symbol =
-                                    claim.action.objective.community.symbol
-
-                                value =
-                                    Eos.assetToString loggedIn.shared.translators
-                                        { amount = claim.action.verifierReward
-                                        , symbol = symbol
-                                        }
-                            in
-                            { model
-                                | status = Loading
-                                , claimModalStatus = Claim.Closed
-                            }
-                                |> UR.init
-                                |> UR.addExt (LoggedIn.ShowFeedback Feedback.Success (message value))
-                                |> UR.addExt
-                                    (profileClaimQuery loggedIn
-                                        model.accountString
-                                        symbol
-                                    )
-
-                        Nothing ->
-                            model
-                                |> UR.init
-
-                _ ->
-                    model |> UR.init
-
-        GotVoteResult _ (Err eosErrorString) ->
-            let
-                errorMessage =
-                    EosError.parseClaimError loggedIn.shared.translators eosErrorString
-            in
-            case model.status of
-                Loaded profileSummaries claims ->
-                    let
-                        updateShowClaimModal profileSummary =
-                            { profileSummary | showClaimModal = False }
-                    in
-                    { model
-                        | status = Loaded (List.map updateShowClaimModal profileSummaries) claims
-                        , claimModalStatus = Claim.Closed
-                    }
-                        |> UR.init
-                        |> UR.addExt (LoggedIn.ShowFeedback Feedback.Failure errorMessage)
-
-                _ ->
-                    model |> UR.init
 
         SelectedTab tab ->
             let
@@ -707,28 +576,8 @@ receiveBroadcast broadcastMsg =
 
 
 jsAddressToMsg : List String -> Encode.Value -> Maybe Msg
-jsAddressToMsg addr val =
-    case addr of
-        "VoteClaim" :: claimId :: _ ->
-            let
-                id =
-                    String.toInt claimId
-                        |> Maybe.withDefault 0
-            in
-            Decode.decodeValue
-                (Decode.oneOf
-                    [ Decode.field "transactionId" Decode.string
-                        |> Decode.map Ok
-                    , Decode.field "error" (Decode.nullable Decode.value)
-                        |> Decode.map Err
-                    ]
-                )
-                val
-                |> Result.map (Just << GotVoteResult id)
-                |> Result.withDefault Nothing
-
-        _ ->
-            Nothing
+jsAddressToMsg _ _ =
+    Nothing
 
 
 msgToString : Msg -> List String
@@ -740,20 +589,11 @@ msgToString msg =
         ClaimsLoaded r ->
             [ "ClaimsLoaded", UR.remoteDataToString r ]
 
-        ClosedAuthModal ->
-            [ "ClosedAuthModal" ]
-
         CompletedLoadCommunity _ ->
             [ "CompletedLoadCommunity" ]
 
         ClaimMsg _ _ ->
             [ "ClaimMsg" ]
-
-        VoteClaim claimId _ ->
-            [ "VoteClaim", String.fromInt claimId ]
-
-        GotVoteResult _ r ->
-            [ "GotVoteResult", UR.resultToString r ]
 
         SelectedTab _ ->
             [ "SelectedTab" ]

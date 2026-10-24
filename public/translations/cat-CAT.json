@@ -162,19 +162,6 @@
         "Sale creator and sale doesn't match": "El creador de la venda i la venda no coincideixen",
         "Invalid number of units": "Nombre d'unitats no vàlid",
         "overdrawn community limit": "Saldo insuficient per fer aquesta transferència"
-      },
-      "verifyclaim": {
-        "Can't vote on already verified claim": "No es pot votar sobre una reclamació ja verificada",
-        "This is action is already completed, can't verify claim": "Aquesta acció ja s'ha completat, no es pot verificar la reclamació",
-        "There are no usages left for this action": "No queden usos per a aquesta acció",
-        "Can't find claim with given claim_id": "No es pot trobar la reclamació amb la reclamació indicada",
-        "Can't find action with given claim_id": "No es pot trobar cap acció amb claim_id donat",
-        "Can't find objective with given claim_id": "No es pot trobar objectiu amb la reclamació_id donada",
-        "Can't find community with given claim_id": "No es pot trobar la comunitat amb l'indicació claim_id",
-        "This community don't have objectives enabled.": "Aquesta comunitat no té objectius activats.",
-        "Verifier is not in the action validator list": "El verificador no es troba a la llista de validadors d'accions",
-        "Deadline exceeded": "S'ha superat el termini",
-        "The verifier cannot check the same claim more than once": "El verificador no pot comprovar la mateixa reclamació més d’una vegada"
       }
     }
   },
@@ -698,9 +685,6 @@
         "error": "L'activitat no es pot crear. Proveu més endavant"
       }
     },
-    "verifyClaim": {
-      "error": "S'ha produït un error en intentar processar la convalidació. Torneu-ho a provar més endavant"
-    },
     "kyc": {
       "title": "KYC",
       "dataTitle": "Dades KYC",
@@ -1125,8 +1109,6 @@
     "verification": "verificació",
     "your_reward": "la teva recompensa",
     "action": "Acció",
-    "reject": "Rebutjar",
-    "verify": "Verificar",
     "closed": "tancat",
     "my_claims": "Les meves reclamacions",
     "my_offers": "Les meves ofertes",
@@ -1139,8 +1121,6 @@
         "1": "Enhorabona",
         "2": "Ja no hi ha accions per analitzar"
       },
-      "analyze_now": "Analitza ara",
-      "count": "Teniu **{{amount}} accions** per analitzar",
       "error_fetching": "S'ha produït un error en obtenir accions per analitzar-les"
     },
     "activities": {
@@ -1162,23 +1142,17 @@
     }
   },
   "all_analysis": {
-    "title": "Totes les accions per a l'anàlisi",
     "more_details": "Més detalls",
     "all": "Tot",
     "approved": "Aprovat",
     "pending": "Sota Revisió",
     "disapproved": "Rebutjat",
-    "empty": "Sense resultats, ",
-    "clear_filters": "esborreu els filtres",
-    "show_more": "mostra els següents 16 articles",
-    "error": "S'ha produït un error en carregar les accions",
     "tabs": {
       "waiting_vote": "Vot en espera",
       "analyzed": "Analitzat"
     },
     "filter": {
       "title": "Filtres",
-      "user": "Usuari",
       "apply": "Aplicar",
       "status": {
         "label": "Estat de l’acció",
@@ -1220,7 +1194,6 @@
     "cancelled": "Cancel·lat",
     "disapproved": "Desaprovat",
     "approved": "Aprovat",
-    "reward": "Has guanyat: {{value}}",
     "sub_wait_1": "Heu d'esperar, aquesta reclamació està sota revisió d'altres usuaris.",
     "sub_wait_2": "En acabar, rebràs la teva recompensa.",
     "objective": "Objectiu",
@@ -1239,7 +1212,6 @@
     "disapprove": "Desaprovar",
     "approve": "Aprovar",
     "no_results_found": "Sense resultats",
-    "voteTitle": "Aproveu o rebutgeu aquesta acció?",
     "attention": "Atenció: ",
     "cancelled_texts": {
       "cancelled_claim": "Reclamació cancel·lada",
@@ -1250,12 +1222,6 @@
       "not_available": "Per tant, la reclamació ja no està disponible per votar"
     },
     "modal": {
-      "title": "Sota Revisió",
-      "message_disapprove": "Realment voleu rebutjar aquesta reclamació?",
-      "message_approve": "Realment voleu aprovar aquesta reclamació?",
-      "primary_disapprove": "sí, desaproveu",
-      "primary_approve": "sí, aprova",
-      "secondary": "no, cancel·la",
       "view_details": "Veure Detalls"
     }
   },
@@ -1686,5 +1652,11 @@
     "login_hint": "Sign in to the new panel with the same 12 words you use here.",
     "go": "Sign in to the new panel",
     "back": "Back to home"
+  },
+  "review_moved": {
+    "title": "La validació ha canviat de lloc",
+    "body": "La votació ara és a la nova app.",
+    "go": "Votar a la nova app",
+    "card_count": "**{{amount}} sol·licituds** esperen el teu vot"
   }
 }
