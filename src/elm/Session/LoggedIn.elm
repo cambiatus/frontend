@@ -240,7 +240,6 @@ type alias Model =
     , showCommunitySelector : Bool
     , feedback : Feedback.Model
     , searchModel : Search.Model
-    , claimingAction : Action.ClaimingStatus
     , authToken : Maybe Api.Graphql.Token
     , hasSeenDashboard : Bool
     , queuedCommunityFields : List Community.Field
@@ -283,7 +282,6 @@ initModel shared lastKnownPin maybePrivateKey_ accountName authToken =
       , unreadCount = 0
       , feedback = Feedback.Hidden
       , searchModel = Search.init
-      , claimingAction = Action.notClaiming
       , authToken = authToken
       , hasSeenDashboard = False
       , queuedCommunityFields = []
@@ -445,8 +443,6 @@ viewHelper pageMsg page profile_ ({ shared } as model) content =
                     |> Html.map pageMsg
                , viewCommunityContactsModal model
                     |> Html.map pageMsg
-               , Action.viewClaimModal model.shared model.claimingAction
-                    |> Html.map (GotActionMsg >> pageMsg)
                , viewAuthModal pageMsg model
                , communitySelectorModal model
                     |> Html.map pageMsg
@@ -2004,23 +2000,13 @@ update msg model =
                 |> UR.addExt (GotTime time |> Broadcast)
 
         GotActionMsg subMsg ->
-            Action.update subMsg model.claimingAction model
-                |> UR.fromChild (\newClaimingAction -> { model | claimingAction = newClaimingAction })
+            Action.update subMsg model
+                |> UR.fromChild (\() -> model)
                     GotActionMsg
                     (\ext ->
                         case ext of
-                            Action.SetUpdateTimeEvery interval ->
-                                UR.mapModel (\m -> { m | updateTimeEvery = interval })
-
                             Action.ShowFeedback feedbackModel ->
                                 UR.mapModel (\m -> { m | feedback = feedbackModel })
-
-                            Action.RequiredPrivateKey afterAuthMsg ->
-                                UR.mapModel askedAuthentication
-                                    >> UR.addExt (AddAfterPrivateKeyCallback (GotActionMsg afterAuthMsg))
-
-                            Action.ShowInsufficientPermissionsModal ->
-                                UR.mapModel (\m -> { m | showInsufficientPermissionsModal = True })
                     )
                     model
 

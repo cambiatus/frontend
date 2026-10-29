@@ -1657,6 +1657,10 @@
     "title": "La validació ha canviat de lloc",
     "body": "La votació ara és a la nova app.",
     "go": "Votar a la nova app",
-    "card_count": "**{{amount}} sol·licituds** esperen el teu vot"
+    "card_count_one": "**{{amount}} reclamació** espera el teu vot",
+    "card_count": "**{{amount}} reclamacions** esperen el teu vot"
+  },
+  "claim_moved": {
+    "go": "Reclama a la nova app"
   }
 }

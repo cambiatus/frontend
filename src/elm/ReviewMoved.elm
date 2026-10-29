@@ -1,4 +1,4 @@
-module ReviewMoved exposing (reviewUrl, viewClaimCta, viewMovedContent)
+module ReviewMoved exposing (appUrl, cardCountKey, reviewUrl, viewClaimCta, viewMovedContent)
 
 {-| Claim validation (voting) moved to the LiveView app at /app/review. Everything that
 used to let a validator vote in the Elm SPA now links there instead.
@@ -14,11 +14,10 @@ import Route
 import Translation
 
 
-{-| Absolute URL of the review page, optionally focused on one claim. Built on the same API
-base as `Page.AdminMoved.loginUrl`.
+{-| Absolute URL of a path in the LiveView app: the API base without a trailing slash, then the path.
 -}
-reviewUrl : String -> Maybe Int -> String
-reviewUrl apiUrl maybeClaimId =
+appUrl : String -> String -> String
+appUrl apiUrl path =
     let
         base =
             if String.endsWith "/" apiUrl then
@@ -27,12 +26,31 @@ reviewUrl apiUrl maybeClaimId =
             else
                 apiUrl
     in
+    base ++ path
+
+
+{-| Absolute URL of the review page, optionally focused on one claim. Built on the same API
+base as `Page.AdminMoved.loginUrl`.
+-}
+reviewUrl : String -> Maybe Int -> String
+reviewUrl apiUrl maybeClaimId =
     case maybeClaimId of
         Just claimId ->
-            base ++ "/app/review?claim=" ++ String.fromInt claimId
+            appUrl apiUrl ("/app/review?claim=" ++ String.fromInt claimId)
 
         Nothing ->
-            base ++ "/app/review"
+            appUrl apiUrl "/app/review"
+
+
+{-| Translation key of the dashboard card count: singular for one claim, plural otherwise.
+-}
+cardCountKey : Int -> String
+cardCountKey amount =
+    if amount == 1 then
+        "review_moved.card_count_one"
+
+    else
+        "review_moved.card_count"
 
 
 {-| Short line and button that replace the approve/reject buttons for a claim.

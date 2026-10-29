@@ -26,6 +26,16 @@ all =
                     ReviewMoved.reviewUrl "http://localhost:4000/" (Just 42)
                         |> Expect.equal "http://localhost:4000/app/review?claim=42"
             ]
+        , describe "cardCountKey"
+            [ test "uses the singular text for one claim" <|
+                \_ ->
+                    ReviewMoved.cardCountKey 1
+                        |> Expect.equal "review_moved.card_count_one"
+            , test "uses the plural text otherwise" <|
+                \_ ->
+                    List.map ReviewMoved.cardCountKey [ 0, 2, 30 ]
+                        |> Expect.equal (List.repeat 3 "review_moved.card_count")
+            ]
         , describe "viewClaimCta"
             [ test "links to the claim in the new app and leaves the SPA" <|
                 \_ ->

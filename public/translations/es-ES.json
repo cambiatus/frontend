@@ -1658,6 +1658,10 @@
     "title": "La validación cambió de lugar",
     "body": "La votación ahora es en la nueva app.",
     "go": "Votar en la nueva app",
-    "card_count": "**{{amount}} solicitudes** esperan tu voto"
+    "card_count_one": "**{{amount}} reclamo** espera tu voto",
+    "card_count": "**{{amount}} reclamos** esperan tu voto"
+  },
+  "claim_moved": {
+    "go": "Reclamar en la nueva app"
   }
 }

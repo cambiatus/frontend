@@ -4,8 +4,8 @@ module Action exposing
     , ObjectiveId, objectiveIdSelectionSet, objectiveIdFromInt, objectiveIdToInt
     , isClosed, isPastDeadline, isObjectiveClosed, daysLeft, limitNotice
     , selectionSet, selectionSetWithoutEligibility
-    , ClaimingStatus, notClaiming, startClaiming, Msg, update, ExternalMsg(..), msgToString, jsAddressToMsg
-    , viewCard, viewClaimModal
+    , Msg, update, ExternalMsg(..), msgToString, jsAddressToMsg
+    , viewCard
     )
 
 {-|
@@ -41,19 +41,18 @@ module Action exposing
 
 ## Claiming actions
 
-@docs ClaimingStatus, notClaiming, startClaiming, Msg, update, ExternalMsg, msgToString, jsAddressToMsg
+@docs Msg, update, ExternalMsg, msgToString, jsAddressToMsg
 
 
 ### Views
 
-@docs viewCard, viewClaimModal
+@docs viewCard
 
 -}
 
 import Auth
 import Browser.Dom
 import Cambiatus.Enum.ClaimEligibilityStatus as ClaimEligibilityStatus exposing (ClaimEligibilityStatus)
-import Cambiatus.Enum.Permission as Permission exposing (Permission)
 import Cambiatus.Enum.VerificationType as VerificationType exposing (VerificationType)
 import Cambiatus.Object
 import Cambiatus.Object.Action
@@ -61,16 +60,15 @@ import Cambiatus.Object.ClaimEligibility
 import Cambiatus.Object.Community
 import Cambiatus.Object.Objective
 import Cambiatus.Scalar exposing (DateTime)
+import ClaimMoved
 import Eos
 import Eos.Account
-import Form
-import Form.File
 import Form.Text
 import Graphql.Http
 import Graphql.OptionalArgument as OptionalArgument
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet)
-import Html exposing (Html, button, div, h4, img, li, p, span, text)
-import Html.Attributes exposing (alt, class, classList, disabled, id, src, tabindex)
+import Html exposing (Html, button, div, h4, img, li, span, text)
+import Html.Attributes exposing (alt, class, classList, id, src, tabindex)
 import Html.Attributes.Aria exposing (ariaHidden)
 import Html.Events exposing (onClick)
 import Icons
@@ -81,16 +79,13 @@ import Profile
 import RemoteData exposing (RemoteData)
 import Route
 import Session.Shared exposing (Shared)
-import Sha256
 import Task
 import Time
-import Time.Extra
 import Translation
 import UpdateResult as UR
 import Url
 import Utils
 import View.Feedback
-import View.Modal
 
 
 type alias Action =
@@ -147,69 +142,18 @@ type ObjectiveId
     = ObjectiveId Int
 
 
-type ClaimingStatus
-    = NotClaiming
-    | Claiming
-        { action : Action
-        , proof : Proof
-        , position : Maybe Int
-        }
-
-
-notClaiming : ClaimingStatus
-notClaiming =
-    NotClaiming
-
-
-startClaiming : { position : Maybe Int } -> Action -> Msg
-startClaiming position action =
-    ClickedClaimAction position action
-
-
-type Proof
-    = NoProofNecessary
-    | WithProof (Form.Model Form.File.SingleModel) ProofCodeStatus
-
-
-type ProofCodeStatus
-    = NoCodeNecessary
-    | GeneratingCode
-    | WithCode ProofCode
-
-
-type alias ProofCode =
-    { code : String
-    , expiration : Time.Posix
-    , generation : Time.Posix
-    }
-
-
 type Msg
     = NoOp
-    | ClickedClaimAction { position : Maybe Int } Action
     | ClickedShareAction Action
     | CopiedShareLinkToClipboard Id
-    | GotClaimingActionMsg ClaimingActionMsg
-
-
-type ClaimingActionMsg
-    = ClickedCloseClaimModal
-    | ConfirmedClaimAction
-    | ConfirmedClaimActionWithPhotoProof { photoProofUrl : String, proofCode : Maybe ProofCode }
-    | GotPhotoProofFormMsg (Form.Msg Form.File.SingleModel)
-    | GotUint64Name String
-    | CompletedClaimingAction (Result Json.Encode.Value ())
 
 
 type alias UpdateResult =
-    UR.UpdateResult ClaimingStatus Msg ExternalMsg
+    UR.UpdateResult () Msg ExternalMsg
 
 
 type ExternalMsg
-    = SetUpdateTimeEvery Float
-    | ShowFeedback View.Feedback.Model
-    | RequiredPrivateKey Msg
-    | ShowInsufficientPermissionsModal
+    = ShowFeedback View.Feedback.Model
 
 
 type alias ExtensibleCommunity community =
@@ -226,11 +170,11 @@ type alias LoggedIn loggedIn community =
     }
 
 
-update : Msg -> ClaimingStatus -> LoggedIn loggedIn community -> UpdateResult
-update msg status loggedIn =
+update : Msg -> LoggedIn loggedIn community -> UpdateResult
+update msg loggedIn =
     case msg of
         NoOp ->
-            UR.init status
+            UR.init ()
 
         ClickedShareAction action ->
             let
@@ -266,12 +210,11 @@ update msg status loggedIn =
                                 ]
                         }
             in
-            UR.init status
+            UR.init ()
                 |> UR.addPort sharePort
 
         CopiedShareLinkToClipboard actionId ->
-            status
-                |> UR.init
+            UR.init ()
                 |> UR.addExt
                     (ShowFeedback
                         (View.Feedback.Visible View.Feedback.Success
@@ -282,300 +225,6 @@ update msg status loggedIn =
                     (Browser.Dom.focus (shareActionButtonId actionId)
                         |> Task.attempt (\_ -> NoOp)
                     )
-
-        ClickedClaimAction { position } action ->
-            let
-                form =
-                    { fileUrl = Nothing
-                    , aspectRatio = Nothing
-                    }
-                        |> Form.File.initSingle
-                        |> Form.init
-
-                proofCode =
-                    if action.hasProofCode then
-                        GeneratingCode
-
-                    else
-                        NoCodeNecessary
-
-                proof =
-                    if action.hasProofPhoto then
-                        WithProof form proofCode
-
-                    else
-                        NoProofNecessary
-
-                generateProofCodePort =
-                    if action.hasProofCode then
-                        UR.addPort
-                            { responseAddress = msg
-                            , responseData = Json.Encode.null
-                            , data =
-                                Json.Encode.object
-                                    [ ( "name", Json.Encode.string "accountNameToUint64" )
-                                    , ( "accountName", Eos.Account.encodeName loggedIn.accountName )
-                                    ]
-                            }
-
-                    else
-                        identity
-            in
-            { action = action
-            , proof = proof
-            , position = position
-            }
-                |> Claiming
-                |> UR.init
-                |> UR.addExt (SetUpdateTimeEvery 1000)
-                |> generateProofCodePort
-
-        GotClaimingActionMsg subMsg ->
-            case status of
-                NotClaiming ->
-                    UR.init status
-                        |> UR.logIncompatibleMsg msg
-                            (Just loggedIn.accountName)
-                            { moduleName = "Action", function = "update" }
-                            []
-
-                Claiming { action, proof, position } ->
-                    updateClaimingAction subMsg action proof { position = position } loggedIn
-
-
-
--- CLAIMING ACTIONS
-
-
-updateClaimingAction : ClaimingActionMsg -> Action -> Proof -> { position : Maybe Int } -> LoggedIn loggedIn community -> UpdateResult
-updateClaimingAction msg action proof { position } loggedIn =
-    let
-        status =
-            { action = action, proof = proof, position = position }
-
-        withPrivateKey : List Permission -> UpdateResult -> UpdateResult
-        withPrivateKey requiredPermissions ur =
-            Auth.withPrivateKey loggedIn.auth
-                { requiredPermissions = requiredPermissions
-                , currentPermissions =
-                    RemoteData.toMaybe loggedIn.profile
-                        |> Maybe.map (.roles >> List.concatMap .permissions)
-                }
-                { onAskedPrivateKey = UR.addExt (RequiredPrivateKey (GotClaimingActionMsg msg))
-                , onInsufficientPermissions = UR.addExt ShowInsufficientPermissionsModal
-                , onAbsentPermissions =
-                    UR.logImpossible (GotClaimingActionMsg msg)
-                        "Tried signing eos transaction, but profile wasn't loaded"
-                        (Just loggedIn.accountName)
-                        { moduleName = "Action"
-                        , function = "updateClaimingAction"
-                        }
-                        []
-                , defaultModel = Claiming status
-                }
-                (\_ -> ur)
-    in
-    case msg of
-        ClickedCloseClaimModal ->
-            UR.init NotClaiming
-                |> UR.addExt (SetUpdateTimeEvery (60 * 1000))
-
-        ConfirmedClaimAction ->
-            Claiming status
-                |> UR.init
-                |> UR.addPort
-                    { responseAddress = GotClaimingActionMsg msg
-                    , responseData = Json.Encode.null
-                    , data =
-                        Eos.encodeTransaction
-                            [ { accountName = loggedIn.shared.contracts.community
-                              , name = "claimaction"
-                              , authorization =
-                                    { actor = loggedIn.accountName
-                                    , permissionName = Eos.Account.samplePermission
-                                    }
-                              , data =
-                                    encodeClaimAction
-                                        { communityId = action.objective.community.symbol
-                                        , actionId = action.id
-                                        , claimer = loggedIn.accountName
-                                        , proof = Nothing
-                                        }
-                              }
-                            ]
-                    }
-                |> withPrivateKey [ Permission.Claim ]
-
-        ConfirmedClaimActionWithPhotoProof { photoProofUrl, proofCode } ->
-            let
-                claimPort maybeProofCode =
-                    { responseAddress = GotClaimingActionMsg msg
-                    , responseData = Json.Encode.null
-                    , data =
-                        Eos.encodeTransaction
-                            [ { accountName = loggedIn.shared.contracts.community
-                              , name = "claimaction"
-                              , authorization =
-                                    { actor = loggedIn.accountName
-                                    , permissionName = Eos.Account.samplePermission
-                                    }
-                              , data =
-                                    encodeClaimAction
-                                        { communityId = action.objective.community.symbol
-                                        , actionId = action.id
-                                        , claimer = loggedIn.accountName
-                                        , proof =
-                                            Just
-                                                { photo = photoProofUrl
-                                                , proofCode = maybeProofCode
-                                                }
-                                        }
-                              }
-                            ]
-                    }
-            in
-            case proofCode of
-                Nothing ->
-                    if action.hasProofCode then
-                        Claiming status
-                            |> UR.init
-                            |> UR.logImpossible (GotClaimingActionMsg msg)
-                                "Claimed action that requires proof code, but no proof code was provided"
-                                (Just loggedIn.accountName)
-                                { moduleName = "Action"
-                                , function = "updateClaimingAction"
-                                }
-                                []
-
-                    else
-                        Claiming status
-                            |> UR.init
-                            |> UR.addPort (claimPort Nothing)
-                            |> withPrivateKey [ Permission.Claim ]
-
-                Just code ->
-                    Claiming status
-                        |> UR.init
-                        |> UR.addPort
-                            (claimPort
-                                (Just
-                                    { code = code.code
-                                    , time = code.generation
-                                    }
-                                )
-                            )
-                        |> withPrivateKey [ Permission.Claim ]
-
-        GotPhotoProofFormMsg subMsg ->
-            case proof of
-                NoProofNecessary ->
-                    Claiming status
-                        |> UR.init
-
-                WithProof photoProofForm proofCodeStatus ->
-                    Form.update loggedIn.shared subMsg photoProofForm
-                        |> UR.fromChild
-                            (\newForm ->
-                                Claiming { status | proof = WithProof newForm proofCodeStatus }
-                            )
-                            (GotClaimingActionMsg << GotPhotoProofFormMsg)
-                            (\ext -> UR.addExt (ShowFeedback ext))
-                            (Claiming status)
-
-        GotUint64Name uint64Name ->
-            case proof of
-                NoProofNecessary ->
-                    Claiming status
-                        |> UR.init
-
-                WithProof formModel _ ->
-                    let
-                        proofCode =
-                            generateProofCode action
-                                uint64Name
-                                loggedIn.shared.now
-
-                        expiration =
-                            Time.Extra.add Time.Extra.Minute
-                                30
-                                loggedIn.shared.timezone
-                                loggedIn.shared.now
-
-                        proofCodeStatus =
-                            if action.hasProofCode then
-                                WithCode
-                                    { code = proofCode
-                                    , expiration = expiration
-                                    , generation = loggedIn.shared.now
-                                    }
-
-                            else
-                                NoCodeNecessary
-                    in
-                    Claiming { status | proof = WithProof formModel proofCodeStatus }
-                        |> UR.init
-
-        CompletedClaimingAction (Ok ()) ->
-            case loggedIn.selectedCommunity of
-                RemoteData.Success community ->
-                    NotClaiming
-                        |> UR.init
-                        |> UR.addExt
-                            (ShowFeedback
-                                (View.Feedback.Visible View.Feedback.Success
-                                    (loggedIn.shared.translators.tr
-                                        "dashboard.check_claim.success"
-                                        [ ( "symbolCode", Eos.symbolToSymbolCodeString community.symbol ) ]
-                                    )
-                                )
-                            )
-                        |> UR.addExt (SetUpdateTimeEvery (60 * 1000))
-                        |> UR.addCmd
-                            (Eos.Account.nameToString loggedIn.accountName
-                                |> Route.ProfileClaims
-                                |> Route.pushUrl loggedIn.shared.navKey
-                            )
-
-                _ ->
-                    NotClaiming
-                        |> UR.init
-                        |> UR.addExt (SetUpdateTimeEvery (60 * 1000))
-                        |> UR.logImpossible (GotClaimingActionMsg msg)
-                            "Completed claiming action, but community wasn't loaded"
-                            (Just loggedIn.accountName)
-                            { moduleName = "Action", function = "updateClaimingAction" }
-                            []
-                        |> UR.addCmd
-                            (Eos.Account.nameToString loggedIn.accountName
-                                |> Route.ProfileClaims
-                                |> Route.pushUrl loggedIn.shared.navKey
-                            )
-
-        CompletedClaimingAction (Err val) ->
-            let
-                raw =
-                    Json.Encode.encode 0 val
-
-                failureText =
-                    if String.contains "claim limit reached" raw then
-                        loggedIn.shared.translators.t "community.objectives.claim_limit.failed_limit"
-
-                    else if String.contains "reclaim cooldown until" raw then
-                        loggedIn.shared.translators.t "community.objectives.claim_limit.failed_cooldown"
-
-                    else
-                        loggedIn.shared.translators.t "dashboard.check_claim.failure"
-            in
-            NotClaiming
-                |> UR.init
-                |> UR.addExt (ShowFeedback (View.Feedback.Visible View.Feedback.Failure failureText))
-                |> UR.addExt (SetUpdateTimeEvery (60 * 1000))
-                |> UR.logJsonValue (GotClaimingActionMsg msg)
-                    (Just loggedIn.accountName)
-                    "Got an error when claiming an action"
-                    { moduleName = "Action", function = "updateClaimingAction" }
-                    []
-                    val
 
 
 
@@ -696,20 +345,7 @@ viewCard loggedIn { containerAttrs, position, toMsg } action =
                     , text <| t "share"
                     ]
                 , if canBeClaimed then
-                    button
-                        [ class "button button-primary w-full sm:col-span-1"
-                        , onClick
-                            (ClickedClaimAction { position = position } action
-                                |> toMsg
-                            )
-                        ]
-                        [ if action.hasProofPhoto then
-                            Icons.camera "w-4 mr-2 flex-shrink-0"
-
-                          else
-                            text ""
-                        , text <| t "dashboard.claim"
-                        ]
+                    ClaimMoved.viewClaimLink translators loggedIn.shared.endpoints.api (idToInt action.id)
 
                   else
                     text ""
@@ -793,268 +429,6 @@ viewClaimProgress { tr } action =
 
         _ ->
             text ""
-
-
-viewClaimModal : Shared -> ClaimingStatus -> Html Msg
-viewClaimModal shared status =
-    case status of
-        NotClaiming ->
-            text ""
-
-        Claiming { action, proof, position } ->
-            let
-                { t } =
-                    shared.translators
-
-                ( onClaimClick, isClaimDisabled ) =
-                    case proof of
-                        WithProof formModel _ ->
-                            ( Form.parse (claimWithPhotoForm shared.translators)
-                                formModel
-                                { onError = GotPhotoProofFormMsg
-                                , onSuccess =
-                                    \photoProofUrl ->
-                                        ConfirmedClaimActionWithPhotoProof
-                                            { photoProofUrl = photoProofUrl
-                                            , proofCode =
-                                                case proof of
-                                                    WithProof _ (WithCode proofCode) ->
-                                                        Just proofCode
-
-                                                    _ ->
-                                                        Nothing
-                                            }
-                                }
-                            , Form.hasFieldsLoading formModel
-                            )
-
-                        NoProofNecessary ->
-                            ( ConfirmedClaimAction, False )
-            in
-            View.Modal.initWith
-                { closeMsg = ClickedCloseClaimModal
-                , isVisible = True
-                }
-                |> View.Modal.withBody
-                    [ case action.image of
-                        Nothing ->
-                            text ""
-
-                        Just "" ->
-                            text ""
-
-                        Just image ->
-                            div [ class "mb-4 relative" ]
-                                [ img
-                                    [ src image
-                                    , alt ""
-                                    , class "max-w-full mx-auto object-scale-down rounded"
-                                    ]
-                                    []
-                                , div [ class "bg-gradient-to-t from-[#01003a14] to-[#01003a00] absolute top-0 left-0 w-full h-full rounded" ] []
-                                ]
-                    , div
-                        [ class "flex"
-                        , classList [ ( "md:mb-6", proof == NoProofNecessary ) ]
-                        ]
-                        [ case position of
-                            Nothing ->
-                                Icons.flag "w-8 text-green fill-current"
-
-                            Just validPosition ->
-                                span
-                                    [ class "text-lg text-gray-500 font-bold"
-                                    , ariaHidden True
-                                    ]
-                                    [ text (String.fromInt validPosition ++ ".") ]
-                        , div [ class "ml-5 mt-1 min-w-0 w-full" ]
-                            [ Markdown.view [] action.description
-                            , div [ class "md:flex md:justify-between md:w-full" ]
-                                [ div []
-                                    [ span [ class "font-bold text-sm text-gray-900 uppercase block mt-6" ]
-                                        [ text <| t "community.objectives.reward" ]
-                                    , div [ class "text-green font-bold" ]
-                                        [ span [ class "text-2xl mr-1" ]
-                                            [ text
-                                                (Eos.formatSymbolAmount shared.translators
-                                                    action.objective.community.symbol
-                                                    action.reward
-                                                )
-                                            ]
-                                        , text (Eos.symbolToSymbolCodeString action.objective.community.symbol)
-                                        ]
-                                    ]
-                                , viewClaimCount shared.translators [ class "hidden md:flex md:self-end md:mr-8" ] action
-                                ]
-                            ]
-                        ]
-                    , viewClaimCount shared.translators
-                        [ class "md:hidden"
-                        , classList [ ( "mb-6", proof == NoProofNecessary ) ]
-                        ]
-                        action
-                    , case proof of
-                        WithProof formModel proofCode ->
-                            let
-                                timeLeft =
-                                    case proofCode of
-                                        NoCodeNecessary ->
-                                            Nothing
-
-                                        GeneratingCode ->
-                                            Nothing
-
-                                        WithCode { expiration } ->
-                                            let
-                                                minutes =
-                                                    Time.Extra.diff Time.Extra.Minute
-                                                        shared.timezone
-                                                        shared.now
-                                                        expiration
-
-                                                seconds =
-                                                    Time.Extra.diff Time.Extra.Second
-                                                        shared.timezone
-                                                        shared.now
-                                                        expiration
-                                                        |> modBy 60
-                                            in
-                                            Just { minutes = minutes, seconds = seconds }
-
-                                isTimeOver =
-                                    case timeLeft of
-                                        Nothing ->
-                                            False
-
-                                        Just { minutes } ->
-                                            minutes < 0
-                            in
-                            div []
-                                [ p [ class "text-lg font-bold text-gray-333 mt-6 mb-4 md:text-center" ]
-                                    [ text <| t "community.actions.proof.title" ]
-                                , case action.photoProofInstructions of
-                                    Just instructions ->
-                                        Markdown.view [] instructions
-
-                                    Nothing ->
-                                        p [] [ text <| t "community.actions.proof.upload_hint" ]
-                                , case proofCode of
-                                    NoCodeNecessary ->
-                                        text ""
-
-                                    GeneratingCode ->
-                                        div [ class "p-4 mt-4 bg-gray-100 rounded-sm flex flex-col items-center justify-center md:w-1/2 md:mx-auto" ]
-                                            [ span [ class "uppercase text-gray-333 font-bold text-sm" ]
-                                                [ text <| t "community.actions.form.verification_code" ]
-                                            , span [ class "bg-gray-333 animate-skeleton-loading h-10 w-44 mt-2" ] []
-                                            ]
-
-                                    WithCode { code } ->
-                                        div []
-                                            [ div [ class "p-4 mt-4 bg-gray-100 rounded-sm flex flex-col items-center justify-center md:w-1/2 md:mx-auto" ]
-                                                [ span [ class "uppercase text-gray-333 font-bold text-sm" ]
-                                                    [ text <| t "community.actions.form.verification_code" ]
-                                                , span [ class "font-bold text-xl text-gray-333" ] [ text code ]
-                                                ]
-                                            , p
-                                                [ class "text-purple-500 text-center mt-4"
-                                                , classList [ ( "text-red", isTimeOver ) ]
-                                                ]
-                                                [ text <| t "community.actions.proof.code_period_label"
-                                                , text " "
-                                                , span [ class "font-bold" ]
-                                                    [ case timeLeft of
-                                                        Nothing ->
-                                                            text "30:00"
-
-                                                        Just { minutes, seconds } ->
-                                                            (Utils.padInt 2 minutes ++ ":" ++ Utils.padInt 2 seconds)
-                                                                |> text
-                                                    ]
-                                                ]
-                                            ]
-                                , Form.viewWithoutSubmit [ class "mb-6" ]
-                                    shared.translators
-                                    (\_ -> [])
-                                    (claimWithPhotoForm shared.translators)
-                                    formModel
-                                    { toMsg = GotPhotoProofFormMsg }
-                                ]
-
-                        NoProofNecessary ->
-                            text ""
-                    ]
-                |> View.Modal.withFooter
-                    [ div [ class "w-full grid md:grid-cols-2 gap-4" ]
-                        [ if isClaimable action then
-                            button
-                                [ class "button button-secondary w-full"
-                                , onClick ClickedCloseClaimModal
-                                ]
-                                [ text <| t "menu.cancel" ]
-
-                          else
-                            text ""
-                        , button
-                            [ onClick onClaimClick
-                            , class "button button-primary w-full"
-                            , disabled isClaimDisabled
-                            ]
-                            [ text <| t "dashboard.claim" ]
-                        ]
-                    ]
-                |> View.Modal.withSize View.Modal.FullScreen
-                |> View.Modal.toHtml
-                |> Html.map GotClaimingActionMsg
-
-
-viewClaimCount : Translation.Translators -> List (Html.Attribute msg) -> Action -> Html msg
-viewClaimCount { t, tr } attrs action =
-    div
-        (class "mt-4 p-2 bg-gray-100 flex items-center justify-center text-gray-900 font-semibold text-sm rounded-sm"
-            :: attrs
-        )
-        [ img
-            [ src "/images/doggo_holding_coins.svg"
-            , alt ""
-            , class "w-8 mr-2"
-            ]
-            []
-        , p []
-            [ text <| t "community.objectives.claim_count"
-            , text " "
-            , span [ class "text-base ml-1 font-bold" ]
-                [ if action.claimCount == 1 then
-                    text <| t "community.objectives.claim_count_times_singular"
-
-                  else
-                    text <|
-                        tr "community.objectives.claim_count_times"
-                            [ ( "count", String.fromInt action.claimCount ) ]
-                ]
-            ]
-        ]
-
-
-claimWithPhotoForm : Translation.Translators -> Form.Form msg Form.File.SingleModel String
-claimWithPhotoForm translators =
-    Form.succeed identity
-        |> Form.with
-            (Form.File.init { id = "photo-proof-input" }
-                |> Form.File.withFileTypes [ Form.File.Image, Form.File.Pdf ]
-                |> Form.File.withGrayBoxVariant translators
-                |> Form.File.withContainerAttributes [ class "w-full mt-2" ]
-                |> Form.File.withEntryContainerAttributes (\_ -> [ class "h-56 w-full" ])
-                |> Form.File.withImageClass "h-56"
-                |> Form.File.withAddImagesContainerAttributes [ class "h-56 rounded-sm" ]
-                |> Form.file
-                    { parser = Ok
-                    , translators = translators
-                    , value = identity
-                    , update = \newModel _ -> newModel
-                    , externalError = always Nothing
-                    }
-            )
 
 
 
@@ -1162,52 +536,6 @@ communitySelectionSet =
 
 
 -- JSON
-
-
-type alias ClaimedAction =
-    { communityId : Eos.Symbol
-    , actionId : Id
-    , claimer : Eos.Account.Name
-    , proof :
-        Maybe
-            { photo : String
-            , proofCode :
-                Maybe
-                    { code : String
-                    , time : Time.Posix
-                    }
-            }
-    }
-
-
-encodeClaimAction : ClaimedAction -> Json.Encode.Value
-encodeClaimAction c =
-    let
-        encodeProofItem getter default encoder =
-            c.proof
-                |> Maybe.map getter
-                |> Maybe.withDefault default
-                |> encoder
-
-        encodeProofCodeItem getter default encoder =
-            c.proof
-                |> Maybe.andThen .proofCode
-                |> Maybe.map getter
-                |> Maybe.withDefault default
-                |> encoder
-    in
-    Json.Encode.object
-        [ ( "community_id", Eos.encodeSymbol c.communityId )
-        , ( "action_id", encodeId c.actionId )
-        , ( "maker", Eos.Account.encodeName c.claimer )
-        , ( "proof_photo", encodeProofItem .photo "" Json.Encode.string )
-        , ( "proof_code", encodeProofCodeItem .code "" Json.Encode.string )
-        , ( "proof_time"
-          , encodeProofCodeItem (.time >> Time.posixToMillis >> (\time -> time // 1000))
-                0
-                Json.Encode.int
-          )
-        ]
 
 
 encodeId : Id -> Json.Encode.Value
@@ -1338,16 +666,6 @@ shareActionFallbackId actionId =
     "share-action-fallback-" ++ String.fromInt (idToInt actionId)
 
 
-generateProofCode : Action -> String -> Time.Posix -> String
-generateProofCode action claimerAccountUint64 time =
-    (String.fromInt (idToInt action.id)
-        ++ claimerAccountUint64
-        ++ String.fromInt (Time.posixToMillis time // 1000)
-    )
-        |> Sha256.sha256
-        |> String.slice 0 8
-
-
 idToInt : Id -> Int
 idToInt (Id id) =
     id
@@ -1381,15 +699,6 @@ objectiveIdFromInt id =
 
 jsAddressToMsg : List String -> Json.Encode.Value -> Maybe Msg
 jsAddressToMsg addr val =
-    let
-        decodeConfirmedClaimAction =
-            Json.Decode.decodeValue (Json.Decode.field "transactionId" Json.Decode.string) val
-                |> Result.map (\_ -> ())
-                |> Result.mapError (\_ -> val)
-                |> CompletedClaimingAction
-                |> GotClaimingActionMsg
-                |> Just
-    in
     case addr of
         "ClickedShareAction" :: _ ->
             case
@@ -1416,17 +725,6 @@ jsAddressToMsg addr val =
                 Err _ ->
                     Just NoOp
 
-        "ClickedClaimAction" :: _ ->
-            Json.Decode.decodeValue (Json.Decode.field "uint64name" Json.Decode.string) val
-                |> Result.map (GotUint64Name >> GotClaimingActionMsg)
-                |> Result.toMaybe
-
-        "GotClaimingActionMsg" :: "ConfirmedClaimAction" :: _ ->
-            decodeConfirmedClaimAction
-
-        "GotClaimingActionMsg" :: "ConfirmedClaimActionWithPhotoProof" :: _ ->
-            decodeConfirmedClaimAction
-
         _ ->
             Nothing
 
@@ -1437,36 +735,8 @@ msgToString msg =
         NoOp ->
             [ "NoOp" ]
 
-        ClickedClaimAction _ _ ->
-            [ "ClickedClaimAction" ]
-
         ClickedShareAction _ ->
             [ "ClickedShareAction" ]
 
         CopiedShareLinkToClipboard _ ->
             [ "CopiedShareLinkToClipboard" ]
-
-        GotClaimingActionMsg subMsg ->
-            "GotClaimingActionMsg" :: claimingActionMsgToString subMsg
-
-
-claimingActionMsgToString : ClaimingActionMsg -> List String
-claimingActionMsgToString msg =
-    case msg of
-        ClickedCloseClaimModal ->
-            [ "ClickedCloseClaimModal" ]
-
-        ConfirmedClaimAction ->
-            [ "ConfirmedClaimAction" ]
-
-        ConfirmedClaimActionWithPhotoProof _ ->
-            [ "ConfirmedClaimActionWithPhotoProof" ]
-
-        GotPhotoProofFormMsg subMsg ->
-            "GotPhotoProofFormMsg" :: Form.msgToString subMsg
-
-        GotUint64Name _ ->
-            [ "GotUint64Name" ]
-
-        CompletedClaimingAction r ->
-            [ "CompletedClaimingAction", UR.resultToString r ]
