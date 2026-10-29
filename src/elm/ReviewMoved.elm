@@ -1,4 +1,4 @@
-module ReviewMoved exposing (appUrl, reviewUrl, viewClaimCta, viewMovedContent)
+module ReviewMoved exposing (appUrl, cardCountKey, reviewUrl, viewClaimCta, viewMovedContent)
 
 {-| Claim validation (voting) moved to the LiveView app at /app/review. Everything that
 used to let a validator vote in the Elm SPA now links there instead.
@@ -40,6 +40,17 @@ reviewUrl apiUrl maybeClaimId =
 
         Nothing ->
             appUrl apiUrl "/app/review"
+
+
+{-| Translation key of the dashboard card count: singular for one claim, plural otherwise.
+-}
+cardCountKey : Int -> String
+cardCountKey amount =
+    if amount == 1 then
+        "review_moved.card_count_one"
+
+    else
+        "review_moved.card_count"
 
 
 {-| Short line and button that replace the approve/reject buttons for a claim.

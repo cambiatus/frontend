@@ -883,7 +883,7 @@ viewActionsForAnalysisCard loggedIn model =
                                 )
                             , Markdown.view [ class "mb-4 text-center" ]
                                 (Markdown.fromTranslationWithReplacements loggedIn.shared.translators
-                                    "review_moved.card_count"
+                                    (ReviewMoved.cardCountKey analysis.count)
                                     [ ( "amount", String.fromInt analysis.count ) ]
                                 )
                             , a

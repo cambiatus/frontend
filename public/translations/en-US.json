@@ -1655,6 +1655,7 @@
     "title": "Validation has moved",
     "body": "Voting now happens in the new app.",
     "go": "Vote in the new app",
+    "card_count_one": "**{{amount}} claim** waiting for your vote",
     "card_count": "**{{amount}} claims** waiting for your vote"
   },
   "claim_moved": {
