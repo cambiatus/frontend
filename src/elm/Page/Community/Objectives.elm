@@ -174,43 +174,10 @@ update msg model loggedIn =
                                                 ]
                                         }
                                         >> getHighlightedObjectiveSummaryHeight
-
-                startClaimingAction =
-                    case model.highlightedAction of
-                        Nothing ->
-                            identity
-
-                        Just { objectiveId, actionId } ->
-                            let
-                                maybeActionAndPosition : Maybe ( Action, Int )
-                                maybeActionAndPosition =
-                                    List.Extra.find (\objective -> objective.id == objectiveId) objectives
-                                        |> Maybe.andThen
-                                            (\foundObjective ->
-                                                Maybe.map2 Tuple.pair
-                                                    (List.Extra.find (\action -> Just action.id == actionId) foundObjective.actions)
-                                                    (List.Extra.findIndex (\action -> Just action.id == actionId) foundObjective.actions
-                                                        |> Maybe.map ((+) 1)
-                                                    )
-                                            )
-                            in
-                            case maybeActionAndPosition of
-                                Nothing ->
-                                    identity
-
-                                Just ( action, position ) ->
-                                    if Action.limitNotice loggedIn.shared.translators loggedIn.shared.now action == Nothing then
-                                        Action.startClaiming { position = Just position } action
-                                            |> LoggedIn.ExternalActionMsg
-                                            |> UR.addExt
-
-                                    else
-                                        identity
             in
             model
                 |> UR.init
                 |> scrollActionIntoView
-                |> startClaimingAction
 
         ClickedToggleObjectiveVisibility objective ->
             { model

@@ -1658,5 +1658,8 @@
     "body": "La votació ara és a la nova app.",
     "go": "Votar a la nova app",
     "card_count": "**{{amount}} sol·licituds** esperen el teu vot"
+  },
+  "claim_moved": {
+    "go": "Reclama a la nova app"
   }
 }

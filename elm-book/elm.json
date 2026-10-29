@@ -10,7 +10,6 @@
             "CurrySoftware/elm-datepicker": "4.0.0",
             "NoRedInk/elm-json-decode-pipeline": "1.0.1",
             "NoRedInk/elm-simple-fuzzy": "1.0.3",
-            "billstclair/elm-sha256": "1.0.9",
             "dillonkearns/elm-graphql": "5.0.11",
             "dillonkearns/elm-markdown": "7.0.0",
             "dtwrks/elm-book": "1.4.2",

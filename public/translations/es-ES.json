@@ -1659,5 +1659,8 @@
     "body": "La votación ahora es en la nueva app.",
     "go": "Votar en la nueva app",
     "card_count": "**{{amount}} solicitudes** esperan tu voto"
+  },
+  "claim_moved": {
+    "go": "Reclamar en la nueva app"
   }
 }

@@ -1628,5 +1628,8 @@
     "body": "Voting now happens in the new app.",
     "go": "Vote in the new app",
     "card_count": "**{{amount}} claims** waiting for your vote"
+  },
+  "claim_moved": {
+    "go": "Claim in the new app"
   }
 }
