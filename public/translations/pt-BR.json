@@ -1169,6 +1169,7 @@
     }
   },
   "claim": {
+    "a_validator": "Um validador",
     "title_under_review": {
       "1": "Reivindicação",
       "2": "em análise",
