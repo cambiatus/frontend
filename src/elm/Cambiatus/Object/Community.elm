@@ -118,6 +118,11 @@ hasNews =
     Object.selectionForField "Bool" "hasNews" [] Decode.bool
 
 
+hideValidatorNames : SelectionSet Bool Cambiatus.Object.Community
+hideValidatorNames =
+    Object.selectionForField "Bool" "hideValidatorNames" [] Decode.bool
+
+
 hasObjectives : SelectionSet Bool Cambiatus.Object.Community
 hasObjectives =
     Object.selectionForField "Bool" "hasObjectives" [] Decode.bool

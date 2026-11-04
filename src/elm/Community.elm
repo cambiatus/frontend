@@ -111,6 +111,7 @@ type alias Model =
     , hasKyc : Bool
     , hasAutoInvite : Bool
     , hasNews : Bool
+    , hideValidatorNames : Bool
     , validators : List Eos.Name
     , uploads : RemoteData (Graphql.Http.Error (List String)) (List String)
     , website : Maybe String
@@ -334,6 +335,7 @@ communitySelectionSet =
         |> with Community.hasKyc
         |> with Community.autoInvite
         |> with Community.hasNews
+        |> with Community.hideValidatorNames
         |> with (Community.validators (Eos.nameSelectionSet Profile.account))
         |> SelectionSet.hardcoded RemoteData.NotAsked
         |> with Community.website

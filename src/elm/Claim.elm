@@ -8,6 +8,7 @@ module Claim exposing
     , Msg(..)
     , Paginated
     , claimPaginatedSelectionSet
+    , hidesValidatorNames
     , initClaimProfileSummaries
     , isOpenForVotes
     , isValidated
@@ -18,12 +19,14 @@ module Claim exposing
     , updateClaimModalStatus
     , updateProfileSummaries
     , viewClaimCard
+    , viewHiddenValidator
     , viewPhotoModal
     , viewVotingProgress
     )
 
 import Action exposing (Action)
 import Api.Relay as Relay
+import Avatar
 import Cambiatus.Enum.ClaimStatus as ClaimStatus
 import Cambiatus.Enum.Permission as Permission exposing (Permission)
 import Cambiatus.Object
@@ -44,11 +47,13 @@ import List.Extra as List
 import Markdown
 import Profile
 import Profile.Summary
+import RemoteData
 import ReviewMoved
 import Route
 import Session.LoggedIn as LoggedIn
 import Session.Shared exposing (Shared)
 import Time
+import Translation
 import Utils
 import View.Components
 import View.Modal as Modal
@@ -679,6 +684,22 @@ viewVotingProgress shared completionStatus =
         ]
 
 
+{-| Whether the viewer should see "A validator" instead of validator profiles:
+the community asked to hide the names, and the viewer is the claimer.
+-}
+hidesValidatorNames : Bool -> Eos.Name -> Model -> Bool
+hidesValidatorNames communityHidesNames viewer claim =
+    communityHidesNames && claim.claimer.account == viewer
+
+
+viewHiddenValidator : Translation.Translators -> Html msg
+viewHiddenValidator { t } =
+    div [ class "flex items-center" ]
+        [ Avatar.view Avatar.empty "h-10 w-10"
+        , p [ class "ml-2 text-gray-900" ] [ text (t "claim.a_validator") ]
+        ]
+
+
 viewClaimModal : LoggedIn.Model -> ClaimProfileSummaries -> Model -> Html Msg
 viewClaimModal ({ shared, accountName } as loggedIn) profileSummaries claim =
     let
@@ -698,6 +719,21 @@ viewClaimModal ({ shared, accountName } as loggedIn) profileSummaries claim =
             div [ class claimVerifiersFewerProfiles ]
                 [ div [ class "mb-10" ] [ Profile.viewEmpty shared.translators ]
                 ]
+
+        hideValidators =
+            case loggedIn.selectedCommunity of
+                RemoteData.Success community ->
+                    hidesValidatorNames community.hideValidatorNames accountName claim
+
+                _ ->
+                    False
+
+        viewValidatorSummary validator profileSummary_ =
+            if hideValidators then
+                viewHiddenValidator shared.translators
+
+            else
+                viewProfileSummary validator profileSummary_
 
         viewProfileSummary profile_ profileSummary_ =
             profileSummary_
@@ -823,7 +859,7 @@ viewClaimModal ({ shared, accountName } as loggedIn) profileSummaries claim =
                                 (\profileSummary index c ->
                                     if c.isApproved then
                                         div [ class "mb-4" ]
-                                            [ viewProfileSummary c.validator profileSummary
+                                            [ viewValidatorSummary c.validator profileSummary
                                                 |> Html.map (GotProfileSummaryMsg (VotersSummaries index) >> GotExternalMsg)
                                             ]
 
@@ -859,7 +895,7 @@ viewClaimModal ({ shared, accountName } as loggedIn) profileSummaries claim =
                                 (\profileSummary index c ->
                                     if not c.isApproved then
                                         div [ class "mb-4" ]
-                                            [ viewProfileSummary c.validator profileSummary
+                                            [ viewValidatorSummary c.validator profileSummary
                                                 |> Html.map (GotProfileSummaryMsg (VotersSummaries index) >> GotExternalMsg)
                                             ]
 
@@ -895,7 +931,7 @@ viewClaimModal ({ shared, accountName } as loggedIn) profileSummaries claim =
                                 |> List.map3
                                     (\profileSummary index v ->
                                         div [ class "mb-4" ]
-                                            [ viewProfileSummary v profileSummary
+                                            [ viewValidatorSummary v profileSummary
                                                 |> Html.map (GotProfileSummaryMsg (PendingSummaries index) >> GotExternalMsg)
                                             ]
                                     )

@@ -1166,6 +1166,7 @@
     }
   },
   "claim": {
+    "a_validator": "Un validador",
     "title_under_review": {
       "1": "Reclamo",
       "2": "pendiente",

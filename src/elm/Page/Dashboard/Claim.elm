@@ -327,6 +327,22 @@ viewVoters ({ shared } as loggedIn) profileSummaries claim =
     let
         text_ s =
             text (shared.translators.t s)
+
+        hideValidators =
+            case loggedIn.selectedCommunity of
+                RemoteData.Success community ->
+                    Claim.hidesValidatorNames community.hideValidatorNames loggedIn.accountName claim
+
+                _ ->
+                    False
+
+        viewValidator validator profileSummary msg =
+            if hideValidators then
+                Claim.viewHiddenValidator shared.translators
+
+            else
+                Profile.Summary.view shared.translators loggedIn.accountName validator profileSummary
+                    |> Html.map msg
     in
     div []
         [ div [ class "mb-8" ]
@@ -340,12 +356,7 @@ viewVoters ({ shared } as loggedIn) profileSummaries claim =
                         (\profileSummary index c ->
                             if c.isApproved then
                                 div [ class "px-2" ]
-                                    [ Profile.Summary.view shared.translators
-                                        loggedIn.accountName
-                                        c.validator
-                                        profileSummary
-                                        |> Html.map (GotProfileSummaryMsg (VoterSummary index))
-                                    ]
+                                    [ viewValidator c.validator profileSummary (GotProfileSummaryMsg (VoterSummary index)) ]
 
                             else
                                 text ""
@@ -366,9 +377,7 @@ viewVoters ({ shared } as loggedIn) profileSummaries claim =
                         (\profileSummary index c ->
                             if not c.isApproved then
                                 div [ class "px-2" ]
-                                    [ Profile.Summary.view shared.translators loggedIn.accountName c.validator profileSummary
-                                        |> Html.map (GotProfileSummaryMsg (VoterSummary index))
-                                    ]
+                                    [ viewValidator c.validator profileSummary (GotProfileSummaryMsg (VoterSummary index)) ]
 
                             else
                                 text ""
@@ -388,8 +397,7 @@ viewVoters ({ shared } as loggedIn) profileSummaries claim =
                     (pendingValidators claim
                         |> List.map3
                             (\profileSummary index v ->
-                                Profile.Summary.view shared.translators loggedIn.accountName v profileSummary
-                                    |> Html.map (GotProfileSummaryMsg (PendingSummary index))
+                                viewValidator v profileSummary (GotProfileSummaryMsg (PendingSummary index))
                             )
                             profileSummaries.pending
                             (List.range 0 (List.length profileSummaries.pending))
