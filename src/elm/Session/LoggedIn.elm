@@ -63,6 +63,7 @@ import List.Extra as List
 import Log
 import Markdown
 import Maybe.Extra
+import NewsMoved
 import Notification
 import Ports
 import Profile
@@ -304,7 +305,6 @@ type Page
     | AdminMoved
     | Invite
     | Dashboard
-    | News (Maybe Int)
     | CommunityAbout
     | CommunityObjectives
     | CommunityEditor
@@ -415,22 +415,13 @@ viewHelper pageMsg page profile_ ({ shared } as model) content =
             :: (case model.maybeHighlightedNews of
                     Just news ->
                         let
-                            isInNewsPage =
-                                case page of
-                                    News maybeNewsId ->
-                                        maybeNewsId == Just news.id
-
-                                    _ ->
-                                        False
-
                             showHighlightedNews =
                                 not (Maybe.Extra.isJust news.receipt)
                                     && (page /= AdminMoved)
-                                    && not isInNewsPage
                                     && not (List.member page [ Join, Invite ])
                         in
                         if showHighlightedNews then
-                            viewHighlightedNews shared.translators pageMsg news
+                            viewHighlightedNews shared.translators shared.endpoints.api pageMsg news
 
                         else
                             text ""
@@ -512,8 +503,8 @@ viewCommunityContactsModal model =
             text ""
 
 
-viewHighlightedNews : Translators -> (Msg pageMsg -> pageMsg) -> Community.News.Model -> Html pageMsg
-viewHighlightedNews { t } toPageMsg news =
+viewHighlightedNews : Translators -> String -> (Msg pageMsg -> pageMsg) -> Community.News.Model -> Html pageMsg
+viewHighlightedNews { t } apiUrl toPageMsg news =
     div
         [ class "bg-purple-500 py-4 sticky top-0 z-10"
         ]
@@ -534,7 +525,8 @@ viewHighlightedNews { t } toPageMsg news =
                 ]
             , a
                 [ class "button button-primary w-auto px-4 ml-auto mr-6"
-                , Route.href (Route.News { selectedNews = Just news.id, showOthers = True })
+                , Html.Attributes.href (NewsMoved.newsUrl apiUrl (Just news.id))
+                , Html.Attributes.target "_self"
                 , onClick (toPageMsg ClickedReadHighlightedNews)
                 ]
                 [ text <| t "news.read" ]
@@ -1273,7 +1265,6 @@ type External msg
     | ReloadResource Resource
     | RequestedReloadCommunityField Community.Field
     | RequestedCommunityField Community.Field
-    | SetCommunityField Community.FieldValue
     | RequiredPrivateKey { successMsg : msg, errorMsg : msg }
     | RequiredAuthToken { callbackCmd : Api.Graphql.Token -> Cmd msg }
     | RequestQuery (Cmd (Result { callbackCmd : Model -> Api.Graphql.Token -> Cmd msg } msg))
@@ -1654,9 +1645,6 @@ mapExternal mapFn msg =
         RequestedCommunityField field ->
             RequestedCommunityField field
 
-        SetCommunityField value ->
-            SetCommunityField value
-
         RequestedReloadCommunityField field ->
             RequestedReloadCommunityField field
 
@@ -1850,29 +1838,6 @@ updateExternal externalMsg ({ shared } as model) =
                                 | queuedCommunityFields =
                                     field :: model.queuedCommunityFields
                             }
-                    }
-
-        SetCommunityField value ->
-            case model.selectedCommunity of
-                RemoteData.Success community ->
-                    { defaultResult
-                        | model =
-                            { model
-                                | selectedCommunity =
-                                    Community.setFieldValue value community
-                                        |> RemoteData.Success
-                            }
-                    }
-
-                _ ->
-                    { defaultResult
-                        | cmd =
-                            Log.fromImpossible externalMsg
-                                "Tried setting community field, but community wasn't loaded"
-                                (Just model.accountName)
-                                { moduleName = "Session.LoggedIn", function = "updateExternal" }
-                                [ Log.contextFromCommunity model.selectedCommunity ]
-                                |> Log.send externalMsgToString
                     }
 
         RequiredPrivateKey afterAuthMsg ->
@@ -3214,58 +3179,3 @@ msgToString msg =
 
         ClosedCommunityContactsModal ->
             [ "ClosedCommunityContactsModal" ]
-
-
-externalMsgToString : External msg -> List String
-externalMsgToString externalMsg =
-    case externalMsg of
-        UpdatedLoggedIn _ ->
-            [ "UpdatedLoggedIn" ]
-
-        DropFromRouteHistoryWhile _ ->
-            [ "PopFromRouteHistory" ]
-
-        ShowInsufficientPermissionsModal ->
-            [ "ShowInsufficientPermissionsModal" ]
-
-        AddedCommunity _ ->
-            [ "AddedCommunity" ]
-
-        ExternalBroadcast _ ->
-            [ "ExternalBroadcast" ]
-
-        ReloadResource _ ->
-            [ "ReloadResource" ]
-
-        RequestedReloadCommunityField _ ->
-            [ "RequestedReloadCommunityField" ]
-
-        RequestedCommunityField _ ->
-            [ "RequestedCommunityField" ]
-
-        SetCommunityField _ ->
-            [ "SetCommunityField" ]
-
-        RequiredPrivateKey _ ->
-            [ "RequiredPrivateKey" ]
-
-        RequiredAuthToken _ ->
-            [ "RequiredAuthToken" ]
-
-        RequestQuery _ ->
-            [ "RequestQuery" ]
-
-        ShowFeedback _ _ ->
-            [ "ShowFeedback" ]
-
-        HideFeedback ->
-            [ "HideFeedback" ]
-
-        ShowCodeOfConductModal ->
-            [ "ShowCodeOfConductModal" ]
-
-        ExternalActionMsg subMsg ->
-            "ExternalActionMsg" :: Action.msgToString subMsg
-
-        ChangedPin _ ->
-            [ "ChangedPin" ]

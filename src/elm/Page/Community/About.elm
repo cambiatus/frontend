@@ -7,7 +7,7 @@ import Contact
 import Eos
 import Form.Text
 import Html exposing (Html, a, button, div, h1, h2, hr, img, li, p, span, text, ul)
-import Html.Attributes exposing (alt, class, classList, href, media, src, style, tabindex, title)
+import Html.Attributes exposing (alt, class, classList, href, media, src, style, tabindex, target, title)
 import Html.Attributes.Aria exposing (ariaHidden, ariaLabel)
 import Html.Events exposing (onClick)
 import Http
@@ -16,6 +16,7 @@ import Json.Decode as Decode
 import Json.Encode as Encode
 import Log
 import Markdown
+import NewsMoved
 import Page
 import RemoteData exposing (RemoteData)
 import Route
@@ -386,7 +387,7 @@ viewCommunityCard ({ translators } as shared) community =
                                 [ a
                                     [ class "flex flex-col items-center hover:opacity-60"
                                     , href (Contact.toHref contact)
-                                    , Html.Attributes.target "blank"
+                                    , target "blank"
                                     , title (Contact.toLabel translators contact)
                                     ]
                                     [ Contact.circularIconWithGrayBg [ class "w-10 h-10" ] translators contact
@@ -444,7 +445,8 @@ viewNewsCard ({ translators } as shared) community =
                                 , hr [ class "mb-4 border-gray-100", ariaHidden True ] []
                                 , a
                                     [ class "button button-secondary w-full"
-                                    , Route.href (Route.News { selectedNews = Nothing, showOthers = True })
+                                    , href (NewsMoved.newsUrl shared.endpoints.api Nothing)
+                                    , target "_self"
                                     ]
                                     [ text <| t "news.view_more" ]
                                 ]

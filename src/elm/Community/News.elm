@@ -1,24 +1,22 @@
-module Community.News exposing (Model, Reaction, Receipt, isPublished, listReactions, reactToNews, reactionName, reactionToString, receiptSelectionSet, selectionSet, viewList)
+module Community.News exposing (Model, Reaction, Receipt, isPublished, selectionSet, viewList)
 
-import Cambiatus.Enum.ReactionEnum as Reaction exposing (ReactionEnum(..))
-import Cambiatus.Mutation
+import Cambiatus.Enum.ReactionEnum exposing (ReactionEnum)
 import Cambiatus.Object
 import Cambiatus.Object.News as News
 import Cambiatus.Object.NewsReceipt as NewsReceipt
 import Cambiatus.Object.ReactionType
 import Cambiatus.Scalar
-import Graphql.Operation
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet)
 import Html exposing (Html, a, div, h3, h4, p, text)
-import Html.Attributes exposing (class, classList, style, title)
+import Html.Attributes exposing (class, classList, href, style, target, title)
 import Html.Attributes.Aria exposing (ariaHidden)
 import Icons
 import Iso8601
 import List.Extra
 import Markdown exposing (Markdown)
 import Maybe.Extra
+import NewsMoved
 import Profile
-import Route
 import Session.Shared exposing (Shared, Translators)
 import Time
 import Utils
@@ -69,51 +67,6 @@ isPublished now model =
             Time.posixToMillis now >= Time.posixToMillis scheduling
 
 
-reactionToString : Reaction -> String
-reactionToString reaction =
-    case reaction of
-        ClappingHands ->
-            "👏"
-
-        FaceWithRaisedEyebrow ->
-            "🤨"
-
-        GrinningFaceWithBigEyes ->
-            "😃"
-
-        PartyPopper ->
-            "🎉"
-
-        RedHeart ->
-            "❤️"
-
-        Rocket ->
-            "🚀"
-
-        SlightlyFrowningFace ->
-            "🙁"
-
-        SmilingFaceWithHeartEyes ->
-            "😍"
-
-        ThumbsDown ->
-            "👎"
-
-        ThumbsUp ->
-            "👍"
-
-
-reactionName : Reaction -> String
-reactionName =
-    Reaction.toString
-        >> String.replace "_" " "
-
-
-listReactions : List Reaction
-listReactions =
-    Reaction.list
-
-
 
 -- GRAPHQL
 
@@ -154,25 +107,6 @@ reactionWithCountSelectionSet =
         |> SelectionSet.with Cambiatus.Object.ReactionType.reaction
 
 
-reactToNews : Model -> { newsId : Int, reaction : Reaction } -> SelectionSet (Maybe Receipt) Graphql.Operation.RootMutation
-reactToNews news args =
-    Cambiatus.Mutation.reactToNews
-        { newsId = args.newsId
-        , reactions =
-            case news.receipt of
-                Nothing ->
-                    [ args.reaction ]
-
-                Just receipt ->
-                    if List.member args.reaction receipt.reactions then
-                        List.filter ((/=) args.reaction) receipt.reactions
-
-                    else
-                        args.reaction :: receipt.reactions
-        }
-        receiptSelectionSet
-
-
 
 -- GRAPHQL HELPERS
 
@@ -211,6 +145,7 @@ viewList shared attrs news =
                             (List.map
                                 (\theseNews ->
                                     viewSummary shared.translators
+                                        shared.endpoints.api
                                         (Maybe.Extra.isJust theseNews.receipt)
                                         theseNews
                                 )
@@ -221,13 +156,14 @@ viewList shared attrs news =
         )
 
 
-viewSummary : Translators -> Bool -> Model -> Html msg
-viewSummary { t } hasRead news =
+viewSummary : Translators -> String -> Bool -> Model -> Html msg
+viewSummary { t } apiUrl hasRead news =
     a
         [ class "grid items-center py-4 focus-ring rounded-sm hover:opacity-70"
         , style "grid-template-columns" "32px 1fr 80px"
         , title news.title
-        , Route.href (Route.News { selectedNews = Just news.id, showOthers = False })
+        , href (NewsMoved.newsUrl apiUrl (Just news.id))
+        , target "_self"
         ]
         [ Icons.speechBubble
             [ ariaHidden True
