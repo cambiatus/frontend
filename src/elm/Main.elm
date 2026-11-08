@@ -10,6 +10,7 @@ import Html exposing (Html, text)
 import Json.Decode as Decode exposing (Value)
 import Json.Encode as Encode
 import Log
+import NewsMoved
 import Page exposing (Session)
 import Page.AdminMoved as AdminMoved
 import Page.ComingSoon as ComingSoon
@@ -24,7 +25,6 @@ import Page.Dashboard.Analysis as Analysis
 import Page.Dashboard.Claim as Claim
 import Page.Join as Join
 import Page.Login as Login
-import Page.News as News
 import Page.NotFound as NotFound
 import Page.Notification as Notification
 import Page.PaymentHistory as PaymentHistory
@@ -154,7 +154,6 @@ type Status
     | Notification Notification.Model
     | Dashboard Dashboard.Model
     | Login (Maybe Route) Login.Model
-    | News News.Model
     | Profile Profile.Model
     | ProfileEditor ProfileEditor.Model
     | ProfileAddKyc ProfileAddKyc.Model
@@ -189,7 +188,6 @@ type Msg
     | GotVerifyClaimMsg Claim.Msg
     | GotDashboardMsg Dashboard.Msg
     | GotLoginMsg Login.Msg
-    | GotNewsMsg News.Msg
     | GotPaymentHistoryMsg PaymentHistory.Msg
     | GotProfileMsg Profile.Msg
     | GotProfileEditorMsg ProfileEditor.Msg
@@ -340,11 +338,6 @@ update msg model =
             Login.update subMsg subModel
                 >> updateGuestUResult (Login maybeRedirect) GotLoginMsg model
                 |> withGuest
-
-        ( GotNewsMsg subMsg, News subModel ) ->
-            News.update subMsg subModel
-                >> updateLoggedInUResult News GotNewsMsg model
-                |> withLoggedIn
 
         ( GotNotificationMsg subMsg, Notification subModel ) ->
             -- Will return a function expecting a LoggedIn Model
@@ -528,10 +521,6 @@ broadcast loggedIn broadcastMessage status =
                 Join _ ->
                     Join.receiveBroadcast broadcastMessage
                         |> Maybe.map GotJoinMsg
-
-                News _ ->
-                    News.receiveBroadcast broadcastMessage
-                        |> Maybe.map GotNewsMsg
 
                 PaymentHistory _ ->
                     PaymentHistory.receiveBroadcast broadcastMessage
@@ -887,9 +876,6 @@ statusToRoute status session =
             in
             Just (Route.Login maybeInvitation maybeRedirect)
 
-        News subModel ->
-            Just (Route.News { selectedNews = subModel.newsId, showOthers = subModel.showOtherNews })
-
         Profile subModel ->
             Just (Route.Profile subModel.profileName)
 
@@ -1140,9 +1126,7 @@ changeRouteTo maybeRoute model =
                 |> withGuest maybeInvitation maybeRedirect
 
         Just (Route.News config) ->
-            News.init config
-                >> updateLoggedInUResult News GotNewsMsg model
-                |> withLoggedIn (Route.News config)
+            ( model, Nav.load (NewsMoved.newsUrl shared.endpoints.api config.selectedNews) )
 
         Just (Route.PaymentHistory accountName) ->
             PaymentHistory.init accountName
@@ -1424,9 +1408,6 @@ msgToString msg =
         GotLoginMsg subMsg ->
             "GotLoginMsg" :: Login.msgToString subMsg
 
-        GotNewsMsg subMsg ->
-            "GotNewsMsg" :: News.msgToString subMsg
-
         GotPaymentHistoryMsg subMsg ->
             "GotPaymentHistoryMsg" :: PaymentHistory.msgToString subMsg
 
@@ -1590,9 +1571,6 @@ view model =
 
         Login _ subModel ->
             viewGuest subModel Guest.Login GotLoginMsg Login.view
-
-        News subModel ->
-            viewLoggedIn subModel (LoggedIn.News subModel.newsId) GotNewsMsg News.view
 
         Notification subModel ->
             viewLoggedIn subModel LoggedIn.Notification GotNotificationMsg Notification.view
