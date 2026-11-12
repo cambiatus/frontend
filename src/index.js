@@ -59,6 +59,25 @@ const breadcrumbs = [];
 const recentReports = new Map();
 let reportsSent = 0;
 
+// Keys whose values are secrets (the start-up breadcrumb carries `flags()`, which
+// holds the auth token). Their values never leave the browser.
+const SECRET_KEYS =
+  /^(authtoken|token|privatekey|passphrase|pin|words|signature|signed|password|phrase|mnemonic)$/i;
+
+const scrub = (value, depth = 0) => {
+  if (value === null || typeof value !== "object") return value;
+  if (depth > 6) return "[too deep]";
+  if (Array.isArray(value)) return value.map((item) => scrub(item, depth + 1));
+
+  const clean = {};
+  Object.keys(value).forEach((key) => {
+    clean[key] = SECRET_KEYS.test(key)
+      ? "[removed]"
+      : scrub(value[key], depth + 1);
+  });
+  return clean;
+};
+
 /** On production, keeps a breadcrumb in a small in-memory ring buffer that is
   attached to the next report. Needs an object like this:
   { type: 'default' | 'debug' | 'error' | 'info' | 'query',
@@ -87,7 +106,7 @@ const addBreadcrumb = (breadcrumb) => {
     type,
     category,
     message: String(message || "").slice(0, MAX_BREADCRUMB_MESSAGE),
-    data,
+    data: scrub(data),
     level,
     timestamp: Date.now(),
   });
@@ -151,6 +170,8 @@ const sendReport = (report) => {
 
     const body = serializeReport({
       ...report,
+      tags: scrub(report.tags),
+      contexts: scrub(report.contexts),
       breadcrumbs: breadcrumbs.slice(),
       url: currentPathname(),
       version: process.env.COMMIT,
