@@ -55,8 +55,8 @@ The data structure contains the following
 2.  A list of Cmd messages that will be applied to the model
 3.  A list of external messages to be applied to the model and submodel
 4.  A list of ports to execute
-5.  A list of breadcrumbs to be added to Sentry
-6.  A list of events to be sent to Sentry
+5.  A list of breadcrumbs to be added to the next report
+6.  A list of events to be sent to our backend
 
 -}
 type alias UpdateResult model msg extMsg =
@@ -269,7 +269,7 @@ addBreadcrumb breadcrumb uResult =
 
 
 {-| Add an event to be logged. On development, prints it to the console, and on
-production sends an event to Sentry. Usually you can use auxiliary functions
+production sends an event to our backend. Usually you can use auxiliary functions
 such as `logImpossible`, `logDecodingError`, `logHttpError`, `logGraphqlError`,
 `logJsonValue` and `logIncompatibleMsg`
 -}
@@ -278,7 +278,7 @@ logEvent event uResult =
     { uResult | events = event :: uResult.events }
 
 
-{-| Send an Event to Sentry so we can debug later. Should be used when something
+{-| Send an Event so we can debug later. Should be used when something
 broke on the business rules, or when we know something can't happen based on the
 flow of the app, e.g. being in a page that requires a Community, but not having
 the Community available
@@ -289,7 +289,7 @@ logImpossible transaction message maybeUser location contexts =
         |> logEvent
 
 
-{-| Send an Event to Sentry so we can debug later. Should be used when trying to
+{-| Send an Event so we can debug later. Should be used when trying to
 decode a JSON value, but getting a Json.Decode.Error.
 -}
 logDecodingError : msg -> Maybe Eos.Account.Name -> String -> Log.Location -> List Log.Context -> Decode.Error -> UpdateResult m msg eMsg -> UpdateResult m msg eMsg
@@ -298,7 +298,7 @@ logDecodingError transaction maybeUser description location contexts error =
         |> logEvent
 
 
-{-| Send an Event to Sentry so we can debug later. Should be used when
+{-| Send an Event so we can debug later. Should be used when
 attempting to perform an Http request and getting an Http.Error.
 -}
 logHttpError : msg -> Maybe Eos.Account.Name -> String -> Log.Location -> List Log.Context -> Http.Error -> UpdateResult m msg eMsg -> UpdateResult m msg eMsg
@@ -307,7 +307,7 @@ logHttpError transaction maybeUser description location contexts error =
         |> logEvent
 
 
-{-| Send an Event to Sentry so we can debug later. Should be used when
+{-| Send an Event so we can debug later. Should be used when
 attempting to perform a GraphQL request and getting a Graphql.Http.Error.
 -}
 logGraphqlError : msg -> Maybe Eos.Account.Name -> String -> Log.Location -> List Log.Context -> Graphql.Http.Error a -> UpdateResult m msg eMsg -> UpdateResult m msg eMsg
@@ -316,7 +316,7 @@ logGraphqlError transaction maybeUser description location contexts error =
         |> logEvent
 
 
-{-| Send an Event to Sentry so we can debug later. Should be used when we get
+{-| Send an Event so we can debug later. Should be used when we get
 some sort of error encoded as a JSON value.
 
 **Note**: If you just want to log extra information, use something else and add
@@ -329,7 +329,7 @@ logJsonValue transaction maybeUser message location contexts jsonValue =
         |> logEvent
 
 
-{-| Send an Event to Sentry so we can debug later. Should be used when
+{-| Send an Event so we can debug later. Should be used when
 pattern-matching two values at once (usually Model and Msg on update functions),
 and they're in a configuration that doesn't match (usually pattern-matched as
 `(_, _)`)

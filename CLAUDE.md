@@ -166,7 +166,6 @@ Run `yarn generate-graphql` to regenerate Elm types from GraphQL schema. This ta
 - `vite`, `vite-plugin-elm`: Bundling and dev server with Elm support
 - `vite-plugin-node-polyfills`: Node.js polyfills for browser (eosjs compatibility)
 - `@tailwindcss/*`: Tailwind CSS plugins
-- `@sentry/browser`: Error reporting
 - `phoenix`: WebSocket support
 - `eosjs`: EOSIO blockchain integration (v22)
 - `@absinthe/socket`: GraphQL subscriptions over Phoenix WebSocket

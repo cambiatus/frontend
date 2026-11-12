@@ -245,7 +245,12 @@ update msg shared model =
                 |> UR.init
                 |> UR.logEvent
                     { username = Nothing
-                    , message = "Got an error when submitting PIN"
+                    , message =
+                        if err == "error.invalidPin" then
+                            "Login: the PIN did not decrypt the stored key"
+
+                        else
+                            "Login: got an error when submitting PIN"
                     , tags = [ Log.TypeTag Log.UnknownError ]
                     , location =
                         { moduleName = "Auth"
@@ -257,7 +262,12 @@ update msg shared model =
                           }
                         ]
                     , transaction = msg
-                    , level = Log.Error
+                    , level =
+                        if err == "error.invalidPin" then
+                            Log.Warning
+
+                        else
+                            Log.Error
                     }
 
 

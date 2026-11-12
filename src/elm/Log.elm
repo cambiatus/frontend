@@ -21,19 +21,18 @@ port module Log exposing
     , send
     )
 
-{-| This is a module to help log data to our Sentry account. The two main things
-available are adding breadcrumbs, and sending events to Sentry. In our project,
-we use Sentry's JS SDK, which means Sentry is actually handled on the JS side of
-our app (and not on Elm). That way, we can also log events from JS, and Sentry
-can capture some events (like UI interaction, navigation, etc.) automatically.
+{-| This is a module to help log data to our own backend. The two main things
+available are adding breadcrumbs, and sending events. Reporting is handled on
+the JS side of our app (and not on Elm). That way, we can also log events from
+JS, and uncaught JS errors are reported too.
 
-Note that adding breadcrumbs **does not send anything to Sentry**. Breadcrumbs
-are sent automatically with events. Adding a breadcrumb simply means it will be
-shown on the event's information.
+Note that adding breadcrumbs **does not send anything**. The last few
+breadcrumbs are sent automatically with the next event. Adding a breadcrumb
+simply means it will be shown on the event's information.
 
 An event should be sent whenever we see something unusual, such as a failed
-query, or some other kind of error. That will be sent over to Sentry, where we
-can see details about the error and analyze further.
+query, or some other kind of error. That will be sent over to our backend, where
+we can see details about the error and analyze further.
 
 -}
 
@@ -82,7 +81,7 @@ type EventType
     | UnsupportedFeature
 
 
-{-| Defines the possible tags. Tags are used to search for events on Sentry.
+{-| Defines the possible tags. Tags are used to search for events.
 -}
 type Tag
     = TypeTag EventType
@@ -100,8 +99,7 @@ type Level
     | DebugLevel
 
 
-{-| Represents the structure of a Sentry breadcrumb. Extracted from the
-[sentry docs](https://develop.sentry.dev/sdk/event-payloads/breadcrumbs/):
+{-| Represents the structure of a breadcrumb:
 
   - type\_: a [BreadcrumbType](#BreadcrumbType). Different types have different
     ways of being rendered.
@@ -121,8 +119,8 @@ type alias Breadcrumb msg =
     }
 
 
-{-| All the possible types a breadcrumb can be. Extracted from
-[the sentry docs](https://develop.sentry.dev/sdk/event-payloads/breadcrumbs/#breadcrumb-types):
+{-| All the possible types a breadcrumb can be. Modeled on
+the usual breadcrumb types:
 
   - Default: a generic breadcrumb - typically a log message or user-generated.
   - Debug: typically a log message.
@@ -139,13 +137,13 @@ type BreadcrumbType
     | QueryBreadcrumb
 
 
-{-| An event is what we actually send to Sentry. Descriptive messages, tags and
+{-| An event is what we actually send to our backend. Descriptive messages, tags and
 extras are very important so we can have a better debugging experience! Fields:
 
   - username: if the error comes from a logged in user, we can include their
     username. This makes it so if a user reports an error, we can search by
-    their username on Sentry.
-  - message: the title that shows up on Sentry.
+    their username in the logs.
+  - message: the title that shows up in the logs.
   - tags: generic identifiers related to the event, such as
     ("error-type", "eos-transaction"). Used to filter/search through events
   - location: where in the code the Event happened.
@@ -193,9 +191,9 @@ type alias Location =
 -- CMDS
 
 
-{-| Perform a command to add a Breadcrumb to Sentry. This **does not** send data
-over to Sentry, it only add the breadcrumb information on the Sentry object
-handled by JS. If you want to send an event to Sentry, use
+{-| Perform a command to add a Breadcrumb. This **does not** send data
+over the network, it only keeps the breadcrumb information in the buffer
+handled by JS. If you want to send an event, use
 [`send`](#send)!
 
 On development, just logs to the console.
@@ -213,7 +211,7 @@ addBreadcrumb msgToString breadcrumb =
         |> addBreadcrumbPort
 
 
-{-| Perform a command to send an Event to Sentry. It will include all the
+{-| Perform a command to send an Event. It will include all the
 breadcrums added since the previous event.
 
 On development, just logs to the console.

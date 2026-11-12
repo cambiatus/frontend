@@ -1,5 +1,4 @@
 import * as AbsintheSocket from "@absinthe/socket";
-import * as Sentry from "@sentry/browser";
 import { Api, JsonRpc } from "eosjs";
 import { JsSignatureProvider } from "eosjs/dist/eosjs-jssig";
 import { ecc } from "eosjs/dist/eosjs-ecc-migration";
@@ -42,25 +41,45 @@ const config = configuration[env];
 // App startup
 // =========================================
 
-if (env !== "development") {
-  // Init Sentry as soon as possible so it starts recording events and breadcrumbs
-  // automatically
-  Sentry.init({
-    dsn: "https://535b151f7b8c48f8a7307b9bc83ebeba@sentry.io/1480468",
-    environment: env,
-    beforeBreadcrumb(breadcrumb, hint) {
-      // We have a limited amount of breadcrumbs, and these aren't super useful
-      // to us, so we just don't include them
-      const unusedCategories = ["ui.click", "ui.input"];
+// =========================================
+// Client error reporting
+// =========================================
 
-      return unusedCategories.includes(breadcrumb.category) ? null : breadcrumb;
-    },
+// Reports go to our own backend (`POST /api/client_errors`). The endpoint
+// always answers 204 and we never retry, so nothing here can break the app.
+
+const CLIENT_ERRORS_URL = "/api/client_errors";
+const MAX_BREADCRUMBS = 30;
+const MAX_BREADCRUMB_MESSAGE = 300;
+const MAX_REPORTS_PER_PAGE_LOAD = 20;
+const DUPLICATE_WINDOW_MS = 60 * 1000;
+const MAX_BODY_BYTES = 16 * 1024;
+
+const breadcrumbs = [];
+const recentReports = new Map();
+let reportsSent = 0;
+
+// Keys whose values are secrets (the start-up breadcrumb carries `flags()`, which
+// holds the auth token). Their values never leave the browser.
+const SECRET_KEYS =
+  /^(authtoken|token|privatekey|passphrase|pin|words|signature|signed|password|phrase|mnemonic)$/i;
+
+const scrub = (value, depth = 0) => {
+  if (value === null || typeof value !== "object") return value;
+  if (depth > 6) return "[too deep]";
+  if (Array.isArray(value)) return value.map((item) => scrub(item, depth + 1));
+
+  const clean = {};
+  Object.keys(value).forEach((key) => {
+    clean[key] = SECRET_KEYS.test(key)
+      ? "[removed]"
+      : scrub(value[key], depth + 1);
   });
+  return clean;
+};
 
-  Sentry.setTag("cambiatus.version", process.env.COMMIT);
-}
-
-/** On production, adds a breadcrumb to sentry. Needs an object like this:
+/** On production, keeps a breadcrumb in a small in-memory ring buffer that is
+  attached to the next report. Needs an object like this:
   { type: 'default' | 'debug' | 'error' | 'info' | 'query',
     category: portName,
     message: 'Something went wrong',
@@ -80,14 +99,96 @@ const addBreadcrumb = (breadcrumb) => {
     return;
   }
 
-  // We don't want to send localData to sentry, as it might contain sensitive
-  // information
-  const { localData, ...rest } = breadcrumb;
+  // We don't want to keep localData, as it might contain sensitive information
+  const { type, category, message, data, level } = breadcrumb;
 
-  Sentry.addBreadcrumb(rest);
+  breadcrumbs.push({
+    type,
+    category,
+    message: String(message || "").slice(0, MAX_BREADCRUMB_MESSAGE),
+    data: scrub(data),
+    level,
+    timestamp: Date.now(),
+  });
+
+  if (breadcrumbs.length > MAX_BREADCRUMBS) {
+    breadcrumbs.shift();
+  }
 };
 
-/** On production, sends an event to Sentry. Needs an object like this:
+const currentPathname = () => {
+  try {
+    return window.location.pathname;
+  } catch (_) {
+    return null;
+  }
+};
+
+const storedAccountName = () => {
+  try {
+    const user = JSON.parse(getItem(USER_KEY));
+    return (user && user.accountName) || null;
+  } catch (_) {
+    return null;
+  }
+};
+
+const shouldSendReport = ({ level, transaction, message }) => {
+  const now = Date.now();
+  const key = `${level}|${transaction}|${message}`;
+
+  recentReports.forEach((sentAt, sentKey) => {
+    if (now - sentAt >= DUPLICATE_WINDOW_MS) recentReports.delete(sentKey);
+  });
+
+  if (reportsSent >= MAX_REPORTS_PER_PAGE_LOAD || recentReports.has(key)) {
+    return false;
+  }
+
+  reportsSent += 1;
+  recentReports.set(key, now);
+  return true;
+};
+
+const serializeReport = (report) => {
+  let body = JSON.stringify(report);
+
+  if (body.length > MAX_BODY_BYTES) {
+    body = JSON.stringify({ ...report, breadcrumbs: [] });
+  }
+
+  if (body.length > MAX_BODY_BYTES) {
+    body = JSON.stringify({ ...report, breadcrumbs: [], contexts: [] });
+  }
+
+  return body;
+};
+
+const sendReport = (report) => {
+  try {
+    if (!shouldSendReport(report)) return;
+
+    const body = serializeReport({
+      ...report,
+      tags: scrub(report.tags),
+      contexts: scrub(report.contexts),
+      breadcrumbs: breadcrumbs.slice(),
+      url: currentPathname(),
+      version: process.env.COMMIT,
+    });
+
+    fetch(CLIENT_ERRORS_URL, {
+      method: "POST",
+      keepalive: true,
+      headers: { "content-type": "application/json" },
+      body,
+    }).catch(() => {});
+  } catch (_) {
+    // Reporting must never break the app
+  }
+};
+
+/** On production, sends an event to our backend. Needs an object like this:
   { user: eosUsername | null,
     message: 'Something went wrong',
     tags: { 'cambiatus.type': 'eos-transaction' },
@@ -117,27 +218,13 @@ const logEvent = (event) => {
   } else {
     const { user, message, tags, contexts, transaction, level } = event;
 
-    Sentry.withScope((scope) => {
-      if (user !== null) {
-        scope.setUser({ username: user });
-      } else {
-        const user = JSON.parse(getItem(USER_KEY));
-        const accountName = (user && user.accountName) || null;
-
-        if (accountName !== null) {
-          scope.setUser({ username: accountName });
-        }
-      }
-      // If the error comes from Elm, this key will be overwritten
-      scope.setTag("cambiatus.language", "javascript");
-      scope.setTags(tags);
-      scope.setTransaction(transaction);
-      contexts.forEach((context) => {
-        scope.setContext(context.name, context.extras);
-      });
-      scope.setLevel(level);
-
-      Sentry.captureMessage(message);
+    sendReport({
+      level,
+      message,
+      transaction,
+      account: user || storedAccountName(),
+      tags: tags || {},
+      contexts: contexts || [],
     });
   }
 
@@ -150,6 +237,45 @@ const logEvent = (event) => {
     level: "debug",
   });
 };
+
+if (env !== "development") {
+  // Uncaught errors are not seen by Elm, so we report them from here
+  window.addEventListener("error", (event) => {
+    const isForeignScript =
+      event.filename && !event.filename.startsWith(window.location.origin);
+    if (isForeignScript || /ResizeObserver loop/.test(event.message)) return;
+
+    const location = event.filename
+      ? ` (${event.filename}:${event.lineno})`
+      : "";
+
+    sendReport({
+      level: "error",
+      message: `${event.message}${location}`,
+      transaction: "window.onerror",
+      account: storedAccountName(),
+      tags: { "cambiatus.language": "javascript" },
+      contexts: [],
+    });
+  });
+
+  window.addEventListener("unhandledrejection", (event) => {
+    const reason = event.reason;
+    const message = String(
+      (reason && reason.message) || reason || "Unhandled promise rejection",
+    );
+    if (/ResizeObserver loop/.test(message)) return;
+
+    sendReport({
+      level: "error",
+      message,
+      transaction: "window.unhandledrejection",
+      account: storedAccountName(),
+      tags: { "cambiatus.language": "javascript" },
+      contexts: [],
+    });
+  });
+}
 
 const hostnameInfo = () => {
   const environments = ["staging", "demo"];
@@ -316,12 +442,6 @@ async function readClipboardWithPermission() {
 function flags() {
   const user = JSON.parse(getItem(USER_KEY));
   const accountName = (user && user.accountName) || null;
-
-  if (env !== "development" && accountName !== null) {
-    Sentry.configureScope((scope) => {
-      scope.setUser({ username: accountName });
-    });
-  }
 
   return {
     endpoints: config.endpoints,
@@ -513,11 +633,6 @@ function logout() {
     localData: {},
     level: "info",
   });
-  if (env !== "development") {
-    Sentry.configureScope((scope) => {
-      scope.setUser(null);
-    });
-  }
 }
 
 function downloadPdf(accountName, passphrase) {
@@ -728,9 +843,14 @@ async function handleJavascriptPort(arg) {
         } catch (err) {
           logEvent({
             user: null,
-            message: "Get account from key port error",
+            message: "Login: could not look up the account for the 12 words",
             tags: { "cambiatus.kind": "auth" },
-            contexts: [{ name: "Error details", extras: { error: err } }],
+            contexts: [
+              {
+                name: "Error details",
+                extras: { error: String((err && err.message) || err) },
+              },
+            ],
             transaction: "getAccountFromKey",
             level: "error",
           });
@@ -742,9 +862,25 @@ async function handleJavascriptPort(arg) {
     case "signString": {
       const { input, privateKey } = arg.data;
 
-      const signed = ecc.sign(input, privateKey);
+      try {
+        const signed = ecc.sign(input, privateKey);
 
-      return { signed };
+        return { signed };
+      } catch (err) {
+        // Never include the error message or the key: they could echo the key
+        logEvent({
+          user: null,
+          message: "Login: signing the auth phrase failed",
+          tags: { "cambiatus.kind": "auth" },
+          contexts: [
+            { name: "Error details", extras: { errorName: err && err.name } },
+          ],
+          transaction: "signString",
+          level: "error",
+        });
+
+        return { error: "error.unknown" };
+      }
     }
     case "login": {
       const { privateKey, passphrase, accountName, pin } = arg.data;
@@ -761,12 +897,6 @@ async function handleJavascriptPort(arg) {
         textDecoder: new TextDecoder(),
         textEncoder: new TextEncoder(),
       });
-
-      if (env !== "development") {
-        Sentry.configureScope((scope) => {
-          scope.setUser({ username: accountName });
-        });
-      }
 
       addBreadcrumb({
         type: "debug",
@@ -828,7 +958,6 @@ async function handleJavascriptPort(arg) {
             level: "debug",
           });
 
-          // Configure Sentry logged user
           addBreadcrumb({
             type: "info",
             category: "getPrivateKey",
