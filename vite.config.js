@@ -2,7 +2,6 @@ import { defineConfig } from "vite";
 import elmPlugin from "vite-plugin-elm";
 import { nodePolyfills } from "vite-plugin-node-polyfills";
 import { execSync } from "child_process";
-import path from "path";
 
 // Custom plugin to inject git hash
 const gitHashPlugin = () => ({
@@ -114,14 +113,6 @@ export default defineConfig({
       // Some dependencies (url polyfill) expect punycode next to the package
       // tree; point explicitly to the hoisted copy to avoid ENOENT errors.
       punycode: "punycode/",
-      // In dev, stub out Sentry to avoid its var global/const global conflict
-      // that crashes the module before Elm can run. All Sentry calls in
-      // index.js are already guarded by `env !== "development"`.
-      ...(process.env.NODE_ENV !== "production" && {
-        "@sentry/browser": path.resolve(
-          "./src/scripts/sentry-stub.js"
-        ),
-      }),
     },
   },
 });

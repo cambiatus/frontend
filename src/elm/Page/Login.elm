@@ -651,6 +651,7 @@ updateWithPin msg model ({ shared } as guest) =
                         |> PinGuestExternal
                     )
                 |> UR.addExt RevertProcess
+                |> logAccountLookupFailure msg err
 
         GeneratedAuthPhrase (RemoteData.Success phrase) ->
             case model.status of
@@ -921,6 +922,37 @@ jsAddressToMsg addr val =
 
         _ ->
             Nothing
+
+
+{-| Logs why looking up the account for the 12 words failed. `error.unknown` is
+not logged here, as the JS side already logs it with the underlying error.
+-}
+logAccountLookupFailure : PinMsg -> String -> PinUpdateResult -> PinUpdateResult
+logAccountLookupFailure msg err =
+    let
+        logStep level message =
+            UR.logEvent
+                { username = Nothing
+                , message = message
+                , tags = [ Log.TypeTag Log.UnknownError ]
+                , location =
+                    { moduleName = "Page.Login"
+                    , function = "logAccountLookupFailure"
+                    }
+                , contexts = []
+                , transaction = msg
+                , level = level
+                }
+    in
+    case err of
+        "error.accountNotFound" ->
+            logStep Log.Warning "Login: the 12 words match no account"
+
+        "error.invalidKey" ->
+            logStep Log.Warning "Login: the 12 words do not make a valid key"
+
+        _ ->
+            identity
 
 
 msgToString : Msg -> List String
