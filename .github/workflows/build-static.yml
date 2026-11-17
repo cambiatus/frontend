@@ -27,7 +27,11 @@ jobs:
 
       - run: yarn install --frozen-lockfile
 
+      # Bundling with sourcemaps sits right at Node's default ~2 GB heap and has
+      # died with "JavaScript heap out of memory" (exit 134). The runner has the RAM.
       - run: yarn build            # vite build -> dist/
+        env:
+          NODE_OPTIONS: --max-old-space-size=6144
 
       - name: Package static tree
         run: tar -czf frontend-static.tar.gz -C dist .
