@@ -1140,6 +1140,16 @@
       "body": "Lo usamos para entregas y para tu lugar cuando tu ubicación está desactivada.",
       "action": "Añadir dirección",
       "dismiss": "Ahora no"
+    },
+    "new_app": {
+      "label": "Aviso: nueva plataforma de MUDA",
+      "eyebrow": "Novedad",
+      "title": "¡La nueva plataforma llega en el Celebra Muda, a principios de diciembre!",
+      "body": "Pix en la tienda, cestas orgánicas y un diseño totalmente nuevo. Ya puedes conocerla.",
+      "words_warning": "Antes del cambio, comprueba que tus **12 palabras** están guardadas.",
+      "words_link": "Cómo encontrarlas",
+      "action": "Conocer la nueva versión",
+      "dismiss": "Cerrar aviso"
     }
   },
   "all_analysis": {

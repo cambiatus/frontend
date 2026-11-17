@@ -41,6 +41,7 @@ import Json.Encode as Encode
 import List.Extra as List
 import Log
 import Markdown
+import NewAppCallout
 import Page
 import PlaceLocation
 import PlaceRelease
@@ -97,6 +98,7 @@ type alias Model =
     , copied : Bool
     , placeStatus : Maybe PlaceLocation.Status
     , addressNoteDismissed : Bool
+    , newAppCalloutDismissed : Maybe Bool
     }
 
 
@@ -146,6 +148,7 @@ initModel shared =
     , copied = False
     , placeStatus = Nothing
     , addressNoteDismissed = False
+    , newAppCalloutDismissed = Nothing
     }
 
 
@@ -225,7 +228,8 @@ view ({ shared } as loggedIn) model =
                             isExplicitValidator || (hasVerifyPermission && hasAvailableClaims)
                     in
                     div []
-                        [ viewAddressNote shared model
+                        [ viewNewAppCallout shared community.symbol model
+                        , viewAddressNote shared model
                         , div [ class "container mx-auto my-8 px-4 lg:grid lg:grid-cols-3 lg:gap-7" ]
                             [ if not loggedIn.hasAcceptedCodeOfConduct then
                                 LoggedIn.viewFrozenAccountCard shared.translators
@@ -255,6 +259,18 @@ view ({ shared } as loggedIn) model =
     { title = t "menu.dashboard"
     , content = content
     }
+
+
+viewNewAppCallout : Shared -> Eos.Symbol -> Model -> Html Msg
+viewNewAppCallout shared symbol model =
+    if NewAppCallout.isVisible { dismissed = model.newAppCalloutDismissed } symbol then
+        NewAppCallout.view shared.translators
+            { apiUrl = shared.endpoints.api
+            , onDismiss = ClickedDismissNewAppCallout
+            }
+
+    else
+        text ""
 
 
 viewAddressNote : Shared -> Model -> Html Msg
@@ -998,6 +1014,8 @@ type Msg
     | CompletedLocatePlace (RemoteData (Graphql.Http.Error PlaceLocation.Status) PlaceLocation.Status)
     | CompletedLoadPlaceStatus (RemoteData (Graphql.Http.Error (Maybe PlaceLocation.Status)) (Maybe PlaceLocation.Status))
     | ClickedDismissAddressNote
+    | GotNewAppCallout Value
+    | ClickedDismissNewAppCallout
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
@@ -1017,6 +1035,11 @@ update msg model ({ shared, accountName } as loggedIn) =
                 |> UR.addExt (fetchAvailableAnalysis loggedIn Nothing)
                 |> UR.addExt (fetchTransfers loggedIn community Nothing model)
                 |> UR.addExt (LoggedIn.query loggedIn (PlaceRelease.query loggedIn) CompletedLoadPlaceRelease)
+                |> UR.addPort
+                    { responseAddress = GotNewAppCallout Encode.null
+                    , responseData = Encode.null
+                    , data = Encode.object [ ( "name", Encode.string "newAppCallout" ) ]
+                    }
 
         -- Only members who hold the `elm_places` release share their browser's location
         CompletedLoadPlaceRelease (RemoteData.Success True) ->
@@ -1074,6 +1097,25 @@ update msg model ({ shared, accountName } as loggedIn) =
                     { responseAddress = NoOp
                     , responseData = Encode.null
                     , data = Encode.object [ ( "name", Encode.string "dismissAddressNote" ) ]
+                    }
+
+        -- If the browser can't say, the callout shows: better twice than never
+        GotNewAppCallout value ->
+            { model
+                | newAppCalloutDismissed =
+                    Decode.decodeValue NewAppCallout.dismissedDecoder value
+                        |> Result.withDefault False
+                        |> Just
+            }
+                |> UR.init
+
+        ClickedDismissNewAppCallout ->
+            { model | newAppCalloutDismissed = Just True }
+                |> UR.init
+                |> UR.addPort
+                    { responseAddress = NoOp
+                    , responseData = Encode.null
+                    , data = Encode.object [ ( "name", Encode.string "dismissNewAppCallout" ) ]
                     }
 
         CompletedLoadBalance (Ok balance) ->
@@ -1509,6 +1551,9 @@ jsAddressToMsg addr val =
         "GotBrowserLocation" :: _ ->
             Just (GotBrowserLocation val)
 
+        "GotNewAppCallout" :: _ ->
+            Just (GotNewAppCallout val)
+
         _ ->
             Nothing
 
@@ -1536,6 +1581,12 @@ msgToString msg =
 
         ClickedDismissAddressNote ->
             [ "ClickedDismissAddressNote" ]
+
+        GotNewAppCallout _ ->
+            [ "GotNewAppCallout" ]
+
+        ClickedDismissNewAppCallout ->
+            [ "ClickedDismissNewAppCallout" ]
 
         CompletedLoadBalance result ->
             [ "CompletedLoadBalance", UR.resultToString result ]

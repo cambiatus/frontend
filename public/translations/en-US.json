@@ -1137,6 +1137,16 @@
       "body": "We use it for deliveries, and for your place when your location is off.",
       "action": "Add address",
       "dismiss": "Not now"
+    },
+    "new_app": {
+      "label": "Notice: MUDA's new platform",
+      "eyebrow": "New",
+      "title": "The new platform arrives at Celebra Muda, in early December!",
+      "body": "Pix in the shop, organic baskets and a brand new look. You can try it now.",
+      "words_warning": "Before the change, make sure your **12 words** are saved.",
+      "words_link": "How to find them",
+      "action": "Try the new version",
+      "dismiss": "Close notice"
     }
   },
   "all_analysis": {
