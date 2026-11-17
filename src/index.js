@@ -30,6 +30,7 @@ const AUTH_TOKEN = "bespiral.auth_token";
 const RECENT_SEARCHES = "bespiral.recent_search";
 const SELECTED_COMMUNITY_KEY = "bespiral.selected_community";
 const PIN_VISIBILITY_KEY = "bespiral.pin_visibility";
+const NEW_APP_CALLOUT_KEY = "bespiral.new_app_callout_dismissed";
 const env = process.env.NODE_ENV || "development";
 const useSubdomain =
   process.env.USE_SUBDOMAIN === undefined
@@ -1516,6 +1517,13 @@ async function handleJavascriptPort(arg) {
     }
     case "dismissAddressNote": {
       memberLocation.dismissAddressNote();
+      return {};
+    }
+    case "newAppCallout": {
+      return { dismissed: getItem(NEW_APP_CALLOUT_KEY) === "true" };
+    }
+    case "dismissNewAppCallout": {
+      setItem(NEW_APP_CALLOUT_KEY, "true");
       return {};
     }
     case "readClipboard": {

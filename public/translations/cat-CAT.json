@@ -1139,6 +1139,16 @@
       "body": "La fem servir per a lliuraments i per al teu lloc quan la ubicació està desactivada.",
       "action": "Afegir adreça",
       "dismiss": "Ara no"
+    },
+    "new_app": {
+      "label": "Avís: nova plataforma de MUDA",
+      "eyebrow": "Novetat",
+      "title": "La nova plataforma arriba al Celebra Muda, a principis de desembre!",
+      "body": "Pix a la botiga, cistelles orgàniques i un disseny totalment nou. Ja la pots conèixer.",
+      "words_warning": "Abans del canvi, comprova que les teves **12 paraules** estan desades.",
+      "words_link": "Com trobar-les",
+      "action": "Conèixer la nova versió",
+      "dismiss": "Tancar l'avís"
     }
   },
   "all_analysis": {
