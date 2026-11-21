@@ -1643,5 +1643,11 @@
   },
   "claim_moved": {
     "go": "Claim in the new app"
+  },
+  "shop_moved": {
+    "buy_go": "Buy in the new app",
+    "manage_title": "Batches and deliveries now live in the new app",
+    "manage_body": "In the new app you open batches, see each batch's orders and organise deliveries.",
+    "manage_go": "Open in the new app"
   }
 }

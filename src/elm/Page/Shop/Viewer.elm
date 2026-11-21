@@ -44,6 +44,7 @@ import Session.LoggedIn as LoggedIn
 import Session.Shared as Shared
 import Shop exposing (Product, ProductPreview)
 import Shop.Category
+import ShopMoved
 import Transfer
 import Translation
 import UpdateResult as UR
@@ -898,44 +899,51 @@ view session model =
                                             [ Page.viewHeader loggedIn sale.title
                                             , viewContent sale
                                                 sale.categories
-                                                (Form.view []
-                                                    loggedIn.shared.translators
-                                                    (\submitButton ->
-                                                        [ if isOwner then
-                                                            button
-                                                                [ class "button button-primary w-full"
-                                                                , disabled (not loggedIn.hasAcceptedCodeOfConduct)
-                                                                , onClick ClickedEditSale
-                                                                , type_ "button"
-                                                                ]
-                                                                [ text <| t "shop.edit" ]
-
-                                                          else
-                                                            submitButton
-                                                                [ class "button button-primary w-full"
-                                                                , disabled (isOutOfStock || not loggedIn.hasAcceptedCodeOfConduct)
-                                                                ]
-                                                                [ if isOutOfStock then
-                                                                    text <| t "shop.sold_out"
+                                                (ShopMoved.viewBuyOr translators
+                                                    loggedIn.shared.endpoints.api
+                                                    sale
+                                                    (div []
+                                                        [ ShopMoved.viewSellerCard translators loggedIn.shared.endpoints.api loggedIn.accountName sale
+                                                        , Form.view []
+                                                            loggedIn.shared.translators
+                                                            (\submitButton ->
+                                                                [ if isOwner then
+                                                                    button
+                                                                        [ class "button button-primary w-full"
+                                                                        , disabled (not loggedIn.hasAcceptedCodeOfConduct)
+                                                                        , onClick ClickedEditSale
+                                                                        , type_ "button"
+                                                                        ]
+                                                                        [ text <| t "shop.edit" ]
 
                                                                   else
-                                                                    text <| t "shop.buy"
+                                                                    submitButton
+                                                                        [ class "button button-primary w-full"
+                                                                        , disabled (isOutOfStock || not loggedIn.hasAcceptedCodeOfConduct)
+                                                                        ]
+                                                                        [ if isOutOfStock then
+                                                                            text <| t "shop.sold_out"
+
+                                                                          else
+                                                                            text <| t "shop.buy"
+                                                                        ]
                                                                 ]
+                                                            )
+                                                            (createForm loggedIn.shared.translators
+                                                                sale
+                                                                maybeBalance
+                                                                { isDisabled = isDisabled
+                                                                , communityMinBalance = community.minBalance
+                                                                }
+                                                                GotFormInteractionMsg
+                                                            )
+                                                            (Form.withDisabled isDisabled model_.form)
+                                                            { toMsg = GotFormMsg
+                                                            , onSubmit = ClickedTransfer sale
+                                                            }
+                                                            |> Html.map AsLoggedInMsg
                                                         ]
                                                     )
-                                                    (createForm loggedIn.shared.translators
-                                                        sale
-                                                        maybeBalance
-                                                        { isDisabled = isDisabled
-                                                        , communityMinBalance = community.minBalance
-                                                        }
-                                                        GotFormInteractionMsg
-                                                    )
-                                                    (Form.withDisabled isDisabled model_.form)
-                                                    { toMsg = GotFormMsg
-                                                    , onSubmit = ClickedTransfer sale
-                                                    }
-                                                    |> Html.map AsLoggedInMsg
                                                 )
                                             , viewEditSaleModal translators model_ shopCategories sale
                                                 |> Html.map AsLoggedInMsg
