@@ -1,4 +1,4 @@
-module ShopMoved exposing (buyUrl, manageUrl, showsSellerCard, viewBuyLink, viewBuyOr, viewSellerCard)
+module ShopMoved exposing (Role(..), buyUrl, manageUrl, role, viewBuyLink, viewOfferAction, viewSellerCard)
 
 {-| Offers that the server marks `buyInApp` are bought and managed (lotes, orders, deliveries)
 in the LiveView app. Elm has no rule of its own about them: it only follows `Product.buyInApp`
@@ -9,7 +9,6 @@ the SPA.
 
 -}
 
-import Eos.Account
 import Html exposing (Html, a, div, h2, p, text)
 import Html.Attributes exposing (class, href, id, target)
 import ReviewMoved
@@ -52,50 +51,65 @@ viewBuyLink { t } apiUrl offerId =
         [ text (t "shop_moved.buy_go") ]
 
 
-{-| The link to the new app for an offer that is `buyInApp`, otherwise `ownView` untouched.
-Every place that would let a member buy an offer goes through this.
+{-| What a member is to an offer. Decided by role first: the owner of a `buyInApp` offer manages
+it in the new app, anyone else buys it there, and every other offer is untouched.
 -}
-viewBuyOr : Translation.Translators -> String -> { product | id : Shop.Id, buyInApp : Bool } -> Html msg -> Html msg
-viewBuyOr translators apiUrl product ownView =
-    if product.buyInApp then
-        viewBuyLink translators apiUrl product.id
+type Role
+    = Owner
+    | Buyer
+    | Unchanged
+
+
+role : { buyInApp : Bool, isOwner : Bool } -> Role
+role { buyInApp, isOwner } =
+    if not buyInApp then
+        Unchanged
+
+    else if isOwner then
+        Owner
 
     else
-        ownView
+        Buyer
 
 
-{-| Only the creator of a `buyInApp` offer is told that lotes and deliveries live in the new app.
+{-| What the offer page shows where the buy form / edit button lives. `ownView` is exactly what
+Elm showed before: untouched for `Unchanged`, below the seller card for `Owner`, and replaced by
+the buy link for `Buyer`.
 -}
-showsSellerCard : Eos.Account.Name -> { product | creatorId : Eos.Account.Name, buyInApp : Bool } -> Bool
-showsSellerCard viewer product =
-    product.buyInApp && product.creatorId == viewer
-
-
-{-| Card shown to the creator of an offer that is managed in the new app. Empty for anyone else
-and for offers that are not `buyInApp`.
--}
-viewSellerCard :
+viewOfferAction :
     Translation.Translators
     -> String
-    -> Eos.Account.Name
-    -> { product | id : Shop.Id, creatorId : Eos.Account.Name, buyInApp : Bool }
+    -> { product | id : Shop.Id, buyInApp : Bool }
+    -> { isOwner : Bool }
     -> Html msg
-viewSellerCard { t } apiUrl viewer product =
-    if showsSellerCard viewer product then
-        div
-            [ id ("seller-card-new-app-" ++ Shop.idToString product.id)
-            , class "w-full mb-4 p-4 rounded bg-white border border-gray-500 flex flex-col"
-            ]
-            [ h2 [ class "font-bold text-black" ] [ text (t "shop_moved.manage_title") ]
-            , p [ class "mt-2 mb-4 text-gray-333" ] [ text (t "shop_moved.manage_body") ]
-            , a
-                [ id ("manage-in-new-app-" ++ Shop.idToString product.id)
-                , href (manageUrl apiUrl product.id)
-                , target "_self"
-                , class "button button-primary w-full"
-                ]
-                [ text (t "shop_moved.manage_go") ]
-            ]
+    -> Html msg
+viewOfferAction translators apiUrl product { isOwner } ownView =
+    case role { buyInApp = product.buyInApp, isOwner = isOwner } of
+        Unchanged ->
+            ownView
 
-    else
-        text ""
+        Buyer ->
+            viewBuyLink translators apiUrl product.id
+
+        Owner ->
+            div [] [ viewSellerCard translators apiUrl product.id, ownView ]
+
+
+{-| Card telling the creator of a `buyInApp` offer that lotes and deliveries live in the new app.
+-}
+viewSellerCard : Translation.Translators -> String -> Shop.Id -> Html msg
+viewSellerCard { t } apiUrl offerId =
+    div
+        [ id ("seller-card-new-app-" ++ Shop.idToString offerId)
+        , class "w-full mb-4 p-4 rounded bg-white border border-gray-500 flex flex-col"
+        ]
+        [ h2 [ class "font-bold text-black" ] [ text (t "shop_moved.manage_title") ]
+        , p [ class "mt-2 mb-4 text-gray-333" ] [ text (t "shop_moved.manage_body") ]
+        , a
+            [ id ("manage-in-new-app-" ++ Shop.idToString offerId)
+            , href (manageUrl apiUrl offerId)
+            , target "_self"
+            , class "button button-primary w-full"
+            ]
+            [ text (t "shop_moved.manage_go") ]
+        ]

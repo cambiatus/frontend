@@ -632,7 +632,12 @@ view loggedIn model =
                         { isEdit = True
                         , isDisabled = False
                         , availableSteps = allRouteSteps
-                        , sellerCard = Just sale
+                        , sellerCard =
+                            if sale.buyInApp then
+                                Just sale
+
+                            else
+                                Nothing
                         }
                         model
                         formData
@@ -644,7 +649,12 @@ view loggedIn model =
                         { isEdit = True
                         , isDisabled = True
                         , availableSteps = allRouteSteps
-                        , sellerCard = Just sale
+                        , sellerCard =
+                            if sale.buyInApp then
+                                Just sale
+
+                            else
+                                Nothing
                         }
                         model
                         formData
@@ -923,68 +933,69 @@ viewForm ({ shared } as loggedIn) community allCategories { isEdit, isDisabled, 
                     ]
                 , text stepName
                 ]
+
+        sellerCardViews =
+            case sellerCard of
+                Just product ->
+                    [ div [ class "px-4 pt-4 lg:px-0 lg:pt-0 lg:w-2/3 lg:mx-auto" ]
+                        [ ShopMoved.viewSellerCard shared.translators shared.endpoints.api product.id ]
+                    ]
+
+                Nothing ->
+                    []
     in
     div [ class "flex flex-col flex-grow" ]
         [ Page.viewHeader loggedIn pageTitle
         , div [ class "lg:container lg:mx-auto lg:px-4 lg:mt-6 lg:mb-20" ]
-            [ case sellerCard of
-                Just product ->
-                    if ShopMoved.showsSellerCard loggedIn.accountName product then
-                        div [ class "px-4 pt-4 lg:px-0 lg:pt-0 lg:w-2/3 lg:mx-auto" ]
-                            [ ShopMoved.viewSellerCard shared.translators shared.endpoints.api loggedIn.accountName product ]
+            (sellerCardViews
+                ++ [ div
+                        [ class "bg-white pt-4 pb-8 flex-grow flex flex-col lg:w-2/3 lg:mx-auto lg:rounded lg:shadow-lg lg:animate-fade-in-from-above-lg lg:fill-mode-none lg:motion-reduce:animate-none"
+                        , classList [ ( "min-h-150", List.length availableSteps > 1 ) ]
+                        ]
+                        [ if List.length availableSteps > 1 then
+                            viewHeader
 
-                    else
-                        text ""
+                          else
+                            span [ class "font-bold px-4" ] [ text stepName ]
+                        , hr [ class "mt-4 mb-6 border-gray-500 lg:mx-4 lg:mb-10", ariaHidden True ] []
+                        , case formData.currentStep of
+                            MainInformation ->
+                                viewForm_ (mainInformationForm shared.translators)
+                                    formData.mainInformation
+                                    Route.SaleMainInformation
+                                    MainInformationMsg
+                                    (SubmittedMainInformation ImagesMainInformationTarget)
 
-                Nothing ->
-                    text ""
-            , div
-                [ class "bg-white pt-4 pb-8 flex-grow flex flex-col lg:w-2/3 lg:mx-auto lg:rounded lg:shadow-lg lg:animate-fade-in-from-above-lg lg:fill-mode-none lg:motion-reduce:animate-none"
-                , classList [ ( "min-h-150", List.length availableSteps > 1 ) ]
-                ]
-                [ if List.length availableSteps > 1 then
-                    viewHeader
+                            Images _ ->
+                                viewForm_ (imagesForm shared.translators)
+                                    formData.images
+                                    Route.SaleImages
+                                    ImagesMsg
+                                    (SubmittedImages
+                                        (if List.member Route.SaleCategories availableSteps then
+                                            CategoriesImageTarget
 
-                  else
-                    span [ class "font-bold px-4" ] [ text stepName ]
-                , hr [ class "mt-4 mb-6 border-gray-500 lg:mx-4 lg:mb-10", ariaHidden True ] []
-                , case formData.currentStep of
-                    MainInformation ->
-                        viewForm_ (mainInformationForm shared.translators)
-                            formData.mainInformation
-                            Route.SaleMainInformation
-                            MainInformationMsg
-                            (SubmittedMainInformation ImagesMainInformationTarget)
+                                         else
+                                            PriceAndInventoryImageTarget
+                                        )
+                                    )
 
-                    Images _ ->
-                        viewForm_ (imagesForm shared.translators)
-                            formData.images
-                            Route.SaleImages
-                            ImagesMsg
-                            (SubmittedImages
-                                (if List.member Route.SaleCategories availableSteps then
-                                    CategoriesImageTarget
+                            Categories _ _ ->
+                                viewForm_ (categoriesForm shared.translators allCategories)
+                                    formData.categories
+                                    Route.SaleCategories
+                                    CategoriesMsg
+                                    SubmittedCategories
 
-                                 else
-                                    PriceAndInventoryImageTarget
-                                )
-                            )
-
-                    Categories _ _ ->
-                        viewForm_ (categoriesForm shared.translators allCategories)
-                            formData.categories
-                            Route.SaleCategories
-                            CategoriesMsg
-                            SubmittedCategories
-
-                    PriceAndInventory _ _ _ ->
-                        viewForm_ (priceAndInventoryForm shared.translators { isDisabled = isDisabled } community.symbol)
-                            formData.priceAndInventory
-                            Route.SalePriceAndInventory
-                            PriceAndInventoryMsg
-                            SubmittedPriceAndInventory
-                ]
-            ]
+                            PriceAndInventory _ _ _ ->
+                                viewForm_ (priceAndInventoryForm shared.translators { isDisabled = isDisabled } community.symbol)
+                                    formData.priceAndInventory
+                                    Route.SalePriceAndInventory
+                                    PriceAndInventoryMsg
+                                    SubmittedPriceAndInventory
+                        ]
+                   ]
+            )
         ]
 
 

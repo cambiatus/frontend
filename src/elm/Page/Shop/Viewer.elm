@@ -449,58 +449,62 @@ updateAsLoggedIn msg model loggedIn =
             UR.init model
 
         ClickedTransfer sale formOutput ->
-            let
-                authorization =
-                    { actor = loggedIn.accountName
-                    , permissionName = Eos.samplePermission
-                    }
+            if sale.buyInApp then
+                UR.init model
 
-                value =
-                    { amount = sale.price * toFloat formOutput.units
-                    , symbol = sale.symbol
-                    }
+            else
+                let
+                    authorization =
+                        { actor = loggedIn.accountName
+                        , permissionName = Eos.samplePermission
+                        }
 
-                unitPrice =
-                    { amount = sale.price
-                    , symbol = sale.symbol
-                    }
-            in
-            { model | isBuyButtonDisabled = True }
-                |> UR.init
-                |> UR.addPort
-                    { responseAddress = ClickedTransfer sale formOutput
-                    , responseData = Encode.null
-                    , data =
-                        Eos.encodeTransaction
-                            [ { accountName = loggedIn.shared.contracts.token
-                              , name = "transfer"
-                              , authorization = authorization
-                              , data =
-                                    { from = loggedIn.accountName
-                                    , to = sale.creatorId
-                                    , value = value
-                                    , memo = formOutput.memo
-                                    }
-                                        |> Transfer.encodeEosActionData
-                              }
-                            , { accountName = loggedIn.shared.contracts.community
-                              , name = "transfersale"
-                              , authorization = authorization
-                              , data =
-                                    { id = sale.id
-                                    , from = loggedIn.accountName
-                                    , to = sale.creatorId
-                                    , quantity = unitPrice
-                                    , units = formOutput.units
-                                    }
-                                        |> Shop.encodeTransferSale
-                              }
-                            ]
-                    }
-                |> LoggedIn.withPrivateKey loggedIn
-                    [ Permission.Order ]
-                    model
-                    { successMsg = msg, errorMsg = ClosedAuthModal }
+                    value =
+                        { amount = sale.price * toFloat formOutput.units
+                        , symbol = sale.symbol
+                        }
+
+                    unitPrice =
+                        { amount = sale.price
+                        , symbol = sale.symbol
+                        }
+                in
+                { model | isBuyButtonDisabled = True }
+                    |> UR.init
+                    |> UR.addPort
+                        { responseAddress = ClickedTransfer sale formOutput
+                        , responseData = Encode.null
+                        , data =
+                            Eos.encodeTransaction
+                                [ { accountName = loggedIn.shared.contracts.token
+                                  , name = "transfer"
+                                  , authorization = authorization
+                                  , data =
+                                        { from = loggedIn.accountName
+                                        , to = sale.creatorId
+                                        , value = value
+                                        , memo = formOutput.memo
+                                        }
+                                            |> Transfer.encodeEosActionData
+                                  }
+                                , { accountName = loggedIn.shared.contracts.community
+                                  , name = "transfersale"
+                                  , authorization = authorization
+                                  , data =
+                                        { id = sale.id
+                                        , from = loggedIn.accountName
+                                        , to = sale.creatorId
+                                        , quantity = unitPrice
+                                        , units = formOutput.units
+                                        }
+                                            |> Shop.encodeTransferSale
+                                  }
+                                ]
+                        }
+                    |> LoggedIn.withPrivateKey loggedIn
+                        [ Permission.Order ]
+                        model
+                        { successMsg = msg, errorMsg = ClosedAuthModal }
 
         GotFormMsg subMsg ->
             Form.update loggedIn.shared subMsg model.form
@@ -899,50 +903,48 @@ view session model =
                                             [ Page.viewHeader loggedIn sale.title
                                             , viewContent sale
                                                 sale.categories
-                                                (ShopMoved.viewBuyOr translators
+                                                (ShopMoved.viewOfferAction translators
                                                     loggedIn.shared.endpoints.api
                                                     sale
-                                                    (div []
-                                                        [ ShopMoved.viewSellerCard translators loggedIn.shared.endpoints.api loggedIn.accountName sale
-                                                        , Form.view []
-                                                            loggedIn.shared.translators
-                                                            (\submitButton ->
-                                                                [ if isOwner then
-                                                                    button
-                                                                        [ class "button button-primary w-full"
-                                                                        , disabled (not loggedIn.hasAcceptedCodeOfConduct)
-                                                                        , onClick ClickedEditSale
-                                                                        , type_ "button"
-                                                                        ]
-                                                                        [ text <| t "shop.edit" ]
+                                                    { isOwner = isOwner }
+                                                    (Form.view []
+                                                        loggedIn.shared.translators
+                                                        (\submitButton ->
+                                                            [ if isOwner then
+                                                                button
+                                                                    [ class "button button-primary w-full"
+                                                                    , disabled (not loggedIn.hasAcceptedCodeOfConduct)
+                                                                    , onClick ClickedEditSale
+                                                                    , type_ "button"
+                                                                    ]
+                                                                    [ text <| t "shop.edit" ]
 
-                                                                  else
-                                                                    submitButton
-                                                                        [ class "button button-primary w-full"
-                                                                        , disabled (isOutOfStock || not loggedIn.hasAcceptedCodeOfConduct)
-                                                                        ]
-                                                                        [ if isOutOfStock then
-                                                                            text <| t "shop.sold_out"
+                                                              else
+                                                                submitButton
+                                                                    [ class "button button-primary w-full"
+                                                                    , disabled (isOutOfStock || not loggedIn.hasAcceptedCodeOfConduct)
+                                                                    ]
+                                                                    [ if isOutOfStock then
+                                                                        text <| t "shop.sold_out"
 
-                                                                          else
-                                                                            text <| t "shop.buy"
-                                                                        ]
-                                                                ]
-                                                            )
-                                                            (createForm loggedIn.shared.translators
-                                                                sale
-                                                                maybeBalance
-                                                                { isDisabled = isDisabled
-                                                                , communityMinBalance = community.minBalance
-                                                                }
-                                                                GotFormInteractionMsg
-                                                            )
-                                                            (Form.withDisabled isDisabled model_.form)
-                                                            { toMsg = GotFormMsg
-                                                            , onSubmit = ClickedTransfer sale
+                                                                      else
+                                                                        text <| t "shop.buy"
+                                                                    ]
+                                                            ]
+                                                        )
+                                                        (createForm loggedIn.shared.translators
+                                                            sale
+                                                            maybeBalance
+                                                            { isDisabled = isDisabled
+                                                            , communityMinBalance = community.minBalance
                                                             }
-                                                            |> Html.map AsLoggedInMsg
-                                                        ]
+                                                            GotFormInteractionMsg
+                                                        )
+                                                        (Form.withDisabled isDisabled model_.form)
+                                                        { toMsg = GotFormMsg
+                                                        , onSubmit = ClickedTransfer sale
+                                                        }
+                                                        |> Html.map AsLoggedInMsg
                                                     )
                                                 )
                                             , viewEditSaleModal translators model_ shopCategories sale
