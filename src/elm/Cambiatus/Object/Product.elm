@@ -20,6 +20,11 @@ import Graphql.SelectionSet exposing (SelectionSet)
 import Json.Decode as Decode
 
 
+buyInApp : SelectionSet Bool Cambiatus.Object.Product
+buyInApp =
+    Object.selectionForField "Bool" "buyInApp" [] Decode.bool
+
+
 categories :
     SelectionSet decodesTo Cambiatus.Object.Category
     -> SelectionSet (List decodesTo) Cambiatus.Object.Product

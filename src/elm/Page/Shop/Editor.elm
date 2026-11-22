@@ -43,6 +43,7 @@ import Session.LoggedIn as LoggedIn exposing (External(..))
 import Session.Shared exposing (Shared)
 import Shop exposing (Product)
 import Shop.Category
+import ShopMoved
 import Translation
 import Tree
 import Tree.Zipper
@@ -607,6 +608,7 @@ view loggedIn model =
                         { isEdit = False
                         , isDisabled = False
                         , availableSteps = allRouteSteps
+                        , sellerCard = Nothing
                         }
                         model
                         formData
@@ -618,28 +620,41 @@ view loggedIn model =
                         { isEdit = False
                         , isDisabled = True
                         , availableSteps = allRouteSteps
+                        , sellerCard = Nothing
                         }
                         model
                         formData
 
-                EditingUpdate _ formData ->
+                EditingUpdate sale formData ->
                     viewForm loggedIn
                         community
                         shopCategories
                         { isEdit = True
                         , isDisabled = False
                         , availableSteps = allRouteSteps
+                        , sellerCard =
+                            if sale.buyInApp then
+                                Just sale
+
+                            else
+                                Nothing
                         }
                         model
                         formData
 
-                Saving _ formData ->
+                Saving sale formData ->
                     viewForm loggedIn
                         community
                         shopCategories
                         { isEdit = True
                         , isDisabled = True
                         , availableSteps = allRouteSteps
+                        , sellerCard =
+                            if sale.buyInApp then
+                                Just sale
+
+                            else
+                                Nothing
                         }
                         model
                         formData
@@ -651,6 +666,7 @@ view loggedIn model =
                         { isEdit = True
                         , isDisabled = False
                         , availableSteps = [ Route.SaleCategories ]
+                        , sellerCard = Nothing
                         }
                         model
                         formData
@@ -662,6 +678,7 @@ view loggedIn model =
                         { isEdit = True
                         , isDisabled = True
                         , availableSteps = [ Route.SaleCategories ]
+                        , sellerCard = Nothing
                         }
                         model
                         formData
@@ -702,11 +719,12 @@ viewForm :
         { isEdit : Bool
         , isDisabled : Bool
         , availableSteps : List Route.EditSaleStep
+        , sellerCard : Maybe Product
         }
     -> Model
     -> FormData
     -> Html Msg
-viewForm ({ shared } as loggedIn) community allCategories { isEdit, isDisabled, availableSteps } model formData =
+viewForm ({ shared } as loggedIn) community allCategories { isEdit, isDisabled, availableSteps, sellerCard } model formData =
     let
         { t, tr } =
             shared.translators
@@ -915,57 +933,69 @@ viewForm ({ shared } as loggedIn) community allCategories { isEdit, isDisabled, 
                     ]
                 , text stepName
                 ]
+
+        sellerCardViews =
+            case sellerCard of
+                Just product ->
+                    [ div [ class "px-4 pt-4 lg:px-0 lg:pt-0 lg:w-2/3 lg:mx-auto" ]
+                        [ ShopMoved.viewSellerCard shared.translators shared.endpoints.api product.id ]
+                    ]
+
+                Nothing ->
+                    []
     in
     div [ class "flex flex-col flex-grow" ]
         [ Page.viewHeader loggedIn pageTitle
         , div [ class "lg:container lg:mx-auto lg:px-4 lg:mt-6 lg:mb-20" ]
-            [ div
-                [ class "bg-white pt-4 pb-8 flex-grow flex flex-col lg:w-2/3 lg:mx-auto lg:rounded lg:shadow-lg lg:animate-fade-in-from-above-lg lg:fill-mode-none lg:motion-reduce:animate-none"
-                , classList [ ( "min-h-150", List.length availableSteps > 1 ) ]
-                ]
-                [ if List.length availableSteps > 1 then
-                    viewHeader
+            (sellerCardViews
+                ++ [ div
+                        [ class "bg-white pt-4 pb-8 flex-grow flex flex-col lg:w-2/3 lg:mx-auto lg:rounded lg:shadow-lg lg:animate-fade-in-from-above-lg lg:fill-mode-none lg:motion-reduce:animate-none"
+                        , classList [ ( "min-h-150", List.length availableSteps > 1 ) ]
+                        ]
+                        [ if List.length availableSteps > 1 then
+                            viewHeader
 
-                  else
-                    span [ class "font-bold px-4" ] [ text stepName ]
-                , hr [ class "mt-4 mb-6 border-gray-500 lg:mx-4 lg:mb-10", ariaHidden True ] []
-                , case formData.currentStep of
-                    MainInformation ->
-                        viewForm_ (mainInformationForm shared.translators)
-                            formData.mainInformation
-                            Route.SaleMainInformation
-                            MainInformationMsg
-                            (SubmittedMainInformation ImagesMainInformationTarget)
+                          else
+                            span [ class "font-bold px-4" ] [ text stepName ]
+                        , hr [ class "mt-4 mb-6 border-gray-500 lg:mx-4 lg:mb-10", ariaHidden True ] []
+                        , case formData.currentStep of
+                            MainInformation ->
+                                viewForm_ (mainInformationForm shared.translators)
+                                    formData.mainInformation
+                                    Route.SaleMainInformation
+                                    MainInformationMsg
+                                    (SubmittedMainInformation ImagesMainInformationTarget)
 
-                    Images _ ->
-                        viewForm_ (imagesForm shared.translators)
-                            formData.images
-                            Route.SaleImages
-                            ImagesMsg
-                            (SubmittedImages
-                                (if List.member Route.SaleCategories availableSteps then
-                                    CategoriesImageTarget
+                            Images _ ->
+                                viewForm_ (imagesForm shared.translators)
+                                    formData.images
+                                    Route.SaleImages
+                                    ImagesMsg
+                                    (SubmittedImages
+                                        (if List.member Route.SaleCategories availableSteps then
+                                            CategoriesImageTarget
 
-                                 else
-                                    PriceAndInventoryImageTarget
-                                )
-                            )
+                                         else
+                                            PriceAndInventoryImageTarget
+                                        )
+                                    )
 
-                    Categories _ _ ->
-                        viewForm_ (categoriesForm shared.translators allCategories)
-                            formData.categories
-                            Route.SaleCategories
-                            CategoriesMsg
-                            SubmittedCategories
+                            Categories _ _ ->
+                                viewForm_ (categoriesForm shared.translators allCategories)
+                                    formData.categories
+                                    Route.SaleCategories
+                                    CategoriesMsg
+                                    SubmittedCategories
 
-                    PriceAndInventory _ _ _ ->
-                        viewForm_ (priceAndInventoryForm shared.translators { isDisabled = isDisabled } community.symbol)
-                            formData.priceAndInventory
-                            Route.SalePriceAndInventory
-                            PriceAndInventoryMsg
-                            SubmittedPriceAndInventory
-                ]
-            ]
+                            PriceAndInventory _ _ _ ->
+                                viewForm_ (priceAndInventoryForm shared.translators { isDisabled = isDisabled } community.symbol)
+                                    formData.priceAndInventory
+                                    Route.SalePriceAndInventory
+                                    PriceAndInventoryMsg
+                                    SubmittedPriceAndInventory
+                        ]
+                   ]
+            )
         ]
 
 

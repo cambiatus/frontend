@@ -68,6 +68,7 @@ type alias Product =
     , categories : List Shop.Category.Model
     , online : Bool
     , offerType : OfferType
+    , buyInApp : Bool
     }
 
 
@@ -147,7 +148,7 @@ encodeTransferSale t =
 productSelectionSet : SelectionSet Product Cambiatus.Object.Product
 productSelectionSet =
     SelectionSet.succeed
-        (\id title description creatorId price symbol images maybeUnits trackStock creator categories online offerType ->
+        (\id title description creatorId price symbol images maybeUnits trackStock creator categories online offerType buyInApp ->
             { id = id
             , title = title
             , description = description
@@ -172,6 +173,7 @@ productSelectionSet =
             , categories = categories
             , online = online
             , offerType = offerType
+            , buyInApp = buyInApp
             }
         )
         |> with idSelectionSet
@@ -187,6 +189,7 @@ productSelectionSet =
         |> with (Cambiatus.Object.Product.categories Shop.Category.selectionSet)
         |> with Cambiatus.Object.Product.online
         |> with Cambiatus.Object.Product.type_
+        |> with Cambiatus.Object.Product.buyInApp
 
 
 productPreviewSelectionSet : SelectionSet ProductPreview Cambiatus.Object.ProductPreview

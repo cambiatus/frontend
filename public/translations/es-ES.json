@@ -1674,5 +1674,11 @@
   },
   "claim_moved": {
     "go": "Reclamar en la nueva app"
+  },
+  "shop_moved": {
+    "buy_go": "Comprar en la nueva app",
+    "manage_title": "Lotes y entregas ahora están en la nueva app",
+    "manage_body": "En la nueva app abres lotes, ves los pedidos de cada lote y organizas las entregas.",
+    "manage_go": "Abrir en la nueva app"
   }
 }
