@@ -30,6 +30,7 @@ const AUTH_TOKEN = "bespiral.auth_token";
 const RECENT_SEARCHES = "bespiral.recent_search";
 const SELECTED_COMMUNITY_KEY = "bespiral.selected_community";
 const PIN_VISIBILITY_KEY = "bespiral.pin_visibility";
+const NEW_APP_BANNER_KEY = "bespiral.new_app_banner_dismissed";
 const env = process.env.NODE_ENV || "development";
 const useSubdomain =
   process.env.USE_SUBDOMAIN === undefined
@@ -460,6 +461,8 @@ function flags() {
     useSubdomain,
     selectedCommunity: getItem(SELECTED_COMMUNITY_KEY),
     pinVisibility: JSON.parse(getItem(PIN_VISIBILITY_KEY)) || false,
+    newAppBannerDismissed:
+      window.localStorage.getItem(NEW_APP_BANNER_KEY) === "true",
   };
 }
 
@@ -577,6 +580,11 @@ app.ports.storeSelectedCommunitySymbol.subscribe((symbol) => {
     localData: {},
     level: "debug",
   });
+});
+
+// Plain localStorage, not getItem/setItem (cookies when on subdomains)
+app.ports.storeNewAppBannerDismissed.subscribe(() => {
+  window.localStorage.setItem(NEW_APP_BANNER_KEY, "true");
 });
 
 app.ports.storePinVisibility.subscribe((pinVisibility) => {

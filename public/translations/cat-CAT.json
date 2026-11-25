@@ -1685,5 +1685,11 @@
     "create_title": "Les ofertes noves ara es creen a la nova app",
     "create_body": "A la nova app tries si és un producte o un servei, afegeixes fotos i on lliures, i decideixes quan publicar.",
     "create_go": "Anuncia a la nova app"
+  },
+  "new_app_banner": {
+    "label": "Notice: Cambiatus is moving to the new app",
+    "notice": "On 8 December Cambiatus moves to the new app.",
+    "action": "Open this page in the new app",
+    "dismiss": "Close notice"
   }
 }
