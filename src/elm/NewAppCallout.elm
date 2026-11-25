@@ -1,10 +1,13 @@
-module NewAppCallout exposing (isVisible, view)
+module NewAppCallout exposing (buttonClass, isVisible, view, viewArrowIcon, viewDoggo, viewEmphasised, viewEyebrow, viewSpark)
 
 {-| Band at the top of the dashboard inviting MUDA members to the new app (the LiveView
 app at /app), and reminding them to keep their 12 words: the new app signs in with them.
 
 The copy announces MUDA's launch, so it only shows in that community. It is permanent:
 every visit shows it, and it has no close button, since members are moving to the new app.
+
+The pieces below `view` (doggo, eyebrow, sparks, button) are the new app's invitation look,
+shared with `ShopMoved` so every invitation to the new app reads as the same voice.
 
 -}
 
@@ -33,17 +36,9 @@ view { t } { apiUrl } =
         [ viewSpark "left-[18%] top-[10px] text-[#FFE400]"
         , viewSpark "left-[62%] bottom-2 text-[#5AD1C9]"
         , div [ class "container mx-auto relative flex flex-col gap-4 p-6 md:flex-row md:items-center md:gap-6 md:py-8 md:px-8" ]
-            [ img
-                [ src "/images/new-app-doggo.png"
-                , alt ""
-                , class "w-14 md:w-[72px] h-auto flex-none self-start md:self-auto transform rotate-[-6deg]"
-                ]
-                []
+            [ viewDoggo "w-14 md:w-[72px] self-start md:self-auto"
             , div [ class "flex-1 min-w-0" ]
-                [ span [ class "inline-flex items-center gap-1 mb-2 px-2.5 py-0.5 rounded-full bg-[#FFE400] text-[#3A3000] text-sm font-bold uppercase tracking-wide" ]
-                    [ span [ attribute "aria-hidden" "true" ] [ text "✦" ]
-                    , text (t "dashboard.new_app.eyebrow")
-                    ]
+                [ viewEyebrow (t "dashboard.new_app.eyebrow")
                 , h2 [ class "text-lg font-bold" ] [ text (t "dashboard.new_app.title") ]
                 , p [ class "mt-1 text-[#D7E6D2]" ] [ text (t "dashboard.new_app.body") ]
                 , p [ class "mt-2 flex items-start gap-2" ]
@@ -68,13 +63,38 @@ view { t } { apiUrl } =
                 [ id "new-app-callout-go"
                 , href (ReviewMoved.appUrl apiUrl "/app")
                 , target "_self"
-                , class "inline-flex flex-none items-center justify-center gap-2 w-full md:w-auto min-h-[48px] px-5 py-3 rounded bg-white text-[#2E4A2C] font-bold whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FFE400]"
+                , class (buttonClass ++ " md:w-auto")
                 ]
                 [ text (t "dashboard.new_app.action")
                 , viewArrowIcon
                 ]
             ]
         ]
+
+
+viewDoggo : String -> Html msg
+viewDoggo class_ =
+    img
+        [ src "/images/new-app-doggo.png"
+        , alt ""
+        , class ("h-auto flex-none transform rotate-[-6deg] " ++ class_)
+        ]
+        []
+
+
+viewEyebrow : String -> Html msg
+viewEyebrow label =
+    span [ class "inline-flex items-center gap-1 mb-2 px-2.5 py-0.5 rounded-full bg-[#FFE400] text-[#3A3000] text-sm font-bold uppercase tracking-wide" ]
+        [ span [ attribute "aria-hidden" "true" ] [ text "✦" ]
+        , text label
+        ]
+
+
+{-| The white call to action; pair it with `viewArrowIcon`.
+-}
+buttonClass : String
+buttonClass =
+    "inline-flex flex-none items-center justify-center gap-2 w-full min-h-[48px] px-5 py-3 rounded bg-white text-[#2E4A2C] font-bold whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FFE400]"
 
 
 {-| Translations mark the words to stress with `**`, as in "your **12 words**".

@@ -1,5 +1,6 @@
 module ShopMovedTests exposing (all)
 
+import Eos
 import Expect
 import Html exposing (div, text)
 import Html.Attributes
@@ -25,9 +26,24 @@ withOfferId expectation =
         |> Maybe.withDefault (Expect.fail "could not build a Shop.Id")
 
 
-product : Shop.Id -> Bool -> { id : Shop.Id, buyInApp : Bool }
+product : Shop.Id -> Bool -> { id : Shop.Id, buyInApp : Bool, price : Float, symbol : Eos.Symbol }
 product offerId buyInApp =
-    { id = offerId, buyInApp = buyInApp }
+    { id = offerId, buyInApp = buyInApp, price = 30, symbol = muda }
+
+
+muda : Eos.Symbol
+muda =
+    Eos.symbolFromString "0,MUDA" |> Maybe.withDefault Eos.cambiatusSymbol
+
+
+buyer : { isOwner : Bool, balance : Maybe Eos.Asset }
+buyer =
+    { isOwner = False, balance = Nothing }
+
+
+owner : { isOwner : Bool, balance : Maybe Eos.Asset }
+owner =
+    { isOwner = True, balance = Nothing }
 
 
 all : Test
@@ -65,23 +81,6 @@ all =
                                     ]
                             ]
             ]
-        , describe "viewBuyLink"
-            [ test "is a same-tab link named by its text" <|
-                \_ ->
-                    withOfferId <|
-                        \offerId ->
-                            ShopMoved.viewBuyLink translators "https://x" offerId
-                                |> Query.fromHtml
-                                |> Expect.all
-                                    [ Query.has
-                                        [ Selector.tag "a"
-                                        , Selector.id "buy-in-new-app-7"
-                                        , Selector.attribute (Html.Attributes.href "https://x/app/login?next=%2Fapp%2Fshop%2F7%2Fbuy")
-                                        , Selector.attribute (Html.Attributes.target "_self")
-                                        , Selector.text "shop_moved.buy_go"
-                                        ]
-                                    ]
-            ]
         , describe "role"
             [ test "owner of a buyInApp offer" <|
                 \_ -> ShopMoved.role { buyInApp = True, isOwner = True } |> Expect.equal ShopMoved.Owner
@@ -97,18 +96,53 @@ all =
                 \_ ->
                     withOfferId <|
                         \offerId ->
-                            ShopMoved.viewOfferAction translators "https://x" (product offerId True) { isOwner = False } ownView
+                            ShopMoved.viewOfferAction translators "https://x" (product offerId True) buyer ownView
                                 |> Query.fromHtml
                                 |> Expect.all
                                     [ Query.has [ Selector.id "buy-in-new-app-7" ]
                                     , Query.hasNot [ Selector.text "elm edit button" ]
                                     , Query.hasNot [ Selector.id "seller-card-new-app-7" ]
                                     ]
+            , test "a buyer sees the offer's price and a friendly invite, not a bare button" <|
+                \_ ->
+                    withOfferId <|
+                        \offerId ->
+                            ShopMoved.viewOfferAction translators "https://x" (product offerId True) buyer ownView
+                                |> Query.fromHtml
+                                |> Expect.all
+                                    [ Query.find [ Selector.id "buy-price-7" ] >> Query.has [ Selector.text "30" ]
+                                    , Query.find [ Selector.id "buy-invite-7" ]
+                                        >> Query.has
+                                            [ Selector.text "shop_moved.buy_eyebrow"
+                                            , Selector.text "shop_moved.buy_title"
+                                            , Selector.text "shop_moved.buy_body"
+                                            , Selector.text "shop_moved.buy_account"
+                                            ]
+                                    , Query.find [ Selector.id "buy-in-new-app-7" ]
+                                        >> Query.has
+                                            [ Selector.tag "a"
+                                            , Selector.text "shop_moved.buy_go"
+                                            , Selector.attribute (Html.Attributes.href "https://x/app/login?next=%2Fapp%2Fshop%2F7%2Fbuy")
+                                            , Selector.attribute (Html.Attributes.target "_self")
+                                            ]
+                                    ]
+            , test "the buyer's balance shows under the price when known" <|
+                \_ ->
+                    withOfferId <|
+                        \offerId ->
+                            ShopMoved.viewOfferAction translators
+                                "https://x"
+                                (product offerId True)
+                                { buyer | balance = Just { amount = 120, symbol = muda } }
+                                ownView
+                                |> Query.fromHtml
+                                |> Query.find [ Selector.id "buy-price-7" ]
+                                |> Query.has [ Selector.text "shop.transfer.balance" ]
             , test "the owner of a buyInApp offer gets the card, then the old view, and no buy link" <|
                 \_ ->
                     withOfferId <|
                         \offerId ->
-                            ShopMoved.viewOfferAction translators "https://x" (product offerId True) { isOwner = True } ownView
+                            ShopMoved.viewOfferAction translators "https://x" (product offerId True) owner ownView
                                 |> Query.fromHtml
                                 |> Expect.all
                                     [ Query.has [ Selector.id "seller-card-new-app-7", Selector.text "elm edit button" ]
@@ -125,8 +159,8 @@ all =
                     withOfferId <|
                         \offerId ->
                             Expect.all
-                                [ \_ -> ShopMoved.viewOfferAction translators "https://x" (product offerId False) { isOwner = True } ownView |> Expect.equal ownView
-                                , \_ -> ShopMoved.viewOfferAction translators "https://x" (product offerId False) { isOwner = False } ownView |> Expect.equal ownView
+                                [ \_ -> ShopMoved.viewOfferAction translators "https://x" (product offerId False) owner ownView |> Expect.equal ownView
+                                , \_ -> ShopMoved.viewOfferAction translators "https://x" (product offerId False) buyer ownView |> Expect.equal ownView
                                 ]
                                 ()
             ]
