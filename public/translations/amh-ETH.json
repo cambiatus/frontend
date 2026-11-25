@@ -1644,6 +1644,10 @@
     "go": "Claim in the new app"
   },
   "shop_moved": {
+    "buy_eyebrow": "New app",
+    "buy_title": "This offer is bought in the new app",
+    "buy_body": "There you pick how many you want and how to receive them, and follow your order until it arrives.",
+    "buy_account": "Sign in with the same account as always, using your **12 words**.",
     "buy_go": "Buy in the new app",
     "manage_title": "Batches and deliveries now live in the new app",
     "manage_body": "In the new app you open batches, see each batch's orders and organise deliveries.",

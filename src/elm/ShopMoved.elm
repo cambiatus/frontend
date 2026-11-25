@@ -1,4 +1,4 @@
-module ShopMoved exposing (Role(..), buyUrl, createUrl, manageUrl, role, viewBuyLink, viewCreateMoved, viewOfferAction, viewSellerCard)
+module ShopMoved exposing (Role(..), buyUrl, createUrl, manageUrl, role, viewCreateMoved, viewOfferAction, viewSellerCard)
 
 {-| Offers that the server marks `buyInApp` are bought and managed (lotes, orders, deliveries)
 in the LiveView app. Elm has no rule of its own about them: it only follows `Product.buyInApp`
@@ -13,8 +13,10 @@ the SPA.
 
 -}
 
-import Html exposing (Html, a, div, h1, h2, p, text)
+import Eos
+import Html exposing (Html, a, div, h1, h2, p, section, span, text)
 import Html.Attributes exposing (class, href, id, target)
+import NewAppCallout
 import ReviewMoved
 import Shop
 import Translation
@@ -66,19 +68,6 @@ manageUrl apiUrl offerId =
     loginThenUrl apiUrl ("/app/my-shop/offers/" ++ Shop.idToString offerId)
 
 
-{-| Link that replaces every way of buying an offer that is bought in the new app.
--}
-viewBuyLink : Translation.Translators -> String -> Shop.Id -> Html msg
-viewBuyLink { t } apiUrl offerId =
-    a
-        [ id ("buy-in-new-app-" ++ Shop.idToString offerId)
-        , href (buyUrl apiUrl offerId)
-        , target "_self"
-        , class "button button-primary w-full"
-        ]
-        [ text (t "shop_moved.buy_go") ]
-
-
 {-| What a member is to an offer. Decided by role first: the owner of a `buyInApp` offer manages
 it in the new app, anyone else buys it there, and every other offer is untouched.
 -}
@@ -102,25 +91,83 @@ role { buyInApp, isOwner } =
 
 {-| What the offer page shows where the buy form / edit button lives. `ownView` is exactly what
 Elm showed before: untouched for `Unchanged`, below the seller card for `Owner`, and replaced by
-the buy link for `Buyer`.
+the price and the invitation to buy in the new app for `Buyer`.
 -}
 viewOfferAction :
     Translation.Translators
     -> String
-    -> { product | id : Shop.Id, buyInApp : Bool }
-    -> { isOwner : Bool }
+    -> { product | id : Shop.Id, buyInApp : Bool, price : Float, symbol : Eos.Symbol }
+    -> { isOwner : Bool, balance : Maybe Eos.Asset }
     -> Html msg
     -> Html msg
-viewOfferAction translators apiUrl product { isOwner } ownView =
+viewOfferAction translators apiUrl product { isOwner, balance } ownView =
     case role { buyInApp = product.buyInApp, isOwner = isOwner } of
         Unchanged ->
             ownView
 
         Buyer ->
-            viewBuyLink translators apiUrl product.id
+            div [ class "flex flex-col gap-4" ]
+                [ viewPrice translators product balance
+                , viewBuyInvite translators apiUrl product.id
+                ]
 
         Owner ->
             div [] [ viewSellerCard translators apiUrl product.id, ownView ]
+
+
+{-| The price block of Elm's buy form, without the form: the offer reads as it always did.
+-}
+viewPrice :
+    Translation.Translators
+    -> { product | id : Shop.Id, price : Float, symbol : Eos.Symbol }
+    -> Maybe Eos.Asset
+    -> Html msg
+viewPrice ({ tr } as translators) product balance =
+    div
+        [ id ("buy-price-" ++ Shop.idToString product.id)
+        , class "bg-green pt-4 rounded-sm flex flex-col text-white font-bold text-center"
+        ]
+        [ span [ class "text-xl px-4" ] [ text (String.fromFloat product.price) ]
+        , span [ class "px-4 mb-4" ]
+            [ text (tr "shop.transfer.price" [ ( "symbol", Eos.symbolToSymbolCodeString product.symbol ) ]) ]
+        , case balance of
+            Nothing ->
+                text ""
+
+            Just asset ->
+                span [ class "text-sm py-3 px-4 bg-black bg-opacity-20 rounded-b-sm uppercase" ]
+                    [ text (tr "shop.transfer.balance" [ ( "asset", Eos.assetToString translators asset ) ]) ]
+        ]
+
+
+{-| Invitation to buy in the new app, in the dashboard banner's look (`NewAppCallout`).
+-}
+viewBuyInvite : Translation.Translators -> String -> Shop.Id -> Html msg
+viewBuyInvite { t } apiUrl offerId =
+    section
+        [ id ("buy-invite-" ++ Shop.idToString offerId)
+        , class "relative overflow-hidden rounded-large p-5 text-white bg-gradient-to-br from-[#2E4A2C] to-[#3F6B3A]"
+        ]
+        [ NewAppCallout.viewSpark "right-6 top-4 text-[#FFE400]"
+        , NewAppCallout.viewSpark "right-16 top-14 text-[#5AD1C9]"
+        , div [ class "flex items-center gap-3 mb-3" ]
+            [ NewAppCallout.viewDoggo "w-12"
+            , NewAppCallout.viewEyebrow (t "shop_moved.buy_eyebrow")
+            ]
+        , h2 [ class "text-lg font-bold leading-snug" ] [ text (t "shop_moved.buy_title") ]
+        , p [ class "mt-2 text-[#D7E6D2]" ] [ text (t "shop_moved.buy_body") ]
+        , p [ class "mt-2 text-sm text-[#D7E6D2]" ]
+            (NewAppCallout.viewEmphasised (t "shop_moved.buy_account"))
+        , a
+            [ id ("buy-in-new-app-" ++ Shop.idToString offerId)
+            , href (buyUrl apiUrl offerId)
+            , target "_self"
+            , class ("mt-5 " ++ NewAppCallout.buttonClass)
+            ]
+            [ text (t "shop_moved.buy_go")
+            , NewAppCallout.viewArrowIcon
+            ]
+        ]
 
 
 {-| Card telling the creator of a `buyInApp` offer that lotes and deliveries live in the new app.

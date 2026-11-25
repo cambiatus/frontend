@@ -906,7 +906,7 @@ view session model =
                                                 (ShopMoved.viewOfferAction translators
                                                     loggedIn.shared.endpoints.api
                                                     sale
-                                                    { isOwner = isOwner }
+                                                    { isOwner = isOwner, balance = Maybe.map .asset maybeBalance }
                                                     (Form.view []
                                                         loggedIn.shared.translators
                                                         (\submitButton ->

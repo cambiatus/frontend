@@ -1678,6 +1678,10 @@
     "go": "Reivindicar no novo app"
   },
   "shop_moved": {
+    "buy_eyebrow": "Novo app",
+    "buy_title": "Esta oferta é comprada no novo app",
+    "buy_body": "Lá você escolhe quantas unidades quer e como receber, e acompanha o pedido até chegar.",
+    "buy_account": "Entre com a mesma conta de sempre, usando suas **12 palavras**.",
     "buy_go": "Comprar no novo app",
     "manage_title": "Lotes e entregas agora ficam no novo app",
     "manage_body": "No novo app você abre lotes, vê os pedidos de cada lote e organiza as entregas.",
