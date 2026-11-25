@@ -1,15 +1,19 @@
-module ShopMoved exposing (Role(..), buyUrl, manageUrl, role, viewBuyLink, viewOfferAction, viewSellerCard)
+module ShopMoved exposing (Role(..), buyUrl, createUrl, manageUrl, role, viewBuyLink, viewCreateMoved, viewOfferAction, viewSellerCard)
 
 {-| Offers that the server marks `buyInApp` are bought and managed (lotes, orders, deliveries)
 in the LiveView app. Elm has no rule of its own about them: it only follows `Product.buyInApp`
 and links to the matching /app page through its login, which returns the member to `next`.
+
+New offers are created only in the new app (it asks for the type and whether to publish), so
+every "create offer" entry point links there and the editor's create route shows
+`viewCreateMoved`. The server refuses a create from Elm.
 
 Like `ReviewMoved`, links to the app carry `target "_self"` so Elm does not route them inside
 the SPA.
 
 -}
 
-import Html exposing (Html, a, div, h2, p, text)
+import Html exposing (Html, a, div, h1, h2, p, text)
 import Html.Attributes exposing (class, href, id, target)
 import ReviewMoved
 import Shop
@@ -29,6 +33,30 @@ loginThenUrl apiUrl path =
 buyUrl : String -> Shop.Id -> String
 buyUrl apiUrl offerId =
     loginThenUrl apiUrl ("/app/shop/" ++ Shop.idToString offerId ++ "/buy")
+
+
+{-| Where a new offer is created in the new app.
+-}
+createUrl : String -> String
+createUrl apiUrl =
+    loginThenUrl apiUrl "/app/my-shop/offers/new"
+
+
+{-| Body of the editor's create route (`/shop/new/...`), modelled on `ReviewMoved.viewMovedContent`.
+-}
+viewCreateMoved : Translation.Translators -> String -> Html msg
+viewCreateMoved { t } apiUrl =
+    div [ class "container mx-auto px-4 py-16 md:py-24 flex flex-col items-center text-center" ]
+        [ h1 [ class "text-2xl leading-tight font-bold text-black" ] [ text (t "shop_moved.create_title") ]
+        , p [ class "mt-4 max-w-md text-gray-333" ] [ text (t "shop_moved.create_body") ]
+        , a
+            [ id "create-in-new-app"
+            , href (createUrl apiUrl)
+            , target "_self"
+            , class "button button-primary w-full md:w-auto mt-8"
+            ]
+            [ text (t "shop_moved.create_go") ]
+        ]
 
 
 {-| Where the seller manages an offer (lotes, orders, deliveries) in the new app.

@@ -1682,6 +1682,9 @@
     "buy_go": "Comprar no novo app",
     "manage_title": "Lotes e entregas agora ficam no novo app",
     "manage_body": "No novo app você abre lotes, vê os pedidos de cada lote e organiza as entregas.",
-    "manage_go": "Abrir no novo app"
+    "manage_go": "Abrir no novo app",
+    "create_title": "Novas ofertas agora são criadas no novo app",
+    "create_body": "No novo app você escolhe se é produto ou serviço, adiciona fotos e onde entrega, e decide quando publicar.",
+    "create_go": "Anunciar no novo app"
   }
 }

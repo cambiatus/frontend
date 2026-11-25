@@ -601,29 +601,12 @@ view loggedIn model =
                 UnauthorizedToEdit ->
                     Page.fullPageNotFound (t "shop.unauthorized") ""
 
-                EditingCreate formData ->
-                    viewForm loggedIn
-                        community
-                        shopCategories
-                        { isEdit = False
-                        , isDisabled = False
-                        , availableSteps = allRouteSteps
-                        , sellerCard = Nothing
-                        }
-                        model
-                        formData
+                -- New offers are created in the new app; the create route only points there.
+                EditingCreate _ ->
+                    ShopMoved.viewCreateMoved shared.translators shared.endpoints.api
 
-                Creating formData ->
-                    viewForm loggedIn
-                        community
-                        shopCategories
-                        { isEdit = False
-                        , isDisabled = True
-                        , availableSteps = allRouteSteps
-                        , sellerCard = Nothing
-                        }
-                        model
-                        formData
+                Creating _ ->
+                    ShopMoved.viewCreateMoved shared.translators shared.endpoints.api
 
                 EditingUpdate sale formData ->
                     viewForm loggedIn
