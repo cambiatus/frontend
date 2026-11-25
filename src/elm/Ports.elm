@@ -12,6 +12,7 @@ port module Ports exposing
     , setMarkdownContent
     , storeAuthToken
     , storeLanguage
+    , storeNewAppBannerDismissed
     , storePinVisibility
     , storeRecentSearches
     , storeSelectedCommunitySymbol
@@ -94,6 +95,11 @@ port storeSelectedCommunitySymbol : String -> Cmd msg
 {-| Store whether to show or hide the pin by default
 -}
 port storePinVisibility : Bool -> Cmd msg
+
+
+{-| Remember that the new app banner was closed
+-}
+port storeNewAppBannerDismissed : () -> Cmd msg
 
 
 {-| Send info about a link in a MarkdownEditor to be treated on JS

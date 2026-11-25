@@ -1689,5 +1689,11 @@
     "create_title": "Novas ofertas agora são criadas no novo app",
     "create_body": "No novo app você escolhe se é produto ou serviço, adiciona fotos e onde entrega, e decide quando publicar.",
     "create_go": "Anunciar no novo app"
+  },
+  "new_app_banner": {
+    "label": "Aviso: o Cambiatus está mudando para o novo app",
+    "notice": "Em 8 de dezembro o Cambiatus muda para o novo app.",
+    "action": "Abrir esta página no novo app",
+    "dismiss": "Fechar aviso"
   }
 }

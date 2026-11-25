@@ -10,6 +10,7 @@ import Html exposing (Html, text)
 import Json.Decode as Decode exposing (Value)
 import Json.Encode as Encode
 import Log
+import NewAppBanner
 import NewsMoved
 import Page exposing (Session)
 import Page.AdminMoved as AdminMoved
@@ -105,6 +106,8 @@ init flagsValue url navKey =
                 , afterAuthTokenCallbacks = []
                 , afterPrivateKeyCallbacks = []
                 , status = Redirect
+                , url = url
+                , newAppBannerDismissed = NewAppBanner.dismissedFromFlags flagsValue
                 }
     in
     ( model
@@ -137,6 +140,8 @@ type alias Model =
     , afterAuthTokenCallbacks : List (Api.Graphql.Token -> Cmd Msg)
     , afterPrivateKeyCallbacks : List Msg
     , status : Status
+    , url : Url
+    , newAppBannerDismissed : Bool
     }
 
 
@@ -180,6 +185,7 @@ type Msg
     | ChangedUrl Url
     | ClickedLink Browser.UrlRequest
     | GotJavascriptData Value
+    | ClickedDismissNewAppBanner
     | GotPageMsg (Page.Msg Msg)
     | GotNotificationMsg Notification.Msg
     | GotCommunityAboutMsg CommunityAbout.Msg
@@ -253,7 +259,12 @@ update msg model =
             ( model, Cmd.none )
 
         ( ChangedUrl url, _ ) ->
-            changeRouteTo (Route.fromUrl url) model
+            changeRouteTo (Route.fromUrl url) { model | url = url }
+
+        ( ClickedDismissNewAppBanner, _ ) ->
+            ( { model | newAppBannerDismissed = True }
+            , Ports.storeNewAppBannerDismissed ()
+            )
 
         ( ClickedLink urlRequest, _ ) ->
             case urlRequest of
@@ -1384,6 +1395,9 @@ msgToString msg =
         GotJavascriptData _ ->
             [ "GotJavascriptData" ]
 
+        ClickedDismissNewAppBanner ->
+            [ "ClickedDismissNewAppBanner" ]
+
         GotPageMsg subMsg ->
             "GotPageMsg" :: Page.msgToString subMsg
 
@@ -1463,6 +1477,37 @@ msgToString msg =
 
 view : Model -> Document Msg
 view model =
+    let
+        document =
+            viewStatus model
+    in
+    { document | body = viewNewAppBanner model :: document.body }
+
+
+viewNewAppBanner : Model -> Html Msg
+viewNewAppBanner model =
+    let
+        shared =
+            Page.toShared model.session
+    in
+    if
+        NewAppBanner.isVisible
+            { dismissed = model.newAppBannerDismissed
+            , now = shared.now
+            , translationsStatus = shared.translationsStatus
+            }
+    then
+        NewAppBanner.view shared.translators
+            { href = NewAppBanner.handoffUrl model.url
+            , onDismiss = ClickedDismissNewAppBanner
+            }
+
+    else
+        text ""
+
+
+viewStatus : Model -> Document Msg
+viewStatus model =
     let
         baseTitle =
             "Cambiatus"
