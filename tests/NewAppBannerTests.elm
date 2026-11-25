@@ -44,13 +44,12 @@ all =
         [ describe "handoffUrl"
             [ test "encodes path and query, without host or fragment" <|
                 \_ ->
-                    NewAppBanner.handoffUrl "https://app.cambiatus.io"
-                        (url "/shop/31" (Just "step=2") (Just "top"))
-                        |> Expect.equal "https://app.cambiatus.io/app/from-elm?path=%2Fshop%2F31%3Fstep%3D2"
-            , test "works without a query and drops a trailing slash on the API" <|
+                    NewAppBanner.handoffUrl (url "/shop/31" (Just "step=2") (Just "top"))
+                        |> Expect.equal "/app/from-elm?path=%2Fshop%2F31%3Fstep%3D2"
+            , test "works without a query" <|
                 \_ ->
-                    NewAppBanner.handoffUrl "http://localhost:4000/" (url "/" Nothing Nothing)
-                        |> Expect.equal "http://localhost:4000/app/from-elm?path=%2F"
+                    NewAppBanner.handoffUrl (url "/" Nothing Nothing)
+                        |> Expect.equal "/app/from-elm?path=%2F"
             ]
         , describe "isVisible"
             [ test "shows before the cutover" <|

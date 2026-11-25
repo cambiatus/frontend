@@ -1498,7 +1498,7 @@ viewNewAppBanner model =
             }
     then
         NewAppBanner.view shared.translators
-            { href = NewAppBanner.handoffUrl shared.endpoints.api model.url
+            { href = NewAppBanner.handoffUrl model.url
             , onDismiss = ClickedDismissNewAppBanner
             }
 

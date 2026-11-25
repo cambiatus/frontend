@@ -17,7 +17,6 @@ import Html.Attributes exposing (attribute, class, href, id, target, type_)
 import Html.Events exposing (onClick)
 import Icons
 import Json.Decode as Decode exposing (Value)
-import ReviewMoved
 import Session.Shared as Shared
 import Time
 import Translation
@@ -61,10 +60,11 @@ dismissedFromFlags flags =
 
 
 {-| Handoff address for the current Elm screen: its path and query (no host or fragment),
-URI-encoded into `/app/from-elm?path=`.
+URI-encoded into `/app/from-elm?path=`. Relative on purpose: nginx serves `/app` on every
+community host, and the session cookie and the community come from that host.
 -}
-handoffUrl : String -> Url -> String
-handoffUrl apiUrl url =
+handoffUrl : Url -> String
+handoffUrl url =
     let
         pathAndQuery =
             case url.query of
@@ -74,7 +74,7 @@ handoffUrl apiUrl url =
                 Nothing ->
                     url.path
     in
-    ReviewMoved.appUrl apiUrl ("/app/from-elm?path=" ++ Url.percentEncode pathAndQuery)
+    "/app/from-elm?path=" ++ Url.percentEncode pathAndQuery
 
 
 view : Translation.Translators -> { href : String, onDismiss : msg } -> Html msg
