@@ -1,19 +1,16 @@
-module NewAppCallout exposing (dismissedDecoder, isVisible, view)
+module NewAppCallout exposing (isVisible, view)
 
 {-| Band at the top of the dashboard inviting MUDA members to the new app (the LiveView
 app at /app), and reminding them to keep their 12 words: the new app signs in with them.
 
-The copy announces MUDA's launch, so it only shows in that community. Once closed it
-stays closed: the browser remembers it (`newAppCallout` / `dismissNewAppCallout` ports).
+The copy announces MUDA's launch, so it only shows in that community. It is permanent:
+every visit shows it, and it has no close button, since members are moving to the new app.
 
 -}
 
 import Eos
-import Html exposing (Html, a, button, div, h2, img, p, section, span, strong, text)
-import Html.Attributes exposing (alt, attribute, class, href, id, src, target, type_)
-import Html.Events exposing (onClick)
-import Icons
-import Json.Decode as Decode exposing (Decoder)
+import Html exposing (Html, a, div, h2, img, p, section, span, strong, text)
+import Html.Attributes exposing (alt, attribute, class, href, id, src, target)
 import ReviewMoved
 import Route
 import Svg exposing (Svg, svg)
@@ -21,23 +18,13 @@ import Svg.Attributes as SvgAttr
 import Translation
 
 
-{-| Hidden until the browser has said whether it was dismissed, so it never flashes
-in front of someone who already closed it.
--}
-isVisible : { dismissed : Maybe Bool } -> Eos.Symbol -> Bool
-isVisible { dismissed } symbol =
-    dismissed == Just False && Eos.symbolToSymbolCodeString symbol == "MUDA"
+isVisible : Eos.Symbol -> Bool
+isVisible symbol =
+    Eos.symbolToSymbolCodeString symbol == "MUDA"
 
 
-{-| Reply of the `newAppCallout` port.
--}
-dismissedDecoder : Decoder Bool
-dismissedDecoder =
-    Decode.field "dismissed" Decode.bool
-
-
-view : Translation.Translators -> { apiUrl : String, onDismiss : msg } -> Html msg
-view { t } { apiUrl, onDismiss } =
+view : Translation.Translators -> { apiUrl : String } -> Html msg
+view { t } { apiUrl } =
     section
         [ id "new-app-callout"
         , class "relative overflow-hidden text-white bg-gradient-to-r from-[#2E4A2C] to-[#3F6B3A]"
@@ -45,7 +32,7 @@ view { t } { apiUrl, onDismiss } =
         ]
         [ viewSpark "left-[18%] top-[10px] text-[#FFE400]"
         , viewSpark "left-[62%] bottom-2 text-[#5AD1C9]"
-        , div [ class "container mx-auto relative flex flex-col gap-4 p-6 md:flex-row md:items-center md:gap-6 md:py-8 md:pl-8 md:pr-[72px]" ]
+        , div [ class "container mx-auto relative flex flex-col gap-4 p-6 md:flex-row md:items-center md:gap-6 md:py-8 md:px-8" ]
             [ img
                 [ src "/images/new-app-doggo.png"
                 , alt ""
@@ -57,7 +44,7 @@ view { t } { apiUrl, onDismiss } =
                     [ span [ attribute "aria-hidden" "true" ] [ text "✦" ]
                     , text (t "dashboard.new_app.eyebrow")
                     ]
-                , h2 [ class "text-lg font-bold pr-10 md:pr-0" ] [ text (t "dashboard.new_app.title") ]
+                , h2 [ class "text-lg font-bold" ] [ text (t "dashboard.new_app.title") ]
                 , p [ class "mt-1 text-[#D7E6D2]" ] [ text (t "dashboard.new_app.body") ]
                 , p [ class "mt-2 flex items-start gap-2" ]
                     [ viewWarningIcon
@@ -87,14 +74,6 @@ view { t } { apiUrl, onDismiss } =
                 , viewArrowIcon
                 ]
             ]
-        , button
-            [ id "new-app-callout-dismiss"
-            , type_ "button"
-            , class "absolute top-4 right-4 w-12 h-12 flex items-center justify-center rounded text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FFE400]"
-            , attribute "aria-label" (t "dashboard.new_app.dismiss")
-            , onClick onDismiss
-            ]
-            [ Icons.close "w-4 h-4 fill-current" ]
         ]
 
 
