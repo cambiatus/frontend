@@ -20,7 +20,7 @@ import Form.Checkbox
 import Form.Radio
 import Graphql.Http
 import Html exposing (Html, a, br, button, div, h1, h2, img, li, p, span, text, ul)
-import Html.Attributes exposing (alt, class, classList, id, src)
+import Html.Attributes exposing (alt, class, classList, href, id, src, target)
 import Html.Attributes.Aria exposing (ariaLabel)
 import Html.Events exposing (onClick)
 import Http
@@ -39,6 +39,7 @@ import Session.Shared as Shared
 import Shop exposing (Product)
 import Shop.Category
 import Shop.Where as Where exposing (Where)
+import ShopMoved
 import Translation
 import Tree
 import UpdateResult as UR
@@ -605,9 +606,10 @@ viewShopButtons loggedIn model =
             }
             [ class "w-full md:w-40 button button-primary"
             , classList [ ( "button-disabled", not loggedIn.hasAcceptedCodeOfConduct ) ]
-            , Route.href (Route.NewSale Route.SaleMainInformation)
+            , href (ShopMoved.createUrl loggedIn.shared.endpoints.api)
+            , target "_self"
             ]
-            [ text <| t "shop.create_new_offer" ]
+            [ text <| t "shop_moved.create_go" ]
         , button
             [ class "w-full md:w-40 button button-secondary"
             , onClick ClickedOpenFiltersModal
@@ -774,9 +776,10 @@ viewEmptyState loggedIn communitySymbol model =
         , p [ class "text-black text-center mt-4" ] description
         , a
             [ class "button button-primary mt-6 md:px-6 w-full md:w-max"
-            , Route.href (Route.NewSale Route.SaleMainInformation)
+            , href (ShopMoved.createUrl loggedIn.shared.endpoints.api)
+            , target "_self"
             ]
-            [ text <| t "shop.empty.create_new" ]
+            [ text <| t "shop_moved.create_go" ]
         ]
 
 

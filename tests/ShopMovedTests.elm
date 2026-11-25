@@ -45,6 +45,26 @@ all =
                     \offerId ->
                         ShopMoved.manageUrl "http://localhost:4000" offerId
                             |> Expect.equal "http://localhost:4000/app/login?next=%2Fapp%2Fmy-shop%2Foffers%2F7"
+        , test "createUrl goes through the login and returns to the new offer form" <|
+            \_ ->
+                ShopMoved.createUrl "https://muda.cambiatus.io/"
+                    |> Expect.equal "https://muda.cambiatus.io/app/login?next=%2Fapp%2Fmy-shop%2Foffers%2Fnew"
+        , describe "viewCreateMoved"
+            [ test "replaces the offer editor with a same-tab link to the new app" <|
+                \_ ->
+                    ShopMoved.viewCreateMoved translators "https://x"
+                        |> Query.fromHtml
+                        |> Expect.all
+                            [ Query.has [ Selector.text "shop_moved.create_title" ]
+                            , Query.find [ Selector.id "create-in-new-app" ]
+                                >> Query.has
+                                    [ Selector.tag "a"
+                                    , Selector.attribute (Html.Attributes.href "https://x/app/login?next=%2Fapp%2Fmy-shop%2Foffers%2Fnew")
+                                    , Selector.attribute (Html.Attributes.target "_self")
+                                    , Selector.text "shop_moved.create_go"
+                                    ]
+                            ]
+            ]
         , describe "viewBuyLink"
             [ test "is a same-tab link named by its text" <|
                 \_ ->

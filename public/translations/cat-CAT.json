@@ -1678,6 +1678,9 @@
     "buy_go": "Compra a la nova app",
     "manage_title": "Els lots i els lliuraments ara són a la nova app",
     "manage_body": "A la nova app obres lots, veus les comandes de cada lot i organitzes els lliuraments.",
-    "manage_go": "Obre a la nova app"
+    "manage_go": "Obre a la nova app",
+    "create_title": "Les ofertes noves ara es creen a la nova app",
+    "create_body": "A la nova app tries si és un producte o un servei, afegeixes fotos i on lliures, i decideixes quan publicar.",
+    "create_go": "Anuncia a la nova app"
   }
 }
